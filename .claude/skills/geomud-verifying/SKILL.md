@@ -16,9 +16,14 @@ git diff --name-only -- '*.go' | xargs -r gofmt -l  # must print nothing
 ## Baseline (upstream `b3f55cc2`, 2026-10-24)
 
 - `go build ./...` passes.
-- `go test ./...`: 34 packages pass, 1 fails: `scripts`,
-  `TestHTTPSSetupAutoModeLoadsDefaultAdminURLFromActiveOverride` (`https_setup_test.go:311`). Cause
-  not yet investigated. Any other failure is new and is ours.
+- `go test ./... -count=1` on Windows: 3 packages fail, all of which pass on Linux CI (PR #1 run,
+  2026-10-25). Any other failure is new and is ours.
+  - `scripts` `TestHTTPSSetupAutoModeLoadsDefaultAdminURLFromActiveOverride` (`https_setup_test.go:311`): cause not investigated
+  - `internal/mobs` `TestLoadPluginMobs_MergesValidMob`: "filepath mismatch", `/` vs `\` in the expected path suffix
+  - `cmd/reset-admin-pw` `TestPromptForPasswordMismatch`: temp dir cleanup fails, prompt input file still held open
+- Always pass `-count=1`. Without it Go can replay cached results; the first baseline run here
+  showed only 1 failure that way.
+- The full pre-PR gate is in `.github/CONTRIBUTING.md` section 3.
 
 When the baseline changes (the failure is fixed, or a package is stripped), update this section in
 the same commit.
