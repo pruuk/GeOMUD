@@ -110,13 +110,9 @@ jobs:
 
           if printf '%s\n' "${changed_files}" | grep -Eq "${go_re}"; then
             echo "go_lint=true" >> "$GITHUB_OUTPUT"
-            # Pull requests run race tests here; master pushes are covered by
-            # the prerelease validation workflow.
-            if [ "${EVENT_NAME}" = "pull_request" ]; then
-              echo "go_tests=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "go_tests=false" >> "$GITHUB_OUTPUT"
-            fi
+            # GeOMUD has no prerelease workflow, so pull requests and master
+            # pushes both run the race tests here.
+            echo "go_tests=true" >> "$GITHUB_OUTPUT"
           else
             echo "go_lint=false" >> "$GITHUB_OUTPUT"
             echo "go_tests=false" >> "$GITHUB_OUTPUT"
