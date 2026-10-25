@@ -14,6 +14,8 @@ skills (2026-10-24). Git rules are in `geomud-git`.
 - Push every branch with today's commits to `origin` (`pruuk/GeOMUD`); the remote must hold
   everything overnight. Never push to `upstream` (check `git remote -v` per `geomud-git`).
 - Verification run today? Its result goes in `status.md`, read from the output (`geomud-verifying`).
+- Dates are the local date (`date +%F`), not GitHub's UTC timestamps, which roll over in the
+  evening here.
 
 ## 2. Rewrite `status.md`
 Short: about 80 lines at most, one line per item. Built from git and the plan, never from memory.
@@ -51,9 +53,12 @@ live: it is.
 
 ## 5. Branches and worktrees
 ```bash
+git fetch origin --prune
 git branch --merged master      # delete merged branches with git branch -d
 git worktree list               # remove worktrees whose branch merged
 ```
+Remote branches on `origin` whose PR merged (a squash-merged dependabot branch is not deleted for
+you): check `gh pr view <n> --repo pruuk/GeOMUD` says MERGED, then `git push origin --delete <branch>`.
 Never remove another session's worktree or branch without asking it (ListAgents).
 
 ## 6. Root tidy
@@ -74,7 +79,9 @@ foreach ($p in @("$env:LOCALAPPDATA\go-build", "$env:LOCALAPPDATA\Temp\claude\C-
 - Go build cache over 20 GB: `go clean -cache`, unless another session is building Go right now
   (ListAgents). It only slows the next build.
 - This project's session scratchpads: delete each folder not written in two days, never the current
-  session's, never one a running process writes into. Never touch another project's scratchpads.
+  session's, never one a running process writes into. Judge age by the newest file inside, not the
+  folder's own timestamp: background-task output lands in nested folders and leaves the top folder's
+  date old. Never touch another project's scratchpads.
 - Keep deletions and size reports in separate calls. Never kill a process to free a lock.
 
 ## 8. Memory handoff
@@ -84,6 +91,12 @@ Memory stays clean: rules belong in `CLAUDE.md` or a skill, status in `status.md
   alive, anything in `C:/tmp` to keep and why, the one thing the next session picks up first).
 - `MEMORY.md` is one-line pointers: no line over 220 characters, file well under 12 KB.
 - A memory that has become a rule or a status item moves there and is deleted from memory.
+
+## 9. The EOD pull request
+The `status.md`, `PATCH_NOTES.md` and skill fixes from this run go in one PR from a branch named
+`eod-<YYYY-MM-DD>` to `pruuk/GeOMUD`. If it touches only docs, skills and `.github/` text, merge it
+once CI is green. Anything else needs Calabe's go-ahead like any other PR. Afterwards, switch back to
+`master`, pull, and delete the branch locally and on `origin`.
 
 ## Report
 Short summary for Calabe: what was committed today and on which branch, what is in flight, disk

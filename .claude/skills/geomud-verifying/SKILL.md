@@ -17,7 +17,7 @@ git diff --name-only -- '*.go' | xargs -r gofmt -l  # must print nothing
 
 - `go build ./...` passes.
 - `go test ./... -count=1` on Windows: 3 packages fail, all of which pass on Linux CI (PR #1 run,
-  2026-10-25). Any other failure is new and is ours.
+  2026-10-24). Any other failure is new and is ours.
   - `scripts` `TestHTTPSSetupAutoModeLoadsDefaultAdminURLFromActiveOverride` (`https_setup_test.go:311`): cause not investigated
   - `internal/mobs` `TestLoadPluginMobs_MergesValidMob`: "filepath mismatch", `/` vs `\` in the expected path suffix
   - `cmd/reset-admin-pw` `TestPromptForPasswordMismatch`: temp dir cleanup fails, prompt input file still held open
