@@ -8,5 +8,6 @@ Newest day first. One line per finished item.
 - Replaced GoMud's README with a GeOMUD README (origins, docs, building); repo published at `pruuk/GeOMUD`
 - Added project `CLAUDE.md`, `status.md`, this file, and skills `geomud-git`, `geomud-verifying`, `geomud-end-of-day`
 - Contributing rules adapted from DOGMud (`.github/CONTRIBUTING.md`, PR template, CODEOWNERS to `@pruuk`)
+- Removed GoMud's release, Docker publish and Discord workflows; CI now runs Go tests on master pushes; dependabot covers Go modules and Actions only
 - `.gitattributes` keeps Go files LF so gofmt checks pass on Windows; Windows test baseline corrected to 3 known failures
 - Decisions: rules move into a `diku-basic` reference ruleset, then shrink; JS and Lua scripting is dropped
