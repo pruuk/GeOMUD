@@ -16,7 +16,9 @@ ssh_host_key
 ssh_host_key.pub
 tmp-gomud.exe
 __debug*
-.claude/
+.claude/*
+!.claude/skills/
+_archive/
 
 
 cmd/modmanager/modmanager
