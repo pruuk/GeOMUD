@@ -10,6 +10,7 @@ Newest day first. One line per finished item.
 - Ruling: NPCs are players under the hood; new Phase 4b before the rules seam (`gomud_strip_plan.md` decision 4)
 - Phase 2: deleted game commands (economy, character info, every skill and spell command, stripped admin commands), 18 mob commands and 5 game hooks; `suicide` (the death routine) and the combat commands stay until Phase 5; mobs no longer start or join fights until Phase 5
 - Phase 3: server runs on the trimmed `empty` world (376 to 252 files: zones startland, tutorial, shadow_realm); `world/default` deleted (1,574 files); world validation checks the folders the engine loads; restored buff 32 that `empty` lacked (the tutorial fight ran without its bonus); upstream root notes removed
+- Phase 4: JS/Lua scripting deleted (`goja`, `gopher-lua` out of `go.mod`; about 72,500 lines); tutorial zone deleted; smoke test now has an admin spawn items, runs a death and walk-out, and asserts GMCP Char, Room and Comm; death stand-in until Phase 5 (revive at 1 health, portal out of the recovery room); Mudlet Discord Rich Presence removed
 
 ## 2026-10-24
 - Cloned upstream GoMud (`b3f55cc2`, MIT) into this repo; `upstream` remote made fetch-only

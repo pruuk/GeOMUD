@@ -1,22 +1,23 @@
 # Status (updated 2026-10-26)
 
 ## Now
-- Phase 3 (world data) done on branch `strip/phase-3-world-data`, waiting on its PR
+- Phase 4 (scripting, web and GMCP surface) done on branch `strip/phase-4-scripting-surface`,
+  waiting on its PR
 
 ## Next
-1. Phase 4: scripting, web and GMCP surface. The tutorial is all room scripts, so the smoke test needs
-   a new per-player item source here. Also decide on Mudlet "Discord Rich Presence" GMCP
-   (`modules/gmcp/gmcp.Mudlet.go`, about 450 lines), kept through Phase 1
-2. Phase 4b: NPCs are players (decision 4, 2026-10-26). Design spec for Calabe first
-3. Phase 5: rules seam. `suicide` (player and mob death) and the combat commands move here, with
+1. Phase 4b: NPCs are players (decision 4, 2026-10-26). Design spec for Calabe first
+2. Phase 5: rules seam. `suicide` (player and mob death, with the 1-health revive stand-in in
+   `docs/plans/2026-10-26-phase-4-scripting-surface.md`) and the combat commands move here, with
    the `professions`, `skills`, `spells` world folders, `set shopstyle`/`set wimpy`, the `help spell`
-   branch and the loot goblin config code
-4. Phase 6: measure. Also measure the Phase 0 engine (`2737986c`) on the trimmed world, since the
+   branch and the loot goblin config code. Spells and scripted buffs (meditating, illumination,
+   death recovery) do nothing until then
+3. Phase 6: measure. Also measure the Phase 0 engine (`2737986c`) on the trimmed world, since the
    Phase 0 baseline ran on the deleted `default` world
 
 ## Waiting on Calabe
-- Go-ahead to start Phase 4 (`gomud_strip_plan.md`)
-- Whether to rewrite `templates/about.template` (still GoMud's text, credits and Discord) for GeOMUD
+- Go-ahead to start Phase 4b (`gomud_strip_plan.md`)
+- Whether to rewrite `templates/about.template` (still GoMud's text, credits and "join the GoMud
+  Discord" advert) for GeOMUD
 
 ## Watch
 - Phase 5 rules seam: `buffs` has 13 importers and `characters` imports every rules package

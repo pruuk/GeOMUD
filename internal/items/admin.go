@@ -283,7 +283,7 @@ func SaveItemSpec(spec *ItemSpec) error {
 	return nil
 }
 
-// DeleteItemSpec removes an item spec from disk (YAML + JS script) and from the
+// DeleteItemSpec removes an item spec from disk (YAML) and from the
 // in-memory cache.
 func DeleteItemSpec(itemId int) error {
 	spec := GetItemSpec(itemId)
@@ -298,32 +298,6 @@ func DeleteItemSpec(itemId int) error {
 		return fmt.Errorf("removing item yaml: %w", err)
 	}
 
-	scriptPath := spec.GetScriptPath()
-	if err := os.Remove(scriptPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("removing item script: %w", err)
-	}
-
 	delete(items, itemId)
 	return nil
-}
-
-// SaveItemScript writes (or overwrites) the JavaScript file for an item.  If
-// content is empty the script file is deleted instead.
-func SaveItemScript(itemId int, content string, lang string) error {
-	spec := GetItemSpec(itemId)
-	if spec == nil {
-		return fmt.Errorf("item %d not found", itemId)
-	}
-
-	scriptPath := spec.GetScriptPath()
-
-	if content == "" {
-		if err := os.Remove(scriptPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("removing item script: %w", err)
-		}
-		return nil
-	}
-
-	scriptPath = util.ApplyScriptLang(scriptPath, lang)
-	return util.WriteFile(scriptPath, []byte(content), 0644)
 }

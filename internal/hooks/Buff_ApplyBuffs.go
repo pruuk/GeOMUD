@@ -6,7 +6,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
@@ -59,17 +58,9 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 	targetChar.AddBuff(evt.BuffId, false)
 
 	//
-	// Fire onStart for buff script
-	//
-	if _, err := scripting.TryBuffScriptEvent(`onStart`, evt.UserId, evt.MobInstanceId, evt.BuffId); err == nil {
-		targetChar.TrackBuffStarted(evt.BuffId)
-	}
-
-	//
 	// If the buff calls for an immediate triggering
 	//
 	if buffInfo.TriggerNow {
-		scripting.TryBuffScriptEvent(`onTrigger`, evt.UserId, evt.MobInstanceId, evt.BuffId)
 
 		if evt.MobInstanceId > 0 && targetChar.Health <= 0 {
 			// Mob died

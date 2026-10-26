@@ -5,7 +5,6 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
@@ -36,12 +35,8 @@ func MobRoundTick(e events.Event) events.ListenerReturn {
 
 		if triggeredBuffs := mob.Character.Buffs.Trigger(); len(triggeredBuffs) > 0 {
 
-			//
-			// Fire onTrigger for buff script
-			//
 			triggeredBuffIds := []int{}
 			for _, buff := range triggeredBuffs {
-				scripting.TryBuffScriptEvent(`onTrigger`, 0, mobInstanceId, buff.BuffId)
 				triggeredBuffIds = append(triggeredBuffIds, buff.BuffId)
 			}
 

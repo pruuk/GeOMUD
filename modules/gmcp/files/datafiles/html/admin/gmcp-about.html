@@ -22,7 +22,7 @@
     <h2>Description</h2>
     <p>The GMCP module implements the Generic MUD Communication Protocol, a telnet sub-negotiation extension that allows the server to send structured JSON data alongside normal text output. This enables feature-rich MUD clients such as Mudlet to display live character stats, room data, map information, and more in dedicated UI panels.</p>
     <p>On connection the module negotiates GMCP capability with the client. WebSocket connections are treated as always-enabled and receive GMCP payloads via a text prefix format (<code>!!GMCP(...)</code>) instead of telnet IAC sequences.</p>
-    <p>Supported GMCP namespaces include <code>Char</code> (character stats, inventory, skills, vitals), <code>Room</code> (room details and map data), <code>World</code> (server-wide info), <code>Party</code> (party state), <code>Game</code> (server info), <code>Gametime</code> (in-game time), <code>Comm</code> (channel messages), and <code>External.Discord</code> (Discord rich presence integration).</p>
+    <p>Supported GMCP namespaces include <code>Char</code> (character stats, inventory, skills, vitals), <code>Room</code> (room details and map data), <code>World</code> (server-wide info), <code>Party</code> (party state), <code>Game</code> (server info), <code>Gametime</code> (in-game time) and <code>Comm</code> (channel messages).</p>
     <p>Other modules can send GMCP events by calling the exported <code>SendGMCPEvent(userId, namespace, payload)</code> function. The <code>IsMudlet(connectionId)</code> export lets other modules adapt output for Mudlet clients.</p>
 </div>
 

@@ -10,27 +10,13 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 )
-
-type mobListEntry struct {
-	mobs.Mob
-	HasScript bool `json:"HasScript"`
-}
 
 // GET /admin/api/v1/mobs
 func apiV1GetMobs(w http.ResponseWriter, r *http.Request) {
-	specs := mobs.GetAllMobSpecs()
-	result := make([]mobListEntry, len(specs))
-	for i, s := range specs {
-		result[i] = mobListEntry{
-			Mob:       s,
-			HasScript: s.HasAnyScript(),
-		}
-	}
-	writeJSON(w, http.StatusOK, APIResponse[[]mobListEntry]{
+	writeJSON(w, http.StatusOK, APIResponse[[]mobs.Mob]{
 		Success: true,
-		Data:    result,
+		Data:    mobs.GetAllMobSpecs(),
 	})
 }
 
@@ -88,7 +74,7 @@ func apiV1CreateMob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newId, err := mobs.CreateNewMobFile(spec, "")
+	newId, err := mobs.CreateNewMobFile(spec)
 	if err != nil {
 		writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
@@ -156,134 +142,6 @@ func apiV1DeleteMob(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	writeJSON(w, http.StatusOK, APIResponse[struct{}]{Success: true})
-}
-
-// GET /admin/api/v1/mobs/{mobId}/script
-func apiV1GetMobScript(w http.ResponseWriter, r *http.Request) {
-	idOrName := r.PathValue("mobId")
-	mobId := resolveMobId(w, idOrName)
-	if mobId == 0 {
-		return
-	}
-
-	spec := mobs.GetMobSpec(mobId)
-	if spec == nil {
-		writeAPIError(w, http.StatusNotFound, "mob not found")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, APIResponse[map[string]string]{
-		Success: true,
-		Data:    map[string]string{"script": spec.GetScript(), "lang": scriptLangString(spec.GetScriptPath())},
-	})
-}
-
-// PUT /admin/api/v1/mobs/{mobId}/script
-func apiV1PutMobScript(w http.ResponseWriter, r *http.Request) {
-	idOrName := r.PathValue("mobId")
-	mobId := resolveMobId(w, idOrName)
-	if mobId == 0 {
-		return
-	}
-
-	var body struct {
-		Script string `json:"script"`
-		Lang   string `json:"lang"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeAPIError(w, http.StatusBadRequest, "malformed request body: "+err.Error())
-		return
-	}
-
-	if err := mobs.SaveMobScript(mobId, body.Script, body.Lang); err != nil {
-		writeAPIError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	scripting.InvalidateMobVMById(int(mobId))
-
-	writeJSON(w, http.StatusOK, APIResponse[struct{}]{Success: true})
-}
-
-// GET /admin/api/v1/mobs/{mobId}/scripts
-func apiV1GetMobScripts(w http.ResponseWriter, r *http.Request) {
-	idOrName := r.PathValue("mobId")
-	mobId := resolveMobId(w, idOrName)
-	if mobId == 0 {
-		return
-	}
-
-	spec := mobs.GetMobSpec(mobId)
-	if spec == nil {
-		writeAPIError(w, http.StatusNotFound, "mob not found")
-		return
-	}
-
-	tags := spec.GetAllScriptTags()
-	if tags == nil {
-		tags = []string{}
-	}
-
-	writeJSON(w, http.StatusOK, APIResponse[[]string]{
-		Success: true,
-		Data:    tags,
-	})
-}
-
-// GET /admin/api/v1/mobs/{mobId}/scripts/{tag}
-func apiV1GetMobScriptByTag(w http.ResponseWriter, r *http.Request) {
-	idOrName := r.PathValue("mobId")
-	mobId := resolveMobId(w, idOrName)
-	if mobId == 0 {
-		return
-	}
-
-	tag := r.PathValue("tag")
-
-	script, err := mobs.GetMobScriptForTag(mobId, tag)
-	if err != nil {
-		writeAPIError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	lang := "js"
-	if spec := mobs.GetMobSpec(mobId); spec != nil {
-		lang = scriptLangString(spec.GetScriptPathForTag(tag))
-	}
-
-	writeJSON(w, http.StatusOK, APIResponse[map[string]string]{
-		Success: true,
-		Data:    map[string]string{"script": script, "tag": tag, "lang": lang},
-	})
-}
-
-// PUT /admin/api/v1/mobs/{mobId}/scripts/{tag}
-func apiV1PutMobScriptByTag(w http.ResponseWriter, r *http.Request) {
-	idOrName := r.PathValue("mobId")
-	mobId := resolveMobId(w, idOrName)
-	if mobId == 0 {
-		return
-	}
-
-	tag := r.PathValue("tag")
-
-	var body struct {
-		Script string `json:"script"`
-		Lang   string `json:"lang"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeAPIError(w, http.StatusBadRequest, "malformed request body: "+err.Error())
-		return
-	}
-
-	if err := mobs.SaveMobScriptForTag(mobId, tag, body.Script, body.Lang); err != nil {
-		writeAPIError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	scripting.InvalidateMobVMById(int(mobId))
 
 	writeJSON(w, http.StatusOK, APIResponse[struct{}]{Success: true})
 }

@@ -24,9 +24,21 @@ type client struct {
 
 	mu      sync.Mutex
 	text    strings.Builder
-	mark    int  // waits search the text after this offset; send moves it
-	closed  bool // the server closed the connection
+	mark    int            // waits search the text after this offset; send moves it
+	closed  bool           // the server closed the connection
+	gmcp    map[string]int // GMCP package names received, with counts
 	changed chan struct{}
+}
+
+// gmcpNames returns the GMCP package names this connection has received.
+func (c *client) gmcpNames() map[string]int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make(map[string]int, len(c.gmcp))
+	for k, v := range c.gmcp {
+		out[k] = v
+	}
+	return out
 }
 
 func dial(ctx context.Context, addr string, timeout time.Duration) (*client, error) {
@@ -42,7 +54,7 @@ func newClient(conn net.Conn, timeout time.Duration) *client {
 	// lastSend starts at connect: the server's drop window also opens when it
 	// sends the first prompt (main.go handleTelnetConnection sets lastInput
 	// after the prompt), so an instant first reply is lost too.
-	c := &client{conn: conn, timeout: timeout, changed: make(chan struct{}, 1), lastSend: time.Now()}
+	c := &client{conn: conn, timeout: timeout, changed: make(chan struct{}, 1), gmcp: map[string]int{}, lastSend: time.Now()}
 	go c.read()
 	return c
 }
@@ -70,6 +82,10 @@ func (c *client) read() {
 				c.notify()
 			case telnet.TokenIAC:
 				c.negotiate(tok.Command, tok.Option)
+			case telnet.TokenGMCP:
+				c.mu.Lock()
+				c.gmcp[tok.GMCPPackage]++
+				c.mu.Unlock()
 			}
 		}
 		if err != nil {

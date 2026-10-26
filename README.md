@@ -30,7 +30,7 @@ go test ./...
 go run .
 ```
 
-The Makefile targets (`make build`, `make run`, `make test`) come from GoMud; `make test` also runs code generation and the JS and Lua linters. With the stock config, the server listens for telnet on ports 33333 and 44444 and serves the web client and admin over HTTP on port 80.
+The Makefile targets (`make build`, `make run`, `make test`) come from GoMud; `make test` also runs code generation and the JS linter. With the stock config, the server listens for telnet on ports 33333 and 44444 and serves the web client and admin over HTTP on port 80.
 
 ## License
 

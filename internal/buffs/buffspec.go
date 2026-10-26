@@ -3,7 +3,6 @@ package buffs
 import (
 	"fmt"
 	"math"
-	"os"
 	"strings"
 	"time"
 
@@ -159,29 +158,6 @@ func (b *BuffSpec) Filename() string {
 
 func (b *BuffSpec) Filepath() string {
 	return b.Filename()
-}
-
-func (b *BuffSpec) GetScript() string {
-
-	// Check plugin-registered scripts first.
-	if script := getPluginScript(b.BuffId); script != `` {
-		return script
-	}
-
-	scriptPath := b.GetScriptPath()
-	// Load the script into a string
-	if _, err := os.Stat(scriptPath); err == nil {
-		if bytes, err := util.ReadFile(scriptPath); err == nil {
-			return string(bytes)
-		}
-	}
-
-	return ``
-}
-
-func (b *BuffSpec) GetScriptPath() string {
-	// Load any script for the buff (prefers .js, falls back to .lua)
-	return util.ResolveScriptPath(string(configs.GetFilePathsConfig().DataFiles) + `/buffs/` + b.Filepath())
 }
 
 // file self loads due to init()

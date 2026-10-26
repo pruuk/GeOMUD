@@ -10,7 +10,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -173,19 +172,9 @@ func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.Even
 			enterFromExit = fmt.Sprintf(`the <ansi fg="exit">%s</ansi>`, enterFromExit)
 		}
 
-		if blocked, err := scripting.TryRoomTryExitEvent(exitName, user.UserId, room.RoomId); err == nil && blocked {
-			return true, nil
-		}
-
-		if blocked, err := scripting.TryRoomTryEnterEvent(user.UserId, destRoom.RoomId); err == nil && blocked {
-			return true, nil
-		}
-
 		if err := rooms.MoveToRoom(user.UserId, destRoom.RoomId); err != nil {
 			user.SendText("Oops, couldn't move there!")
 		} else {
-
-			scripting.TryRoomScriptEvent(`onExit`, user.UserId, originRoomId)
 
 			// Tell the player they are moving
 			if isSneaking {
@@ -321,9 +310,7 @@ func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.Even
 
 			handled = true
 
-			if doLook, err := scripting.TryRoomScriptEvent(`onEnter`, user.UserId, destRoom.RoomId); err != nil || doLook {
-				Look(``, user, destRoom, events.CmdSecretly)
-			}
+			Look(``, user, destRoom, events.CmdSecretly)
 
 		}
 

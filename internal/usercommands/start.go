@@ -12,7 +12,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/users"
@@ -180,12 +179,18 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 	// Trigger a player changed event
 	events.AddToQueue(events.PlayerChanged{UserId: user.UserId})
 
-	question := cmdPrompt.Ask(`Would you like to skip the tutorial?`, []string{`yes`, `no`}, `yes`)
-	if !question.Done {
-		return true, nil
+	// With no tutorial rooms configured there is nothing to offer: skip the
+	// question and send the new character to the start room.
+	skipTutorial := true
+	if len(configs.GetSpecialRoomsConfig().TutorialRooms) > 0 {
+		question := cmdPrompt.Ask(`Would you like to skip the tutorial?`, []string{`yes`, `no`}, `yes`)
+		if !question.Done {
+			return true, nil
+		}
+		skipTutorial = question.Response != `no`
 	}
 
-	if question.Response != `no` {
+	if skipTutorial {
 
 		user.ClearPrompt()
 
@@ -204,9 +209,7 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 				user.UserId,
 			)
 
-			if doLook, err := scripting.TryRoomScriptEvent(`onEnter`, user.UserId, destRoom.RoomId); err != nil || doLook {
-				Look(``, user, destRoom, events.CmdSecretly) // Do a secret look.
-			}
+			Look(``, user, destRoom, events.CmdSecretly) // Do a secret look.
 
 			return true, nil
 		}
@@ -214,6 +217,12 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 	}
 
 	user.ClearPrompt()
+
+	if len(configs.GetSpecialRoomsConfig().TutorialRooms) == 0 {
+		// The start room failed to load and there is no tutorial to fall back on.
+		user.SendText(`The start room could not be loaded. Please tell an admin.`)
+		return true, nil
+	}
 
 	tutorialRoomIds := []int{}
 	startRoom := 0
@@ -241,10 +250,8 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 
 	rooms.MoveToRoom(user.UserId, ephemeralStartRoomId)
 
-	if doLook, err := scripting.TryRoomScriptEvent(`onEnter`, user.UserId, ephemeralStartRoomId); err != nil || doLook {
-		if lookRoom := rooms.LoadRoom(ephemeralStartRoomId); lookRoom != nil {
-			Look(``, user, lookRoom, events.CmdSecretly)
-		}
+	if lookRoom := rooms.LoadRoom(ephemeralStartRoomId); lookRoom != nil {
+		Look(``, user, lookRoom, events.CmdSecretly)
 	}
 
 	return true, nil

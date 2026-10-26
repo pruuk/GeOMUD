@@ -11,31 +11,12 @@ import (
 
 var (
 	pluginFileSystems []fileloader.ReadableGroupFS
-	pluginScripts     = map[int]string{} // buffId -> JS source
 )
 
 // RegisterFS registers a plugin file system to be searched when loading buff
 // data files. Must be called before LoadDataFiles().
 func RegisterFS(f ...fileloader.ReadableGroupFS) {
 	pluginFileSystems = append(pluginFileSystems, f...)
-}
-
-// RegisterBuffScript registers an embedded JS script for a given buff ID.
-// This is used by modules that embed their scripts rather than placing them
-// on disk alongside the YAML definition.
-func RegisterBuffScript(buffId int, script string) {
-	if buffId < 0 {
-		buffId *= -1
-	}
-	pluginScripts[buffId] = script
-}
-
-// getPluginScript returns the registered plugin script for buffId, or "".
-func getPluginScript(buffId int) string {
-	if buffId < 0 {
-		buffId *= -1
-	}
-	return pluginScripts[buffId]
 }
 
 // loadPluginBuffs walks every sub-filesystem of every registered plugin FS,

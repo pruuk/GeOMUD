@@ -3,8 +3,6 @@ package mobs
 import (
 	"fmt"
 	"math"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -58,7 +56,6 @@ type Mob struct {
 	MaxWander       int       `yaml:"maxwander,omitempty"`   // Max rooms to wander from home
 	WanderCount     int       `yaml:"-"`                     // How many times this mob has wandered
 	PreventIdle     bool      `yaml:"-"`                     // Whether they can't possibly be idle
-	ScriptTag       string    `yaml:"scripttag,omitempty"`   // Script for this mob: mobs/frostfang/scripts/{mobId}-{mobname}-{ScriptTag}.js
 	BuffIds         []int     `yaml:"buffids,omitempty"`     // Buff Id's this mob always has upon spawn
 	EliteChance     int       `yaml:"elitechance,omitempty"` // Percent chance (0-100) this mob spawns as elite
 	IsElite         bool      `yaml:"-"`                     // Runtime flag: true if this instance is elite
@@ -326,9 +323,6 @@ func (m *Mob) HasShop() bool {
 
 func (m *Mob) IsTameable() bool {
 	if m.HasShop() {
-		return false
-	}
-	if len(m.ScriptTag) > 0 {
 		return false
 	}
 	if r := races.GetRace(m.Character.GetRaceId()); r != nil {
@@ -622,122 +616,6 @@ func (r *Mob) Save() error {
 	}
 
 	return nil
-}
-
-func (m *Mob) HasScript() bool {
-
-	if script := getPluginScript(int(m.MobId), m.ScriptTag); script != `` {
-		return true
-	}
-
-	scriptPath := m.GetScriptPath()
-	// Load the script into a string
-	if _, err := os.Stat(scriptPath); err == nil {
-		return true
-	}
-
-	return false
-}
-
-// HasAnyScript reports whether this mob has any script on disk, including
-// instance (tagged) scripts. HasScript only checks the mob's current ScriptTag
-// (the base/untagged script for a spec), so listings that want to flag mobs
-// with only instance scripts should use this instead.
-func (m *Mob) HasAnyScript() bool {
-	if m.HasScript() {
-		return true
-	}
-	return len(m.GetAllScriptTags()) > 0
-}
-
-func (m *Mob) GetScript() string {
-
-	if script := getPluginScript(int(m.MobId), m.ScriptTag); script != `` {
-		return script
-	}
-
-	scriptPath := m.GetScriptPath()
-	// Load the script into a string
-	if _, err := os.Stat(scriptPath); err == nil {
-		if bytes, err := util.ReadFile(scriptPath); err == nil {
-			return string(bytes)
-		}
-	}
-
-	return ``
-}
-
-func (m *Mob) GetScriptPath() string {
-	return m.GetScriptPathForTag(m.ScriptTag)
-}
-
-func (m *Mob) GetScriptPathForTag(tag string) string {
-	// Load any script for the mob (prefers .js, falls back to .lua)
-
-	mobFilePath := m.Filename()
-
-	newExt := `.yaml`
-	if tag != `` {
-		newExt = fmt.Sprintf(`-%s.yaml`, tag)
-	}
-
-	scriptFilePath := `scripts/` + strings.Replace(mobFilePath, `.yaml`, newExt, 1)
-	yamlScriptPath := strings.Replace(configs.GetFilePathsConfig().DataFiles.String()+`/mobs/`+m.Filepath(),
-		mobFilePath,
-		scriptFilePath,
-		1)
-
-	return util.ResolveScriptPath(yamlScriptPath)
-}
-
-// GetAllScriptTags returns the tag (empty string for the base script) of every
-// .js or .lua script file that exists for this mob. The base (untagged) script
-// is always first when present; tagged scripts follow in sorted order. When
-// both a .js and .lua exist for the same tag, the tag is reported once.
-func (m *Mob) GetAllScriptTags() []string {
-	mobFilePath := m.Filename()
-	baseName := strings.TrimSuffix(mobFilePath, `.yaml`)
-
-	// Derive the scripts directory from the canonical script path so the logic
-	// stays in sync with GetScriptPathForTag.
-	baseScriptPath := m.GetScriptPathForTag(``)
-	scriptDir := filepath.Dir(baseScriptPath)
-
-	entries, err := os.ReadDir(scriptDir)
-	if err != nil {
-		return nil
-	}
-
-	hasBase := false
-	seen := map[string]bool{}
-	var tags []string
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		ext := filepath.Ext(name)
-		if ext != `.js` && ext != `.lua` {
-			continue
-		}
-		stem := strings.TrimSuffix(name, ext)
-		if stem == baseName {
-			hasBase = true
-			continue
-		}
-		prefix := baseName + `-`
-		if strings.HasPrefix(stem, prefix) {
-			tag := strings.TrimPrefix(stem, prefix)
-			if !seen[tag] {
-				seen[tag] = true
-				tags = append(tags, tag)
-			}
-		}
-	}
-	if hasBase {
-		tags = append([]string{``}, tags...)
-	}
-	return tags
 }
 
 func ReduceHostility() {

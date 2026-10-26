@@ -26,7 +26,7 @@ func Glarble(rest string, user *users.UserRecord, room *rooms.Room, flags events
 }
 ```
 
-Then the command must be entered into the `userCommands` map in [usercommands.go](/internal/scripting/usercommands.go)
+Then the command must be entered into the `userCommands` map in [usercommands.go](/internal/usercommands/usercommands.go)
 
 Each entry into `userCommands` defines:
 * `UserCommand` - the function for the command

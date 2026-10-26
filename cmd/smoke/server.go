@@ -22,6 +22,8 @@ type server struct {
 	addr string
 	cmd  *exec.Cmd
 	done chan struct{} // closed when the process exits
+
+	copyLogTo string // if set, stop copies the server log here before deleting the temp dir
 }
 
 // overrides returns the CONFIG_PATH file contents: the world copy and only
@@ -142,6 +144,13 @@ func (s *server) stop(showLog bool) {
 	if s.cmd != nil && s.cmd.Process != nil {
 		s.cmd.Process.Kill()
 		<-s.done
+	}
+	if s.copyLogTo != "" {
+		if b, err := os.ReadFile(s.logPath()); err == nil {
+			if err := os.WriteFile(s.copyLogTo, b, 0o644); err != nil {
+				fmt.Fprintln(os.Stderr, "smoke: could not save the server log:", err)
+			}
+		}
 	}
 	if showLog {
 		if b, err := os.ReadFile(s.logPath()); err == nil {

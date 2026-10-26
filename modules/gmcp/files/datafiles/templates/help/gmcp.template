@@ -32,9 +32,6 @@ The server sends GMCP data automatically as game state changes. Clients may also
 
   <ansi fg="white-bold">Client.GUI</ansi>   - Mudlet UI package installation and update instructions
   <ansi fg="white-bold">Client.Map</ansi>   - Mudlet mapper package URL
-  <ansi fg="white-bold">Suggestion</ansi>   - Autocomplete suggestions (used by the web client)
-  <ansi fg="white-bold">External.Discord.Info</ansi>   - Discord Rich Presence application identity
-  <ansi fg="white-bold">External.Discord.Status</ansi> - Discord Rich Presence status update
 
 <ansi fg="yellow-bold">Notes:</ansi>
 - GMCP is negotiated automatically over telnet. Web client connections have GMCP enabled by default.

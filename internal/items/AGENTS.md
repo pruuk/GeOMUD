@@ -8,16 +8,16 @@
 ## Working Rules
 
 - Preserve the separation between immutable item specifications and mutable item instances.
-- Be careful with file-backed item spec and script operations. Admin helpers and on-disk data must stay in sync.
+- Be careful with file-backed item spec operations. Admin helpers and on-disk data must stay in sync.
 - Prefer existing helpers for finding, creating, saving, loading, and deleting item specs instead of open-coding file logic.
 - Keep item search and matching behavior compatible unless the task explicitly changes user-facing matching semantics.
-- If a change affects item scripts, item events, or admin item editing, consider the corresponding package or web surface together.
+- If a change affects item events or admin item editing, consider the corresponding package or web surface together.
 
 ## Verification
 
 - Run targeted `internal/items` tests for item-loading, matching, or admin-helper changes.
-- If the change touches admin item editing or item script persistence, verify the exact create/update/delete path involved.
-- Use broader checks if the change crosses into buffs, quests, scripting, or admin APIs.
+- If the change touches admin item editing, verify the exact create/update/delete path involved.
+- Use broader checks if the change crosses into buffs or admin APIs.
 
 ## Documentation
 

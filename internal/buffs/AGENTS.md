@@ -13,7 +13,7 @@
 - `flags_admin.go`: CRUD helpers for flag specs. Locked flags reject edits/deletes; the flag identifier cannot be changed.
 - `flags_plugin.go`: module flag data-file integration. `RegisterFlagFS(...)` registers plugin filesystems; `loadPluginFlags` merges embedded `buffs-flags/*.yaml` (disk wins on duplicate ids).
 - `admin.go`: CRUD helpers that persist buff YAML and refresh in-memory state.
-- `plugin.go`: module data-file integration. `RegisterFS(...)` registers plugin filesystems; `loadPluginBuffs` merges embedded `buffs/*.yaml` into the spec map inside `LoadDataFiles` (after disk load, before items load). `RegisterBuffScript(buffId, src)` registers embedded JS; `BuffSpec.GetScript()` checks it before the disk path. Disk buffs win on duplicate ids.
+- `plugin.go`: module data-file integration. `RegisterFS(...)` registers plugin filesystems; `loadPluginBuffs` merges embedded `buffs/*.yaml` into the spec map inside `LoadDataFiles` (after disk load, before items load). Disk buffs win on duplicate ids.
 
 ## Working Rules
 
@@ -25,4 +25,4 @@
 ## Verification
 
 - Prefer targeted Go tests for this package first: `go test ./internal/buffs`.
-- If buff behavior changes affect combat, items, or scripting flows, run broader validation before claiming safety.
+- If buff behavior changes affect combat or items, run broader validation before claiming safety.

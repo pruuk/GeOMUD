@@ -3,7 +3,6 @@ package hooks
 import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -31,27 +30,22 @@ func HandleIdleMobs(e events.Event) events.ListenerReturn {
 		}
 	}
 
+	if isCharmed {
+		return events.Continue
+	}
+
+	if mob.MaxWander > -1 && mob.WanderCount > mob.MaxWander {
+		// Not charmed and far from home, and should never leave home.
+		// So go home.
+		mob.Command(`pathto home`)
+		return events.Continue
+	}
+
 	// If they have idle commands, maybe do one of them?
-	handled, _ := scripting.TryMobScriptEvent("onIdle", mob.InstanceId, 0, ``, nil)
-	if !handled {
-
-		if isCharmed {
-			return events.Continue
+	if util.Rand(100) < mob.ActivityLevel {
+		if idleCmd := mob.GetIdleCommand(); idleCmd != `` {
+			mob.Command(idleCmd)
 		}
-
-		if mob.MaxWander > -1 && mob.WanderCount > mob.MaxWander {
-			// Not charmed and far from home, and should never leave home.
-			// So go home.
-			mob.Command(`pathto home`)
-			return events.Continue
-		}
-
-		if util.Rand(100) < mob.ActivityLevel {
-			if idleCmd := mob.GetIdleCommand(); idleCmd != `` {
-				mob.Command(idleCmd)
-			}
-		}
-
 	}
 
 	return events.Continue

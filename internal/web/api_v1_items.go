@@ -7,7 +7,6 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/items"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 )
 
 // GET /admin/api/v1/items/ranks/weapons
@@ -80,9 +79,8 @@ func apiV1GetItemAttackMessages(w http.ResponseWriter, r *http.Request) {
 
 type itemListEntry struct {
 	items.ItemSpec
-	HasScript bool `json:"HasScript"`
-	BuffCount int  `json:"BuffCount"`
-	BuffValue int  `json:"BuffValue"`
+	BuffCount int `json:"BuffCount"`
+	BuffValue int `json:"BuffValue"`
 }
 
 // GET /admin/api/v1/items
@@ -93,7 +91,6 @@ func apiV1GetItems(w http.ResponseWriter, r *http.Request) {
 		buffCount, buffValue := items.GetBuffSummary(s.ItemId)
 		result[i] = itemListEntry{
 			ItemSpec:  s,
-			HasScript: s.GetScript() != "",
 			BuffCount: buffCount,
 			BuffValue: buffValue,
 		}
@@ -206,26 +203,6 @@ func apiV1DeleteItem(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, APIResponse[struct{}]{Success: true})
 }
 
-// GET /admin/api/v1/items/{itemId}/script
-func apiV1GetItemScript(w http.ResponseWriter, r *http.Request) {
-	idOrName := r.PathValue("itemId")
-	itemId := resolveItemId(w, idOrName)
-	if itemId == 0 {
-		return
-	}
-
-	spec := items.GetItemSpec(itemId)
-	if spec == nil {
-		writeAPIError(w, http.StatusNotFound, "item not found")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, APIResponse[map[string]string]{
-		Success: true,
-		Data:    map[string]string{"script": spec.GetScript(), "lang": scriptLangString(spec.GetScriptPath())},
-	})
-}
-
 // PUT /admin/api/v1/items/attack-messages/{subtype}/{intensity}/{proximity}/{target}
 func apiV1PutItemAttackMessage(w http.ResponseWriter, r *http.Request) {
 	subtype := items.ItemSubType(r.PathValue("subtype"))
@@ -303,33 +280,6 @@ func apiV1DeleteItemAttackMessage(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	writeJSON(w, http.StatusOK, APIResponse[struct{}]{Success: true})
-}
-
-// PUT /admin/api/v1/items/{itemId}/script
-func apiV1PutItemScript(w http.ResponseWriter, r *http.Request) {
-	idOrName := r.PathValue("itemId")
-	itemId := resolveItemId(w, idOrName)
-	if itemId == 0 {
-		return
-	}
-
-	var body struct {
-		Script string `json:"script"`
-		Lang   string `json:"lang"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeAPIError(w, http.StatusBadRequest, "malformed request body: "+err.Error())
-		return
-	}
-
-	if err := items.SaveItemScript(itemId, body.Script, body.Lang); err != nil {
-		writeAPIError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	scripting.InvalidateItemVM(itemId)
 
 	writeJSON(w, http.StatusOK, APIResponse[struct{}]{Success: true})
 }

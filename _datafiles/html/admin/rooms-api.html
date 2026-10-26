@@ -234,42 +234,6 @@
 
     <details class="api-entry">
         <summary>
-            <span class="method method-get">GET</span>
-            <span class="api-path">/admin/api/v1/rooms/{roomId}/script</span>
-            <span class="api-desc">Get room script</span>
-            <span class="perm-badge">rooms.read</span>
-        </summary>
-        <div class="api-body">
-            <p>Returns the JavaScript source for the room's script file. <code>script</code> is an empty string if no script file exists.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/rooms/1/script</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"script":"function onEnter(actor) { ... }"}}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-put">PUT</span>
-            <span class="api-path">/admin/api/v1/rooms/{roomId}/script</span>
-            <span class="api-desc">Replace or delete room script</span>
-            <span class="perm-badge">rooms.write</span>
-        </summary>
-        <div class="api-body">
-            <p>Writes the supplied JavaScript to the room's <code>.js</code> script file. Send an empty <code>script</code> string to delete the script file.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="flag">-X</span> PUT <span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \
-     <span class="flag">-d</span> <span class="str">'{{`{"script":"function onEnter(actor) { actor.SendText(\"Welcome!\"); }"}`}}'</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/rooms/1/script</span></div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
             <span class="method method-delete">DELETE</span>
             <span class="api-path">/admin/api/v1/rooms/{roomId}</span>
             <span class="api-desc">Delete a room</span>

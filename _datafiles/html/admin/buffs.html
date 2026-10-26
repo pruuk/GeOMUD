@@ -131,16 +131,6 @@
     .flag-name { font-weight: 600; color: var(--color-primary); display: block; }
     .flag-desc { font-size: 0.75rem; color: var(--color-text-faint); display: block; margin-top: 0.1rem; }
 
-    /* script */
-    .script-section {
-        margin-top: 1.25rem; border-top: 1px solid var(--color-border-light); padding-top: 1rem;
-        display: flex; flex-direction: column; gap: 0.5rem;
-    }
-    .script-section-toolbar {
-        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
-    }
-    .script-section-label { font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); flex: 1; }
-
     .action-bar { display: flex; gap: 0.6rem; margin-top: 1.25rem; align-items: center; flex-wrap: wrap; }
     .btn { padding: 0.45rem 1.1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; font-weight: 600; }
     .btn-primary { background: var(--color-primary); color: var(--color-surface-white); }
@@ -236,20 +226,6 @@
                 </div>
             </div>
 
-            <!-- Script editor -->
-            <div class="script-section">
-                <div class="script-section-toolbar">
-                    <span class="script-section-label">Script</span>
-                    <span class="script-lang-mount"></span>
-                    <button class="btn btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="openScriptWizard()">+ Add Event Handler</button>
-                    <button class="btn btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="ScriptEditor.open('f-script')">&#x26F6; Pop Out</button>
-                </div>
-                <textarea id="f-script" spellcheck="false" style="display:none"></textarea>
-                <div style="display:flex;justify-content:flex-end;margin-top:0.5rem;">
-                    <button class="btn btn-danger" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="deleteScript()">&#x1F5D1; Delete Script</button>
-                </div>
-            </div>
-
             <div class="action-bar">
                 <button class="btn btn-primary" id="save-btn" onclick="saveBuff()">Save Buff</button>
                 <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
@@ -269,7 +245,6 @@
     let allStatMods = {};  // statName -> description  (from /admin/api/v1/statmods)
     let currentBuffId = null;
     let isNew = false;
-    let scriptSync = null;
 
     // Ordered groups for the known-stat grid.
     // Each entry: { label, keys[] }
@@ -319,8 +294,6 @@
         allStatMods = statmodsRes.data.data || {};
 
         renderList(Object.values(allBuffs).sort((a, b) => a.BuffId - b.BuffId));
-        scriptSync = ScriptEditor.init('f-script', 'buff');
-        ScriptEditor.setDeleteHandler('f-script', deleteScript);
         const hashId = parseInt(location.hash.slice(1), 10);
         if (hashId) loadBuff(hashId);
     }
@@ -357,15 +330,10 @@
     // Load buff
     // -------------------------------------------------------------------------
     async function loadBuff(buffId) {
-        const [specRes, scriptRes] = await AdminAPI.all([
-            AdminAPI.get('/admin/api/v1/buffs/' + buffId),
-            AdminAPI.get('/admin/api/v1/buffs/' + buffId + '/script'),
-        ]);
+        const specRes = await AdminAPI.get('/admin/api/v1/buffs/' + buffId);
         if (!specRes.ok) { showStatus('Failed to load buff: ' + specRes.error, false); return; }
 
         const spec   = specRes.data.data;
-        const script = scriptRes.ok ? (scriptRes.data.data.script || '') : '';
-        const lang   = scriptRes.ok ? (scriptRes.data.data.lang || 'js') : 'js';
 
         allBuffs[spec.BuffId] = spec;
         currentBuffId = buffId;
@@ -373,7 +341,7 @@
         location.hash = buffId;
         setActiveRow(buffId);
         showEditor();
-        fillForm(spec, script, lang);
+        fillForm(spec);
     }
 
     function setActiveRow(id) {
@@ -388,8 +356,7 @@
         document.getElementById('delete-btn').style.display = isNew ? 'none' : '';
     }
 
-    function fillForm(spec, script, lang) {
-        lang = lang || 'js';
+    function fillForm(spec) {
         document.getElementById('editor-title').textContent = isNew ? 'New Buff' : spec.Name;
         document.getElementById('buff-id-display').textContent = isNew ? '' : 'ID: ' + spec.BuffId;
         var yamlBtn = document.getElementById('yaml-view-btn');
@@ -409,12 +376,6 @@
 
         buildStatModsUI(spec.StatMods || {});
         buildFlagsGrid(spec.Flags || []);
-
-        setVal('f-script', script);
-        if (scriptSync) scriptSync(undefined, lang);
-        // Lock the language to the existing file's type; a new (empty) script
-        // stays selectable until it is saved.
-        ScriptEditor.lockLang('f-script', script !== '');
     }
 
     // -------------------------------------------------------------------------
@@ -425,7 +386,7 @@
         isNew = true;
         document.querySelectorAll('.buff-row').forEach(r => r.classList.remove('active'));
         showEditor();
-        fillForm({ TriggerCount: 1 }, '');
+        fillForm({ TriggerCount: 1 });
         document.getElementById('editor-title').textContent = 'New Buff';
         document.getElementById('buff-id-display').textContent = '';
         document.getElementById('delete-btn').style.display = 'none';
@@ -626,8 +587,6 @@
             Flags:        collectFlags(),
         };
 
-        const scriptContent = document.getElementById('f-script').value;
-
         if (isNew) {
             showStatus('To create a new buff, assign it a BuffId and use PATCH /admin/api/v1/buffs/{id}.', false);
             btn.disabled = false; btn.textContent = 'Save Buff';
@@ -642,12 +601,7 @@
         const saved = res.data.data;
         allBuffs[saved.BuffId] = saved;
 
-        const scriptRes = await AdminAPI.put('/admin/api/v1/buffs/' + saved.BuffId + '/script', { script: scriptContent, lang: ScriptEditor.getLang('f-script') });
-        showStatus(
-            scriptRes.ok ? 'Buff saved successfully.' : 'Buff saved but script update failed: ' + scriptRes.error,
-            scriptRes.ok
-        );
-        ScriptEditor.lockLang('f-script', scriptContent.trim().length > 0);
+        showStatus('Buff saved successfully.', true);
 
         document.getElementById('editor-title').textContent = saved.Name;
         document.getElementById('buff-id-display').textContent = 'ID: ' + saved.BuffId;
@@ -667,31 +621,6 @@
         filterBuffs();
         cancelEdit();
         showStatus('Buff deleted.', true);
-    };
-
-    // -------------------------------------------------------------------------
-    // Script toggle
-    // -------------------------------------------------------------------------
-    window.openScriptWizard = function () {
-        ScriptWizard.open({ scriptType: 'buff', textareaId: 'f-script' });
-    };
-
-    // Blank the current script and save it. The backend deletes the script
-    // file when an empty script is saved.
-    window.deleteScript = async function () {
-        if (isNew || currentBuffId === null) {
-            if (scriptSync) scriptSync('');
-            ScriptEditor.lockLang('f-script', false);
-            return;
-        }
-        if (!confirm('Delete this script? This cannot be undone.')) return;
-
-        const res = await AdminAPI.put('/admin/api/v1/buffs/' + currentBuffId + '/script', { script: '', lang: ScriptEditor.getLang('f-script') });
-        if (!res.ok) { showStatus('Script delete failed: ' + res.error, false); return; }
-
-        if (scriptSync) scriptSync('');
-        ScriptEditor.lockLang('f-script', false);
-        showStatus('Script deleted.', true);
     };
 
     // -------------------------------------------------------------------------

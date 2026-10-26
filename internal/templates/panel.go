@@ -302,7 +302,7 @@ type panelLayoutDef struct {
 	Slots        []slotDef `yaml:"slots"`
 }
 
-// LayoutSlot is the exported handle for a slot, used by the scripting layer.
+// LayoutSlot is the exported handle for a slot, used when building a layout in code.
 type LayoutSlot = layoutSlot
 
 // NewPanelLayout creates a PanelLayout programmatically without loading a YAML file.

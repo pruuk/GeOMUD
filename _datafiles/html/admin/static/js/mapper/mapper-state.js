@@ -151,7 +151,6 @@ var MapperState = (function() {
     var showBounds = localStorage.getItem('mapper.showBounds') === 'true';
     var selectedZoneOnly = localStorage.getItem('mapper.selectedZoneOnly') === 'true';
     var showMobBorder = localStorage.getItem('mapper.showMobBorder') !== 'false';
-    var showScriptBorder = localStorage.getItem('mapper.showScriptBorder') !== 'false';
     var showTagsBorder = localStorage.getItem('mapper.showTagsBorder') !== 'false';
     var tooltipHideTimer = null;
 
@@ -216,8 +215,6 @@ var MapperState = (function() {
         set selectedZoneOnly(v) { selectedZoneOnly = v; },
         get showMobBorder() { return showMobBorder; },
         set showMobBorder(v) { showMobBorder = v; },
-        get showScriptBorder() { return showScriptBorder; },
-        set showScriptBorder(v) { showScriptBorder = v; },
         get showTagsBorder() { return showTagsBorder; },
         set showTagsBorder(v) { showTagsBorder = v; },
         get tooltipHideTimer() { return tooltipHideTimer; },

@@ -5,7 +5,7 @@
    CONNECTION_COLOR, ABNORMAL_CONNECTION_COLOR, SELECTED_ROOM_COLOR, SELECTED_ROOM_TEXT_COLOR, SYMBOL_TEXT_COLOR,
    ZONE_BOX_PADDING, ZONE_BOX_COLOR, ZONE_BOX_COLOR_HOV, ZONE_BOX_BORDER, ZONE_BOX_BORDER_HOV,
    ROOM_ARROW_COLOR, ROOM_ARROW_STROKE_COLOR, ROOM_ARROW_STROKE_WIDTH,
-   ROOM_BORDER_MOB_SPAWN, ROOM_BORDER_SCRIPT_GLOW, ROOM_BORDER_TAGS, ROOM_BORDER_UNSAVED, BADGE_SECRET_COLOR, BADGE_LOCK_COLOR,
+   ROOM_BORDER_MOB_SPAWN, ROOM_BORDER_TAGS, ROOM_BORDER_UNSAVED, BADGE_SECRET_COLOR, BADGE_LOCK_COLOR,
    GHOST_CELL_BORDER, GHOST_CELL_FILL, GHOST_CELL_SYMBOL,
    EXIT_DRAW_TARGET_HIGHLIGHT, EXIT_DRAW_LINE_COLOR,
    DRAG_ORIGIN_MARKER, DRAG_SNAP_BLOCKED, DRAG_SNAP_BROKEN, DRAG_SNAP_CLEAN, DRAG_CONSTRAINT_BROKEN, DRAG_CONSTRAINT_OK, DRAG_GHOST_BROKEN_FILL,
@@ -216,9 +216,9 @@ var MapperRender = (function() {
      * Draws a single room tile in 2D: filled square, border, and symbol.
      * Sets ctx.font, ctx.textAlign, and ctx.textBaseline itself so it is safe
      * to call as a standalone primitive (e.g. from tool overlays).
-     * Script-glow and Z-arrows are handled in separate deferred passes by render2d.
+     * Z-arrows are handled in a separate deferred pass by render2d.
      *
-     * Returns { hasScript, hasUp, hasDown } so the caller can collect rooms
+     * Returns { hasUp, hasDown } so the caller can collect rooms
      * that need the deferred passes without re-iterating.
      */
     function drawRoom2d(p, room, id) {
@@ -252,7 +252,6 @@ var MapperRender = (function() {
         ctx.fillText(room._symbol || '•', p.px, p.py);
 
         return {
-            hasScript: !isSelected && room.HasScript,
             hasUp: false,
             hasDown: false
         };
@@ -356,7 +355,6 @@ var MapperRender = (function() {
     var _drawnEdges    = new Set();
     var _abnormalEdges = [];
     var _deferredBadges = [];
-    var _glowRooms     = [];   // { p, room, rx, ry, scaledSize, scaledBorder }
     var _tagRooms      = [];   // { rx, ry, scaledSize, scaledBorder }
     var _arrowRooms    = [];   // { p, room, rx, ry, scaledSize }
     var _unsavedRooms  = [];   // { rx, ry, scaledSize, scaledBorder } — temp (negative-ID) rooms
@@ -401,7 +399,6 @@ var MapperRender = (function() {
         _drawnEdges.clear();
         _abnormalEdges.length = 0;
         _deferredBadges.length = 0;
-        _glowRooms.length = 0;
         _tagRooms.length = 0;
         _arrowRooms.length = 0;
         _unsavedRooms.length = 0;
@@ -501,10 +498,6 @@ var MapperRender = (function() {
             ctx.fillText(room._symbol || '•', p.px, p.py);
 
             // Collect rooms that need deferred passes rather than doing them inline
-            if (!isSelected && room.HasScript && cam.showScriptBorder) {
-                _glowRooms.push({ p: p, scaledSize: scaledSize, scaledBorder: scaledBorder, rx: rx, ry: ry });
-            }
-
             if (!isSelected && room.Tags && room.Tags.length > 0 && cam.showTagsBorder) {
                 _tagRooms.push({ scaledSize: scaledSize, scaledBorder: scaledBorder, rx: rx, ry: ry });
             }
@@ -539,21 +532,7 @@ var MapperRender = (function() {
             ctx.restore();
         }
 
-        // Pass 5: script glow — one save/restore for all glowing rooms
-        if (_glowRooms.length > 0 && cam.showScriptBorder) {
-            ctx.save();
-            ctx.shadowColor = ROOM_BORDER_SCRIPT_GLOW;
-            ctx.strokeStyle = ROOM_BORDER_SCRIPT_GLOW;
-            for (var gi = 0; gi < _glowRooms.length; gi++) {
-                var gr = _glowRooms[gi];
-                var offset = gr.scaledBorder * 1;
-                ctx.lineWidth = gr.scaledBorder;
-                ctx.strokeRect(gr.rx - offset, gr.ry - offset, gr.scaledSize + offset * 2, gr.scaledSize + offset * 2);
-            }
-            ctx.restore();
-        }
-
-        // Pass 6: Z-arrows — one save/restore for all arrow rooms
+        // Pass 5: Z-arrows — one save/restore for all arrow rooms
         if (_arrowRooms.length > 0) {
             var arrowSize = Math.max(10, ROOM_SIZE_2D * cam.zoomScale * 0.56);
             var useStroke = ROOM_ARROW_STROKE_COLOR && ROOM_ARROW_STROKE_WIDTH > 0;
@@ -586,7 +565,7 @@ var MapperRender = (function() {
             drawLineBadges2d(_deferredBadges);
         }
 
-        // Pass 7: unsaved (pending) rooms -- dashed amber border drawn on top
+        // Pass 6: unsaved (pending) rooms -- dashed amber border drawn on top
         if (_unsavedRooms.length > 0) {
             ctx.save();
             ctx.strokeStyle = ROOM_BORDER_UNSAVED;

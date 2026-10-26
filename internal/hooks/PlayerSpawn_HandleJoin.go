@@ -7,7 +7,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
@@ -91,9 +90,7 @@ func HandleJoin(e events.Event) events.ListenerReturn {
 			user.SendText("A portal opens before you and you feel an intense pulling... you can't escape it... You are transported elsewhere!")
 		}
 
-		if doLook, err := scripting.TryRoomScriptEvent(`onEnter`, user.UserId, user.Character.RoomId); err != nil || doLook {
-			user.CommandFlagged(`look`, events.CmdSecretly) // Do a secret look.
-		}
+		user.CommandFlagged(`look`, events.CmdSecretly) // Do a secret look.
 	}
 
 	return events.Continue

@@ -11,7 +11,7 @@ The `internal/rooms` package is the core world management system for GoMud, hand
 - **Special room types**: Banks, storage rooms, character creation rooms, PvP areas
 - **Dynamic state**: Player/mob tracking, visitor history, temporary data storage
 - **Room features**: Containers, signs, skill training areas, spawn points
-- **Tags**: General-purpose string tags (`Tags []string`) for use by modules, scripts, and other systems. Managed at runtime via the `room tag` admin command or the `ScriptRoom.SetTag`/`UnsetTag`/`HasTag` scripting functions.
+- **Tags**: General-purpose string tags (`Tags []string`) for use by modules and other systems. Managed at runtime via the `room tag` admin command.
 
 ### Room Management System (`roommanager.go`)
 - **RoomManager**: Singleton manager for all room operations and caching
@@ -40,7 +40,7 @@ The `internal/rooms` package is the core world management system for GoMud, hand
 - **SpawnInfo**: Comprehensive mob and item spawning system
 - **Spawn configuration**: Mob templates, items, gold, and containers
 - **Respawn mechanics**: Time-based respawning with configurable rates
-- **Spawn customization**: Level modifications, hostility, scripting overrides
+- **Spawn customization**: Level modifications, hostility, name and idle-command overrides
 - **Quest integration**: Quest flags and buff assignments for spawned entities
 
 ### Container System (`container.go`)

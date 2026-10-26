@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -28,62 +26,52 @@ func UserRoundTick(e events.Event) events.ListenerReturn {
 		if room := rooms.LoadRoom(roomId); room != nil {
 			room.RoundTick()
 
-			allowIdleMessages := true
-			if handled, err := scripting.TryRoomIdleEvent(roomId); err == nil {
-				if handled { // For this event, handled represents whether to reject the move.
-					allowIdleMessages = false
+			chanceIn100 := 5
+			if room.RoomId == -1 {
+				chanceIn100 = 20
+			}
+
+			var idleMsgs []string
+
+			if len(room.IdleMessages) > 0 {
+				idleMsgs = room.IdleMessages
+			} else {
+				if zCfg := rooms.GetZoneConfig(room.Zone); zCfg != nil {
+					if len(zCfg.IdleMessages) > 0 {
+						idleMsgs = zCfg.IdleMessages
+					}
 				}
 			}
 
-			if allowIdleMessages {
+			idleMsgCt := len(idleMsgs)
+			if idleMsgCt > 0 && util.Rand(100) < chanceIn100 {
 
-				chanceIn100 := 5
-				if room.RoomId == -1 {
-					chanceIn100 = 20
-				}
-
-				var idleMsgs []string
-
-				if len(room.IdleMessages) > 0 {
-					idleMsgs = room.IdleMessages
-				} else {
-					if zCfg := rooms.GetZoneConfig(room.Zone); zCfg != nil {
-						if len(zCfg.IdleMessages) > 0 {
-							idleMsgs = zCfg.IdleMessages
-						}
+				if targetRoomId, err := strconv.Atoi(idleMsgs[0]); err == nil {
+					idleMsgCt = 0
+					if tgtRoom := rooms.LoadRoom(targetRoomId); tgtRoom != nil {
+						idleMsgs = tgtRoom.IdleMessages
+						idleMsgCt = len(idleMsgs)
 					}
 				}
 
-				idleMsgCt := len(idleMsgs)
-				if idleMsgCt > 0 && util.Rand(100) < chanceIn100 {
+				if idleMsgCt > 0 {
+					// pick a random message
+					idleMsgIndex := uint8(util.Rand(idleMsgCt))
 
-					if targetRoomId, err := strconv.Atoi(idleMsgs[0]); err == nil {
-						idleMsgCt = 0
-						if tgtRoom := rooms.LoadRoom(targetRoomId); tgtRoom != nil {
-							idleMsgs = tgtRoom.IdleMessages
-							idleMsgCt = len(idleMsgs)
+					// If it's a repeating message, treat it as a non-message
+					// (Unless it's the only one)
+					if idleMsgIndex != room.LastIdleMessage || idleMsgCt == 1 {
+
+						room.LastIdleMessage = idleMsgIndex
+
+						msg := idleMsgs[idleMsgIndex]
+						if msg != `` {
+							room.SendText(msg)
 						}
+
 					}
-
-					if idleMsgCt > 0 {
-						// pick a random message
-						idleMsgIndex := uint8(util.Rand(idleMsgCt))
-
-						// If it's a repeating message, treat it as a non-message
-						// (Unless it's the only one)
-						if idleMsgIndex != room.LastIdleMessage || idleMsgCt == 1 {
-
-							room.LastIdleMessage = idleMsgIndex
-
-							msg := idleMsgs[idleMsgIndex]
-							if msg != `` {
-								room.SendText(msg)
-							}
-
-						}
-					}
-
 				}
+
 			}
 
 			for _, uId := range room.GetPlayers() {
@@ -118,23 +106,9 @@ func UserRoundTick(e events.Event) events.ListenerReturn {
 
 				if triggeredBuffs := user.Character.Buffs.Trigger(); len(triggeredBuffs) > 0 {
 
-					//
-					// Fire onTrigger for buff script
-					//
 					triggeredBuffIds := []int{}
 					for _, buff := range triggeredBuffs {
-
-						if buff.Expired() {
-							triggeredBuffIds = append(triggeredBuffIds, buff.BuffId)
-							continue
-						}
-
-						_, err := scripting.TryBuffScriptEvent(`onTrigger`, uId, 0, buff.BuffId)
-
-						if buff.TriggersLeft != buffs.TriggersLeftUnlimited || err != scripting.ErrEventNotFound {
-							triggeredBuffIds = append(triggeredBuffIds, buff.BuffId)
-						}
-
+						triggeredBuffIds = append(triggeredBuffIds, buff.BuffId)
 					}
 
 					events.AddToQueue(events.BuffsTriggered{UserId: user.UserId, BuffIds: triggeredBuffIds})

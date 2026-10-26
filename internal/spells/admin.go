@@ -44,30 +44,6 @@ func DeleteSpellSpec(spellId string) error {
 		return fmt.Errorf("removing spell yaml: %w", err)
 	}
 
-	scriptPath := spec.GetScriptPath()
-	if err := os.Remove(scriptPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("removing spell script: %w", err)
-	}
-
 	delete(allSpells, spellId)
 	return nil
-}
-
-func SaveSpellScript(spellId string, content string, lang string) error {
-	spec := GetSpell(spellId)
-	if spec == nil {
-		return fmt.Errorf("spell %q not found", spellId)
-	}
-
-	scriptPath := spec.GetScriptPath()
-
-	if content == "" {
-		if err := os.Remove(scriptPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("removing spell script: %w", err)
-		}
-		return nil
-	}
-
-	scriptPath = util.ApplyScriptLang(scriptPath, lang)
-	return util.WriteFile(scriptPath, []byte(content), 0644)
 }

@@ -14,7 +14,6 @@ func RegisterListeners() {
 	events.RegisterListener(events.RoomChange{}, CleanupEphemeralRooms)
 
 	// NewRound Listeners
-	events.RegisterListener(events.NewRound{}, PruneVMs)
 	events.RegisterListener(events.NewRound{}, InactivePlayers)
 	events.RegisterListener(events.NewRound{}, UpdateZoneMutators)
 	events.RegisterListener(events.NewRound{}, CheckNewDay)
@@ -38,17 +37,9 @@ func RegisterListeners() {
 	events.RegisterListener(events.NewTurn{}, PruneBuffs)
 	events.RegisterListener(events.NewTurn{}, ActionPoints)
 
-	// ItemOwnership
-	events.RegisterListener(events.ItemOwnership{}, ItemScriptEvents)
-
 	// Spawn events
 	events.RegisterListener(events.PlayerSpawn{}, HandleJoin)
-	events.RegisterListener(events.PlayerSpawn{}, UserScriptLogin)
-	events.RegisterListener(events.PlayerDespawn{}, UserScriptLogout)         // Must run before the final HandleLeave cleanup
 	events.RegisterListener(events.PlayerDespawn{}, HandleLeave, events.Last) // This is a final listener, has to happen last
-
-	// Levelup
-	events.RegisterListener(events.LevelUp{}, UserScriptLevelUp)
 
 	// Messages
 	events.RegisterListener(events.Message{}, Message_SendMessage)

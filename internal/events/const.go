@@ -17,8 +17,8 @@ func (f *EventFlag) Remove(flag EventFlag) {
 const (
 
 	// Not using iota here to avoid accidentally renumbering if they get moved around.
+	// 0b00000001 was CmdSkipScripts (JS/Lua scripting, removed in Phase 4).
 	CmdNone                    EventFlag = 0
-	CmdSkipScripts             EventFlag = 0b00000001                      // Skip any scripts that would normally process this command
 	CmdSecretly                EventFlag = 0b00000010                      // User beahvior should not be alerted to the room
 	CmdIsRequeue               EventFlag = 0b00000100                      // This command was a requeue. The flag is intended to help avoid a infinite requeue loop.
 	CmdBlockInput              EventFlag = 0b00001000                      // This command when started sets user input to blocking all commands that don't AllowWhenDowned.

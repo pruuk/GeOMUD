@@ -5,11 +5,3 @@ Grant experience points to yourself
 
 <ansi fg="command">grant [target] [amount] experience</ansi> - e.g. <ansi fg="command">grant james 1000 experience</ansi>
 Grant experience points to a user
-
-<ansi fg="command">grant petlevelup</ansi> - Level up your own pet
-<ansi fg="command">grant [target] petlevelup</ansi> - e.g. <ansi fg="command">grant james petlevelup</ansi>
-Level up a user's pet
-
-<ansi fg="command">grant petleveldown</ansi> - Level down your own pet
-<ansi fg="command">grant [target] petleveldown</ansi> - e.g. <ansi fg="command">grant james petleveldown</ansi>
-Level down a user's pet

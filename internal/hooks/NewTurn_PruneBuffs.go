@@ -5,7 +5,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
@@ -38,7 +37,6 @@ func PruneBuffs(e events.Event) events.ListenerReturn {
 				if buffsToPrune := user.Character.Buffs.Prune(); len(buffsToPrune) > 0 {
 					prunedIds := make([]int, 0, len(buffsToPrune))
 					for _, buffInfo := range buffsToPrune {
-						scripting.TryBuffScriptEvent(`onEnd`, uId, 0, buffInfo.BuffId)
 						prunedIds = append(prunedIds, buffInfo.BuffId)
 
 						if buffInfo.BuffId == 0 { // Log them out // logoff // logout
@@ -70,10 +68,6 @@ func PruneBuffs(e events.Event) events.ListenerReturn {
 		mob := mobs.GetInstance(mobInstanceId)
 
 		if buffsToPrune := mob.Character.Buffs.Prune(); len(buffsToPrune) > 0 {
-			for _, buffInfo := range buffsToPrune {
-				scripting.TryBuffScriptEvent(`onEnd`, 0, mobInstanceId, buffInfo.BuffId)
-			}
-
 			mob.Character.Validate()
 		}
 

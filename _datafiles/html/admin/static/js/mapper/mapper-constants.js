@@ -43,7 +43,6 @@ var DEFAULT_ROOM_COLOR        = '#3a3a4a';
 
 // Room border indicators
 var ROOM_BORDER_MOB_SPAWN     = 'rgb(255, 90, 90)';  // border color when room has a mob spawn
-var ROOM_BORDER_SCRIPT_GLOW   = '#fff952';  // script glow border color
 var ROOM_BORDER_TAGS          = '#8dffff';  // outer border color when room has tags
 var ROOM_ARROW_COLOR          = '#ff00ff';  // up/down Z-arrow color
 var ROOM_ARROW_STROKE_COLOR   = 'rgba(0,0,0,0.75)';  // stroke/outline color for Z-arrows (set to '' to disable)

@@ -53,13 +53,13 @@
             <span class="perm-badge">mobs.read</span>
         </summary>
         <div class="api-body">
-            <p>Returns an array of every loaded mob specification. Each entry includes a <code>HasScript</code> boolean indicating whether a JavaScript file exists for the mob.</p>
+            <p>Returns an array of every loaded mob specification.</p>
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
      <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/mobs</span></div>
             <div class="response-examples">
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":[{"MobId":1,"Zone":"Frostfang","Hostile":false,"HasScript":true,"Character":{"Name":"rat","Level":1}},{"MobId":2,"Zone":"Frostfang","Hostile":true,"HasScript":false,"Character":{"Name":"goblin","Level":3}}]}</div></div>
+                    <div class="resp-body"><div class="curl-block">{"success":true,"data":[{"MobId":1,"Zone":"Frostfang","Hostile":false,"Character":{"Name":"rat","Level":1}},{"MobId":2,"Zone":"Frostfang","Hostile":true,"Character":{"Name":"goblin","Level":3}}]}</div></div>
                 </details>
             </div>
         </div>
@@ -153,11 +153,11 @@
         <summary>
             <span class="method method-delete">DELETE</span>
             <span class="api-path">/admin/api/v1/mobs/{mobId}</span>
-            <span class="api-desc">Delete a mob and its script</span>
+            <span class="api-desc">Delete a mob</span>
             <span class="perm-badge">mobs.write</span>
         </summary>
         <div class="api-body">
-            <p>Permanently removes the mob YAML and associated JS script from disk and from the in-memory cache.</p>
+            <p>Permanently removes the mob YAML from disk and from the in-memory cache.</p>
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
      <span class="flag">-X</span> DELETE \
      <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/mobs/42</span></div>
@@ -165,57 +165,6 @@
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
                     <div class="resp-body"><div class="curl-block">{"success":true}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">404</span> <span class="resp-label">Not Found</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"mob not found: 99999"}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-get">GET</span>
-            <span class="api-path">/admin/api/v1/mobs/{mobId}/script</span>
-            <span class="api-desc">Get the mob's JavaScript</span>
-            <span class="perm-badge">mobs.read</span>
-        </summary>
-        <div class="api-body">
-            <p>Returns the raw script content. <code>script</code> is an empty string if no script file exists. The script filename is derived from the mob's ID, name, and optional <code>ScriptTag</code>.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/mobs/26/script</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"script":"function onAsk(mob, room, eventDetails) {\n}\n"}}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-put">PUT</span>
-            <span class="api-path">/admin/api/v1/mobs/{mobId}/script</span>
-            <span class="api-desc">Replace (or delete) the mob's JavaScript</span>
-            <span class="perm-badge">mobs.write</span>
-        </summary>
-        <div class="api-body">
-            <p>Writes the provided <code>script</code> string to the mob's <code>.js</code> file. Send an empty string to delete the script file. The script directory is created automatically if it does not exist.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="flag">-X</span> PUT \
-     <span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \
-     <span class="flag">-d</span> <span class="str">'{"script":"function onAsk(mob,room,eventDetails){}"}'</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/mobs/26/script</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">400</span> <span class="resp-label">Bad Request</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"malformed request body: ..."}</div></div>
                 </details>
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-err">404</span> <span class="resp-label">Not Found</span></summary>

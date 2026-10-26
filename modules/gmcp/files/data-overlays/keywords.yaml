@@ -9,7 +9,6 @@ help:
       - mudletmap
       - mudletui
     integration:
-      - discord
       - gmcp
 
 # Aliases for keywords when typing: help <keyword>

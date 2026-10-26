@@ -2,19 +2,12 @@ package mobs
 
 import (
 	"errors"
-	"os"
-	"path/filepath"
 
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
-	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-var (
-	SampleScripts = map[string]string{}
-)
-
-func CreateNewMobFile(newMobInfo Mob, copyScript string) (MobId, error) {
+func CreateNewMobFile(newMobInfo Mob) (MobId, error) {
 
 	newMobInfo.MobId = getNextMobId()
 
@@ -44,17 +37,6 @@ func CreateNewMobFile(newMobInfo Mob, copyScript string) (MobId, error) {
 	allMobNames = append(allMobNames, newMobInfo.Character.Name)
 	mobNameCache[newMobInfo.MobId] = newMobInfo.Character.Name
 	mobs[newMobInfo.Id()] = &newMobInfo
-
-	if copyScript != `` {
-
-		newScriptPath := newMobInfo.GetScriptPath()
-		os.MkdirAll(filepath.Dir(newScriptPath), os.ModePerm)
-
-		fileloader.CopyFileContents(
-			util.FilePath(`_datafiles/sample-scripts/mobs/`+copyScript),
-			newMobInfo.GetScriptPath(),
-		)
-	}
 
 	return newMobInfo.MobId, nil
 }

@@ -9,37 +9,14 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// mobScriptKey identifies an embedded mob script by mob id and script tag.
-// An empty tag refers to the mob's base (untagged) script.
-type mobScriptKey struct {
-	mobId int
-	tag   string
-}
-
 var (
 	pluginFileSystems []fileloader.ReadableGroupFS
-	pluginScripts     = map[mobScriptKey]string{} // (mobId, tag) -> JS source
 )
 
 // RegisterFS registers a plugin file system to be searched when loading mob
 // data files. Must be called before LoadDataFiles().
 func RegisterFS(f ...fileloader.ReadableGroupFS) {
 	pluginFileSystems = append(pluginFileSystems, f...)
-}
-
-// RegisterMobScript registers an embedded JS script for a given mob ID and
-// script tag (empty tag = base script). This is used by modules that embed
-// their scripts rather than placing them on disk alongside the YAML definition.
-//
-// Note: embedded mob scripts are not enumerated by GetAllScriptTags(), so
-// module-provided mob scripts are not editable through the admin script-tag UI.
-func RegisterMobScript(mobId int, tag string, script string) {
-	pluginScripts[mobScriptKey{mobId: mobId, tag: tag}] = script
-}
-
-// getPluginScript returns the registered plugin script for (mobId, tag), or "".
-func getPluginScript(mobId int, tag string) string {
-	return pluginScripts[mobScriptKey{mobId: mobId, tag: tag}]
 }
 
 // loadPluginMobs walks every sub-filesystem of every registered plugin FS,

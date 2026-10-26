@@ -6,7 +6,6 @@ name: CI
 # - conditional GitHub automation lint
 # - Go format/vet
 # - conditional JS lint
-# - conditional Lua lint
 # - PR Go race tests
 # - telnet smoke test (make smoke)
 
@@ -44,8 +43,6 @@ jobs:
         ${{ steps.filter.outputs.go_tests }}
       js_lint: >-
         ${{ steps.filter.outputs.js_lint }}
-      lua_lint: >-
-        ${{ steps.filter.outputs.lua_lint }}
     steps:
       # Depth 2 covers normal single-commit pushes and pull request merge
       # parents; the script fetches the base commit for larger push ranges.
@@ -91,14 +88,6 @@ jobs:
             echo "automation_lint=true" >> "$GITHUB_OUTPUT"
           else
             echo "automation_lint=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          lua_re='(^|/)[^/]+\.lua$'
-          lua_re="${lua_re}|^(Makefile|\.luacheckrc|\.github/workflows/ci\.yml)$"
-          if printf '%s\n' "${changed_files}" | grep -Eq "${lua_re}"; then
-            echo "lua_lint=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "lua_lint=false" >> "$GITHUB_OUTPUT"
           fi
 
           go_re='(^|/)[^/]+\.go$'
@@ -213,22 +202,6 @@ jobs:
 
       - name: Run JavaScript lint checks
         run: make js-lint
-
-  lua-lint:
-    name: Lua Lint
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    needs: detect-changes
-    if: >-
-      needs.detect-changes.outputs.lua_lint == 'true'
-    steps:
-      # actions/checkout v6.0.3
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
-        with:
-          persist-credentials: false
-
-      - name: Run Lua lint checks
-        run: make lua-lint
 
   test:
     name: Go Tests

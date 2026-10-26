@@ -28,11 +28,6 @@
     .spell-type-help { background: var(--color-success-bg); color: var(--color-success-text); }
     .spell-type-neutral { background: var(--color-chip-bg); color: var(--color-chip-text); }
     .spell-row.active .spell-type-badge { opacity: 0.85; }
-    .spell-script-badge {
-        font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 3px;
-        background: var(--color-warning-bg); color: var(--color-warning-text); flex-shrink: 0;
-    }
-    .spell-row.active .spell-script-badge { background: var(--color-warning-text); color: var(--color-surface-white); }
     .no-spells { padding: 1.5rem; text-align: center; color: var(--color-text-faint); font-size: 0.85rem; }
 
     .btn-new { margin: 0.6rem 0.9rem; padding: 0.4rem 0.9rem; border: none; border-radius: 4px; background: var(--color-success-text); color: var(--color-surface-white); font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: center; }
@@ -61,15 +56,6 @@
     .range-wrap { display: flex; align-items: center; gap: 0.6rem; }
     .range-wrap input[type="range"] { flex: 1; accent-color: var(--color-primary); }
     .range-val { font-family: monospace; font-size: 0.85rem; font-weight: 600; min-width: 2.5rem; text-align: center; color: var(--color-primary); }
-
-    .script-section {
-        margin-top: 1.25rem; border-top: 1px solid var(--color-border-light); padding-top: 1rem;
-        display: flex; flex-direction: column; gap: 0.5rem;
-    }
-    .script-section-toolbar {
-        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
-    }
-    .script-section-label { font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); flex: 1; }
 
     .action-bar { display: flex; gap: 0.6rem; margin-top: 1.25rem; align-items: center; flex-wrap: wrap; }
     .btn { padding: 0.45rem 1.1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; font-weight: 600; }
@@ -172,20 +158,6 @@
                 </div>
             </div>
 
-            <!-- Script editor -->
-            <div class="script-section">
-                <div class="script-section-toolbar">
-                    <span class="script-section-label">Script</span>
-                    <span class="script-lang-mount"></span>
-                    <button class="btn btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="openScriptWizard()">+ Add Event Handler</button>
-                    <button class="btn btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="ScriptEditor.open('f-script')">&#x26F6; Pop Out</button>
-                </div>
-                <textarea id="f-script" spellcheck="false" style="display:none"></textarea>
-                <div style="display:flex;justify-content:flex-end;margin-top:0.5rem;">
-                    <button class="btn btn-danger" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="deleteScript()">&#x1F5D1; Delete Script</button>
-                </div>
-            </div>
-
             <div class="action-bar">
                 <button class="btn btn-primary" id="save-btn" onclick="saveSpell()">Save Spell</button>
                 <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
@@ -203,7 +175,6 @@
     let allSpells = {};
     let currentSpellId = null;
     let isNew = false;
-    let scriptSync = null;
 
     async function init() {
         const res = await AdminAPI.get('/admin/api/v2/spells');
@@ -213,8 +184,6 @@
         for (const s of spellList) allSpells[s.SpellId] = s;
 
         renderList(sortedSpells());
-        scriptSync = ScriptEditor.init('f-script', 'spell');
-        ScriptEditor.setDeleteHandler('f-script', deleteScript);
         const hashId = location.hash.slice(1);
         if (hashId) loadSpell(hashId);
     }
@@ -251,7 +220,7 @@
             const row = document.createElement('div');
             row.className = 'spell-row' + (s.SpellId === currentSpellId ? ' active' : '');
             row.dataset.id = s.SpellId;
-            row.innerHTML = `<span class="spell-id">${esc(s.SpellId)}</span><span>${esc(s.Name)}</span>${s.HasScript ? '<span class="spell-script-badge">{}</span>' : ''}${typeBadge(s.Type || 'neutral')}`;
+            row.innerHTML = `<span class="spell-id">${esc(s.SpellId)}</span><span>${esc(s.Name)}</span>${typeBadge(s.Type || 'neutral')}`;
             row.onclick = () => loadSpell(s.SpellId);
             list.appendChild(row);
         }
@@ -261,15 +230,10 @@
     // Load spell
     // -------------------------------------------------------------------------
     async function loadSpell(spellId) {
-        const [specRes, scriptRes] = await AdminAPI.all([
-            AdminAPI.get('/admin/api/v2/spells/' + encodeURIComponent(spellId)),
-            AdminAPI.get('/admin/api/v2/spells/' + encodeURIComponent(spellId) + '/script'),
-        ]);
+        const specRes = await AdminAPI.get('/admin/api/v2/spells/' + encodeURIComponent(spellId));
         if (!specRes.ok) { showStatus('Failed to load spell: ' + specRes.error, false); return; }
 
         const spec   = specRes.data.data;
-        const script = scriptRes.ok ? (scriptRes.data.data.script || '') : '';
-        const lang   = scriptRes.ok ? (scriptRes.data.data.lang || 'js') : 'js';
 
         allSpells[spec.SpellId] = spec;
         currentSpellId = spellId;
@@ -277,7 +241,7 @@
         location.hash = spellId;
         setActiveRow(spellId);
         showEditor();
-        fillForm(spec, script, lang);
+        fillForm(spec);
     }
 
     function setActiveRow(id) {
@@ -292,8 +256,7 @@
         document.getElementById('delete-btn').style.display = isNew ? 'none' : '';
     }
 
-    function fillForm(spec, script, lang) {
-        lang = lang || 'js';
+    function fillForm(spec) {
         document.getElementById('editor-title').textContent = isNew ? 'New Spell' : (spec.Name || spec.SpellId);
         document.getElementById('spell-id-display').textContent = isNew ? '' : 'ID: ' + spec.SpellId;
         var yamlBtn = document.getElementById('yaml-view-btn');
@@ -318,12 +281,6 @@
         const diff = spec.Difficulty || 0;
         setVal('f-difficulty', diff);
         document.getElementById('f-difficulty-val').textContent = diff;
-
-        setVal('f-script', script);
-        if (scriptSync) scriptSync(undefined, lang);
-        // Lock the language to the existing file's type; a new (empty) script
-        // stays selectable until it is saved.
-        ScriptEditor.lockLang('f-script', script !== '');
     }
 
     // -------------------------------------------------------------------------
@@ -334,7 +291,7 @@
         isNew = true;
         document.querySelectorAll('.spell-row').forEach(r => r.classList.remove('active'));
         showEditor();
-        fillForm({}, '');
+        fillForm({});
         document.getElementById('editor-title').textContent = 'New Spell';
         document.getElementById('spell-id-display').textContent = '';
         document.getElementById('delete-btn').style.display = 'none';
@@ -374,8 +331,6 @@
             Difficulty:  parseInt(document.getElementById('f-difficulty').value, 10) || 0,
         };
 
-        const scriptContent = document.getElementById('f-script').value;
-
         let spellRes;
         if (isNew) {
             spellRes = await AdminAPI.post('/admin/api/v2/spells', payload);
@@ -389,14 +344,9 @@
 
         const saved = spellRes.data.data;
 
-        const scriptRes = await AdminAPI.put('/admin/api/v2/spells/' + encodeURIComponent(saved.SpellId) + '/script', { script: scriptContent, lang: ScriptEditor.getLang('f-script') });
-        showStatus(
-            scriptRes.ok ? 'Spell saved successfully.' : 'Spell saved but script update failed: ' + scriptRes.error,
-            scriptRes.ok
-        );
-        ScriptEditor.lockLang('f-script', scriptContent.trim().length > 0);
+        showStatus('Spell saved successfully.', true);
 
-        allSpells[saved.SpellId] = Object.assign({}, saved, { HasScript: scriptContent.length > 0 });
+        allSpells[saved.SpellId] = saved;
         currentSpellId = saved.SpellId;
         isNew = false;
         document.getElementById('editor-title').textContent = saved.Name || saved.SpellId;
@@ -423,31 +373,6 @@
         filterSpells();
         cancelEdit();
         showStatus('Spell deleted.', true);
-    };
-
-    // -------------------------------------------------------------------------
-    // Script toggle
-    // -------------------------------------------------------------------------
-    window.openScriptWizard = function () {
-        ScriptWizard.open({ scriptType: 'spell', textareaId: 'f-script' });
-    };
-
-    // Blank the current script and save it. The backend deletes the script
-    // file when an empty script is saved.
-    window.deleteScript = async function () {
-        if (isNew || currentSpellId === null) {
-            if (scriptSync) scriptSync('');
-            ScriptEditor.lockLang('f-script', false);
-            return;
-        }
-        if (!confirm('Delete this script? This cannot be undone.')) return;
-
-        const res = await AdminAPI.put('/admin/api/v2/spells/' + encodeURIComponent(currentSpellId) + '/script', { script: '', lang: ScriptEditor.getLang('f-script') });
-        if (!res.ok) { showStatus('Script delete failed: ' + res.error, false); return; }
-
-        if (scriptSync) scriptSync('');
-        ScriptEditor.lockLang('f-script', false);
-        showStatus('Script deleted.', true);
     };
 
     // -------------------------------------------------------------------------
