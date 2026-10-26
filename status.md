@@ -31,3 +31,7 @@
 - `empty` world references missing data: buff 22 (wildfire mutator), item 30001 (small red potion)
   points at missing buff 5; the sample admin `users/1.yaml` names zone Frostfang
 - `exits` command file exists but was never registered (upstream too); the plan lists it as kept
+- Upstream security debt (CodeQL, 30 open alerts on master, all from upstream): passwords are hashed
+  with unsalted SHA-256 (`internal/util/util.go:384`); file reads and writes take user-provided paths
+  (`util.go:706-752`); unchecked integer narrowing (`mobs.go:91,97`, `main.go:884`). A PR that edits
+  these files shows them as "new" alerts. Needs its own pass before any public server
