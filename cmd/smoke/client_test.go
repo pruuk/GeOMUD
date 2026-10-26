@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -91,8 +92,8 @@ func TestNegotiationAcceptsGMCPOnly(t *testing.T) {
 }
 
 func TestOverridesOnlyLoopback(t *testing.T) {
-	got := overrides(`C:\tmp\w`, 4242)
-	assert.Contains(t, got, `FilePaths.DataFiles: "C:/tmp/w"`)
+	got := overrides(filepath.Join("tmp", "w"), 4242)
+	assert.Contains(t, got, `FilePaths.DataFiles: "tmp/w"`)
 	assert.Contains(t, got, "Network.TelnetPort: []\n")
 	assert.Contains(t, got, "Network.LocalPort: 4242\n")
 	for _, k := range []string{"HttpPort", "HttpsPort", "SSHPort", "AI.Port"} {
