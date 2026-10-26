@@ -180,7 +180,7 @@ FilePaths:
   #   Do not include the protocol such as http:// or https://
   WebDomain: "localhost"
   # - WebCDNLocation -
-  #   Optional alternative location to serve static files from such as audio
+  #   Optional alternative location to serve static files from
   #   Example: http://files.gomud.net
   #   Leave blank if no CDN config or similar desired
   WebCDNLocation: ""
@@ -347,9 +347,6 @@ GamePlay:
   #   Scales how much XP is gained when characters gain XP. Number is a percentage
   #   Example: 100 = 100%
   XPScale: 100
-  # - MobConverseChance -
-  #   Chance in 100 that the mob will attempt to converse when idle.
-  MobConverseChance: 3
   # - AlignmentDecayRounds -
   #   How many rounds between each alignment decay step toward neutral.
   #   Set to 0 to disable alignment decay entirely.
@@ -451,20 +448,6 @@ GamePlay:
     #   equipment/buff mods are added on top of the compressed racial value at full value.
     #   Default false (original behaviour: all sources compressed together).
     StatCapExemptBonus: false
-
-################################################################################
-#
-#   INTEGRATIONS
-#   Special settings for third party integrations such as discord messages
-#
-################################################################################
-Integrations:
-  # - Discord settings -
-  Discord:
-    # Optional webhook URL to send mud event messages to, such as joins/disconnects
-    # Can also be set via environment variable: DISCORD_WEBHOOK_URL
-    WebhookUrl: ''
-
 
 ################################################################################
 #

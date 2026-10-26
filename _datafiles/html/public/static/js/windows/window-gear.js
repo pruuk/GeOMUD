@@ -122,7 +122,6 @@
         .gw-equip-row.empty       { cursor: default; }
         .gw-equip-row.empty:hover { background: transparent; }
         .gw-equip-name.cursed { color: var(--t-cursed-text); }
-        .gw-equip-name.quest  { color: var(--t-quest-text); }
 
         .gw-equip-badge {
             font-size: 0.58em;
@@ -132,7 +131,6 @@
         }
 
         .gw-equip-badge.cursed { background:var(--t-cursed-badge-bg); color:var(--t-cursed-text); border:1px solid var(--t-cursed-badge-border); }
-        .gw-equip-badge.quest  { background:var(--t-quest-badge-bg); color:var(--t-quest-text); border:1px solid var(--t-quest-badge-border); }
         .gw-equip-badge.uses   { background:var(--t-uses-badge-bg); color:var(--t-uses-badge-text); border:1px solid var(--t-uses-badge-border); }
 
         /* ---- Backpack tab ---- */
@@ -223,7 +221,6 @@
         }
 
         .gw-bp-name.cursed { color: var(--t-cursed-text); }
-        .gw-bp-name.quest  { color: var(--t-quest-text); }
 
         .gw-bp-badge {
             font-size: 0.58em;
@@ -233,7 +230,6 @@
         }
 
         .gw-bp-badge.cursed { background:var(--t-cursed-badge-bg); color:var(--t-cursed-text); border:1px solid var(--t-cursed-badge-border); }
-        .gw-bp-badge.quest  { background:var(--t-quest-badge-bg); color:var(--t-quest-text); border:1px solid var(--t-quest-badge-border); }
         .gw-bp-badge.uses   { background:var(--t-uses-badge-bg); color:var(--t-uses-badge-text); border:1px solid var(--t-uses-badge-border); }
 
         /* ---- Tooltip ---- */
@@ -266,7 +262,6 @@
         }
 
         .gw-tt-details.cursed { color: var(--t-cursed-text); }
-        .gw-tt-details.quest  { color: var(--t-quest-text); }
 
         .gw-tt-divider {
             border: none;
@@ -326,7 +321,6 @@
             return '<span class="gw-tt-cmd">' + name + '</span>';
         }
 
-        if (details.includes('quest'))    { return 'This is a quest item.'; }
         if (type === 'readable')          { return 'You should probably ' + cmd('read') + ' this.'; }
         if (subtype === 'drinkable')      { return 'You could probably ' + cmd('drink') + ' this.'; }
         if (subtype === 'edible')         { return 'You could probably ' + cmd('eat') + ' this.'; }
@@ -356,8 +350,7 @@
         clearTimeout(hideTimer);
 
         const details     = (item.details && item.details.length > 0) ? item.details.join(', ') : null;
-        const detailClass = item.details && item.details.includes('cursed') ? 'cursed'
-                          : item.details && item.details.includes('quest')  ? 'quest' : '';
+        const detailClass = item.details && item.details.includes('cursed') ? 'cursed' : '';
 
         let html = '<div class="gw-tt-name">' + item.name;
         if (details) {
@@ -611,15 +604,12 @@
             rowItemData.set(rowEl, item);
 
             const isCursed = item.details && item.details.includes('cursed');
-            const isQuest  = item.details && item.details.includes('quest');
 
             nameEl.textContent = item.name;
-            nameEl.className   = 'gw-equip-name' + (isCursed ? ' cursed' : isQuest ? ' quest' : '');
+            nameEl.className   = 'gw-equip-name' + (isCursed ? ' cursed' : '');
 
             if (isCursed) {
                 badgeEl.textContent = 'cursed'; badgeEl.className = 'gw-equip-badge cursed'; badgeEl.style.display = '';
-            } else if (isQuest) {
-                badgeEl.textContent = 'quest';  badgeEl.className = 'gw-equip-badge quest';  badgeEl.style.display = '';
             } else if (item.uses > 0) {
                 badgeEl.textContent = item.uses + 'x'; badgeEl.className = 'gw-equip-badge uses'; badgeEl.style.display = '';
             } else {
@@ -658,9 +648,6 @@
         }
 
         const sorted = [...items].sort((a, b) => {
-            const aq = a.details && a.details.includes('quest');
-            const bq = b.details && b.details.includes('quest');
-            if (aq !== bq) { return aq ? -1 : 1; }
             const ac = a.details && a.details.includes('cursed');
             const bc = b.details && b.details.includes('cursed');
             if (ac !== bc) { return ac ? -1 : 1; }
@@ -669,7 +656,6 @@
 
         sorted.forEach(item => {
             const isCursed = item.details && item.details.includes('cursed');
-            const isQuest  = item.details && item.details.includes('quest');
 
             const row = document.createElement('div');
             row.className = 'gw-bp-row';
@@ -679,15 +665,13 @@
             typeEl.textContent = item.type || '';
 
             const nameEl = document.createElement('span');
-            nameEl.className   = 'gw-bp-name' + (isCursed ? ' cursed' : isQuest ? ' quest' : '');
+            nameEl.className   = 'gw-bp-name' + (isCursed ? ' cursed' : '');
             nameEl.textContent = item.name || '';
 
             const badgeEl = document.createElement('span');
             badgeEl.className = 'gw-bp-badge';
             if (isCursed) {
                 badgeEl.textContent = 'cursed'; badgeEl.classList.add('cursed');
-            } else if (isQuest) {
-                badgeEl.textContent = 'quest';  badgeEl.classList.add('quest');
             } else if (item.uses > 0) {
                 badgeEl.textContent = item.uses + 'x'; badgeEl.classList.add('uses');
             } else {

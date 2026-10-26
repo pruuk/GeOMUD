@@ -8,9 +8,7 @@ const (
 )
 
 type ClientSettings struct {
-	Display DisplaySettings
-	// Is MSP enabled?
-	MSPEnabled        bool // Do they accept sound in their client?
+	Display           DisplaySettings
 	SendTelnetGoAhead bool // Defaults false, should we send a IAC GA after prompts?
 	// IsMudlet is true when the client identified itself as Mudlet (via the MNES
 	// NEW-ENVIRON CLIENT_NAME variable). Mudlet echoes input locally and treats
@@ -20,10 +18,6 @@ type ClientSettings struct {
 	// DetectionComplete is set once the connect-time client-type probe has
 	// resolved (either a NEW-ENVIRON reply arrived or the probe timed out).
 	DetectionComplete bool
-}
-
-func (c ClientSettings) IsMsp() bool {
-	return c.MSPEnabled
 }
 
 type DisplaySettings struct {

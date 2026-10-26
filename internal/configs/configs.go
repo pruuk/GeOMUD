@@ -43,7 +43,6 @@ type Config struct {
 	Timing       Timing       `yaml:"Timing"`
 	FilePaths    FilePaths    `yaml:"FilePaths"`
 	GamePlay     GamePlay     `yaml:"GamePlay"`
-	Integrations Integrations `yaml:"Integrations"`
 	TextFormats  TextFormats  `yaml:"TextFormats"`
 	Translation  Translation  `yaml:"Translation"`
 	Network      Network      `yaml:"Network"`
@@ -224,7 +223,6 @@ func (c *Config) Validate() {
 	c.Timing.Validate()
 	c.FilePaths.Validate()
 	c.GamePlay.Validate()
-	c.Integrations.Validate()
 	c.TextFormats.Validate()
 	c.Translation.Validate()
 	c.Network.Validate()
@@ -495,7 +493,7 @@ func FindFullPath(inputKey string) (properKey string, typeName string) {
 	return findFullPathFrom(inputKey, keyLookups, typeLookups)
 }
 
-// Usage: configs.GetSecret(c.DiscordWebhookUrl)
+// Usage: configs.GetSecret(c.FilePaths.HttpsEmail)
 func GetSecret(v ConfigSecret) string {
 	return string(v)
 }

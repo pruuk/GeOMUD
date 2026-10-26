@@ -39,12 +39,6 @@ func AttackPlayerVsMob(user *users.UserRecord, mob *mobs.Mob) AttackResult {
 	// Remember who has hit him
 	mob.Character.TrackPlayerDamage(user.UserId, attackResult.DamageToTarget)
 
-	if attackResult.Hit {
-		user.PlaySound(`hit-other`, `combat`)
-	} else {
-		user.PlaySound(`miss`, `combat`)
-	}
-
 	return attackResult
 }
 
@@ -63,13 +57,6 @@ func AttackPlayerVsPlayer(userAtk *users.UserRecord, userDef *users.UserRecord) 
 		userDef.WimpyCheck()
 	}
 
-	if attackResult.Hit {
-		userAtk.PlaySound(`hit-other`, `combat`)
-		userDef.PlaySound(`hit-self`, `combat`)
-	} else {
-		userAtk.PlaySound(`miss`, `combat`)
-	}
-
 	return attackResult
 }
 
@@ -83,10 +70,6 @@ func AttackMobVsPlayer(mob *mobs.Mob, user *users.UserRecord) AttackResult {
 	if attackResult.DamageToTarget != 0 {
 		user.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
 		user.WimpyCheck()
-	}
-
-	if attackResult.Hit {
-		user.PlaySound(`hit-self`, `combat`)
 	}
 
 	return attackResult
@@ -400,54 +383,6 @@ func calculateCombat(sourceChar characters.Character, targetChar characters.Char
 				attackResult.DamageToTargetReduction += attackTargetReduction
 			}
 
-		}
-
-		// Pet has a 20% chance per attack round to join the fight (once, regardless of weapon count)
-		if sourceChar.Pet.Exists() && !sourceChar.Pet.IsMissing() {
-			chance, petDmg := sourceChar.Pet.GetEffectiveDamage()
-			if chance > 0 && util.RollDice(1, chance) <= chance {
-				if sourceChar.RoomId == targetChar.RoomId {
-					if petDmg.DiceRoll != `` {
-
-						pAttacks, pDCount, pDSides, pDBonus, critBuffs := sourceChar.Pet.GetDiceRoll()
-						combatMsgs := sourceChar.Pet.GetCombatMessages(string(targetType))
-
-						for p := 0; p < pAttacks; p++ {
-
-							if !Hits(0, targetChar.Stats.Speed.ValueAdj, 0) {
-								targetDisplayName := fmt.Sprintf(`<ansi fg="%sname">%s</ansi>`, string(targetType), targetChar.Name)
-								toAttackerMsg := combatMsgs.ApplyTokens(combatMsgs.Miss, sourceChar.Pet.DisplayName(), 0, targetDisplayName)
-								attackResult.SendToSource(toAttackerMsg)
-								continue
-							}
-
-							attackTargetDamage := util.RollDice(pDCount, pDSides) + pDBonus
-
-							attackTargetDamage, _ = applyDefenseReduction(attackTargetDamage, targetChar.GetDefense())
-
-							attackResult.DamageToTarget += attackTargetDamage
-
-							targetDisplayName := fmt.Sprintf(`<ansi fg="%sname">%s</ansi>`, string(targetType), targetChar.Name)
-							petDisplayName := sourceChar.Pet.DisplayName()
-
-							toAttackerMsg := combatMsgs.ApplyTokens(combatMsgs.ToOwner, petDisplayName, attackTargetDamage, targetDisplayName)
-							attackResult.SendToSource(toAttackerMsg)
-
-							toDefenderMsg := combatMsgs.ApplyTokens(combatMsgs.ToTarget, petDisplayName, attackTargetDamage, targetDisplayName)
-							attackResult.SendToTarget(toDefenderMsg)
-
-							toAttackerRoomMsg := combatMsgs.ApplyTokens(combatMsgs.ToRoom, petDisplayName, attackTargetDamage, targetDisplayName)
-							attackResult.SendToTargetRoom(toAttackerRoomMsg)
-
-							// pets doing max damage are considered "crits" and will always apply any special critBuffs
-							if len(critBuffs) > 0 && (attackTargetDamage == (pDCount*pDSides)+pDBonus) {
-								attackResult.BuffTarget = critBuffs
-							}
-						}
-
-					}
-				}
-			}
 		}
 	}
 

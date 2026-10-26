@@ -83,7 +83,6 @@ var (
 		`enchant`:     {Enchant, false, false},
 		`experience`:  {Experience, true, false},
 		`equip`:       {Equip, false, false},
-		`feed`:        {Feed, false, false},
 		`flee`:        {Flee, false, false},
 		`formset`:     {FormSet, false, true}, // Admin only
 		`gearup`:      {Gearup, false, false},
@@ -116,7 +115,6 @@ var (
 		`password`:    {Password, true, false},
 		`paz`:         {Paz, true, true}, // Admin only
 		`peep`:        {Peep, false, false},
-		`pet`:         {Pet, false, false},
 		`picklock`:    {Picklock, false, false},
 		`pickpocket`:  {Pickpocket, false, false},
 		`prepare`:     {Prepare, true, true}, // Admin only
@@ -126,9 +124,7 @@ var (
 		`printline`:   {PrintLine, true, false},
 		`put`:         {Put, false, false},
 		`pvp`:         {Pvp, true, false},
-		`quests`:      {Quests, true, false},
 		`quit`:        {Quit, true, false},
-		`questtoken`:  {QuestToken, false, true}, // Admin only
 		`rank`:        {Rank, false, false},
 		`rankings`:    {Rankings, false, true}, // Admin only
 		`read`:        {Read, false, false},
@@ -159,8 +155,7 @@ var (
 		`status`:      {Status, true, false},
 
 		`suicide`:    {Suicide, true, false},
-		`syslogs`:    {SysLogs, true, true},   // Admin only
-		`telemetry`:  {Telemetry, true, true}, // Admin only
+		`syslogs`:    {SysLogs, true, true}, // Admin only
 		`tame`:       {Tame, false, false},
 		`teleport`:   {Teleport, true, true}, // Admin only
 		`throw`:      {Throw, false, false},
@@ -197,55 +192,6 @@ func GetExportedFunction(fName string) (any, bool) {
 		}
 	}
 	return nil, false
-}
-
-// Returns a list of close match commands
-func GetCmdSuggestions(text string, includeAdmin bool) []string {
-
-	text = strings.ToLower(text)
-
-	results := []string{}
-
-	for _, info := range keywords.GetAllHelpTopicInfo() {
-		if info.AdminOnly && !includeAdmin {
-			continue
-		}
-
-		testCmd := strings.ToLower(info.Command)
-		if testCmd != text && strings.HasPrefix(testCmd, text) {
-			results = append(results, info.Command[len(text):])
-		}
-	}
-
-	for alias, _ := range keywords.GetAllCommandAliases() {
-		testCmd := strings.ToLower(alias)
-		if testCmd != text && strings.HasPrefix(testCmd, text) {
-			results = append(results, alias[len(text):])
-		}
-	}
-
-	return results
-}
-
-func GetHelpSuggestions(text string, includeAdmin bool) []string {
-
-	results := []string{}
-
-	for _, cmd := range keywords.GetAllHelpTopics() {
-		testCmd := strings.ToLower(cmd)
-		if testCmd != text && strings.HasPrefix(testCmd, text) {
-			results = append(results, cmd[len(text):])
-		}
-	}
-
-	for alias, _ := range keywords.GetAllHelpAliases() {
-		testCmd := strings.ToLower(alias)
-		if testCmd != text && strings.HasPrefix(testCmd, text) {
-			results = append(results, alias[len(text):])
-		}
-	}
-
-	return results
 }
 
 func TryCommand(cmd string, rest string, userId int, flags events.EventFlag) (bool, error) {
@@ -337,13 +283,6 @@ func TryCommand(cmd string, rest string, userId int, flags events.EventFlag) (bo
 			handled, err := scripting.TryBuffCommand(cmd, rest, user.UserId, 0, b.BuffId)
 			if handled { // For this event, handled represents whether to reject the move.
 				return handled, err
-			}
-		}
-
-		// Check if the pet script intercepts this command
-		if user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
-			if handled, err := scripting.TryPetCommand(cmd, rest, user.UserId); err == nil && handled {
-				return true, nil
 			}
 		}
 

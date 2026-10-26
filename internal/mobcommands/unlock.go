@@ -31,8 +31,6 @@ func Unlock(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		container.Lock.SetUnlocked()
 		room.Containers[containerName] = container
 
-		room.PlaySound(`change`, `other`)
-
 		room.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> unlocks the <ansi fg="container">%s</ansi>.`, mob.Character.Name, containerName))
 
 		return true, nil
@@ -47,8 +45,6 @@ func Unlock(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 		exitInfo.Lock.SetUnlocked()
 		room.SetExitLock(exitName, false)
-
-		room.PlaySound(`change`, `other`)
 
 		room.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> unlocks the <ansi fg="exit">%s</ansi> lock`, mob.Character.Name, exitName))
 

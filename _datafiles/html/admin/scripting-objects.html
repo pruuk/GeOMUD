@@ -124,7 +124,6 @@
         <a href="/admin/scripting-items">Item Scripts</a>
         <a href="/admin/scripting-buffs">Buff Scripts</a>
         <a href="/admin/scripting-spells">Spell Scripts</a>
-        <a href="/admin/scripting-pets">Pet Scripts</a>
         <a href="/admin/scripting-users">User Scripts</a>
     </div>
     <span class="sb-group-label">Reference</span>
@@ -138,7 +137,6 @@
         <a href="#actor">ActorObject</a>
         <a href="#room">RoomObject</a>
         <a href="#item">ItemObject</a>
-        <a href="#pet">PetObject</a>
         <a href="#party">PartyObject</a>
         <a href="#container">ContainerObject</a>
         <a href="#panellayout">PanelLayoutObject</a>
@@ -155,7 +153,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
             Object Reference
         </h1>
-        <p class="subtitle">API reference for all scripting objects — ActorObject, RoomObject, ItemObject, PetObject, PartyObject, ContainerObject, PanelLayoutObject, SlotObject, and PanelObject.</p>
+        <p class="subtitle">API reference for all scripting objects — ActorObject, RoomObject, ItemObject, PartyObject, ContainerObject, PanelLayoutObject, SlotObject, and PanelObject.</p>
     </div>
 
     <!-- Search -->
@@ -180,9 +178,8 @@
         Used in <a href="/admin/scripting-rooms">room</a>,
         <a href="/admin/scripting-mobs">mob</a>,
         <a href="/admin/scripting-items">item</a>,
-        <a href="/admin/scripting-buffs">buff</a>,
-        <a href="/admin/scripting-spells">spell</a>, and
-        <a href="/admin/scripting-pets">pet</a> scripts.
+        <a href="/admin/scripting-buffs">buff</a>, and
+        <a href="/admin/scripting-spells">spell</a> scripts.
     </p>
     <div class="fn-list" id="fn-list-actor">
 
@@ -381,27 +378,6 @@
             </div>
         </details>
 
-        <details class="fn-card" data-search="PlaySound sound audio identifier category user actor">
-            <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.PlaySound</span><span class="fn-p">(</span><span class="fn-a">soundId</span> <span class="fn-t">string</span>, <span class="fn-a">category</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Plays a sound for this actor. Only affects user actors &mdash; silently ignored for mobs. <code>soundId</code> must match an identifier defined in <strong>audio.yaml</strong> (e.g. <code>"levelup"</code>). <code>category</code> groups related sounds for client-side volume control (e.g. <code>"combat"</code>, <code>"other"</code>).</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">soundId</td><td class="at">string</td><td>Identifier from audio.yaml (e.g. <code>"levelup"</code>, <code>"hit-self"</code>).</td></tr>
-                    <tr><td class="an">category</td><td class="at">string</td><td>Client volume category (e.g. <code>"combat"</code>, <code>"movement"</code>, <code>"other"</code>).</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
-        <details class="fn-card" data-search="PlayMusic music audio file identifier user actor stop off">
-            <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.PlayMusic</span><span class="fn-p">(</span><span class="fn-a">musicFileOrId</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Changes the background music for this actor. Only affects user actors. <code>musicFileOrId</code> may be a filepath (e.g. <code>"static/audio/music/intro.mp3"</code>) or a sound identifier from audio.yaml whose filepath resolves to a music file. Pass <code>"Off"</code> to stop music.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">musicFileOrId</td><td class="at">string</td><td>Music filepath, audio.yaml identifier, or <code>"Off"</code> to stop.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
         <details class="fn-card" data-search="Command execute command string waitTurns force action">
             <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.Command</span><span class="fn-p">(</span><span class="fn-a">cmd</span> <span class="fn-t">string</span><span class="fn-p"> [, </span><span class="fn-a">waitTurns</span> <span class="fn-t">int</span><span class="fn-p">])</span></span><span class="fn-ret-badge ret-void">void</span></summary>
             <div class="fn-body">
@@ -551,27 +527,6 @@ mob:Command("pathto 150", 2) -- move after 2 turns</code></pre></div>
             </div>
         </details>
 
-        <!-- Quests -->
-        <details class="fn-card" data-search="HasQuest quest id bool check progress">
-            <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.HasQuest</span><span class="fn-p">(</span><span class="fn-a">questId</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-bool">bool</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Returns true if the actor has the specified quest or quest step.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">questId</td><td class="at">string</td><td>Quest identifier, e.g. <code>"3-start"</code> or <code>"3-end"</code>.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
-        <details class="fn-card" data-search="GiveQuest give grant quest progress id string">
-            <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.GiveQuest</span><span class="fn-p">(</span><span class="fn-a">questId</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Grants a quest or quest progress step to the actor.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">questId</td><td class="at">string</td><td>Quest identifier, e.g. <code>"3-start"</code>.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
         <!-- Skills -->
         <details class="fn-card" data-search="TrainSkill skill train level string int">
             <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.TrainSkill</span><span class="fn-p">(</span><span class="fn-a">skillName</span> <span class="fn-t">string</span>, <span class="fn-a">skillLevel</span> <span class="fn-t">int</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
@@ -704,25 +659,10 @@ mob:Command("pathto 150", 2) -- move after 2 turns</code></pre></div>
             <div class="fn-body"><p class="fn-desc">Returns a <a href="#party">PartyObject</a> for party members not in the same room.</p></div>
         </details>
 
-        <!-- Tame / Pet -->
-        <details class="fn-card" data-search="IsTameable tameable bool tame pet">
+        <!-- Tame -->
+        <details class="fn-card" data-search="IsTameable tameable bool tame">
             <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.IsTameable</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-bool">bool</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns true if this actor can be tamed as a pet.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="GetPet pet PetObject actor user companion">
-            <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.GetPet</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-object">PetObject | null</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Returns the <a href="#pet">PetObject</a> for this actor, or <code>null</code> if they have no pet. Only meaningful for user actors.</p>
-                <p class="fn-note">The returned PetObject is a live reference — mutations take effect immediately.</p>
-                <div class="code-wrap"><button class="copy-btn" onclick="copyCode(this)">Copy</button><pre class="scriptlang-block" data-lang="js"><code class="language-javascript">var pet = actor.GetPet();
-if (pet !== null) {
-    room.SendText(pet.NameSimple() + ' is here!');
-}</code></pre><pre class="scriptlang-block" data-lang="lua"><code class="language-lua">local pet = actor:GetPet()
-if pet ~= nil then
-    room:SendText(pet:NameSimple() .. " is here!")
-end</code></pre></div>
-            </div>
+            <div class="fn-body"><p class="fn-desc">Returns true if this actor can be tamed.</p></div>
         </details>
 
         <details class="fn-card" data-search="GetTameMastery tame mastery mob level object">
@@ -758,7 +698,7 @@ end</code></pre></div>
                 <p class="fn-desc">Grants experience points to the actor.</p>
                 <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
                     <tr><td class="an">xpAmt</td><td class="at">int</td><td>Amount of XP to grant.</td></tr>
-                    <tr><td class="an">reason</td><td class="at">string</td><td>Short reason, e.g. <code>"combat"</code>, <code>"quest"</code>.</td></tr>
+                    <tr><td class="an">reason</td><td class="at">string</td><td>Short reason, e.g. <code>"combat"</code>.</td></tr>
                 </tbody></table>
             </div>
         </details>
@@ -1054,27 +994,6 @@ end</code></pre></div>
             </div>
         </details>
 
-        <!-- New methods: Quests -->
-        <details class="fn-card" data-search="IsQuestDone quest done complete finished bool token">
-            <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.IsQuestDone</span><span class="fn-p">(</span><span class="fn-a">questToken</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-bool">bool</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Returns true if the actor has fully completed the quest identified by <code>questToken</code>. Unlike <code>HasQuest()</code>, this only returns true when the quest is at the <code>end</code> step.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">questToken</td><td class="at">string</td><td>Quest token string, e.g. <code>"1-end"</code>.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
-        <details class="fn-card" data-search="ClearQuestToken quest clear reset token progress">
-            <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.ClearQuestToken</span><span class="fn-p">(</span><span class="fn-a">questToken</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Removes all progress for the quest identified by <code>questToken</code>. The actor will no longer have any record of that quest.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">questToken</td><td class="at">string</td><td>Quest token string, e.g. <code>"1-start"</code>.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
         <!-- New methods: Skills / Spells -->
         <details class="fn-card" data-search="GetAllSkills skills map all ranks int list">
             <summary><span class="fn-name-sig"><span class="fn-n">ActorObject.GetAllSkills</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-object">map[string]int</span></summary>
@@ -1327,18 +1246,6 @@ end</code></pre></div>
             <div class="fn-body"><p class="fn-desc">Returns all items on the floor of the room.</p></div>
         </details>
 
-        <details class="fn-card" data-search="PlaySound sound audio identifier category room all players">
-            <summary><span class="fn-name-sig"><span class="fn-n">RoomObject.PlaySound</span><span class="fn-p">(</span><span class="fn-a">soundId</span> <span class="fn-t">string</span>, <span class="fn-a">category</span> <span class="fn-t">string</span><span class="fn-p"> [, </span><span class="fn-a">excludeUserIds&hellip;</span><span class="fn-p">])</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Plays a sound for all players currently in the room. <code>soundId</code> must match an identifier defined in <strong>audio.yaml</strong>. <code>category</code> groups related sounds for client-side volume control.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">soundId</td><td class="at">string</td><td>Identifier from audio.yaml (e.g. <code>"room-enter"</code>).</td></tr>
-                    <tr><td class="an">category</td><td class="at">string</td><td>Client volume category (e.g. <code>"combat"</code>, <code>"movement"</code>, <code>"other"</code>).</td></tr>
-                    <tr><td class="an">excludeUserIds</td><td class="at">int&hellip; (optional)</td><td>User IDs that should not receive the sound.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
         <details class="fn-card" data-search="GetStashItems stash items hidden array ItemObject room">
             <summary><span class="fn-name-sig"><span class="fn-n">RoomObject.GetStashItems</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-array">[]ItemObject</span></summary>
             <div class="fn-body"><p class="fn-desc">Returns all hidden (stashed) items in the room — not visible to players in normal room descriptions.</p></div>
@@ -1487,16 +1394,6 @@ end</code></pre></div>
         <details class="fn-card" data-search="RemoveMutator mutator remove expire room string">
             <summary><span class="fn-name-sig"><span class="fn-n">RoomObject.RemoveMutator</span><span class="fn-p">(</span><span class="fn-a">mutName</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
             <div class="fn-body"><p class="fn-desc">Expires a mutator. If the mutator respawns, it may return.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="HasQuest quest room users array party">
-            <summary><span class="fn-name-sig"><span class="fn-n">RoomObject.HasQuest</span><span class="fn-p">(</span><span class="fn-a">questId</span> <span class="fn-t">string</span><span class="fn-p"> [, </span><span class="fn-a">partyUserId</span> <span class="fn-t">int</span><span class="fn-p">])</span></span><span class="fn-ret-badge ret-array">[]int</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns an array of user IDs in the room who have the quest. If <code>partyUserId</code> is supplied, only checks that user and their party.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="MissingQuest quest room missing users array party">
-            <summary><span class="fn-name-sig"><span class="fn-n">RoomObject.MissingQuest</span><span class="fn-p">(</span><span class="fn-a">questId</span> <span class="fn-t">string</span><span class="fn-p"> [, </span><span class="fn-a">partyUserId</span> <span class="fn-t">int</span><span class="fn-p">])</span></span><span class="fn-ret-badge ret-array">[]int</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns an array of user IDs in the room who do NOT have the quest.</p></div>
         </details>
 
         <details class="fn-card" data-search="IsEphemeral ephemeral bool room copy instance">
@@ -1846,11 +1743,6 @@ c:AddItem(CreateItem(501))</code></pre></div>
             <div class="fn-body"><p class="fn-desc">Returns the item's description text from its spec.</p></div>
         </details>
 
-        <details class="fn-card" data-search="GetQuestToken quest token string item grant">
-            <summary><span class="fn-name-sig"><span class="fn-n">ItemObject.GetQuestToken</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-string">string</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the quest token this item grants when picked up, or an empty string if none.</p></div>
-        </details>
-
         <details class="fn-card" data-search="GetElement element string item fire ice water">
             <summary><span class="fn-name-sig"><span class="fn-n">ItemObject.GetElement</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-string">string</span></summary>
             <div class="fn-body"><p class="fn-desc">Returns the item's elemental type, e.g. <code>"fire"</code>, <code>"ice"</code>, <code>"electricity"</code>, or empty string if none.</p></div>
@@ -1915,149 +1807,6 @@ c:AddItem(CreateItem(501))</code></pre></div>
 </section>
 
 <!-- =================================================================
-     PET OBJECT
-================================================================== -->
-<section class="fn-group" id="pet">
-    <div class="fn-group-header">
-        <h2>PetObject</h2>
-        <span class="fn-group-badge">Pets</span>
-    </div>
-    <p class="fn-group-desc">Represents a player's companion pet. Obtained via <code>ActorObject.GetPet()</code>. Returns <code>null</code> if the actor has no pet. This is a live reference — mutations take effect immediately.</p>
-    <div class="fn-list" id="fn-list-pet">
-
-        <details class="fn-card" data-search="Type type string pet kind">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.Type</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-string">string</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the pet's type identifier, e.g. <code>"dog"</code>, <code>"cat"</code>, <code>"owl"</code>.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="Name name string pet display ansi color hunger">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.Name</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-string">string</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the full display name including ANSI color tags and hunger indicator. Use for output to players.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="NameSimple name simple string pet plain text">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.NameSimple</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-string">string</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the plain text name with no color or hunger indicator. Use for comparisons and concatenation.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="SetName set name pet string rename">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.SetName</span><span class="fn-p">(</span><span class="fn-a">name</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body"><p class="fn-desc">Renames the pet. Pass an empty string to revert to the type identifier.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="Level level int pet current">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.Level</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-int">int</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the pet's current level (1–10). Increases when well-fed, decreases when starving.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="Food food string hunger state pet Starving Hungry Satisfied Full">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.Food</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-string">string</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Returns the hunger state as a string.</p>
-                <table class="prop-table"><thead><tr><th>Value</th><th>Meaning</th></tr></thead><tbody>
-                    <tr><td class="pn">"Starving"</td><td>Food level 0 — will lose a level at next daily tick.</td></tr>
-                    <tr><td class="pn">"Hungry"</td><td>Food level 1.</td></tr>
-                    <tr><td class="pn">"Satisfied"</td><td>Food level 2.</td></tr>
-                    <tr><td class="pn">"Full"</td><td>Food level 3 — will gain a level at next daily tick.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
-        <details class="fn-card" data-search="FoodLevel food level int pet hunger numeric">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.FoodLevel</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-int">int</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the raw hunger level as an integer: 0 (Starving) through 3 (Full).</p></div>
-        </details>
-
-        <details class="fn-card" data-search="Feed feed pet increase hunger">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.Feed</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body"><p class="fn-desc">Increases hunger level by one step (max 3 / Full).</p></div>
-        </details>
-
-        <details class="fn-card" data-search="Starve starve pet decrease hunger">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.Starve</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body"><p class="fn-desc">Decreases hunger level by one step (min 0 / Starving).</p></div>
-        </details>
-
-        <details class="fn-card" data-search="GetStatMod stat mod pet int bonus owner">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.GetStatMod</span><span class="fn-p">(</span><span class="fn-a">statName</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-int">int</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the stat modifier the pet grants its owner for the named stat at its current level.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="GetCapacity capacity int pet carry items">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.GetCapacity</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-int">int</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the number of items the pet can carry at its current level. 0 if the pet type has no carry ability.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="ItemCount item count int pet carrying">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.ItemCount</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-int">int</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the number of items the pet is currently carrying.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="HasScript has script bool pet file">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.HasScript</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-bool">bool</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns true if this pet type has a script file on disk.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="IsMissing missing bool pet absent">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.IsMissing</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-bool">bool</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns true when the pet is temporarily absent. While missing, the pet is invisible, inactive, and grants no bonuses.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="GoMissing go missing rounds int pet absent leave return">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.GoMissing</span><span class="fn-p">(</span><span class="fn-a">rounds</span> <span class="fn-t">int</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Sends the pet away for the given number of rounds, firing <code>PetLeave()</code>. Pass <code>0</code> to return the pet immediately, firing <code>PetReturn()</code>.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">rounds</td><td class="at">int</td><td>Rounds to be absent. 0 = return immediately.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
-        <!-- New methods: Pet inventory -->
-        <details class="fn-card" data-search="GetItems items array list pet inventory carry">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.GetItems</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-array">[]ItemObject</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns an array of all items currently in the pet's inventory.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="FindItem find item pet inventory name string">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.FindItem</span><span class="fn-p">(</span><span class="fn-a">itemName</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-object">ItemObject</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Searches the pet's inventory for an item matching <code>itemName</code>. Returns the matching <a href="#item">ItemObject</a> or <code>null</code> if not found.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">itemName</td><td class="at">string</td><td>Name or partial name to search for.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
-        <details class="fn-card" data-search="StoreItem store item pet inventory add bool">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.StoreItem</span><span class="fn-p">(</span><span class="fn-a">item</span> <span class="fn-t">ItemObject</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-bool">bool</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Adds an item to the pet's inventory. Returns <code>false</code> if the pet is at capacity or the item is invalid.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">item</td><td class="at"><a href="#item">ItemObject</a></td><td>The item to store.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
-        <details class="fn-card" data-search="RemoveItem remove item pet inventory bool">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.RemoveItem</span><span class="fn-p">(</span><span class="fn-a">item</span> <span class="fn-t">ItemObject</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-bool">bool</span></summary>
-            <div class="fn-body">
-                <p class="fn-desc">Removes an item from the pet's inventory. Returns <code>true</code> if found and removed.</p>
-                <table class="arg-table"><thead><tr><th>Argument</th><th>Type</th><th>Description</th></tr></thead><tbody>
-                    <tr><td class="an">item</td><td class="at"><a href="#item">ItemObject</a></td><td>The item to remove.</td></tr>
-                </tbody></table>
-            </div>
-        </details>
-
-        <details class="fn-card" data-search="GetBuffIds buff ids array int pet passive bonuses">
-            <summary><span class="fn-name-sig"><span class="fn-n">PetObject.GetBuffIds</span><span class="fn-p">()</span></span><span class="fn-ret-badge ret-array">[]int</span></summary>
-            <div class="fn-body"><p class="fn-desc">Returns the buff IDs the pet grants to its owner at its current level. These buffs are applied passively while the pet is not missing.</p></div>
-        </details>
-
-    </div>
-</section>
-
-<!-- =================================================================
      PARTY OBJECT
 ================================================================== -->
 <section class="fn-group" id="party">
@@ -2076,11 +1825,6 @@ c:AddItem(CreateItem(501))</code></pre></div>
         <details class="fn-card" data-search="SendText message send party all members">
             <summary><span class="fn-name-sig"><span class="fn-n">PartyObject.SendText</span><span class="fn-p">(</span><span class="fn-a">msg</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
             <div class="fn-body"><p class="fn-desc">Sends a message to all party members.</p></div>
-        </details>
-
-        <details class="fn-card" data-search="GiveQuest quest party all members give grant">
-            <summary><span class="fn-name-sig"><span class="fn-n">PartyObject.GiveQuest</span><span class="fn-p">(</span><span class="fn-a">questId</span> <span class="fn-t">string</span><span class="fn-p">)</span></span><span class="fn-ret-badge ret-void">void</span></summary>
-            <div class="fn-body"><p class="fn-desc">Grants a quest or quest step to all party members.</p></div>
         </details>
 
         <details class="fn-card" data-search="AddGold gold party all members bank int">

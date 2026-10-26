@@ -202,7 +202,6 @@
     .shop-type-item   { background: var(--color-success-bg); color: var(--color-success-text); }
     .shop-type-mob    { background: var(--color-info-bg); color: var(--color-info-text); }
     .shop-type-buff   { background: var(--color-method-put-bg); color: var(--color-method-put-text); }
-    .shop-type-pet    { background: var(--color-warning-bg); color: var(--color-warning-text); }
     .shop-card-remove {
         position: absolute; top: 0.5rem; right: 0.6rem;
         background: none; border: none; cursor: pointer; font-size: 1.1rem;
@@ -384,14 +383,7 @@
                         <div class="field-hint">Randomly chosen during combat</div>
                     </div>
 
-                    <div class="section-title" style="margin-top:0.5rem;">Quest &amp; Buffs</div>
-
-                    <div class="field span2">
-                        <label>Quest Flags</label>
-                        <div class="tags-wrap" id="questflags-list"></div>
-                        <button class="btn-add-sm" style="margin-top:0.4rem;" onclick="pickQuestFlag()">+ Add Quest Flag</button>
-                        <div class="field-hint">Quest flags set on this mob (e.g. 5-start, 5-return). If the quest is available to a player, this will cause a symbol to show next to the mob name.</div>
-                    </div>
+                    <div class="section-title" style="margin-top:0.5rem;">Buffs</div>
 
                     <div class="field span2">
                         <label>Buff IDs (applied on spawn)</label>
@@ -499,7 +491,6 @@
                             <button class="btn-add-sm" onclick="addShopEntry('item')">+ Item</button>
                             <button class="btn-add-sm" onclick="addShopEntry('mob')">+ Mob for Hire</button>
                             <button class="btn-add-sm" onclick="addShopEntry('buff')">+ Buff</button>
-                            <button class="btn-add-sm" onclick="addShopEntry('pet')">+ Pet</button>
                         </div>
                         <div class="field-hint">Leave empty if not a shopkeeper. QuantityMax: 0 = always in stock, -1 = never restocks (temporary).</div>
                     </div>
@@ -879,10 +870,9 @@
 
         setVal('f-gold', ch.Gold || 0);
 
-        // Groups, Hates, QuestFlags
+        // Groups, Hates
         renderTags('groups-list', mob.Groups || []);
         renderTags('hates-list', mob.Hates || []);
-        renderTags('questflags-list', mob.QuestFlags || []);
 
         // Commands
         setVal('f-idlecommands', (mob.IdleCommands || []).join('\n'));
@@ -951,7 +941,7 @@
     };
 
     // -------------------------------------------------------------------------
-    // Tags (groups, hates, quest flags)
+    // Tags (groups, hates)
     // -------------------------------------------------------------------------
     function renderTags(listId, values) {
         const list = document.getElementById(listId);
@@ -963,20 +953,9 @@
         const chip = document.createElement('span');
         chip.className = 'tag-chip';
         chip.dataset.value = value;
-        // Quest flags are quest tokens (questId-stepId); tag them so the shared
-        // QuestTooltip can show the quest name and step description on hover.
-        if (list.id === 'questflags-list') chip.dataset.questToken = value;
         chip.innerHTML = `${esc(value)} <button title="Remove" onclick="this.closest('.tag-chip').remove()">&times;</button>`;
         list.appendChild(chip);
     }
-
-    window.pickQuestFlag = function () {
-        QuestTokenPicker.pick((token) => {
-            const existing = collectTags('questflags-list');
-            if (existing.includes(token)) return;
-            appendTagChip(document.getElementById('questflags-list'), token);
-        });
-    };
 
     window.addTag = function (listId, inputId) {
         const input = document.getElementById(inputId);
@@ -1122,7 +1101,6 @@
     // Shop entries
     // -------------------------------------------------------------------------
     function detectShopType(entry) {
-        if (entry.PetType)  return 'pet';
         if (entry.BuffId)   return 'buff';
         if (entry.MobId)    return 'mob';
         return 'item';
@@ -1154,7 +1132,6 @@
         item: { label: 'Item',         badge: 'shop-type-item', idField: 'ItemId',  idLabel: 'Item' },
         mob:  { label: 'Mob for Hire', badge: 'shop-type-mob',  idField: 'MobId',   idLabel: 'Mob' },
         buff: { label: 'Buff',         badge: 'shop-type-buff', idField: 'BuffId',  idLabel: 'Buff' },
-        pet:  { label: 'Pet',          badge: 'shop-type-pet',  idField: 'PetType', idLabel: 'Pet Type' },
     };
 
     const restockOptions = [
@@ -1299,7 +1276,7 @@
 
     function appendShopCard(list, entry, forcedType) {
         const e = entry || {};
-        // New entries (from the +Item/+Mob/+Buff/+Pet buttons) pass an explicit
+        // New entries (from the +Item/+Mob/+Buff buttons) pass an explicit
         // type; loaded entries are detected from their populated id field.
         const type = forcedType || detectShopType(e);
         const meta = shopTypeMeta[type];
@@ -1308,7 +1285,7 @@
         card.className = 'shop-card';
         card.dataset.shopType = type;
 
-        const idVal  = type === 'pet' ? (e.PetType || '') : (e[meta.idField] || 0);
+        const idVal  = e[meta.idField] || 0;
         const qtyMax = e.QuantityMax != null ? e.QuantityMax : 0;
         const restockVal = e.RestockRate || '';
         const tradeVal   = e.TradeItemId || 0;
@@ -1359,18 +1336,9 @@
 
         // Insert id field
         const idSlot = card.querySelector('[data-slot="id"]');
-        if (type === 'pet') {
-            const inp = document.createElement('input');
-            inp.type = 'text';
-            inp.setAttribute('data-field', 'id');
-            inp.value = String(idVal);
-            inp.placeholder = 'e.g. cat, mule';
-            idSlot.appendChild(inp);
-        } else {
-            const pickerWrap = buildPickerField(type, idVal, null);
-            pickerWrap.setAttribute('data-field', 'id');
-            idSlot.appendChild(pickerWrap);
-        }
+        const pickerWrap = buildPickerField(type, idVal, null);
+        pickerWrap.setAttribute('data-field', 'id');
+        idSlot.appendChild(pickerWrap);
 
         // Insert trade-item field
         const tradeSlot = card.querySelector('[data-slot="trade"]');
@@ -1393,14 +1361,9 @@
             const idEl = card.querySelector('[data-field="id"]');
             const entry = {};
 
-            if (type === 'pet') {
-                entry.PetType = idEl.value.trim();
-                if (!entry.PetType) return;
-            } else {
-                const idVal = parseInt(idEl.dataset.value, 10) || 0;
-                if (idVal < 1) return;
-                entry[meta.idField] = idVal;
-            }
+            const idVal = parseInt(idEl.dataset.value, 10) || 0;
+            if (idVal < 1) return;
+            entry[meta.idField] = idVal;
 
             entry.Price        = parseInt(card.querySelector('[data-field="price"]').value, 10) || 0;
             entry.QuantityMax  = parseInt(card.querySelector('[data-field="qtymax"]').value, 10) || 0;
@@ -1437,7 +1400,6 @@
             EliteChance:    parseInt(document.getElementById('f-elitechance').value, 10) || 0,
             Groups:         collectTags('groups-list'),
             Hates:          collectTags('hates-list'),
-            QuestFlags:     collectTags('questflags-list'),
             BuffIds:        collectBuffIds('buffids-list'),
             IdleCommands:   textToArray('f-idlecommands'),
             AngryCommands:  textToArray('f-angrycommands'),

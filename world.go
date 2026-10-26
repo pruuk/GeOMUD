@@ -19,7 +19,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/prompt"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/scripting"
-	"github.com/GoMudEngine/GoMud/internal/suggestions"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
@@ -306,10 +305,6 @@ Connected		+ OutWorld (logging in) 	Has record in connections.netConnections 			
 Connected		+ InWorld  (non-link-dead)	No record in users.LinkDeadConnections								| no link-dead flag		| user object in room
 Disconnected	+ InWorld  (link-dead)			Has record in users.LinkDeadConnections 								| has link-dead flag		| user object in room
 */
-
-func (w *World) GetAutoComplete(userId int, inputText string) []string {
-	return suggestions.GetAutoComplete(userId, inputText)
-}
 
 const (
 	// Used in GameTickWorker()

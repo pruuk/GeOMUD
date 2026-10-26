@@ -10,7 +10,7 @@ import (
 
 // handwritten interface declarations for the engine's script object types.
 // These correspond to the Go structs ScriptActor, ScriptRoom, ScriptItem,
-// ScriptPet, and the schema-driven ContainerObject.
+// and the schema-driven ContainerObject.
 const engineObjectInterfaces = `
 declare interface ActorObject {
     UserId(): number;
@@ -86,10 +86,6 @@ declare interface ActorObject {
     DisableSpell(spellId: string): boolean;
     EnableSpell(spellId: string): boolean;
     GetSpells(): {[spellId: string]: number};
-    HasQuest(questId: string): boolean;
-    GiveQuest(questId: string): void;
-    IsQuestDone(questToken: string): boolean;
-    ClearQuestToken(questToken: string): void;
     GetParty(excludeSelf?: boolean): PartyObject;
     GetPartyPresent(excludeSelf?: boolean): PartyObject;
     GetPartyMissing(): PartyObject;
@@ -134,10 +130,7 @@ declare interface ActorObject {
     PathingAtWaypoint(): boolean;
     Sleep(seconds: number): void;
     GetLastInputRound(): number;
-    PlaySound(soundId: string, category: string): void;
-    PlayMusic(musicFileOrId: string): void;
     Uncurse(): ItemObject[];
-    GetPet(): PetObject | null;
 }
 
 declare interface RoomObject {
@@ -176,8 +169,6 @@ declare interface RoomObject {
     AddMutator(mutName: string): void;
     RemoveMutator(mutName: string): void;
     GetExits(): {Name: string, RoomId: number, Secret: boolean, Lock: any, temporary: boolean}[];
-    HasQuest(questId: string, partyUserId?: number): number[];
-    MissingQuest(questId: string, partyUserId?: number): number[];
     SendText(msg: string, ...excludeUserIds: number[]): void;
     SendTextToExits(msg: string, isQuiet: boolean, ...excludeUserIds: number[]): void;
     GetGold(): number;
@@ -198,7 +189,6 @@ declare interface RoomObject {
     AreMobsAttacking(userId: number): boolean;
     ArePlayersAttacking(userId: number): boolean;
     HasRecentVisitors(): boolean;
-    PlaySound(soundId: string, category: string, ...excludeUserIds: number[]): void;
 }
 
 declare interface ItemObject {
@@ -214,7 +204,6 @@ declare interface ItemObject {
     GetSubtype(): string;
     GetValue(): number;
     GetElement(): string;
-    GetQuestToken(): string;
     GetBuffIds(): number[];
     GetWornBuffIds(): number[];
     GetStatMods(): {[stat: string]: number};
@@ -235,34 +224,10 @@ declare interface ItemObject {
     GetTempData(key: string): any;
 }
 
-declare interface PetObject {
-    Name(): string;
-    NameSimple(): string;
-    SetName(name: string): void;
-    Type(): string;
-    Level(): number;
-    Food(): string;
-    FoodLevel(): number;
-    Feed(): void;
-    Starve(): void;
-    GetStatMod(statName: string): number;
-    GetCapacity(): number;
-    ItemCount(): number;
-    IsMissing(): boolean;
-    GoMissing(rounds: number): void;
-    HasScript(): boolean;
-    GetItems(): ItemObject[];
-    FindItem(itemName: string): ItemObject | null;
-    StoreItem(item: ItemObject): boolean;
-    RemoveItem(item: ItemObject): boolean;
-    GetBuffIds(): number[];
-}
-
 declare interface PartyObject {
     GetMembers(): ActorObject[];
     SendText(msg: string): void;
     SetResetRoomId(roomId: number): void;
-    GiveQuest(questId: string): void;
     AddGold(amount: number, bankAmount?: number): void;
     AddHealth(amt: number): void;
     AddMana(amt: number): void;
@@ -448,8 +413,6 @@ func goTypeToTS(t string) string {
 		return "ActorObject"
 	case "ItemObject":
 		return "ItemObject"
-	case "PetObject":
-		return "PetObject"
 	case "PartyObject":
 		return "PartyObject"
 	case "ContainerObject":

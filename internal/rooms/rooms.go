@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoMudEngine/GoMud/internal/audio"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/exit"
@@ -49,7 +48,6 @@ const (
 	FindDowned         FindFlag = 0b00001000000 // hp < 1
 	FindBuffed         FindFlag = 0b00010000000 // has a buff
 	FindHasLight       FindFlag = 0b00100000000 // has a light source
-	FindHasPet         FindFlag = 0b01000000000 // has a pet
 	FindNative         FindFlag = 0b10000000000 // spawns in this room
 
 	// Combinatorial flags
@@ -65,7 +63,6 @@ type Room struct {
 	//mutex
 	RoomId            int                               `yaml:"roomid"`                              // a unique numeric index of the room. Also the filename.
 	Zone              string                            `yaml:"zone"`                                // zone is a way to partition rooms into groups. Also into folders.
-	MusicFile         string                            `yaml:"musicfile,omitempty"`                 // background music to play when in this room
 	IsBank            bool                              `yaml:"isbank,omitempty"`                    // Is this a bank room? If so, players can deposit/withdraw gold here.
 	Title             string                            `yaml:"title"`                               // Title shown to the user
 	Description       string                            `yaml:"description"`                         // Description shown to the user
@@ -280,45 +277,6 @@ func (r *Room) SendText(txt string, excludeUserIds ...int) {
 		ExcludeUserIds: excludeUserIds,
 		IsQuiet:        false,
 	})
-
-}
-
-func (r *Room) PlaySound(soundId string, category string, excludeUserIds ...int) {
-
-	volume := 100
-	if soundConfig := audio.GetFile(soundId); soundConfig.FilePath != `` {
-		soundId = soundConfig.FilePath
-		if soundConfig.Volume > 0 && soundConfig.Volume <= 100 {
-			volume = soundConfig.Volume
-		}
-	}
-
-	for _, userId := range r.players {
-
-		skip := false
-
-		exLen := len(excludeUserIds)
-		if exLen > 0 {
-			for _, excludeId := range excludeUserIds {
-				if excludeId == userId {
-					skip = true
-					break
-				}
-			}
-		}
-
-		if skip {
-			continue
-		}
-
-		events.AddToQueue(events.MSP{
-			UserId:    userId,
-			SoundType: `SOUND`,
-			SoundFile: soundId,
-			Volume:    volume,
-			Category:  category,
-		})
-	}
 
 }
 
@@ -679,10 +637,6 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 
 				if len(spawnInfo.ScriptTag) > 0 {
 					mob.ScriptTag = spawnInfo.ScriptTag
-				}
-
-				if len(spawnInfo.QuestFlags) > 0 {
-					mob.QuestFlags = spawnInfo.QuestFlags
 				}
 
 				// Does this mob have a special name?
@@ -1255,11 +1209,6 @@ func (r *Room) GetMobs(findTypes ...FindFlag) []int {
 			mobMatches = append(mobMatches, mobId)
 			continue
 		}
-
-		if typeFlag&FindHasPet == FindHasPet && mob.Character.Pet.Exists() && !mob.Character.Pet.IsMissing() {
-			mobMatches = append(mobMatches, mobId)
-			continue
-		}
 	}
 
 	return mobMatches
@@ -1342,11 +1291,6 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 		}
 
 		if typeFlag&FindBuffed == FindBuffed && len(user.Character.Buffs.List) > 0 {
-			playerMatches = append(playerMatches, userId)
-			continue
-		}
-
-		if typeFlag&FindHasPet == FindHasPet && user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
 			playerMatches = append(playerMatches, userId)
 			continue
 		}
@@ -1492,29 +1436,6 @@ func (r *Room) FindByName(searchName string, findTypes ...FindFlag) (playerId in
 	mobInstanceId, _ = r.findMobByName(searchName, findTypes...)
 	playerId, _ = r.findPlayerByName(searchName, findTypes...)
 	return playerId, mobInstanceId
-}
-
-func (r *Room) FindByPetName(searchName string) (playerId int) {
-	// Map name to display name
-	petOwners := map[string]int{}
-	petNames := []string{}
-
-	for _, uId := range r.GetPlayers(FindHasPet) {
-		if u := users.GetByUserId(uId); u != nil {
-			petOwners[u.Character.Pet.Name] = u.UserId
-			petNames = append(petNames, u.Character.Pet.Name)
-		}
-	}
-
-	match, closeMatch := util.FindMatchIn(searchName, petNames...)
-	if match == `` {
-		if closeMatch == `` {
-			return 0
-		}
-		return petOwners[closeMatch]
-	}
-
-	return petOwners[match]
 }
 
 func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, error) {

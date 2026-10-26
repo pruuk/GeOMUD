@@ -6,7 +6,7 @@ func buildAdminNav() []WebNavItem {
 	nav := []WebNavItem{
 		{
 			Name:        "Lifeforms",
-			Description: "Manage players, NPCs, conversations, pets, and races.",
+			Description: "Manage players, NPCs, and races.",
 			Children: []WebNavItem{
 				{
 					Name:        "Users",
@@ -29,25 +29,6 @@ func buildAdminNav() []WebNavItem {
 					},
 				},
 				{
-					Name:        "Conversations",
-					Target:      "/admin/conversations",
-					Description: "Script dialogue sequences between NPCs.",
-					Children: []WebNavItem{
-						{Label: "View / Edit", Target: "/admin/conversations", Description: "Browse and edit NPC conversation scripts."},
-						{Label: "API Docs", Target: "/admin/conversations-api", Description: "REST API reference for the conversations endpoint."},
-					},
-				},
-				{
-					Name:        "Pets",
-					Target:      "/admin/pets",
-					Description: "Configure tameable companion types and rankings.",
-					Children: []WebNavItem{
-						{Label: "View / Edit", Target: "/admin/pets", Description: "Browse and edit pet type definitions."},
-						{Label: "Rankings", Target: "/admin/pets-ranks", Description: "View pet power rankings across all types."},
-						{Label: "API Docs", Target: "/admin/pets-api", Description: "REST API reference for the pets endpoint."},
-					},
-				},
-				{
 					Name:        "Races",
 					Target:      "/admin/races",
 					Description: "Define playable and NPC races with stats and traits.",
@@ -61,7 +42,7 @@ func buildAdminNav() []WebNavItem {
 
 		{
 			Name:        "Content",
-			Description: "Manage items, rooms, buffs, spells, and quests.",
+			Description: "Manage items, rooms, buffs, and spells.",
 			Children: []WebNavItem{
 				{
 					Name:        "Items",
@@ -107,15 +88,6 @@ func buildAdminNav() []WebNavItem {
 					},
 				},
 				{
-					Name:        "Quests",
-					Target:      "/admin/quests",
-					Description: "Design multi-step quest chains with token-based progression.",
-					Children: []WebNavItem{
-						{Label: "View / Edit", Target: "/admin/quests", Description: "Browse, create, and edit quest definitions."},
-						{Label: "API Docs", Target: "/admin/quests-api", Description: "REST API reference for the quests endpoint."},
-					},
-				},
-				{
 					Name:        "Skills",
 					Target:      "/admin/skills",
 					Description: "Define skills, their level caps, and the professions that group them.",
@@ -129,17 +101,8 @@ func buildAdminNav() []WebNavItem {
 		},
 		{
 			Name:        "Metrics",
-			Description: "Inspect runtime stats, search telemetry/event logs.",
+			Description: "Inspect runtime stats.",
 			Children: []WebNavItem{
-				{
-					Name:        "Telemetry",
-					Target:      "/admin/telemetry",
-					Description: "Query and inspect server-side telemetry event data.",
-					Children: []WebNavItem{
-						{Label: "View / Query", Target: "/admin/telemetry", Description: "Browse and filter recorded telemetry events."},
-						{Label: "API Docs", Target: "/admin/telemetry-api", Description: "REST API reference for the telemetry endpoint."},
-					},
-				},
 				{
 					Name:        "Stats",
 					Target:      "/admin/stats",
@@ -153,7 +116,7 @@ func buildAdminNav() []WebNavItem {
 		},
 		{
 			Name:        "Settings",
-			Description: "Configure the server, manage time, audio, panels, and scripting.",
+			Description: "Configure the server, manage time, panels, and scripting.",
 			Children: []WebNavItem{
 				{
 					Name:        "Config",
@@ -180,15 +143,6 @@ func buildAdminNav() []WebNavItem {
 					Children: []WebNavItem{
 						{Label: "View / Edit", Target: "/admin/gametime", Description: "View the current game date and adjust time settings."},
 						{Label: "API Docs", Target: "/admin/gametime-api", Description: "REST API reference for the gametime endpoint."},
-					},
-				},
-				{
-					Name:        "Audio",
-					Target:      "/admin/audio",
-					Description: "Manage ambient and event-triggered audio cues.",
-					Children: []WebNavItem{
-						{Label: "View / Edit", Target: "/admin/audio", Description: "Browse and edit audio cue definitions."},
-						{Label: "API Docs", Target: "/admin/audio-api", Description: "REST API reference for the audio endpoint."},
 					},
 				},
 				{
@@ -238,9 +192,8 @@ func buildAdminNav() []WebNavItem {
 						{Label: "Item Scripts", Target: "/admin/scripting-items", Description: "Event hooks for item scripts."},
 						{Label: "Buff Scripts", Target: "/admin/scripting-buffs", Description: "Event hooks for buff/status effect scripts."},
 						{Label: "Spell Scripts", Target: "/admin/scripting-spells", Description: "Event hooks for spell scripts."},
-						{Label: "Pet Scripts", Target: "/admin/scripting-pets", Description: "Event hooks for pet scripts."},
 						{Label: "User Scripts", Target: "/admin/scripting-users", Description: "Event hooks for the global per-player script."},
-						{Label: "Object Reference", Target: "/admin/scripting-objects", Description: "API reference for ActorObject, RoomObject, ItemObject, PetObject, PartyObject, and ContainerObject."},
+						{Label: "Object Reference", Target: "/admin/scripting-objects", Description: "API reference for ActorObject, RoomObject, ItemObject, PartyObject, and ContainerObject."},
 						{Label: "Function Reference", Target: "/admin/scripting-functions", Description: "Global utility, messaging, and panel layout functions."},
 						{Label: "REST API", Target: "/admin/scripting-api", Description: "REST endpoints for script validation and schema."},
 					},

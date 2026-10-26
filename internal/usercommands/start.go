@@ -210,9 +210,6 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 				Look(``, user, destRoom, events.CmdSecretly) // Do a secret look.
 			}
 
-			room.PlaySound(`room-exit`, `movement`, user.UserId)
-			destRoom.PlaySound(`room-enter`, `movement`, user.UserId)
-
 			return true, nil
 		}
 

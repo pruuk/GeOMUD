@@ -50,14 +50,6 @@ type BuffsRemoved struct {
 
 func (b BuffsRemoved) Type() string { return `BuffsRemoved` }
 
-// Used for giving/taking quest progress
-type Quest struct {
-	UserId     int
-	QuestToken string
-}
-
-func (q Quest) Type() string { return `Quest` }
-
 // For special room-targetting actions
 type RoomAction struct {
 	RoomId       int
@@ -139,17 +131,6 @@ type System struct {
 }
 
 func (s System) Type() string { return `System` }
-
-// Payloads describing sound/music to play
-type MSP struct {
-	UserId    int
-	SoundType string // SOUND or MUSIC
-	SoundFile string
-	Volume    int    // 1-100
-	Category  string // special category/type for MSP string
-}
-
-func (m MSP) Type() string { return `MSP` }
 
 // Fired whenever a mob or player changes rooms
 type RoomChange struct {
@@ -275,31 +256,6 @@ type LevelUp struct {
 }
 
 func (l LevelUp) Type() string { return `LevelUp` }
-
-type PetLevelChange struct {
-	UserId     int
-	PetName    string
-	OldLevel   int
-	NewLevel   int
-	OldAbility any
-	NewAbility any
-}
-
-func (p PetLevelChange) Type() string { return `PetLevelChange` }
-
-// Fired when a player feeds their pet
-type PetFed struct {
-	UserId int
-}
-
-func (p PetFed) Type() string { return `PetFed` }
-
-// Fired when an item is given to or removed from a pet
-type PetItemChange struct {
-	UserId int
-}
-
-func (p PetItemChange) Type() string { return `PetItemChange` }
 
 type PlayerDrop struct {
 	UserId int
@@ -466,12 +422,11 @@ type Purchase struct {
 	UserId       int
 	RoomId       int
 	Cost         int
-	SellerMobId  int    // mob spec ID of the seller; 0 if seller is a player or unknown
-	SellerUserId int    // user ID of the seller; 0 if seller is a mob or unknown
-	ItemId       int    // item spec ID when an item was purchased; 0 otherwise
-	MobId        int    // mob spec ID when a mercenary was purchased; 0 otherwise
-	BuffId       int    // buff ID when a buff/enchantment was purchased; 0 otherwise
-	PetName      string // pet type name when a pet was purchased; empty otherwise
+	SellerMobId  int // mob spec ID of the seller; 0 if seller is a player or unknown
+	SellerUserId int // user ID of the seller; 0 if seller is a mob or unknown
+	ItemId       int // item spec ID when an item was purchased; 0 otherwise
+	MobId        int // mob spec ID when a mercenary was purchased; 0 otherwise
+	BuffId       int // buff ID when a buff/enchantment was purchased; 0 otherwise
 }
 
 func (p Purchase) Type() string { return `Purchase` }

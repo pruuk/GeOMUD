@@ -5,7 +5,6 @@
  *
  * Tabs:
  *   Overview - name, race/class, level, alignment, stats grid, point badges
- *   Quests   - in-progress quest log, click to expand
  *   Skills   - learned skills with levels and max indicator
  *   Jobs     - profession completion and proficiency
  *   Effects  - active buffs/debuffs with duration bars
@@ -14,7 +13,6 @@
  *   Char         - full character update
  *   Char.Info    - name, race, class, level, alignment, skill/training points
  *   Char.Stats   - six core stats
- *   Char.Quests  - quest progress
  *   Char.Skills  - skill names, levels, max flag
  *   Char.Jobs    - profession completion and proficiency
  *   Char.Affects - active buffs/debuffs
@@ -22,7 +20,6 @@
  * Reads:
  *   Client.GMCPStructs.Char.Info
  *   Client.GMCPStructs.Char.Stats
- *   Client.GMCPStructs.Char.Quests
  *   Client.GMCPStructs.Char.Skills
  *   Client.GMCPStructs.Char.Jobs
  *   Client.GMCPStructs.Char.Affects
@@ -276,115 +273,6 @@
         }
 
         .cw-affect-item { cursor: default; }
-
-        /* ---- Quests tab ---- */
-        #cw-quests {
-            padding: 4px 6px;
-            gap: 5px;
-        }
-
-        #cw-quests .cq-empty {
-            color: var(--t-text-dim);
-            font-size: 0.78em;
-            font-style: italic;
-            text-align: center;
-            padding: 12px 0;
-        }
-
-        #cw-quests .cq-item {
-            background: var(--t-bg-surface-alt);
-            border: 1px solid var(--t-accent-dim);
-            border-radius: 4px;
-            padding: 5px 7px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            cursor: pointer;
-            transition: background 0.15s;
-            flex-shrink: 0;
-        }
-
-        #cw-quests .cq-item:hover,
-        #cw-quests .cq-item.expanded {
-            background: var(--t-bg-surface);
-        }
-
-        #cw-quests .cq-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 6px;
-        }
-
-        #cw-quests .cq-name {
-            font-size: 0.82em;
-            color: var(--t-text);
-            font-weight: bold;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        #cw-quests .cq-pct {
-            font-size: 0.7em;
-            color: var(--t-text-secondary);
-            flex-shrink: 0;
-        }
-
-        #cw-quests .cq-bar-track {
-            width: 100%;
-            height: 5px;
-            background: var(--t-bg-row);
-            border-radius: 3px;
-            overflow: hidden;
-            border: 1px solid var(--t-party-hp-border);
-        }
-
-        #cw-quests .cq-bar-fill {
-            height: 100%;
-            border-radius: 3px;
-            background: linear-gradient(to right, var(--t-progress-from), var(--t-progress-to));
-            transition: width 0.4s ease-out;
-        }
-
-        #cw-quests .cq-item.complete {
-            background: var(--t-bg-deep);
-            border-color: var(--t-border-accent);
-            opacity: 0.6;
-        }
-
-        #cw-quests .cq-item.complete:hover,
-        #cw-quests .cq-item.complete.expanded {
-            opacity: 1;
-            background: var(--t-bg-surface-alt);
-        }
-
-        #cw-quests .cq-item.complete .cq-name {
-            color: var(--t-text-secondary);
-            text-decoration: line-through;
-        }
-
-        #cw-quests .cq-item.complete .cq-pct {
-            color: var(--t-accent);
-            font-weight: bold;
-        }
-
-        #cw-quests .cq-bar-fill.complete {
-            background: var(--t-accent);
-        }
-
-        #cw-quests .cq-desc {
-            font-size: 0.73em;
-            color: var(--t-text-secondary);
-            line-height: 1.4;
-            display: none;
-            padding-top: 2px;
-            border-top: 1px solid var(--t-border);
-        }
-
-        #cw-quests .cq-item.expanded .cq-desc {
-            display: block;
-        }
 
         /* ---- Skills tab ---- */
         #cw-skills {
@@ -740,7 +628,6 @@
         el.innerHTML =
             '<div class="cw-tab-bar">' +
                 '<button class="cw-tab-btn active" data-panel="cw-overview">Overview</button>' +
-                '<button class="cw-tab-btn"        data-panel="cw-quests">Quests</button>' +
                 '<button class="cw-tab-btn"        data-panel="cw-skills">Skills</button>' +
                 '<button class="cw-tab-btn"        data-panel="cw-jobs">Jobs</button>' +
                 '<button class="cw-tab-btn"        data-panel="cw-effects">Effects</button>' +
@@ -751,10 +638,6 @@
                 '<div id="cw-char-level">Level \u2014</div>' +
                 '<div id="cw-char-alignment"></div>' +
                 buildStatsGrid() +
-            '</div>' +
-
-            '<div class="cw-tab-panel" id="cw-quests">' +
-                '<div class="cq-empty">No active quests</div>' +
             '</div>' +
 
             '<div class="cw-tab-panel" id="cw-skills">' +
@@ -779,7 +662,7 @@
             }
             const modEl = el.querySelector('#cw-stat-mod-' + d.key);
             if (modEl) {
-                modEl.addEventListener('mouseenter', () => showStatTooltip(modEl, 'How much of this stat is due to equipment, buffs and pets.'));
+                modEl.addEventListener('mouseenter', () => showStatTooltip(modEl, 'How much of this stat is due to equipment and buffs.'));
                 modEl.addEventListener('mouseleave', hideStatTooltip);
             }
         });
@@ -984,54 +867,6 @@
         });
     }
 
-    function updateQuests() {
-        const quests = Client.GMCPStructs.Char && Client.GMCPStructs.Char.Quests;
-        const panel  = document.getElementById('cw-quests');
-        if (!panel) { return; }
-
-        const expanded = new Set();
-        panel.querySelectorAll('.cq-item.expanded').forEach(el => {
-            expanded.add(el.dataset.questName);
-        });
-
-        panel.innerHTML = '';
-
-        if (!Array.isArray(quests) || quests.length === 0) {
-            panel.innerHTML = '<div class="cq-empty">No active quests</div>';
-            return;
-        }
-
-        const sorted = [...quests].sort((a, b) => {
-            const ac = (a.completion || 0) >= 100;
-            const bc = (b.completion || 0) >= 100;
-            if (ac !== bc) { return ac ? 1 : -1; }
-            if (a.completion !== b.completion) { return a.completion - b.completion; }
-            return (a.name || '').localeCompare(b.name || '');
-        });
-
-        sorted.forEach(q => {
-            const pct        = Math.max(0, Math.min(100, q.completion || 0));
-            const complete   = pct >= 100;
-            const isExpanded = expanded.has(q.name);
-
-            const item = document.createElement('div');
-            item.className       = 'cq-item' + (complete ? ' complete' : '') + (isExpanded ? ' expanded' : '');
-            item.dataset.questName = q.name || '';
-            item.innerHTML =
-                '<div class="cq-header">' +
-                    '<span class="cq-name">' + (q.name || 'Unknown Quest') + '</span>' +
-                    '<span class="cq-pct">' + (complete ? 'Complete' : pct + '%') + '</span>' +
-                '</div>' +
-                '<div class="cq-bar-track">' +
-                    '<div class="cq-bar-fill' + (complete ? ' complete' : '') + '" style="width:' + pct + '%"></div>' +
-                '</div>' +
-                '<div class="cq-desc">' + (q.description || '') + '</div>';
-
-            item.addEventListener('click', () => item.classList.toggle('expanded'));
-            panel.appendChild(item);
-        });
-    }
-
     function _isDebuff(mods) {
         if (!mods) { return false; }
         return Object.values(mods).some(v => v < 0);
@@ -1133,7 +968,6 @@
         if (!win.isOpen()) { return; }
         updateOverview();
         updateStats();
-        updateQuests();
         updateSkills();
         updateJobs();
         updateEffects();
@@ -1144,7 +978,7 @@
     // -----------------------------------------------------------------------
     VirtualWindows.register({
         window:       win,
-        gmcpHandlers: ['Char.Info', 'Char.Stats', 'Char.Quests', 'Char.Skills', 'Char.Jobs', 'Char.Affects', 'Char'],
+        gmcpHandlers: ['Char.Info', 'Char.Stats', 'Char.Skills', 'Char.Jobs', 'Char.Affects', 'Char'],
         onGMCP() { update(); },
     });
 

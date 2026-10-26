@@ -75,13 +75,8 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 			continue
 		}
 
-		if mob.InConversation() {
-			mob.Converse()
-			continue
-		}
-
 		// Check whether they are currently in the middle of a path, or have one waiting to start.
-		// This comes after checks for whether they are currently in a conersation, or in combat, etc.
+		// This comes after checks for whether they are in combat, etc.
 		if currentStep := mob.Path.Current(); currentStep != nil || mob.Path.Len() > 0 {
 
 			if currentStep == nil {

@@ -30,10 +30,6 @@ func adminScriptingSpells(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "scripting-spells.html", nil)
 }
 
-func adminScriptingPets(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "scripting-pets.html", nil)
-}
-
 func adminScriptingUsers(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "scripting-users.html", nil)
 }

@@ -135,12 +135,6 @@ func (p ScriptParty) SetResetRoomId(roomId int) {
 	})
 }
 
-func (p ScriptParty) GiveQuest(questId string) {
-	p.each(func(a ScriptActor) {
-		a.GiveQuest(questId)
-	})
-}
-
 func (p ScriptParty) AddGold(amt int, bankAmt ...int) {
 	p.each(func(a ScriptActor) {
 		a.AddGold(amt, bankAmt...)

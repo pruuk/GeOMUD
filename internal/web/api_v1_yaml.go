@@ -9,12 +9,9 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/configs"
-	"github.com/GoMudEngine/GoMud/internal/conversations"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
-	"github.com/GoMudEngine/GoMud/internal/pets"
-	"github.com/GoMudEngine/GoMud/internal/quests"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/skills"
@@ -217,33 +214,6 @@ func apiV1GetProfessionYAML(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
-// Pets
-// ---------------------------------------------------------------------------
-
-// GET /admin/api/v1/pets/{petname}/yaml
-func apiV1GetPetYAML(w http.ResponseWriter, r *http.Request) {
-	petname := strings.TrimSpace(r.PathValue("petname"))
-	if petname == "" {
-		writeAPIError(w, http.StatusBadRequest, "petname is required")
-		return
-	}
-	spec := pets.GetPetCopy(petname)
-	if !spec.Exists() {
-		writeAPIError(w, http.StatusNotFound, "pet not found: "+petname)
-		return
-	}
-	path := dataFiles() + `/pets/` + spec.Filepath()
-	content, ok := readYAMLFile(w, path)
-	if !ok {
-		return
-	}
-	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
-		Success: true,
-		Data:    yamlResp(content, path),
-	})
-}
-
-// ---------------------------------------------------------------------------
 // Mutators
 // ---------------------------------------------------------------------------
 
@@ -294,34 +264,6 @@ func apiV1GetBiomeYAML(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
-// Quests
-// ---------------------------------------------------------------------------
-
-// GET /admin/api/v1/quests/{questId}/yaml
-func apiV1GetQuestYAML(w http.ResponseWriter, r *http.Request) {
-	questIdStr := r.PathValue("questId")
-	questId, err := strconv.Atoi(questIdStr)
-	if err != nil {
-		writeAPIError(w, http.StatusBadRequest, "questId must be an integer: "+questIdStr)
-		return
-	}
-	q := quests.GetQuestById(questId)
-	if q == nil {
-		writeAPIError(w, http.StatusNotFound, "quest not found: "+questIdStr)
-		return
-	}
-	path := dataFiles() + `/quests/` + q.Filepath()
-	content, ok := readYAMLFile(w, path)
-	if !ok {
-		return
-	}
-	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
-		Success: true,
-		Data:    yamlResp(content, path),
-	})
-}
-
-// ---------------------------------------------------------------------------
 // Rooms
 // ---------------------------------------------------------------------------
 
@@ -349,27 +291,6 @@ func apiV1GetRoomYAML(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
-// Conversations
-// ---------------------------------------------------------------------------
-
-// GET /admin/api/v1/conversations/{zone}/{mobId}/yaml
-func apiV1GetConversationYAML(w http.ResponseWriter, r *http.Request) {
-	zone, mobId, ok := resolveConversationPath(w, r)
-	if !ok {
-		return
-	}
-	path := conversations.ConvFilePath(zone, mobId)
-	content, ok := readYAMLFile(w, path)
-	if !ok {
-		return
-	}
-	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
-		Success: true,
-		Data:    yamlResp(content, path),
-	})
-}
-
-// ---------------------------------------------------------------------------
 // Users
 // ---------------------------------------------------------------------------
 
@@ -383,23 +304,6 @@ func apiV1GetUserYAML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := util.FilePath(dataFiles(), `/`, `users`, `/`, strconv.Itoa(userId)+`.yaml`)
-	content, ok := readYAMLFile(w, path)
-	if !ok {
-		return
-	}
-	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
-		Success: true,
-		Data:    yamlResp(content, path),
-	})
-}
-
-// ---------------------------------------------------------------------------
-// Audio (single file)
-// ---------------------------------------------------------------------------
-
-// GET /admin/api/v1/audio/yaml
-func apiV1GetAudioYAML(w http.ResponseWriter, r *http.Request) {
-	path := dataFiles() + `/audio.yaml`
 	content, ok := readYAMLFile(w, path)
 	if !ok {
 		return

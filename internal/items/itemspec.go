@@ -209,7 +209,6 @@ type ItemSpec struct {
 	DisplayName     string `yaml:"displayname,omitempty"` // Name that is typically displayed to the user
 	NameSimple      string // A simpler name for the item, for example "Golden Battleaxe" should be "Battleaxe" or "Axe" for simple
 	Description     string
-	QuestToken      string `yaml:"questtoken,omitempty"` // Grants this quest if given/picked up
 	Type            ItemType
 	Subtype         ItemSubType
 	Damage          Damage

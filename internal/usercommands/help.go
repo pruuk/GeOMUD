@@ -11,7 +11,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/spells"
-	"github.com/GoMudEngine/GoMud/internal/telemetry"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -85,8 +84,6 @@ func Help(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 			user.SendText(fmt.Sprintf(`No help found for "%s"`, rest))
 			return true, err
 		}
-
-		telemetry.TrackFull(telemetry.CatHelpTopic, "", 0, 0, 0, 0, resolveHelpTopic(rest))
 
 	}
 
@@ -205,14 +202,3 @@ type HelpContentsResult struct {
 //	    return r
 //	})
 var OnGetHelpContents util.Hook[HelpContentsResult]
-
-// resolveHelpTopic returns the canonical help topic name for a raw input string,
-// applying the same alias resolution used by GetHelpContents.
-func resolveHelpTopic(input string) string {
-	if fullSearchAlias := keywords.TryHelpAlias(input); fullSearchAlias != input {
-		return fullSearchAlias
-	}
-	helpName := util.SplitButRespectQuotes(input)[0]
-	helpName = regexp.MustCompile(`[^a-zA-Z0-9\\-]+`).ReplaceAllString(helpName, ``)
-	return keywords.TryHelpAlias(helpName)
-}

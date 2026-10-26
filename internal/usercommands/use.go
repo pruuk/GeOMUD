@@ -45,8 +45,6 @@ func Use(rest string, user *users.UserRecord, room *rooms.Room, flags events.Eve
 			container.AddItem(newItem)
 			room.Containers[containerName] = container
 
-			room.PlaySound(`change`, `other`)
-
 			user.SendText(``)
 			user.SendText(fmt.Sprintf(`The <ansi fg="container">%s</ansi> produces a <ansi fg="itemname">%s</ansi>!`, containerName, newItem.DisplayName()))
 			user.SendText(``)

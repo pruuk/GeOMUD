@@ -1086,13 +1086,6 @@ var FIELD_META = {
         inputType: 'slider',
         min: 1, max: 500, step: 1,
     },
-    'GamePlay.MobConverseChance': {
-        label: 'Mob Converse Chance (%)',
-        description: 'The percentage chance (1-100) that an idle mob will attempt to start a conversation with another nearby mob each round.',
-        implications: 'Higher values create a more lively world with frequent NPC chatter. Lower values make conversations rare and special. 0 disables NPC conversations entirely.',
-        inputType: 'slider',
-        min: 0, max: 100, step: 1,
-    },
     'GamePlay.AlignmentDecayRounds': {
         label: 'Alignment Decay Rounds',
         description: 'How many rounds between each step of alignment decay toward neutral. Alignment slowly drifts toward neutral over time when this is non-zero.',
@@ -1614,11 +1607,11 @@ var SECTIONS = [
     {
         key: 'GamePlay.General',
         name: 'Gameplay: General',
-        desc: 'XP scale, mob conversations, alignment decay, elite mobs, shops, containers, and floor items.',
+        desc: 'XP scale, alignment decay, elite mobs, shops, containers, and floor items.',
         color: '#c0392b',
         iconBg: '#fdecea',
         icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 9H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5S16.33 9 15.5 9z"/><path d="M10 9.5c0 .83-.67 1.5-1.5 1.5h-5C2.67 11 2 10.33 2 9.5S2.67 8 3.5 8h5c.83 0 1.5.67 1.5 1.5z"/><path d="M8.5 15H10v-1.5c0-.83-.67-1.5-1.5-1.5S7 12.67 7 13.5s.67 1.5 1.5 1.5z"/></svg>',
-        fields: ['GamePlay.AllowItemBuffRemoval','GamePlay.XPScale','GamePlay.MobConverseChance','GamePlay.AlignmentDecayRounds','GamePlay.EliteLevelBonus','GamePlay.EliteXPBonus','GamePlay.ShopRestockRate','GamePlay.MercHirePricePerLevel','GamePlay.ContainerSizeMax','GamePlay.FloorItemCountMax'],
+        fields: ['GamePlay.AllowItemBuffRemoval','GamePlay.XPScale','GamePlay.AlignmentDecayRounds','GamePlay.EliteLevelBonus','GamePlay.EliteXPBonus','GamePlay.ShopRestockRate','GamePlay.MercHirePricePerLevel','GamePlay.ContainerSizeMax','GamePlay.FloorItemCountMax'],
     },
     {
         key: 'GamePlay.Lives',

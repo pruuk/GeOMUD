@@ -13,7 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
-	"github.com/GoMudEngine/GoMud/internal/quests"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/skills"
@@ -53,12 +52,6 @@ func init() {
 	events.RegisterListener(events.BuffsRemoved{}, g.buffsRemovedHandler)
 	events.RegisterListener(events.AlignmentChanged{}, g.alignmentChangedHandler)
 
-	events.RegisterListener(events.Quest{}, g.questProgressHandler, events.Last)
-
-	events.RegisterListener(events.PetLevelChange{}, g.petLevelChangeHandler)
-	events.RegisterListener(events.PetFed{}, g.petFedHandler)
-	events.RegisterListener(events.PetItemChange{}, g.petItemChangeHandler)
-
 	events.RegisterListener(events.MobDeath{}, g.killsChangedHandler)
 	events.RegisterListener(events.PlayerDeath{}, g.killsChangedHandler)
 
@@ -76,25 +69,6 @@ type GMCPCharUpdate struct {
 }
 
 func (g GMCPCharUpdate) Type() string { return `GMCPCharUpdate` }
-
-func (g *GMCPCharModule) questProgressHandler(e events.Event) events.ListenerReturn {
-
-	evt, typeOk := e.(events.Quest)
-	if !typeOk {
-		return events.Continue // Return false to stop halt the event chain for this event
-	}
-
-	if evt.UserId == 0 {
-		return events.Continue
-	}
-
-	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
-		Identifier: `Char.Quests`,
-	})
-
-	return events.Continue
-}
 
 func (g *GMCPCharModule) killsChangedHandler(e events.Event) events.ListenerReturn {
 
@@ -193,63 +167,6 @@ func (g *GMCPCharModule) buffsRemovedHandler(e events.Event) events.ListenerRetu
 	events.AddToQueue(GMCPCharUpdate{
 		UserId:     evt.UserId,
 		Identifier: `Char`,
-	})
-
-	return events.Continue
-}
-
-func (g *GMCPCharModule) petLevelChangeHandler(e events.Event) events.ListenerReturn {
-
-	evt, typeOk := e.(events.PetLevelChange)
-	if !typeOk {
-		return events.Continue
-	}
-
-	if evt.UserId == 0 {
-		return events.Continue
-	}
-
-	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
-		Identifier: `Char.Pets`,
-	})
-
-	return events.Continue
-}
-
-func (g *GMCPCharModule) petItemChangeHandler(e events.Event) events.ListenerReturn {
-
-	evt, typeOk := e.(events.PetItemChange)
-	if !typeOk {
-		return events.Continue
-	}
-
-	if evt.UserId == 0 {
-		return events.Continue
-	}
-
-	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
-		Identifier: `Char.Pets`,
-	})
-
-	return events.Continue
-}
-
-func (g *GMCPCharModule) petFedHandler(e events.Event) events.ListenerReturn {
-
-	evt, typeOk := e.(events.PetFed)
-	if !typeOk {
-		return events.Continue
-	}
-
-	if evt.UserId == 0 {
-		return events.Continue
-	}
-
-	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
-		Identifier: `Char.Pets`,
 	})
 
 	return events.Continue
@@ -512,46 +429,6 @@ func (g *GMCPCharModule) GetCharNode(user *users.UserRecord, gmcpModule string) 
 		}
 	}
 
-	if all || g.wantsGMCPPayload(`Char.Pets`, gmcpModule) {
-
-		payload.Pets = []GMCPCharModule_Payload_Pet{}
-
-		if user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
-
-			p := GMCPCharModule_Payload_Pet{
-				Name:     user.Character.Pet.Name,
-				Type:     user.Character.Pet.Type,
-				Level:    user.Character.Pet.Level,
-				Hunger:   user.Character.Pet.Food.String(),
-				Capacity: user.Character.Pet.GetEffectiveCapacity(),
-				Buffs:    []string{},
-				Items:    []GMCPCharModule_Payload_Inventory_Item{},
-			}
-
-			if abDisplay := user.Character.Pet.GetCurrentAbilityDisplay(); abDisplay != nil {
-				p.Ability = &GMCPCharModule_Payload_Pet_Ability{
-					LevelGranted: abDisplay.LevelGranted,
-					CombatChance: abDisplay.CombatChance,
-					DiceRoll:     abDisplay.DiceRoll,
-					StatMods:     abDisplay.StatMods,
-				}
-				if len(abDisplay.BuffNames) > 0 {
-					p.Buffs = abDisplay.BuffNames
-				}
-			}
-
-			for _, itm := range user.Character.Pet.Items {
-				p.Items = append(p.Items, newInventory_Item(itm))
-			}
-
-			payload.Pets = append(payload.Pets, p)
-		}
-
-		if !all {
-			return payload.Pets, `Char.Pets`
-		}
-	}
-
 	if all || g.wantsGMCPPayload(`Char.Enemies`, gmcpModule) {
 
 		payload.Enemies = []GMCPCharModule_Enemy{}
@@ -743,52 +620,6 @@ func (g *GMCPCharModule) GetCharNode(user *users.UserRecord, gmcpModule string) 
 		}
 	}
 
-	if all || g.wantsGMCPPayload(`Char.Quests`, gmcpModule) {
-
-		payload.Quests = []GMCPCharModule_Payload_Quest{}
-
-		for questId, questStep := range user.Character.GetQuestProgress() {
-
-			questToken := quests.PartsToToken(questId, questStep)
-
-			questInfo := quests.GetQuest(questToken)
-			if questInfo == nil {
-				continue
-			}
-
-			// Secret quests are not sent
-			if questInfo.Secret {
-				continue
-			}
-
-			completedSteps := 0
-			totalSteps := len(questInfo.Steps)
-
-			questPayload := GMCPCharModule_Payload_Quest{
-				Name:        questInfo.Name,
-				Completion:  0,
-				Description: questInfo.Description,
-			}
-
-			for _, step := range questInfo.Steps {
-				completedSteps++
-				if step.Id == questStep {
-					questPayload.Description = step.Description
-					break
-				}
-			}
-
-			questPayload.Completion = int(math.Floor(float64(completedSteps) / float64(totalSteps) * 100))
-
-			// Add to the returned output
-			payload.Quests = append(payload.Quests, questPayload)
-		}
-
-		if !all {
-			return payload.Quests, `Char.Quests`
-		}
-	}
-
 	if all || g.wantsGMCPPayload(`Char.Skills`, gmcpModule) {
 
 		payload.Skills = []GMCPCharModule_Payload_Skill{}
@@ -923,8 +754,6 @@ type GMCPCharModule_Payload struct {
 	Stats     *GMCPCharModule_Payload_Stats            `json:"Stats,omitempty"`
 	Vitals    *GMCPCharModule_Payload_Vitals           `json:"Vitals,omitempty"`
 	Worth     *GMCPCharModule_Payload_Worth            `json:"Worth,omitempty"`
-	Quests    []GMCPCharModule_Payload_Quest           `json:"Quests,omitempty"`
-	Pets      []GMCPCharModule_Payload_Pet             `json:"Pets,omitempty"`
 	Skills    []GMCPCharModule_Payload_Skill           `json:"Skills,omitempty"`
 	Jobs      []GMCPCharModule_Payload_Job             `json:"Jobs,omitempty"`
 	Kills     *GMCPCharModule_Payload_Kills            `json:"Kills,omitempty"`
@@ -1025,10 +854,6 @@ func newInventory_Item(itm items.Item) GMCPCharModule_Payload_Inventory_Item {
 		d.Details = append(d.Details, `cursed`)
 	}
 
-	if itmSpec.QuestToken != `` {
-		d.Details = append(d.Details, `quest`)
-	}
-
 	if itmSpec.Type == items.Weapon {
 		d.Details = append(d.Details, strconv.Itoa(itmSpec.Hands)+`-handed`)
 	}
@@ -1084,36 +909,6 @@ type GMCPCharModule_Payload_Affect struct {
 	DurationLeft int            `json:"duration_left"`
 	Type         string         `json:"type"`
 	Mods         map[string]int `json:"affects"`
-}
-
-// /////////////////
-// Char.Quests
-// /////////////////
-type GMCPCharModule_Payload_Quest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Completion  int    `json:"completion"`
-}
-
-// /////////////////
-// Char.Pets
-// /////////////////
-type GMCPCharModule_Payload_Pet struct {
-	Name     string                                  `json:"name"`
-	Type     string                                  `json:"type"`
-	Level    int                                     `json:"level"`
-	Hunger   string                                  `json:"hunger"`
-	Ability  *GMCPCharModule_Payload_Pet_Ability     `json:"ability,omitempty"`
-	Buffs    []string                                `json:"buffs"`
-	Items    []GMCPCharModule_Payload_Inventory_Item `json:"items"`
-	Capacity int                                     `json:"capacity"`
-}
-
-type GMCPCharModule_Payload_Pet_Ability struct {
-	LevelGranted int            `json:"level_granted"`
-	CombatChance int            `json:"combat_chance"`
-	DiceRoll     string         `json:"dice_roll"`
-	StatMods     map[string]int `json:"stat_mods,omitempty"`
 }
 
 // /////////////////

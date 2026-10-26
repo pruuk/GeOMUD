@@ -7,10 +7,10 @@ import (
 )
 
 //
-// Checks for quests on the item
+// Runs the item's onFound/onLost script when a user gains or loses it
 //
 
-func CheckItemQuests(e events.Event) events.ListenerReturn {
+func ItemScriptEvents(e events.Event) events.ListenerReturn {
 
 	evt, typeOk := e.(events.ItemOwnership)
 	if !typeOk {
@@ -24,14 +24,6 @@ func CheckItemQuests(e events.Event) events.ListenerReturn {
 	}
 
 	if evt.Gained {
-
-		iSpec := evt.Item.GetSpec()
-		if iSpec.QuestToken != `` {
-			events.AddToQueue(events.Quest{
-				UserId:     evt.UserId,
-				QuestToken: iSpec.QuestToken,
-			})
-		}
 
 		scripting.TryItemScriptEvent(`onFound`, evt.Item, evt.UserId)
 

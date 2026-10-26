@@ -12,7 +12,7 @@ type ObjectMethod struct {
 }
 
 // ObjectTypeDef describes an engine object type (the runtime value bound to a
-// script variable such as `mob`, `room`, `item`, `pet`) and the methods that
+// script variable such as `mob`, `room`, `item`) and the methods that
 // can be called on it.
 type ObjectTypeDef struct {
 	Name        string         `json:"name"`
@@ -40,7 +40,6 @@ func GetScriptObjectTypes() *ScriptObjectTypes {
 			"ActorObject":       actorObjectType(),
 			"RoomObject":        roomObjectType(),
 			"ItemObject":        itemObjectType(),
-			"PetObject":         petObjectType(),
 			"PartyObject":       partyObjectType(),
 			"ContainerObject":   containerScriptObjectType(),
 			"PanelLayoutObject": panelLayoutObjectType(),
@@ -136,10 +135,6 @@ func actorObjectType() ObjectTypeDef {
 			m("DisableSpell", "boolean", "Disables a known spell.", p("spellId", "string")),
 			m("EnableSpell", "boolean", "Re-enables a disabled spell.", p("spellId", "string")),
 			m("GetSpells", "object", "Returns a map of spell ID to level."),
-			m("HasQuest", "boolean", "Returns true if the actor has progress on a quest.", p("questId", "string")),
-			m("GiveQuest", "void", "Grants a quest token to the actor.", p("questId", "string")),
-			m("IsQuestDone", "boolean", "Returns true if a quest token is complete.", p("questToken", "string")),
-			m("ClearQuestToken", "void", "Clears a quest token from the actor.", p("questToken", "string")),
 			m("GetParty", "PartyObject", "Returns the actor's party (members present and missing).", p("excludeSelf?", "boolean")),
 			m("GetPartyPresent", "PartyObject", "Returns the actor's party limited to members in the same room.", p("excludeSelf?", "boolean")),
 			m("GetPartyMissing", "PartyObject", "Returns the actor's party limited to members not in the same room."),
@@ -184,10 +179,7 @@ func actorObjectType() ObjectTypeDef {
 			m("PathingAtWaypoint", "boolean", "Returns true if the actor is at a path waypoint."),
 			m("Sleep", "void", "Pauses the actor for a number of seconds.", p("seconds", "number")),
 			m("GetLastInputRound", "number", "Returns the round of the actor's last input."),
-			m("PlaySound", "void", "Plays a sound for the actor.", p("soundId", "string"), p("category", "string")),
-			m("PlayMusic", "void", "Plays music for the actor.", p("musicFileOrId", "string")),
 			m("Uncurse", "ItemObject[]", "Uncurses worn items and returns them."),
-			m("GetPet", "PetObject", "Returns the actor's pet, or null."),
 		},
 	}
 }
@@ -232,8 +224,6 @@ func roomObjectType() ObjectTypeDef {
 			m("AddMutator", "void", "Adds a mutator to the room.", p("mutName", "string")),
 			m("RemoveMutator", "void", "Removes a mutator from the room.", p("mutName", "string")),
 			m("GetExits", "object", "Returns the room's exits."),
-			m("HasQuest", "number[]", "Returns user IDs in the room with quest progress.", p("questId", "string"), p("partyUserId?", "number")),
-			m("MissingQuest", "number[]", "Returns user IDs missing a quest.", p("questId", "string"), p("partyUserId?", "number")),
 			m("SendText", "void", "Sends text to everyone in the room.", p("msg", "string"), p("...excludeUserIds", "number")),
 			m("SendTextToExits", "void", "Sends text to adjacent rooms.", p("msg", "string"), p("isQuiet", "boolean"), p("...excludeUserIds", "number")),
 			m("GetGold", "number", "Returns gold on the room floor."),
@@ -254,7 +244,6 @@ func roomObjectType() ObjectTypeDef {
 			m("AreMobsAttacking", "boolean", "Returns true if mobs are attacking the user.", p("userId", "number")),
 			m("ArePlayersAttacking", "boolean", "Returns true if players are attacking the user.", p("userId", "number")),
 			m("HasRecentVisitors", "boolean", "Returns true if the room had recent visitors."),
-			m("PlaySound", "void", "Plays a sound for everyone in the room.", p("soundId", "string"), p("category", "string"), p("...excludeUserIds", "number")),
 		},
 	}
 }
@@ -276,7 +265,6 @@ func itemObjectType() ObjectTypeDef {
 			m("GetSubtype", "string", "Returns the item subtype."),
 			m("GetValue", "number", "Returns the item's value in gold."),
 			m("GetElement", "string", "Returns the item's element."),
-			m("GetQuestToken", "string", "Returns the item's quest token."),
 			m("GetBuffIds", "number[]", "Returns buffs granted on use."),
 			m("GetWornBuffIds", "number[]", "Returns buffs granted while worn."),
 			m("GetStatMods", "object", "Returns the item's stat modifiers."),
@@ -299,35 +287,6 @@ func itemObjectType() ObjectTypeDef {
 	}
 }
 
-func petObjectType() ObjectTypeDef {
-	return ObjectTypeDef{
-		Name:        "PetObject",
-		Description: "A pet companion.",
-		Methods: []ObjectMethod{
-			m("Name", "string", "Returns the pet's display name."),
-			m("NameSimple", "string", "Returns the pet's simple name."),
-			m("SetName", "void", "Sets the pet's name.", p("name", "string")),
-			m("Type", "string", "Returns the pet type."),
-			m("Level", "number", "Returns the pet's level."),
-			m("Food", "string", "Returns the pet's food type."),
-			m("FoodLevel", "number", "Returns the pet's food level."),
-			m("Feed", "void", "Feeds the pet."),
-			m("Starve", "void", "Reduces the pet's food level."),
-			m("GetStatMod", "number", "Returns a named stat modifier the pet grants.", p("statName", "string")),
-			m("GetCapacity", "number", "Returns the pet's item capacity."),
-			m("ItemCount", "number", "Returns the number of items the pet carries."),
-			m("IsMissing", "boolean", "Returns true if the pet is missing."),
-			m("GoMissing", "void", "Sends the pet missing for a number of rounds.", p("rounds", "number")),
-			m("HasScript", "boolean", "Returns true if the pet type has a script."),
-			m("GetItems", "ItemObject[]", "Returns the items the pet carries."),
-			m("FindItem", "ItemObject", "Finds a carried item by name.", p("itemName", "string")),
-			m("StoreItem", "boolean", "Stores an item on the pet.", p("item", "ItemObject")),
-			m("RemoveItem", "boolean", "Removes an item from the pet.", p("item", "ItemObject")),
-			m("GetBuffIds", "number[]", "Returns buffs the pet grants its owner."),
-		},
-	}
-}
-
 func partyObjectType() ObjectTypeDef {
 	return ObjectTypeDef{
 		Name:        "PartyObject",
@@ -336,7 +295,6 @@ func partyObjectType() ObjectTypeDef {
 			m("GetMembers", "ActorObject[]", "Returns all actors in the party."),
 			m("SendText", "void", "Sends a text message to every party member.", p("msg", "string")),
 			m("SetResetRoomId", "void", "Sets the reset room for every party member.", p("roomId", "number")),
-			m("GiveQuest", "void", "Grants a quest token to every party member.", p("questId", "string")),
 			m("AddGold", "void", "Adds gold to every party member (and optionally the bank).", p("amount", "number"), p("bankAmount?", "number")),
 			m("AddHealth", "void", "Adds (or subtracts) health for every party member.", p("amt", "number")),
 			m("AddMana", "void", "Adds (or subtracts) mana for every party member.", p("amt", "number")),

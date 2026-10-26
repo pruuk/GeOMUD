@@ -14,27 +14,22 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/GoMudEngine/GoMud/internal/audio"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
-	"github.com/GoMudEngine/GoMud/internal/conversations"
 	"github.com/GoMudEngine/GoMud/internal/copyover"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/flags"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/hooks"
 	"github.com/GoMudEngine/GoMud/internal/inputhandlers"
-	"github.com/GoMudEngine/GoMud/internal/integrations/discord"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/language"
-	"github.com/GoMudEngine/GoMud/internal/migration"
 	"github.com/GoMudEngine/GoMud/internal/modmanager"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
-	"github.com/GoMudEngine/GoMud/internal/version"
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/ssh"
 
@@ -42,16 +37,12 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
-	"github.com/GoMudEngine/GoMud/internal/pets"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
-	"github.com/GoMudEngine/GoMud/internal/quests"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/GoMudEngine/GoMud/internal/spells"
-	"github.com/GoMudEngine/GoMud/internal/suggestions"
-	"github.com/GoMudEngine/GoMud/internal/telemetry"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/users"
@@ -65,7 +56,6 @@ import (
 // Should be kept in lockstep with github releases
 // When updating this version:
 // 1. Expect to update the github release version
-// 2. Consider whether any migration code is needed for breaking changes, particularly in datafiles (see internal/migration)
 const VERSION = "0.9.10"
 
 var (
@@ -131,22 +121,6 @@ func main() {
 	configs.ReloadConfig()
 	c := configs.GetConfig()
 
-	lastKnownVersion, err := version.Parse(string(configs.GetServerConfig().CurrentVersion))
-	if err != nil {
-		mudlog.Error("Versioning", "error", err)
-		os.Exit(1)
-	}
-
-	currentVersion, _ := version.Parse(VERSION)
-
-	// if no copyover FD, run any migrations
-	if flags.CopyoverFd() < 0 {
-		if err = migration.Run(lastKnownVersion, currentVersion); err != nil {
-			mudlog.Error("migration.Run()", "error", err)
-			os.Exit(1)
-		}
-	}
-
 	// Default i18n localize folders
 	if len(c.Translation.LanguagePaths) == 0 {
 		c.Translation.LanguagePaths = []string{
@@ -199,10 +173,7 @@ func main() {
 	mutators.RegisterFS(plugins.GetPluginRegistry())
 	buffs.RegisterFS(plugins.GetPluginRegistry())
 	buffs.RegisterFlagFS(plugins.GetPluginRegistry())
-	pets.RegisterFS(plugins.GetPluginRegistry())
-	quests.RegisterFS(plugins.GetPluginRegistry())
 	mobs.RegisterFS(plugins.GetPluginRegistry())
-	conversations.RegisterFS(plugins.GetPluginRegistry())
 	usercommands.AddFunctionExporter(plugins.GetPluginRegistry())
 	users.AddFunctionExporter(plugins.GetPluginRegistry())
 	usercommands.SetRoomTagProvider(plugins.GetRegisteredRoomTags)
@@ -227,17 +198,6 @@ func main() {
 	})
 
 	hooks.RegisterListeners()
-
-	telemetry.Load(configs.GetFilePathsConfig().DataFiles.String())
-	telemetry.RegisterListeners()
-
-	// Discord integration
-	if webhookUrl := string(c.Integrations.Discord.WebhookUrl); webhookUrl != "" {
-		discord.Init(webhookUrl)
-		mudlog.Info("Discord", "info", "integration is enabled")
-	} else {
-		mudlog.Warn("Discord", "info", "integration is disabled")
-	}
 
 	mudlog.Info(
 		"Starting server",
@@ -454,7 +414,6 @@ func main() {
 	wg.Wait()
 
 	// Give it a second to disaptch any final messages in the event queue
-	// Example: discord server shutdown
 	time.Sleep(1 * time.Second)
 }
 
@@ -490,7 +449,6 @@ func resumeRestoredConnection(connDetails *connections.ConnectionDetails, userOb
 		History:      connections.InputHistory{},
 	}
 
-	var sug suggestions.Suggestions
 	lastInput := time.Now()
 	c := configs.GetConfig()
 
@@ -528,48 +486,7 @@ func resumeRestoredConnection(connDetails *connections.ConnectionDetails, userOb
 		}
 
 		if !okContinue {
-			_, suggested := userObject.GetUnsentText()
-
-			redrawPrompt := false
-
-			if clientInput.TabPressed {
-				if sug.Count() < 1 {
-					sug.Set(worldManager.GetAutoComplete(userObject.UserId, string(clientInput.Buffer)))
-				}
-				if sug.Count() > 0 {
-					suggested = sug.Next()
-					userObject.SetUnsentText(string(clientInput.Buffer), suggested)
-					redrawPrompt = true
-				}
-			} else if clientInput.BSPressed {
-				userObject.SetUnsentText(string(clientInput.Buffer), ``)
-				if suggested != `` {
-					suggested = ``
-					sug.Clear()
-					redrawPrompt = true
-				}
-			} else {
-				if suggested != `` {
-					if len(clientInput.Buffer) > 0 && clientInput.Buffer[len(clientInput.Buffer)-1] == term.ASCII_SPACE {
-						clientInput.Buffer = append(clientInput.Buffer[0:len(clientInput.Buffer)-1], []byte(suggested)...)
-						clientInput.Buffer = append(clientInput.Buffer[0:len(clientInput.Buffer)], []byte(` `)...)
-						redrawPrompt = true
-						userObject.SetUnsentText(string(clientInput.Buffer), ``)
-						sug.Clear()
-					} else {
-						suggested = ``
-						sug.Clear()
-						userObject.SetUnsentText(string(clientInput.Buffer), suggested)
-						redrawPrompt = true
-					}
-				}
-				userObject.SetUnsentText(string(clientInput.Buffer), suggested)
-			}
-
-			if redrawPrompt {
-				pTxt := userObject.GetCommandPrompt()
-				connections.SendTo([]byte(templates.AnsiParse(pTxt)), clientInput.ConnectionId)
-			}
+			userObject.SetUnsentText(string(clientInput.Buffer))
 
 			continue
 		}
@@ -579,23 +496,15 @@ func resumeRestoredConnection(connDetails *connections.ConnectionDetails, userOb
 
 			if time.Since(lastInput) < time.Duration(c.Timing.TurnMs)*time.Millisecond {
 				clientInput.Reset()
-				userObject.SetUnsentText(``, ``)
+				userObject.SetUnsentText(``)
 			} else {
-				_, suggested := userObject.GetUnsentText()
-				if len(suggested) > 0 {
-					clientInput.Buffer = append(clientInput.Buffer, []byte(suggested)...)
-					sug.Clear()
-					userObject.SetUnsentText(string(clientInput.Buffer), ``)
-					connections.SendTo([]byte(templates.AnsiParse(userObject.GetCommandPrompt())), clientInput.ConnectionId)
-				}
-
 				wi := WorldInput{
 					FromId:    userObject.UserId,
 					InputText: string(clientInput.Buffer),
 				}
 				worldManager.SendInput(wi)
 				clientInput.Reset()
-				userObject.SetUnsentText(``, ``)
+				userObject.SetUnsentText(``)
 				lastInput = time.Now()
 			}
 
@@ -734,12 +643,6 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 		connDetails.ConnectionId(),
 	)
 
-	// Send request to enable MSP
-	connections.SendTo(
-		term.MspEnable.BytesWithPayload(nil),
-		connDetails.ConnectionId(),
-	)
-
 	connections.SendTo(
 		term.TelnetSuppressGoAhead.BytesWithPayload(nil),
 		connDetails.ConnectionId(),
@@ -779,17 +682,6 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 		EnterPressed: false,
 		Clipboard:    []byte{},
 		History:      connections.InputHistory{},
-	}
-
-	if audioConfig := audio.GetFile(`intro`); audioConfig.FilePath != `` {
-		v := 100
-		if audioConfig.Volume > 0 && audioConfig.Volume <= 100 {
-			v = audioConfig.Volume
-		}
-		connections.SendTo(
-			term.MspCommand.BytesWithPayload([]byte("!!MUSIC("+audioConfig.FilePath+" V="+strconv.Itoa(v)+" L=-1 C=1)")),
-			clientInput.ConnectionId,
-		)
 	}
 
 	// --- Send Initial Welcome/Splash ---
@@ -835,7 +727,6 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 	loginHandler(initialTriggerInput, sharedState)
 
 	var userObject *users.UserRecord
-	var sug suggestions.Suggestions
 	lastInput := time.Now()
 	c := configs.GetConfig()
 
@@ -897,63 +788,7 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 				continue
 			}
 
-			_, suggested := userObject.GetUnsentText()
-
-			redrawPrompt := false
-
-			if clientInput.TabPressed {
-
-				if sug.Count() < 1 {
-					sug.Set(worldManager.GetAutoComplete(userObject.UserId, string(clientInput.Buffer)))
-				}
-
-				if sug.Count() > 0 {
-					suggested = sug.Next()
-					userObject.SetUnsentText(string(clientInput.Buffer), suggested)
-					redrawPrompt = true
-				}
-
-			} else if clientInput.BSPressed {
-				// If a suggestion is pending, remove it
-				// otherwise just do a normal backspace operation
-				userObject.SetUnsentText(string(clientInput.Buffer), ``)
-				if suggested != `` {
-					suggested = ``
-					sug.Clear()
-					redrawPrompt = true
-				}
-
-			} else {
-
-				if suggested != `` {
-
-					// If they hit space, accept the suggestion
-					if len(clientInput.Buffer) > 0 && clientInput.Buffer[len(clientInput.Buffer)-1] == term.ASCII_SPACE {
-						clientInput.Buffer = append(clientInput.Buffer[0:len(clientInput.Buffer)-1], []byte(suggested)...)
-						clientInput.Buffer = append(clientInput.Buffer[0:len(clientInput.Buffer)], []byte(` `)...)
-						redrawPrompt = true
-						userObject.SetUnsentText(string(clientInput.Buffer), ``)
-						sug.Clear()
-					} else {
-						suggested = ``
-						sug.Clear()
-						// Otherwise, just keep the suggestion
-						userObject.SetUnsentText(string(clientInput.Buffer), suggested)
-						redrawPrompt = true
-					}
-				}
-
-				userObject.SetUnsentText(string(clientInput.Buffer), suggested)
-			}
-
-			if redrawPrompt {
-				pTxt := userObject.GetCommandPrompt()
-				if connections.IsWebsocket(clientInput.ConnectionId) {
-					connections.SendTo([]byte(pTxt), clientInput.ConnectionId)
-				} else {
-					connections.SendTo([]byte(templates.AnsiParse(pTxt)), clientInput.ConnectionId)
-				}
-			}
+			userObject.SetUnsentText(string(clientInput.Buffer))
 
 			continue
 		}
@@ -964,12 +799,6 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 		if okContinue && lastHandlerName == "LoginPromptHandler" {
 
 			// Prompt sequence finished successfully
-
-			// Stop intro music if playing
-			connections.SendTo(
-				term.MspCommand.BytesWithPayload([]byte("!!MUSIC(Off)")),
-				clientInput.ConnectionId,
-			)
 
 			// Retrieve the UserObject stored by the completion function
 			if uo, exists := sharedState["UserObject"]; exists {
@@ -1021,9 +850,6 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 		// If okContinue is false OR the last handler was *not* the prompt handler,
 		// it means either an error occurred (handled above), a handler aborted (like IAC/ANSI),
 		// or the prompt handler is still waiting for input for the current/next step.
-		// The existing logic for handling Tab/Backspace suggestions AFTER the input handlers run
-		// might need slight adjustment depending on exactly how you want suggestions during prompts.
-		// For simplicity, you might disable suggestions during the prompt sequence.
 		if !okContinue {
 			if userObject == nil {
 				continue
@@ -1050,26 +876,9 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 
 				// Capturing and resetting the unsent text is purely to allow us to
 				// Keep updating the prompt without losing the typed in text.
-				userObject.SetUnsentText(``, ``)
+				userObject.SetUnsentText(``)
 
 			} else {
-
-				_, suggested := userObject.GetUnsentText()
-
-				if len(suggested) > 0 {
-					// solidify it in the render for UX reasons
-
-					clientInput.Buffer = append(clientInput.Buffer, []byte(suggested)...)
-					sug.Clear()
-					userObject.SetUnsentText(string(clientInput.Buffer), ``)
-
-					if connections.IsWebsocket(clientInput.ConnectionId) {
-						connections.SendTo([]byte(userObject.GetCommandPrompt()), clientInput.ConnectionId)
-					} else {
-						connections.SendTo([]byte(templates.AnsiParse(userObject.GetCommandPrompt())), clientInput.ConnectionId)
-					}
-
-				}
 
 				if connDetails.ConnType() == connections.ConnAI {
 					if !connDetails.AICommandAllowed(int64(util.GetRoundCount()), int(c.Network.AI.CommandsPerRound)) {
@@ -1078,7 +887,7 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 							connDetails.ConnectionId(),
 						)
 						clientInput.Reset()
-						userObject.SetUnsentText(``, ``)
+						userObject.SetUnsentText(``)
 						time.Sleep(time.Duration(10) * time.Millisecond)
 						continue
 					}
@@ -1096,7 +905,7 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 
 				// Capturing and resetting the unsent text is purely to allow us to
 				// Keep updating the prompt without losing the typed in text.
-				userObject.SetUnsentText(``, ``)
+				userObject.SetUnsentText(``)
 
 				lastInput = time.Now()
 			}
@@ -1128,26 +937,10 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 		History:      connections.InputHistory{},
 	}
 
-	connections.SendTo(
-		[]byte("!!SOUND(Off U="+configs.GetConfig().FilePaths.WebCDNLocation.String()+")"),
-		clientInput.ConnectionId,
-	)
-
 	plugins.OnNetConnect(connDetails)
 
 	loginHandler := inputhandlers.GetLoginPromptHandler()
 	connDetails.AddInputHandler("LoginPromptHandler", loginHandler)
-
-	if audioConfig := audio.GetFile(`intro`); audioConfig.FilePath != `` {
-		v := 100
-		if audioConfig.Volume > 0 && audioConfig.Volume <= 100 {
-			v = audioConfig.Volume
-		}
-		connections.SendTo(
-			[]byte("!!MUSIC("+audioConfig.FilePath+" V="+strconv.Itoa(v)+" L=-1 C=1)"),
-			clientInput.ConnectionId,
-		)
-	}
 
 	splashTxt, _ := templates.Process("login/connect-splash", nil)
 	connections.SendTo([]byte(templates.AnsiParse(splashTxt)), connDetails.ConnectionId())
@@ -1239,9 +1032,6 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 		// If okContinue is false OR the last handler was *not* the prompt handler,
 		// it means either an error occurred (handled above), a handler aborted (like IAC/ANSI),
 		// or the prompt handler is still waiting for input for the current/next step.
-		// The existing logic for handling Tab/Backspace suggestions AFTER the input handlers run
-		// might need slight adjustment depending on exactly how you want suggestions during prompts.
-		// For simplicity, you might disable suggestions during the prompt sequence.
 		if !okContinue {
 			continue
 		}
@@ -1259,12 +1049,6 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 				ConnectionId: clientInput.ConnectionId,
 				Text:         `TEXTMASK:false`,
 			})
-
-			// Stop intro music if playing
-			connections.SendTo(
-				[]byte("!!MUSIC(Off)"),
-				clientInput.ConnectionId,
-			)
 
 			// Retrieve the UserObject stored by the completion function
 			if uo, exists := sharedState["UserObject"]; exists {
@@ -1519,17 +1303,6 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 
 	plugins.OnNetConnect(connDetails)
 
-	if audioConfig := audio.GetFile(`intro`); audioConfig.FilePath != `` {
-		v := 100
-		if audioConfig.Volume > 0 && audioConfig.Volume <= 100 {
-			v = audioConfig.Volume
-		}
-		connections.SendTo(
-			term.MspCommand.BytesWithPayload([]byte("!!MUSIC("+audioConfig.FilePath+" V="+strconv.Itoa(v)+" L=-1 C=1)")),
-			connDetails.ConnectionId(),
-		)
-	}
-
 	splashTxt, _ := templates.Process("login/connect-splash", nil)
 	connections.SendTo([]byte(templates.AnsiParse(splashTxt)), connDetails.ConnectionId())
 
@@ -1539,7 +1312,6 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 	loginHandler(initialTriggerInput, sharedState)
 
 	var userObject *users.UserRecord
-	var sug suggestions.Suggestions
 	lastInput := time.Now()
 	c := configs.GetConfig()
 
@@ -1591,56 +1363,11 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 				continue
 			}
 
-			_, suggested := userObject.GetUnsentText()
-			redrawPrompt := false
-
-			if clientInput.TabPressed {
-				if sug.Count() < 1 {
-					sug.Set(worldManager.GetAutoComplete(userObject.UserId, string(clientInput.Buffer)))
-				}
-				if sug.Count() > 0 {
-					suggested = sug.Next()
-					userObject.SetUnsentText(string(clientInput.Buffer), suggested)
-					redrawPrompt = true
-				}
-			} else if clientInput.BSPressed {
-				userObject.SetUnsentText(string(clientInput.Buffer), ``)
-				if suggested != `` {
-					suggested = ``
-					sug.Clear()
-					redrawPrompt = true
-				}
-			} else {
-				if suggested != `` {
-					if len(clientInput.Buffer) > 0 && clientInput.Buffer[len(clientInput.Buffer)-1] == term.ASCII_SPACE {
-						clientInput.Buffer = append(clientInput.Buffer[0:len(clientInput.Buffer)-1], []byte(suggested)...)
-						clientInput.Buffer = append(clientInput.Buffer[0:len(clientInput.Buffer)], []byte(` `)...)
-						redrawPrompt = true
-						userObject.SetUnsentText(string(clientInput.Buffer), ``)
-						sug.Clear()
-					} else {
-						suggested = ``
-						sug.Clear()
-						userObject.SetUnsentText(string(clientInput.Buffer), suggested)
-						redrawPrompt = true
-					}
-				}
-				userObject.SetUnsentText(string(clientInput.Buffer), suggested)
-			}
-
-			if redrawPrompt {
-				pTxt := userObject.GetCommandPrompt()
-				connections.SendTo([]byte(templates.AnsiParse(pTxt)), clientInput.ConnectionId)
-			}
+			userObject.SetUnsentText(string(clientInput.Buffer))
 			continue
 		}
 
 		if okContinue && lastHandlerName == "LoginPromptHandler" {
-			connections.SendTo(
-				term.MspCommand.BytesWithPayload([]byte("!!MUSIC(Off)")),
-				clientInput.ConnectionId,
-			)
-
 			if uo, exists := sharedState["UserObject"]; exists {
 				var ok bool
 				userObject, ok = uo.(*users.UserRecord)
@@ -1682,23 +1409,15 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 
 			if time.Since(lastInput) < time.Duration(c.Timing.TurnMs)*time.Millisecond {
 				clientInput.Reset()
-				userObject.SetUnsentText(``, ``)
+				userObject.SetUnsentText(``)
 			} else {
-				_, suggested := userObject.GetUnsentText()
-				if len(suggested) > 0 {
-					clientInput.Buffer = append(clientInput.Buffer, []byte(suggested)...)
-					sug.Clear()
-					userObject.SetUnsentText(string(clientInput.Buffer), ``)
-					connections.SendTo([]byte(templates.AnsiParse(userObject.GetCommandPrompt())), clientInput.ConnectionId)
-				}
-
 				wi := WorldInput{
 					FromId:    userObject.UserId,
 					InputText: string(clientInput.Buffer),
 				}
 				worldManager.SendInput(wi)
 				clientInput.Reset()
-				userObject.SetUnsentText(``, ``)
+				userObject.SetUnsentText(``)
 				lastInput = time.Now()
 			}
 
@@ -1734,12 +1453,9 @@ func loadAllDataFiles(isReload bool) {
 	skills.LoadDataFiles()           // skills before professions for cross-ref warnings
 	skills.LoadProfessionDataFiles() // professions reference skills
 	mobs.LoadDataFiles()
-	pets.LoadDataFiles()
-	quests.LoadDataFiles()
 	templates.LoadAliases(plugins.GetPluginRegistry())
 	keywords.LoadAliases(plugins.GetPluginRegistry())
 	mutators.LoadDataFiles()
 	colorpatterns.LoadColorPatterns()
-	audio.LoadAudioConfig()
 	characters.CompileAdjectiveSwaps() // This should come after loading color patterns.
 }

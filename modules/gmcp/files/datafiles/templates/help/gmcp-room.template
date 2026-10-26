@@ -45,12 +45,10 @@ Sent as part of Room.Info or independently when contents change.
   <ansi fg="cyan">name</ansi>        <ansi fg="green">string</ansi>  - Display name
   <ansi fg="cyan">adjectives</ansi>  <ansi fg="magenta">array</ansi>   - Descriptive adjectives (e.g. race, size, condition)
   <ansi fg="cyan">aggro</ansi>       <ansi fg="red">bool</ansi>    - True if currently engaged in combat
-  <ansi fg="cyan">quest_flag</ansi>  <ansi fg="red">bool</ansi>    - True if this NPC is relevant to one of the player's quests
 
   Each entry in <ansi fg="white-bold">Items</ansi> contains:
   <ansi fg="cyan">id</ansi>          <ansi fg="green">string</ansi>  - Shorthand item identifier
   <ansi fg="cyan">name</ansi>        <ansi fg="green">string</ansi>  - Display name
-  <ansi fg="cyan">quest_flag</ansi>  <ansi fg="red">bool</ansi>    - True if this item is a quest item
 
   Each entry in <ansi fg="white-bold">Containers</ansi> contains:
   <ansi fg="cyan">name</ansi>           <ansi fg="green">string</ansi>  - Container name

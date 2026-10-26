@@ -3,7 +3,6 @@ package inputhandlers
 import (
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/term"
@@ -65,36 +64,6 @@ func TelnetIACHandler(clientInput *connections.ClientInput, sharedState map[stri
 				continue
 			}
 
-		}
-
-		if term.IsMSPCommand(iacCmd) {
-
-			if ok, payload := term.Matches(iacCmd, term.MspAccept); ok {
-				mudlog.Debug("Received", "type", "IAC (Client-MSP Accept)", "data", term.BytesString(payload))
-
-				cs := connections.GetClientSettings(clientInput.ConnectionId)
-				cs.MSPEnabled = true
-				connections.OverwriteClientSettings(clientInput.ConnectionId, cs)
-
-				connections.SendTo(
-					term.MspCommand.BytesWithPayload([]byte("!!SOUND(Off U="+configs.GetFilePathsConfig().WebCDNLocation.String()+")")),
-					clientInput.ConnectionId,
-				)
-
-				continue
-			}
-
-			if ok, payload := term.Matches(iacCmd, term.MspRefuse); ok {
-				mudlog.Debug("Received", "type", "IAC (Client-MSP Refuse)", "data", term.BytesString(payload))
-
-				cs := connections.GetClientSettings(clientInput.ConnectionId)
-				cs.MSPEnabled = false
-				connections.OverwriteClientSettings(clientInput.ConnectionId, cs)
-
-				continue
-			}
-
-			continue
 		}
 
 		if ok, payload := term.Matches(iacCmd, term.TelnetAcceptedChangeCharset); ok {

@@ -413,11 +413,11 @@ func TestReserveTags_GetRegisteredRoomTags(t *testing.T) {
 
 	p := New("tagtest", "1.0")
 	require.NotNil(t, p)
-	p.ReserveTags("shop", "quest-giver")
+	p.ReserveTags("shop", "trainer")
 
 	tags := GetRegisteredRoomTags()
 	require.Contains(t, tags, "tagtest")
-	assert.ElementsMatch(t, []string{"shop", "quest-giver"}, tags["tagtest"])
+	assert.ElementsMatch(t, []string{"shop", "trainer"}, tags["tagtest"])
 }
 
 func TestGetRegisteredRoomTags_EmptyWhenNoTags(t *testing.T) {

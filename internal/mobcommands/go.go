@@ -128,9 +128,6 @@ func Go(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 		destRoom.SendTextToExits(`You hear someone moving around.`, true, room.GetPlayers(rooms.FindAll)...)
 
-		room.PlaySound(`room-exit`, `movement`)
-		destRoom.PlaySound(`room-enter`, `movement`)
-
 		// We want the `waypoint` onPath event triggered right after they enter the room.
 		if currentStep := mob.Path.Current(); currentStep != nil && currentStep.Waypoint() {
 

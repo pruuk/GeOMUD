@@ -77,7 +77,7 @@ func (a *Aliases) Validate() error {
 
 			helpGroup = strings.ToLower(helpGroup)
 
-			// helpType = configuration/character/shops/quests/combat
+			// helpType = configuration/character/shops/combat
 			for helpCategory, helpList := range helpTypes {
 				helpCategory = strings.ToLower(helpCategory)
 				for _, helpCommand := range helpList {

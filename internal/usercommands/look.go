@@ -15,7 +15,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/users"
-	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
 func Look(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
@@ -317,7 +316,7 @@ func Look(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 		if !isSneaking {
 
 			renderNouns := user.HasRolePermission(`room.nouns`)
-			if user.Character.Pet.Exists() && user.Character.HasBuffFlag("see-nouns") {
+			if user.Character.HasBuffFlag("see-nouns") {
 				renderNouns = true
 			}
 
@@ -342,40 +341,6 @@ func Look(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 		user.SendText(``)
 
 		return true, nil
-	}
-
-	//
-	// Look for any pets in the room
-	//
-	petUserId := room.FindByPetName(rest)
-	if petUserId == 0 && rest == `pet` && user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
-		petUserId = user.UserId
-	}
-	// If the user typed "pet" or the pet's name but their own pet is missing, tell them.
-	if petUserId == 0 && user.Character.Pet.Exists() && user.Character.Pet.IsMissing() {
-		if rest == `pet` {
-			user.SendText(fmt.Sprintf(`%s is not here right now.`, user.Character.Pet.DisplayName()))
-			return true, nil
-		}
-		if petName := user.Character.Pet.Name; petName != `` {
-			if match, _ := util.FindMatchIn(rest, petName); match != `` {
-				user.SendText(fmt.Sprintf(`%s is not here right now.`, user.Character.Pet.DisplayName()))
-				return true, nil
-			}
-		}
-	}
-
-	if petUserId > 0 {
-		if petUser := users.GetByUserId(petUserId); petUser != nil {
-
-			user.SendText(fmt.Sprintf(`You look at %s`, petUser.Character.Pet.DisplayName()))
-
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at %s.`, user.Character.Name, petUser.Character.Pet.DisplayName()), user.UserId)
-
-			user.SendText(buildPetPanel(petUser.Character, petUser.UserId == user.UserId))
-
-			return true, nil
-		}
 	}
 
 	if len(room.Corpses) > 0 {

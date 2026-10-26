@@ -90,8 +90,6 @@ func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.Even
 					fmt.Sprintf(`<ansi fg="username">%s</ansi> quickly picks the lock on the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, exitName),
 					user.UserId)
 
-				room.PlaySound(`change`, `other`)
-
 				exitInfo.Lock.SetUnlocked()
 				room.SetExitLock(exitName, false)
 
@@ -100,8 +98,6 @@ func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.Even
 				room.SendText(
 					fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, exitName),
 					user.UserId)
-
-				room.PlaySound(`change`, `other`)
 
 				exitInfo.Lock.SetUnlocked()
 				room.SetExitLock(exitName, false)
@@ -112,8 +108,6 @@ func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.Even
 				if backpackKeyItm, hasBackpackKey := user.Character.FindKeyInBackpack(lockId); hasBackpackKey {
 
 					itmSpec := backpackKeyItm.GetSpec()
-
-					room.PlaySound(`change`, `other`)
 
 					user.SendText(fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
 					room.SendText(
@@ -206,43 +200,18 @@ func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.Even
 					))
 
 				// Tell the old room they are leaving
-				if user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
+				room.SendText(
+					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
+						fmt.Sprintf(`<ansi fg="username">%s</ansi> leaves towards the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, exitName),
+					),
+					user.UserId)
 
-					room.SendText(
-						fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-							fmt.Sprintf(`<ansi fg="username">%s</ansi> and %s leave towards the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, user.Character.Pet.DisplayName(), exitName),
-						),
-						user.UserId)
-
-				} else {
-					room.SendText(
-						fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-							fmt.Sprintf(`<ansi fg="username">%s</ansi> leaves towards the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, exitName),
-						),
-						user.UserId)
-				}
-
-				// Tell everyone if the pet is following
-				if user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
-
-					user.SendText(fmt.Sprintf(`%s follows you.`, user.Character.Pet.DisplayName()))
-
-					destRoom.SendText(
-						fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-							fmt.Sprintf(`<ansi fg="username">%s</ansi> and %s enters from <ansi fg="exit">%s</ansi>.`, user.Character.Name, user.Character.Pet.DisplayName(), exitName),
-						),
-						user.UserId)
-
-				} else {
-
-					// Tell the new room they have arrived
-					destRoom.SendText(
-						fmt.Sprintf(string(c.EnterRoomMessageWrapper),
-							fmt.Sprintf(`<ansi fg="username">%s</ansi> enters from <ansi fg="exit">%s</ansi>.`, user.Character.Name, enterFromExit),
-						),
-						user.UserId)
-
-				}
+				// Tell the new room they have arrived
+				destRoom.SendText(
+					fmt.Sprintf(string(c.EnterRoomMessageWrapper),
+						fmt.Sprintf(`<ansi fg="username">%s</ansi> enters from <ansi fg="exit">%s</ansi>.`, user.Character.Name, enterFromExit),
+					),
+					user.UserId)
 
 				destRoom.SendTextToExits(`You hear someone moving around.`, true, room.GetPlayers(rooms.FindAll)...)
 			}
@@ -357,9 +326,6 @@ func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.Even
 			if doLook, err := scripting.TryRoomScriptEvent(`onEnter`, user.UserId, destRoom.RoomId); err != nil || doLook {
 				Look(``, user, destRoom, events.CmdSecretly)
 			}
-
-			room.PlaySound(`room-exit`, `movement`, user.UserId)
-			destRoom.PlaySound(`room-enter`, `movement`, user.UserId)
 
 		}
 

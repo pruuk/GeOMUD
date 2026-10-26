@@ -219,49 +219,6 @@ func Give(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 		return true, nil
 	}
 
-	//
-	// Look for any pets in the room
-	//
-	petUserId := room.FindByPetName(giveWho)
-	if petUserId == 0 && giveWho == `pet` && user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
-		petUserId = user.UserId
-	}
-	if petUserId > 0 {
-
-		petUser := users.GetByUserId(petUserId)
-		if petUser == nil {
-			user.SendText("Who???")
-			return true, nil
-		}
-
-		if giveGoldAmount > 0 {
-			room.SendText(fmt.Sprintf(`What would %s do with <ansi fg="gold">%d gold</ansi>?`, petUser.Character.Pet.DisplayName(), giveGoldAmount))
-			return true, nil
-		}
-
-		user.SendText(fmt.Sprintf(`You give the <ansi fg="itemname">%s</ansi> to %s.`, giveItem.DisplayName(), petUser.Character.Pet.DisplayName()))
-		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> gives their <ansi fg="itemname">%s</ansi> to %s...`, user.Character.Name, giveItem.DisplayName(), petUser.Character.Pet.DisplayName()), user.UserId)
-
-		user.Character.RemoveItem(giveItem)
-
-		events.AddToQueue(events.ItemOwnership{
-			UserId: user.UserId,
-			Item:   giveItem,
-			Gained: false,
-		})
-
-		if len(petUser.Character.Pet.Items) >= petUser.Character.Pet.GetEffectiveCapacity() || !petUser.Character.Pet.StoreItem(giveItem) {
-			room.SendText(fmt.Sprintf(`%s throws the <ansi fg="itemname">%s</ansi> onto the ground.`, petUser.Character.Pet.DisplayName(), giveItem.DisplayName()))
-			room.AddItem(giveItem, false)
-		} else {
-			events.AddToQueue(events.PetItemChange{
-				UserId: petUser.UserId,
-			})
-		}
-
-		return true, nil
-	}
-
 	user.SendText(`Who??? (<ansi fg="command">give {object-name} {receiver-name}</ansi>)`)
 
 	return true, nil

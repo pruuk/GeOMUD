@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoMudEngine/GoMud/internal/audio"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
@@ -46,10 +45,8 @@ type UserRecord struct {
 	EmailAddress   string                `yaml:"emailaddress,omitempty"` // Email address (if provided)
 	TipsComplete   map[string]bool       `yaml:"tipscomplete,omitempty"` // Tips the user has followed/completed so they can be quiet
 	EventLog       UserLog               `yaml:"-"`                      // Do not retain in user file (for now)
-	LastMusic      string                `yaml:"-"`                      // Keeps track of the last music that was played
 	connectionId   uint64
 	unsentText     string
-	suggestText    string
 	connectionTime time.Time
 	lastInputRound uint64
 	tempDataStore  map[string]any
@@ -186,7 +183,7 @@ func (u *UserRecord) HasShop() bool {
 
 // Grants experience to the user and notifies them
 // Additionally accepts `source` as a short identifier of the XP source
-// Example source: "combat", "quest progress", "trash cleanup", "exploration"
+// Example source: "combat", "trash cleanup", "exploration"
 func (u *UserRecord) GrantXP(amt int, source string) {
 
 	grantXP, xpScale := u.Character.GrantXP(amt)
@@ -286,45 +283,6 @@ func (u *UserRecord) DidTip(tipName string, completed ...bool) bool {
 	}
 
 	return u.TipsComplete[tipName]
-}
-
-func (u *UserRecord) PlayMusic(musicFileOrId string) {
-
-	v := 100
-	if soundConfig := audio.GetFile(musicFileOrId); soundConfig.FilePath != `` {
-		musicFileOrId = soundConfig.FilePath
-		if soundConfig.Volume > 0 && soundConfig.Volume <= 100 {
-			v = soundConfig.Volume
-		}
-	}
-
-	events.AddToQueue(events.MSP{
-		UserId:    u.UserId,
-		SoundType: `MUSIC`,
-		SoundFile: musicFileOrId,
-		Volume:    v,
-	})
-
-}
-
-func (u *UserRecord) PlaySound(soundId string, category string) {
-
-	v := 100
-	if soundConfig := audio.GetFile(soundId); soundConfig.FilePath != `` {
-		soundId = soundConfig.FilePath
-		if soundConfig.Volume > 0 && soundConfig.Volume <= 100 {
-			v = soundConfig.Volume
-		}
-	}
-
-	events.AddToQueue(events.MSP{
-		UserId:    u.UserId,
-		SoundType: `SOUND`,
-		SoundFile: soundId,
-		Volume:    v,
-		Category:  category,
-	})
-
 }
 
 func (u *UserRecord) Command(inputTxt string, waitSeconds ...float64) {
@@ -522,15 +480,14 @@ func (u *UserRecord) RoundTick() {
 // of typing.
 // I don't like the idea of capturing it every time they hit a key though
 // There is probably a better way.
-func (u *UserRecord) SetUnsentText(t string, suggest string) {
+func (u *UserRecord) SetUnsentText(t string) {
 
 	u.unsentText = t
-	u.suggestText = suggest
 }
 
-func (u *UserRecord) GetUnsentText() (unsent string, suggestion string) {
+func (u *UserRecord) GetUnsentText() string {
 
-	return u.unsentText, u.suggestText
+	return u.unsentText
 }
 
 // Replace a characters information with another.

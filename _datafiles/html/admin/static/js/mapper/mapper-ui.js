@@ -10,7 +10,7 @@
 /* jshint esversion: 11, browser: true */
 /* globals MapperState, MapperRender, MapperEvents, MapperCtxMenu, AdminAPI,
    symbolForRoom, colorForSymbol, bgColorForBiome, contrastColor, escapeHtml, smoothstep,
-   Picker, PickerConfigs, QuestTokenPicker,
+   Picker, PickerConfigs,
    getZonesAtPoint, closestZone,
    ZOOM_STEP, ZOOM_MIN, ZOOM_MAX, CENTER_EASE_DURATION, ROOM_SIZE_2D */
 'use strict';
@@ -933,11 +933,6 @@ var MapperUI = (function() {
             ' <button type="button" title="Remove" onclick="this.closest(\'[data-buff-id]\').remove()">&times;</button></span>';
     }
 
-    function _reQuestChipHtml(token) {
-        return '<span class="re-buff-chip" data-quest-token="' + _reEsc(token) + '">' + _reEsc(token) +
-            ' <button type="button" title="Remove" onclick="this.closest(\'[data-quest-token]\').remove()">&times;</button></span>';
-    }
-
     function _reSpawnAppendCard(list, s, openOnAdd) {
         s = s || {};
         var type = s._type || (s.MobId ? 'mob' : 'item');
@@ -949,9 +944,8 @@ var MapperUI = (function() {
         card.dataset.spawnType = type;
 
         var summary = _reSpawnSummaryFromData(type, s);
-        // Pre-compute buff/quest chip html
+        // Pre-compute buff chip html
         var buffChips = (s.BuffIds || []).map(_reBuffChipHtml).join('');
-        var questChips = (s.QuestFlags || []).map(_reQuestChipHtml).join('');
 
         card.innerHTML =
             '<div class="re-spawn-header" onclick="this.classList.toggle(\'open\');this.nextElementSibling.classList.toggle(\'open\')">'+
@@ -1060,14 +1054,6 @@ var MapperUI = (function() {
                 '<div class="field-hint">Leave blank for mob template default.</div>'+
             '</div>'+
 
-            // --- Quest Flags (mob) ---
-            '<div class="re-spawn-field span2" style="' + (isMob ? shown : hidden) + '">'+
-                '<label>Quest Flags</label>'+
-                '<div class="re-buff-chips-wrap re-spawn-questflags">' + questChips + '</div>'+
-                '<button type="button" class="room-editor-noun-add" style="margin-top:4px" onclick="MapperUI._rePickQuestFlag(this)">+ Add Quest Flag</button>'+
-                '<div class="field-hint">Quest flag tokens assigned to this mob instance.</div>'+
-            '</div>'+
-
             // --- Buff IDs (mob) ---
             '<div class="re-spawn-field span2" style="' + (isMob ? shown : hidden) + '">'+
                 '<label>Permanent Buffs</label>'+
@@ -1141,8 +1127,6 @@ var MapperUI = (function() {
                 if (lmod) s.LevelMod = lmod;
                 var stag = card.querySelector('.re-spawn-scripttag').value.trim();
                 if (stag) s.ScriptTag = stag;
-                var qf = Array.from(card.querySelectorAll('.re-spawn-questflags [data-quest-token]')).map(function(c) { return c.dataset.questToken; }).filter(Boolean);
-                if (qf.length) s.QuestFlags = qf;
                 var bi = Array.from(card.querySelectorAll('.re-spawn-buffids [data-buff-id]')).map(function(c) { return parseInt(c.dataset.buffId, 10); }).filter(function(n) { return !isNaN(n); });
                 if (bi.length) s.BuffIds = bi;
                 var ic = card.querySelector('.re-spawn-idlecommands').value.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
@@ -1202,16 +1186,6 @@ var MapperUI = (function() {
         delete disp.dataset.itemId;
         disp.classList.add('empty');
         _reSpawnUpdateHeader(card);
-    }
-
-    function _rePickQuestFlag(btn) {
-        var card = btn.closest('.re-spawn-card');
-        var wrap = card.querySelector('.re-spawn-questflags');
-        QuestTokenPicker.pick(function(token) {
-            var existing = Array.from(wrap.querySelectorAll('[data-quest-token]')).map(function(c) { return c.dataset.questToken; });
-            if (existing.indexOf(token) !== -1) return;
-            wrap.insertAdjacentHTML('beforeend', _reQuestChipHtml(token));
-        });
     }
 
     function _rePickBuff(btn) {
@@ -1705,7 +1679,6 @@ var MapperUI = (function() {
         _rePickMob:       _rePickMob,
         _rePickItem:      _rePickItem,
         _reClearItem:     _reClearItem,
-        _rePickQuestFlag: _rePickQuestFlag,
         _rePickBuff:      _rePickBuff,
         saveAllChanges: saveAllChanges, discardChanges: discardChanges
     };

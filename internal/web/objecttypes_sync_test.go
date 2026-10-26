@@ -73,7 +73,6 @@ func TestObjectTypesMatchDts(t *testing.T) {
 		"ActorObject":       "ActorObject",
 		"RoomObject":        "RoomObject",
 		"ItemObject":        "ItemObject",
-		"PetObject":         "PetObject",
 		"PartyObject":       "PartyObject",
 		"ContainerObject":   "ContainerObject",
 		"PanelLayoutObject": "PanelLayoutObject",

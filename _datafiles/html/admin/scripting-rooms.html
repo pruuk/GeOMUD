@@ -117,7 +117,6 @@
             <a href="/admin/scripting-items">Item Scripts</a>
             <a href="/admin/scripting-buffs">Buff Scripts</a>
             <a href="/admin/scripting-spells">Spell Scripts</a>
-            <a href="/admin/scripting-pets">Pet Scripts</a>
             <a href="/admin/scripting-users">User Scripts</a>
         </div>
         <span class="sidebar-section-label">Reference</span>
@@ -296,16 +295,16 @@ end</code></pre>
                         <div class="code-wrap">
                             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                             <pre class="scriptlang-block" data-lang="js"><code class="language-javascript">function onTryEnter(user, room) {
-    // Require a specific quest to enter
-    if (!user.HasQuest('dungeon-key:start')) {
+    // Require a specific key item to enter
+    if (!user.HasItemId(10001)) {
         user.SendText('The dungeon gate is sealed. You need a key.');
         return false;
     }
     return true;
 }</code></pre>
                             <pre class="scriptlang-block" data-lang="lua"><code class="language-lua">function onTryEnter(user, room)
-    -- Require a specific quest to enter
-    if not user:HasQuest("dungeon-key:start") then
+    -- Require a specific key item to enter
+    if not user:HasItemId(10001) then
         user:SendText("The dungeon gate is sealed. You need a key.")
         return false
     end

@@ -229,19 +229,6 @@ func (a ScriptActor) GetRoomId() int {
 	return a.characterRecord.RoomId
 }
 
-func (a ScriptActor) HasQuest(questId string) bool {
-	return a.characterRecord.HasQuest(questId)
-}
-
-func (a ScriptActor) GiveQuest(questId string) {
-
-	events.AddToQueue(events.Quest{
-		UserId:     a.UserId(),
-		QuestToken: questId,
-	})
-
-}
-
 // Gets a party object that indexes ALL members of the party
 func (a ScriptActor) GetParty(excludeSelf ...bool) ScriptParty {
 	return ScriptParty{
@@ -715,13 +702,6 @@ func (a ScriptActor) Uncurse() []*ScriptItem {
 	return retList
 }
 
-func (a ScriptActor) GetPet() *ScriptPet {
-	if !a.characterRecord.Pet.Exists() {
-		return nil
-	}
-	return GetPet(&a.characterRecord.Pet, a.userId)
-}
-
 func (a ScriptActor) GrantXP(xpAmt int, reason string) {
 	if a.mobInstanceId > 0 {
 		return
@@ -827,27 +807,6 @@ func (a ScriptActor) GetLastInputRound() uint64 {
 		return a.userRecord.GetLastInputRound()
 	}
 	return 0
-}
-
-// PlaySound sends a sound event to this actor. Only affects user actors.
-// soundId is the identifier defined in audio.yaml (e.g. "levelup").
-// category groups related sounds for client-side volume control (e.g. "combat", "other").
-func (a ScriptActor) PlaySound(soundId string, category string) {
-	if a.userRecord == nil {
-		return
-	}
-	a.userRecord.PlaySound(soundId, category)
-}
-
-// PlayMusic sends a music-change event to this actor. Only affects user actors.
-// musicFileOrId may be a filepath (e.g. "static/audio/music/intro.mp3") or a sound
-// identifier from audio.yaml whose filepath resolves to a music file.
-// Pass "Off" to stop music.
-func (a ScriptActor) PlayMusic(musicFileOrId string) {
-	if a.userRecord == nil {
-		return
-	}
-	a.userRecord.PlayMusic(musicFileOrId)
 }
 
 func (a ScriptActor) Pathing() bool {
@@ -971,14 +930,6 @@ func (a ScriptActor) FindOnBody(itemName string) *ScriptItem {
 	}
 	si := newScriptItem(itm)
 	return &si
-}
-
-func (a ScriptActor) IsQuestDone(questToken string) bool {
-	return a.characterRecord.IsQuestDone(questToken)
-}
-
-func (a ScriptActor) ClearQuestToken(questToken string) {
-	a.characterRecord.ClearQuestToken(questToken)
 }
 
 func (a ScriptActor) GetAllSkills() map[string]int {

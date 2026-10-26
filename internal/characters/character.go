@@ -13,8 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/pets"
-	"github.com/GoMudEngine/GoMud/internal/quests"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/GoMudEngine/GoMud/internal/spells"
@@ -79,13 +77,11 @@ type Character struct {
 	Skills              map[string]int                 `yaml:"skills,omitempty"`         // The skills the character has, and what level they are at
 	Cooldowns           Cooldowns                      `yaml:"cooldowns,omitempty"`      // How many rounds until it is cooled down
 	Settings            map[string]string              `yaml:"settings,omitempty"`       // custom setting tracking, used for anything.
-	QuestProgress       map[int]string                 `yaml:"questprogress,omitempty"`  // quest progress tracking
 	KeyRing             map[string]string              `yaml:"keyring,omitempty"`        // key is the lock id, value is the sequence
 	KD                  KDStats                        `yaml:"kd,omitempty"`             // Kill/Death stats
 	MiscData            map[string]any                 `yaml:"miscdata,omitempty"`       // Any random other data that needs to be stored
 	ExtraLives          int                            `yaml:"extralives,omitempty"`     // How many lives remain. If enabled, players can perma-die if they die at zero
 	MobMastery          MobMasteries                   `yaml:"mobmastery,omitempty"`     // Tracks particular masteries around a given mob
-	Pet                 pets.Pet                       `yaml:"pet,omitempty"`            // Do they have a pet?
 	Created             time.Time                      `yaml:"created"`                  // When this character was created
 	Timers              map[string]gametime.RoundTimer `yaml:"timers,omitempty"`         // any special timers added to this character
 	ZonesVisited        map[string]RoomBitset          `yaml:"zonesvisited,omitempty"`   // permanent record of every room visited, keyed by zone name
@@ -689,10 +685,6 @@ func (c *Character) getFormattedName(viewingUserId int, uType string, renderFlag
 		f.Suffix = `aggro`
 	}
 
-	if c.Pet.Exists() {
-		f.PetName = c.Pet.DisplayName()
-	}
-
 	return OnGetFormattedName.Fire(f)
 }
 
@@ -1073,84 +1065,6 @@ func (c *Character) ZoneVisitPercent(zone string, validRoomIds map[int]struct{})
 	return int(float64(visited) / float64(total) * 100)
 }
 
-func (c *Character) IsQuestDone(questToken string) bool {
-	testQuestId, _ := quests.TokenToParts(questToken)
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	stage := c.QuestProgress[testQuestId]
-
-	return stage == `end`
-}
-
-func (c *Character) HasQuest(questToken string) bool {
-
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	testQuestId, testQuestStep := quests.TokenToParts(questToken)
-
-	currentStep, ok := c.QuestProgress[testQuestId]
-	if !ok {
-		return false
-	}
-
-	// If on that step currently, then true
-	if currentStep == testQuestStep {
-		return true
-	}
-
-	currentToken := quests.PartsToToken(testQuestId, currentStep)
-
-	// If the current token comes after the test token then they've already done that quest
-	return quests.IsTokenAfter(questToken, currentToken)
-}
-
-func (c *Character) GetQuestProgress() map[int]string {
-
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	retMap := make(map[int]string)
-	for questId, stepName := range c.QuestProgress {
-		retMap[questId] = stepName
-	}
-	return retMap
-}
-
-func (c *Character) GiveQuestToken(questToken string) bool {
-
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	questId, newStep := quests.TokenToParts(questToken)
-	currentProgress := c.QuestProgress[questId]
-
-	currentToken := quests.PartsToToken(questId, currentProgress)
-
-	if quests.IsTokenAfter(currentToken, questToken) {
-		c.QuestProgress[questId] = newStep
-		return true
-	}
-
-	return false
-}
-
-func (c *Character) ClearQuestToken(questToken string) {
-
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	questId, _ := quests.TokenToParts(questToken)
-
-	delete(c.QuestProgress, questId)
-}
-
 func (c *Character) SetAggroRemote(exitName string, userId int, mobInstanceId int, aggroType AggroType, roundsWaitTime ...int) {
 	c.SetAggro(userId, mobInstanceId, aggroType, roundsWaitTime...)
 	c.Aggro.ExitName = exitName
@@ -1469,11 +1383,7 @@ func (c *Character) MovementCost() int {
 }
 
 func (c *Character) StatMod(statName string) int {
-	petMod := 0
-	if !c.Pet.IsMissing() {
-		petMod = c.Pet.StatMod(statName)
-	}
-	return c.Equipment.StatMod(statName) + c.Buffs.StatMod(statName) + petMod
+	return c.Equipment.StatMod(statName) + c.Buffs.StatMod(statName)
 }
 
 // returns true if something has changed.
@@ -1621,10 +1531,6 @@ func (c *Character) Validate(recalcPermaBuffs ...bool) error {
 
 	if c.Created.IsZero() {
 		c.Created = time.Now()
-	}
-
-	if c.Pet.Exists() {
-		c.Pet.Validate()
 	}
 
 	if c.SpellBook == nil {
@@ -2168,13 +2074,6 @@ func (c *Character) reapplyPermabuffs(removedItems ...items.Item) {
 	if rInfo := races.GetRace(c.GetRaceId()); rInfo != nil {
 		for _, buffId := range rInfo.BuffIds {
 			buffIdCount[buffId] = 100 // Don't allow racial buffs to be removed, keep this number high
-		}
-	}
-
-	// Apply any buffs from pet
-	if c.Pet.Exists() && !c.Pet.IsMissing() {
-		for _, buffId := range c.Pet.GetBuffs() {
-			buffIdCount[buffId] = 100 // Don't allow pet buffs to be removed, keep this number high
 		}
 	}
 

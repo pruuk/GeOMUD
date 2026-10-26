@@ -66,56 +66,6 @@ func Grant(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 
 	}
 
-	if len(args) >= 1 && (lastWord == `petlevelup` || lastWord == `petleveldown`) {
-
-		delta := 1
-		if lastWord == `petleveldown` {
-			delta = -1
-		}
-
-		if len(args) >= 2 {
-			targetUserId, _ = room.FindByName(args[0])
-		} else {
-			targetUserId = user.UserId
-		}
-
-		if targetUserId > 0 {
-			if u := users.GetByUserId(targetUserId); u != nil {
-
-				if !u.Character.Pet.Exists() {
-					user.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> does not have a pet.`, u.Character.Name))
-					return true, nil
-				}
-
-				oldAbility := u.Character.Pet.GetCurrentAbilityDisplay()
-				oldLevel, newLevel, changed := u.Character.Pet.LevelChange(delta)
-
-				if !changed {
-					user.SendText(fmt.Sprintf(`%s is already at %s level.`, u.Character.Pet.DisplayName(), map[bool]string{true: "maximum", false: "minimum"}[delta > 0]))
-					return true, nil
-				}
-
-				u.Character.Validate(true)
-				newAbility := u.Character.Pet.GetCurrentAbilityDisplay()
-
-				events.AddToQueue(events.PetLevelChange{
-					UserId:     u.UserId,
-					PetName:    u.Character.Pet.DisplayName(),
-					OldLevel:   oldLevel,
-					NewLevel:   newLevel,
-					OldAbility: oldAbility,
-					NewAbility: newAbility,
-				})
-
-				user.SendText(fmt.Sprintf(`Granted %s to <ansi fg="username">%s</ansi>'s pet %s (level %d → %d).`, lastWord, u.Character.Name, u.Character.Pet.DisplayName(), oldLevel, newLevel))
-				return true, nil
-			}
-		}
-
-		user.SendText(`Target not found.`)
-		return true, errors.New(`target not found`)
-	}
-
 	user.SendText(`Invalid command.`)
 
 	return false, errors.New(`unrecognized command`)

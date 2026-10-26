@@ -330,8 +330,6 @@ code {
     background: var(--color-btn-cancel-hover) !important;
 }
 
-/* Conversations editor areas */
-.conv-block,
 .info-callout {
     background: var(--color-surface-raised) !important;
     border-color: var(--color-border) !important;
@@ -350,19 +348,6 @@ code {
 .slot-item {
     background: var(--color-surface-raised) !important;
     color: var(--color-text-tertiary) !important;
-}
-
-/* Quest progress items */
-.quest-progress-item {
-    background: var(--color-surface-raised) !important;
-    border-color: var(--color-border) !important;
-}
-
-/* Conversations turn inputs */
-.turn-cmd-input,
-.conv-speaker-sel {
-    background: var(--color-surface-raised) !important;
-    color: var(--color-text) !important;
 }
 
 /* Rank tables */

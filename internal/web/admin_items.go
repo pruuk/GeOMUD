@@ -14,7 +14,6 @@ import (
 // that governs mutations on that page. Pages without a write permission (e.g.
 // read-only views) are not listed.
 var pageWritePermissions = map[string]string{
-	"/admin/audio":                 "audio.write",
 	"/admin/biomes":                "biomes.write",
 	"/admin/buffs":                 "buffs.write",
 	"/admin/buffs-flags":           "buffs.write",
@@ -23,7 +22,6 @@ var pageWritePermissions = map[string]string{
 	"/admin/config":                "config.write",
 	"/admin/config-wizard":         "config.write",
 	"/admin/progression":           "config.write",
-	"/admin/conversations":         "conversations.write",
 	"/admin/gametime":              "gametime.write",
 	"/admin/items":                 "items.write",
 	"/admin/items-attack-messages": "items.write",
@@ -31,14 +29,11 @@ var pageWritePermissions = map[string]string{
 	"/admin/mobs":                  "mobs.write",
 	"/admin/mutators":              "mutators.write",
 	"/admin/panels":                "panels.write",
-	"/admin/pets":                  "pets.write",
-	"/admin/quests":                "quests.write",
 	"/admin/races":                 "races.write",
 	"/admin/skills":                "skills.write",
 	"/admin/skills-professions":    "skills.write",
 	"/admin/rooms":                 "rooms.write",
 	"/admin/spells":                "spells.write",
-	"/admin/telemetry":             "telemetry.write",
 	"/admin/users":                 "users.write",
 	"/admin/mapper":                "rooms.write",
 }
@@ -129,14 +124,6 @@ func adminBuffsAPI(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "buffs-api.html", nil)
 }
 
-func adminQuests(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "quests.html", nil)
-}
-
-func adminQuestsAPI(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "quests-api.html", nil)
-}
-
 func adminUsers(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "users.html", nil)
 }
@@ -201,18 +188,6 @@ func adminMobsAPI(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "mobs-api.html", nil)
 }
 
-func adminPets(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "pets.html", nil)
-}
-
-func adminPetsAPI(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "pets-api.html", nil)
-}
-
-func adminPetsRanks(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "pets-ranks.html", nil)
-}
-
 func adminMobRankings(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "mob-rankings.html", nil)
 }
@@ -251,14 +226,6 @@ func adminBiomes(w http.ResponseWriter, r *http.Request) {
 
 func adminBiomesAPI(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "biomes-api.html", nil)
-}
-
-func adminConversations(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "conversations.html", nil)
-}
-
-func adminConversationsAPI(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "conversations-api.html", nil)
 }
 
 func adminGameTime(w http.ResponseWriter, r *http.Request) {

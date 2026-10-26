@@ -64,7 +64,6 @@ func GetScriptFunctionsSchema() *ScriptFunctionsSchema {
 			"room":      roomScriptType(),
 			"mob":       mobScriptType(),
 			"item":      itemScriptType(),
-			"pet":       petScriptType(),
 			"spell":     spellScriptType(),
 			"buff":      buffScriptType(),
 			"user":      userScriptType(),
@@ -777,79 +776,6 @@ func spellScriptType() *ScriptTypeDef {
 				ReturnType:      "void",
 				ReturnSemantics: "Return value is ignored.",
 				Stub:            "function onFail(sourceActor, target) {\n\n}\n",
-			},
-		},
-	}
-}
-
-func petScriptType() *ScriptTypeDef {
-	return &ScriptTypeDef{
-		Label:       "Pet Script",
-		Description: "Scripts attached to pet types. Triggered by owner commands and round-based pet actions.",
-		Functions: []ScriptFuncDef{
-			{
-				Name:        "PetAct",
-				Description: "Called each round when the pet's owner is in a room. Use this to produce scripted pet behavior such as emotes, messages, or reactions.",
-				Params: []ScriptFuncParam{
-					{Name: "pet", Type: "PetObject", Description: "The pet."},
-					{Name: "actor", Type: "ActorObject", Description: "The owner of the pet."},
-					{Name: "room", Type: "RoomObject", Description: "The room the pet and owner are in."},
-				},
-				ReturnType:      "void",
-				ReturnSemantics: "Return value is ignored.",
-				Stub:            "function PetAct(pet, actor, room) {\n\n}\n",
-			},
-			{
-				Name:        "PetLeave",
-				Description: "Called when the pet goes missing (GoMissing is invoked with a positive value). Shares the same signature as PetAct.",
-				Params: []ScriptFuncParam{
-					{Name: "pet", Type: "PetObject", Description: "The pet."},
-					{Name: "actor", Type: "ActorObject", Description: "The owner of the pet."},
-					{Name: "room", Type: "RoomObject", Description: "The room the pet and owner are in."},
-				},
-				ReturnType:      "void",
-				ReturnSemantics: "Return value is ignored.",
-				Stub:            "function PetLeave(pet, actor, room) {\n\n}\n",
-			},
-			{
-				Name:        "PetReturn",
-				Description: "Called when the pet returns after its MissingCountdown reaches zero. Shares the same signature as PetAct.",
-				Params: []ScriptFuncParam{
-					{Name: "pet", Type: "PetObject", Description: "The pet."},
-					{Name: "actor", Type: "ActorObject", Description: "The owner of the pet."},
-					{Name: "room", Type: "RoomObject", Description: "The room the pet and owner are in."},
-				},
-				ReturnType:      "void",
-				ReturnSemantics: "Return value is ignored.",
-				Stub:            "function PetReturn(pet, actor, room) {\n\n}\n",
-			},
-			{
-				Name:        "onCommand",
-				Description: "Called when any command is typed by the pet's owner.",
-				Params: []ScriptFuncParam{
-					{Name: "cmd", Type: "string", Description: "The command word typed by the owner."},
-					{Name: "rest", Type: "string", Description: "Everything entered after the command word."},
-					{Name: "pet", Type: "PetObject", Description: "The pet."},
-					{Name: "actor", Type: "ActorObject", Description: "The owner of the pet."},
-					{Name: "room", Type: "RoomObject", Description: "The current room."},
-				},
-				ReturnType:      "boolean | void",
-				ReturnSemantics: "Return true to halt further command processing.",
-				Stub:            "function onCommand(cmd, rest, pet, actor, room) {\n\n    return false;\n}\n",
-			},
-			{
-				Name:        "onCommand_{command}",
-				Description: "Called when a specific command is typed by the pet's owner. If defined, the generic onCommand() will not fire for this command.",
-				Params: []ScriptFuncParam{
-					{Name: "rest", Type: "string", Description: "Everything entered after the command word."},
-					{Name: "pet", Type: "PetObject", Description: "The pet."},
-					{Name: "actor", Type: "ActorObject", Description: "The owner of the pet."},
-					{Name: "room", Type: "RoomObject", Description: "The current room."},
-				},
-				ReturnType:      "boolean | void",
-				ReturnSemantics: "Return true to halt further command processing.",
-				Dynamic:         commandDynamic,
-				Stub:            "function onCommand_{command}(rest, pet, actor, room) {\n\n    return true;\n}\n",
 			},
 		},
 	}

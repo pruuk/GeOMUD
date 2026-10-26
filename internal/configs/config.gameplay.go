@@ -29,7 +29,6 @@ type GamePlay struct {
 	PVP GameplayPVP `yaml:"PVP"`
 	// XpScale (difficulty)
 	XPScale              ConfigFloat `yaml:"XPScale"`
-	MobConverseChance    ConfigInt   `yaml:"MobConverseChance"`    // Chance 1-100 of attempting to converse when idle
 	AlignmentDecayRounds ConfigInt   `yaml:"AlignmentDecayRounds"` // Rounds between each alignment decay step toward neutral (0 = disabled)
 	// Elite mob settings
 	EliteLevelBonus ConfigInt `yaml:"EliteLevelBonus"` // Percent level increase for elite mob spawns (e.g. 20 = 20% higher level)
@@ -170,12 +169,6 @@ func (g *GamePlay) Validate() {
 
 	if g.XPScale <= 0 {
 		g.XPScale = 100
-	}
-
-	if g.MobConverseChance < 0 {
-		g.MobConverseChance = 0
-	} else if g.MobConverseChance > 100 {
-		g.MobConverseChance = 100
 	}
 
 	if g.AlignmentDecayRounds < 0 {
