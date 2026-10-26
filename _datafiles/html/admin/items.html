@@ -28,11 +28,6 @@
         background: var(--color-chip-bg); color: var(--color-chip-text); flex-shrink: 0; margin-left: auto;
     }
     .item-row.active .item-type-badge { background: var(--color-chip-text); color: var(--color-surface-white); }
-    .item-script-badge {
-        font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 3px;
-        background: var(--color-warning-bg); color: var(--color-warning-text); flex-shrink: 0;
-    }
-    .item-row.active .item-script-badge { background: var(--color-warning-text); color: var(--color-surface-white); }
     .item-buff-badge {
         font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 3px;
         background: var(--color-info-bg); color: var(--color-info-text); flex-shrink: 0;
@@ -142,19 +137,6 @@
     }
     .buff-chip button { background: none; border: none; cursor: pointer; color: var(--color-chip-text); font-size: 0.85rem; line-height: 1; padding: 0; }
     .buff-chip button:hover { color: var(--color-danger); }
-
-    /* script editor */
-    .script-section {
-        margin-top: 1.25rem; border-top: 1px solid var(--color-border-light); padding-top: 1rem;
-        display: flex; flex-direction: column; gap: 0.5rem;
-    }
-    .script-section-toolbar {
-        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
-    }
-    .script-section-label {
-        font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); flex: 1;
-    }
-    .script-hint { font-size: 0.75rem; color: var(--color-text-faint); margin-top: 0.3rem; }
 
     /* action bar */
     .action-bar { display: flex; gap: 0.6rem; margin-top: 1.25rem; align-items: center; flex-wrap: wrap; }
@@ -342,20 +324,6 @@
                 </div>
             </div>
 
-            <!-- Script editor -->
-            <div class="script-section">
-                <div class="script-section-toolbar">
-                    <span class="script-section-label">Script</span>
-                    <span class="script-lang-mount"></span>
-                    <button class="btn btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="openScriptWizard()">+ Add Event Handler</button>
-                    <button class="btn btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="ScriptEditor.open('f-script')">&#x26F6; Pop Out</button>
-                </div>
-                <textarea id="f-script" spellcheck="false" style="display:none"></textarea>
-                <div style="display:flex;justify-content:flex-end;margin-top:0.5rem;">
-                    <button class="btn btn-danger" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="deleteScript()">&#x1F5D1; Delete Script</button>
-                </div>
-            </div>
-
             <div class="action-bar">
                 <button class="btn btn-primary" id="save-btn" onclick="saveItem()">Save Item</button>
                 <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
@@ -378,7 +346,6 @@
     let itemSubtypes = [];
     let currentItemId = null; // null = new item
     let isNew = false;
-    let scriptSync = null;
 
     // -------------------------------------------------------------------------
     // Init
@@ -399,8 +366,6 @@
         populateTypeFilter();
         populateTypeSelects();
         renderList(allItems);
-        scriptSync = ScriptEditor.init('f-script', 'item');
-        ScriptEditor.setDeleteHandler('f-script', deleteScript);
         DiceRollHelper.attach(document.getElementById('f-diceroll'));
         const hashId = parseInt(location.hash.slice(1), 10);
         if (hashId) loadItem(hashId);
@@ -438,7 +403,6 @@
             row.innerHTML = `
                 <span class="item-id">#${item.ItemId}</span>
                 <span>${esc(item.Name)}</span>
-                ${item.HasScript ? '<span class="item-script-badge">{}</span>' : ''}
                 ${item.BuffCount ? '<span class="item-buff-badge">B' + item.BuffCount + '</span>' : ''}
                 <span class="item-type-badge">${esc(item.Type || '')}</span>`;
             row.onclick = () => loadItem(item.ItemId);
@@ -493,23 +457,18 @@
     // Load item into editor
     // -------------------------------------------------------------------------
     async function loadItem(itemId) {
-        const [itemRes, scriptRes] = await AdminAPI.all([
-            AdminAPI.get('/admin/api/v1/items/' + itemId),
-            AdminAPI.get('/admin/api/v1/items/' + itemId + '/script'),
-        ]);
+        const itemRes = await AdminAPI.get('/admin/api/v1/items/' + itemId);
 
         if (!itemRes.ok) { showStatus('Failed to load item: ' + itemRes.error, false); return; }
 
         const item = itemRes.data.data;
-        const script = scriptRes.ok ? (scriptRes.data.data.script || '') : '';
-        const lang = scriptRes.ok ? (scriptRes.data.data.lang || 'js') : 'js';
 
         currentItemId = itemId;
         isNew = false;
         location.hash = itemId;
         setActiveRow(itemId);
         showEditor();
-        fillForm(item, script, lang);
+        fillForm(item);
     }
 
     function setActiveRow(itemId) {
@@ -524,8 +483,7 @@
         document.getElementById('delete-btn').style.display = isNew ? 'none' : '';
     }
 
-    function fillForm(item, script, lang) {
-        lang = lang || 'js';
+    function fillForm(item) {
         document.getElementById('editor-title').textContent = isNew ? 'New Item' : item.Name;
         document.getElementById('editor-type-badge').textContent = item.Type || '';
         document.getElementById('item-id-display').textContent = isNew ? '' : 'ID: ' + item.ItemId;
@@ -567,13 +525,6 @@
         // Buff ids
         renderBuffChips('buffids-list', item.BuffIds || []);
         renderBuffChips('wornbuffids-list', item.WornBuffIds || []);
-
-        // Script
-        setVal('f-script', script);
-        if (scriptSync) scriptSync(undefined, lang);
-        // Lock the language to the existing file's type; a new (empty) script
-        // stays selectable until it is saved.
-        ScriptEditor.lockLang('f-script', script !== '');
     }
 
     // -------------------------------------------------------------------------
@@ -584,7 +535,7 @@
         isNew = true;
         document.querySelectorAll('.item-row').forEach(r => r.classList.remove('active'));
         showEditor();
-        fillForm({}, '');
+        fillForm({});
         document.getElementById('editor-title').textContent = 'New Item';
         document.getElementById('item-id-display').textContent = '';
         document.getElementById('delete-btn').style.display = 'none';
@@ -705,8 +656,6 @@
             Damage: { DiceRoll: dmgDice },
         };
 
-        const scriptContent = document.getElementById('f-script').value;
-
         let itemRes;
         if (isNew) {
             itemRes = await AdminAPI.post('/admin/api/v1/items', payload);
@@ -724,14 +673,7 @@
         const saved = itemRes.data.data;
         const savedId = saved.ItemId;
 
-        // Save script separately
-        const scriptRes = await AdminAPI.put('/admin/api/v1/items/' + savedId + '/script', { script: scriptContent, lang: ScriptEditor.getLang('f-script') });
-        if (!scriptRes.ok) {
-            showStatus('Item saved but script update failed: ' + scriptRes.error, false);
-        } else {
-            showStatus('Item saved successfully.', true);
-        }
-        ScriptEditor.lockLang('f-script', scriptContent.trim().length > 0);
+        showStatus('Item saved successfully.', true);
 
         // Refresh list
         if (isNew) {
@@ -766,31 +708,6 @@
         filterItems();
         cancelEdit();
         showStatus('Item deleted.', true);
-    };
-
-    // -------------------------------------------------------------------------
-    // Script toggle
-    // -------------------------------------------------------------------------
-    window.openScriptWizard = function () {
-        ScriptWizard.open({ scriptType: 'item', textareaId: 'f-script' });
-    };
-
-    // Blank the current script and save it. The backend deletes the script
-    // file when an empty script is saved.
-    window.deleteScript = async function () {
-        if (isNew || currentItemId === null) {
-            if (scriptSync) scriptSync('');
-            ScriptEditor.lockLang('f-script', false);
-            return;
-        }
-        if (!confirm('Delete this script? This cannot be undone.')) return;
-
-        const res = await AdminAPI.put('/admin/api/v1/items/' + currentItemId + '/script', { script: '', lang: ScriptEditor.getLang('f-script') });
-        if (!res.ok) { showStatus('Script delete failed: ' + res.error, false); return; }
-
-        if (scriptSync) scriptSync('');
-        ScriptEditor.lockLang('f-script', false);
-        showStatus('Script deleted.', true);
     };
 
     // -------------------------------------------------------------------------

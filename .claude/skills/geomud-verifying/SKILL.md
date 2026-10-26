@@ -16,7 +16,7 @@ git diff --name-only -- '*.go' | xargs -r gofmt -l  # must print nothing
 ## Baseline (upstream `b3f55cc2`, 2026-10-24)
 
 - `go build ./...` passes.
-- `go test ./... -count=1` on Windows: 32 packages ok (2026-10-26, after Phase 1; it was 36 before, and `telemetry`, `conversations`, `quests` and `pets` took their own tests with them), 3 fail, all of which pass on Linux CI (PR #1 run,
+- `go test ./... -count=1` on Windows: 32 packages ok (2026-10-26, after Phase 4's scripting removal; it was 33 before, and `internal/scripting` took its tests with it. Phase 1 took it from 36 by removing `telemetry`, `conversations`, `quests` and `pets`), 3 fail, all of which pass on Linux CI (PR #1 run,
   2026-10-24). Any other failure is new and is ours.
   - `scripts` `TestHTTPSSetupAutoModeLoadsDefaultAdminURLFromActiveOverride` (`https_setup_test.go:311`): cause not investigated
   - `internal/mobs` `TestLoadPluginMobs_MergesValidMob`: "filepath mismatch", `/` vs `\` in the expected path suffix
@@ -41,7 +41,12 @@ stops the server by PID. The repo's `_datafiles` are never written. Flow:
 2. Each bot signs up, runs `start` (race, name; no tutorial question, the world has no tutorial
    rooms), lands in Town Square, then get, drop, get the ring (checking inventory and the floor
    each time), walks north and back, says something, quits, logs back in, checks it still holds
-   the ring, holds (`-hold`), and quits. A drop the floor-item limit refuses is retried.
+   the ring, dies (`suicide`), checks it is in the recovery room ("Waiting room"), walks out
+   through `portal` to Town Square and checks it still holds the ring, holds (`-hold`), and quits.
+   A drop the floor-item limit refuses is retried. `quit` is silent until the server hangs up (its
+   meditation messages were a JS script, gone since Phase 4); the step waits for the disconnect.
+   The death steps exercise the Phase 4 death stand-in (revive at 1 health, fixed exit from
+   room 75), recorded in `docs/plans/2026-10-26-phase-4-scripting-surface.md`.
 
 Report its summary line. `-bots 50` is the load check; `-addr host:port` targets a running server
 (the Docker one in `provisioning/compose.smoke.yml`); `-server-log file` saves the launched

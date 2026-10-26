@@ -22,7 +22,6 @@ type RoomSummary struct {
 	SpawnCount    int    `json:"SpawnCount"`
 	IsBank        bool   `json:"IsBank,omitempty"`
 	Pvp           bool   `json:"Pvp,omitempty"`
-	HasScript     bool   `json:"HasScript,omitempty"`
 	TrainingCount int    `json:"TrainingCount,omitempty"`
 }
 
@@ -154,7 +153,6 @@ func GetPaginatedRoomSummaries(zone string, search string, page int, perPage int
 			SpawnCount:    len(r.SpawnInfo),
 			IsBank:        r.IsBank,
 			Pvp:           r.Pvp,
-			HasScript:     r.HasScript(),
 			TrainingCount: len(r.SkillTraining),
 		})
 	}
@@ -353,27 +351,6 @@ func DeleteRoomInstance(roomId int) error {
 	return nil
 }
 
-// SaveRoomScript writes (or overwrites) the JavaScript file for a room. If
-// content is empty the script file is deleted instead.
-func SaveRoomScript(roomId int, content string, lang string) error {
-	r := LoadRoomTemplate(roomId)
-	if r == nil {
-		return fmt.Errorf("room %d not found", roomId)
-	}
-
-	scriptPath := r.GetScriptPath()
-
-	if content == "" {
-		if err := os.Remove(scriptPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("removing room script: %w", err)
-		}
-		return nil
-	}
-
-	scriptPath = util.ApplyScriptLang(scriptPath, lang)
-	return util.WriteFile(scriptPath, []byte(content), 0644)
-}
-
 type MapperRoomData struct {
 	RoomId         int                       `json:"RoomId"`
 	Zone           string                    `json:"Zone"`
@@ -386,7 +363,6 @@ type MapperRoomData struct {
 	MapLegend      string                    `json:"MapLegend"`
 	Biome          string                    `json:"Biome,omitempty"`
 	Tags           []string                  `json:"Tags,omitempty"`
-	HasScript      bool                      `json:"HasScript,omitempty"`
 	HasMobSpawn    bool                      `json:"HasMobSpawn,omitempty"`
 	Exits          map[string]MapperExitData `json:"Exits"`
 }
@@ -452,7 +428,6 @@ func GetMapperRooms(zoneName string) ([]MapperRoomData, error) {
 			MapLegend:      r.MapLegend,
 			Biome:          biome,
 			Tags:           r.Tags,
-			HasScript:      r.HasScript(),
 			HasMobSpawn:    hasMobSpawn,
 			Exits:          exits,
 		})
@@ -512,7 +487,6 @@ func GetAllMapperRooms() []MapperRoomData {
 			MapLegend:      r.MapLegend,
 			Biome:          biome,
 			Tags:           r.Tags,
-			HasScript:      r.HasScript(),
 			HasMobSpawn:    hasMobSpawn2,
 			Exits:          exits,
 		})

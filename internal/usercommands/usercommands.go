@@ -9,7 +9,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -139,31 +138,6 @@ func GetExportedFunction(fName string) (any, bool) {
 
 func TryCommand(cmd string, rest string, userId int, flags events.EventFlag) (bool, error) {
 
-	// Do not allow scripts to intercept server commands
-	if cmd != `server` {
-
-		alias := keywords.TryCommandAlias(cmd)
-		skipScript := flags.Has(events.CmdSkipScripts)
-		if info, ok := userCommands[alias]; ok && info.AdminOnly {
-			skipScript = true
-		}
-
-		if !skipScript {
-			// Global user script runs first and can halt all further processing.
-			if handled, _ := scripting.TryUserCommand(alias, rest, userId); handled {
-				return true, nil
-			}
-
-			// Instead of calling scripting.TryRoomCommand directly,
-			// use our new function that sends GMCP notifications for blocked directions
-			handled, err := TryRoomScripts(cmd+` `+rest, alias, rest, userId)
-			if handled {
-				return true, err
-			}
-		}
-
-	}
-
 	userDisabled := false
 	user := users.GetByUserId(userId)
 	if user == nil {
@@ -221,28 +195,6 @@ func TryCommand(cmd string, rest string, userId int, flags events.EventFlag) (bo
 		}
 
 		userDisabled = user.Character.IsDisabled()
-
-		for _, b := range user.Character.Buffs.List {
-			handled, err := scripting.TryBuffCommand(cmd, rest, user.UserId, 0, b.BuffId)
-			if handled { // For this event, handled represents whether to reject the move.
-				return handled, err
-			}
-		}
-
-		// Check if the "rest" is an item the character has
-		matchingItem, found := user.Character.FindInBackpack(rest)
-		if !found {
-			matchingItem, found = user.Character.FindOnBody(rest)
-		}
-
-		if found {
-			// If the item has a script, run it
-			if handled, err := scripting.TryItemCommand(cmd, matchingItem, user.UserId); err == nil {
-				if handled { // For this event, handled represents whether to reject the move.
-					return handled, err
-				}
-			}
-		}
 
 	}
 
@@ -333,32 +285,4 @@ func RegisterCommand(command string, handlerFunc UserCommand, disabledWhenDowned
 		disabledWhenDowned,
 		isAdminOnly,
 	}
-}
-
-// TryRoomScripts is called to try both the onCommand_X direct route and also onCommand with a 'cmd' parameter.
-// Returns true if a script handled it. False if not.
-func TryRoomScripts(input, alias, rest string, userId int) (bool, error) {
-
-	// Try direct command room script first
-	cmdHandled, err := scripting.TryRoomCommand(alias, rest, userId)
-
-	if cmdHandled {
-
-		// Check if it's a directional command and send GMCP for wrong direction
-		user := users.GetByUserId(userId)
-		if user != nil && (alias == "north" || alias == "south" || alias == "east" || alias == "west" ||
-			alias == "up" || alias == "down" || alias == "northwest" || alias == "northeast" ||
-			alias == "southwest" || alias == "southeast") {
-
-			// Send GMCP message for script-blocked direction
-			if f, ok := GetExportedFunction(`SendGMCPEvent`); ok {
-				if gmcpSendFunc, ok := f.(func(int, string, any)); ok { // make sure the func definition is `func(int, string, any)`
-					gmcpSendFunc(user.UserId, `Room.WrongDir`, fmt.Sprintf(`"%s"`, alias))
-				}
-			}
-
-		}
-	}
-
-	return cmdHandled, err
 }

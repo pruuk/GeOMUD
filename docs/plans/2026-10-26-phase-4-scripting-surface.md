@@ -14,6 +14,23 @@ Room and Comm"). Decision 2 (no JS or Lua). Branch `strip/phase-4-scripting-surf
 - **Mudlet Discord Rich Presence** (`modules/gmcp/gmcp.Mudlet.go`, 788 lines, 111 Discord mentions)
   is removed.
 
+## Death stand-in (Calabe, 2026-10-26)
+
+Removing scripting broke death outright: `suicide` left the player at -10 health in a private copy
+of room 75 (the recovery room), which had no exits. The death_recovery buff's script (buff 24) did
+all the healing and room 75's `onIdle` script opened the only way out. Until Phase 5 rebuilds death
+in the ruleset:
+
+- `suicide` revives the player at 1 health instead of -10 (`internal/usercommands/suicide.go`,
+  commented as a Phase 5 stand-in). Corpse, drops, XP loss and the move to the recovery room are
+  unchanged. At 1 health `AutoHeal` regenerates the player normally instead of re-running `suicide`.
+- Room 75 has a fixed `portal` exit to the start room, room 1
+  (`_datafiles/world/empty/rooms/shadow_realm/75.yaml`). Ephemeral copies only remap exits that
+  point inside the copied set, so the copy's exit leads to the real room 1.
+- Buff 24 (death recovery) keeps its YAML and does nothing until Phase 5.
+
+Phase 5 replaces both lines with the ruleset's death and recovery.
+
 ## Facts verified against source (2026-10-26, master `fb0a0bdc`)
 
 | Fact | Value | Where |

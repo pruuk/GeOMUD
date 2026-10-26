@@ -31,11 +31,6 @@
         background: var(--color-chip-bg); color: var(--color-chip-text); flex-shrink: 0;
     }
     .room-row.active .room-badge { background: var(--color-chip-text); color: var(--color-surface-white); }
-    .room-script-badge {
-        font-size: 0.65rem; padding: 0.1rem 0.3rem; border-radius: 3px;
-        background: var(--color-warning-bg); color: var(--color-warning-text); flex-shrink: 0;
-    }
-    .room-row.active .room-script-badge { background: var(--color-warning-text); color: var(--color-surface-white); }
     .room-train-badge {
         font-size: 0.65rem; padding: 0.1rem 0.3rem; border-radius: 3px;
         background: var(--color-success-bg); color: var(--color-success-text); flex-shrink: 0;
@@ -275,16 +270,6 @@
     /* zone editor overlay */
     .zone-editor { background: var(--color-surface-alt); border: 1px solid var(--color-border); border-radius: 6px; padding: 1rem; margin-bottom: 1rem; }
     .zone-editor h3 { font-size: 0.95rem; margin-bottom: 0.75rem; }
-
-    /* script editor */
-    .script-section {
-        margin-top: 1.25rem; border-top: 1px solid var(--color-border-light); padding-top: 1rem;
-        display: flex; flex-direction: column; gap: 0.5rem;
-    }
-    .script-section-toolbar {
-        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
-    }
-    .script-section-label { font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); flex: 1; }
 
     /* instance editor modal */
     .instance-modal-overlay { display:none; position:fixed; inset:0; background:var(--color-overlay); z-index:600; align-items:center; justify-content:center; }
@@ -551,20 +536,6 @@
                 </div>
             </div>
 
-            <!-- Script editor -->
-            <div class="script-section">
-                <div class="script-section-toolbar">
-                    <span class="script-section-label">Script</span>
-                    <span class="script-lang-mount"></span>
-                    <button class="btn btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="openScriptWizard()">+ Add Event Handler</button>
-                    <button class="btn btn-secondary" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="ScriptEditor.open('f-script')">&#x26F6; Pop Out</button>
-                </div>
-                <textarea id="f-script" spellcheck="false" style="display:none"></textarea>
-                <div style="display:flex;justify-content:flex-end;margin-top:0.5rem;">
-                    <button class="btn btn-danger" style="font-size:0.78rem;padding:0.25rem 0.7rem;" onclick="deleteScript()">&#x1F5D1; Delete Script</button>
-                </div>
-            </div>
-
             <div class="action-bar">
                 <button class="btn btn-primary" id="save-btn" onclick="saveRoom()">Save Room</button>
                 <button class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
@@ -623,7 +594,6 @@
     let isNew = false;
     let searchTimer = null;
     let buffPickerTarget = null; // exit card element
-    let scriptSync = null;
 
     // -------------------------------------------------------------------------
     // Init
@@ -646,8 +616,6 @@
         await loadRoomList();
         const hashId = parseInt(location.hash.slice(1), 10);
         if (hashId) loadRoom(hashId);
-        scriptSync = ScriptEditor.init('f-script', 'room');
-        ScriptEditor.setDeleteHandler('f-script', deleteScript);
     }
 
     // -------------------------------------------------------------------------
@@ -722,7 +690,6 @@
             row.innerHTML =
                 '<span class="room-id">#' + r.RoomId + '</span>' +
                 '<span class="room-title">' + esc(r.Title) + '</span>' +
-                (r.HasScript ? '<span class="room-script-badge">{}</span>' : '') +
                 (r.TrainingCount ? '<span class="room-train-badge">T</span>' : '') +
                 (r.IsBank ? '<span class="room-bank-badge">B</span>' : '') +
                 (badges.length ? '<span class="room-badge">' + esc(badges.join(', ')) + '</span>' : '');
@@ -753,22 +720,17 @@
     // Load room into editor
     // -------------------------------------------------------------------------
     async function loadRoom(roomId) {
-        const [roomRes, scriptRes] = await AdminAPI.all([
-            AdminAPI.get('/admin/api/v1/rooms/' + roomId),
-            AdminAPI.get('/admin/api/v1/rooms/' + roomId + '/script'),
-        ]);
+        const roomRes = await AdminAPI.get('/admin/api/v1/rooms/' + roomId);
         if (!roomRes.ok) { showStatus('Failed to load room: ' + roomRes.error, false); return; }
 
         const r = roomRes.data.data;
-        const script = (scriptRes.ok && scriptRes.data.data && scriptRes.data.data.script) || '';
-        const lang = (scriptRes.ok && scriptRes.data.data && scriptRes.data.data.lang) || 'js';
         currentRoomId = roomId;
         isNew = false;
         location.hash = roomId;
         setActiveRow(roomId);
         document.getElementById('zone-editor').style.display = 'none';
         showEditor();
-        fillForm(r, script, lang);
+        fillForm(r);
     }
 
     function setActiveRow(roomId) {
@@ -783,8 +745,7 @@
         document.getElementById('delete-btn').style.display = isNew ? 'none' : '';
     }
 
-    function fillForm(r, script, lang) {
-        lang = lang || 'js';
+    function fillForm(r) {
         document.getElementById('editor-title').textContent = isNew ? 'New Room' : r.Title;
         document.getElementById('editor-zone-badge').textContent = r.Zone || '';
         document.getElementById('room-id-display').textContent = isNew ? '' : 'ID: ' + r.RoomId;
@@ -812,13 +773,6 @@
         renderContainers(r.Containers || {});
         renderIdleMsgs('idle-list', r.IdleMessages || []);
         renderNouns(r.Nouns || {});
-
-        // Script - ScriptEditor.init returns a plain sync function
-        setVal('f-script', script);
-        if (scriptSync) scriptSync(undefined, lang);
-        // Lock the language to the existing file's type; a new (empty) script
-        // stays selectable until it is saved.
-        ScriptEditor.lockLang('f-script', script !== '');
     }
 
     // -------------------------------------------------------------------------
@@ -860,31 +814,6 @@
         document.querySelectorAll('.room-row').forEach(r => r.classList.remove('active'));
         currentRoomId = null;
         isNew = false;
-    };
-
-    // -------------------------------------------------------------------------
-    // Script toggle
-    // -------------------------------------------------------------------------
-    window.openScriptWizard = function () {
-        ScriptWizard.open({ scriptType: 'room', textareaId: 'f-script' });
-    };
-
-    // Blank the current script and save it. The backend deletes the script
-    // file when an empty script is saved.
-    window.deleteScript = async function () {
-        if (isNew || currentRoomId === null) {
-            if (scriptSync) scriptSync('');
-            ScriptEditor.lockLang('f-script', false);
-            return;
-        }
-        if (!confirm('Delete this script? This cannot be undone.')) return;
-
-        const res = await AdminAPI.put('/admin/api/v1/rooms/' + currentRoomId + '/script', { script: '', lang: ScriptEditor.getLang('f-script') });
-        if (!res.ok) { showStatus('Script delete failed: ' + res.error, false); return; }
-
-        if (scriptSync) scriptSync('');
-        ScriptEditor.lockLang('f-script', false);
-        showStatus('Script deleted.', true);
     };
 
     // -------------------------------------------------------------------------
@@ -1788,13 +1717,6 @@
                 '<div class="field-hint">Added to the mob\'s resolved level after zone auto-scale. Can be negative.</div>' +
             '</div>' +
 
-            // Script Tag (mob only)
-            '<div class="spawn-field" style="' + (isMob ? shown : hidden) + '">' +
-                '<label>Script Tag</label>' +
-                '<input type="text" class="spawn-scripttag" value="' + esc(s.ScriptTag || '') + '" placeholder="Overrides mob script tag" />' +
-                '<div class="field-hint">Overrides which script file this mob uses. Leave blank for mob template default.</div>' +
-            '</div>' +
-
             // Buff IDs (mob only)
             '<div class="spawn-field span2" style="' + (isMob ? shown : hidden) + '">' +
                 '<label>Permanent Buffs</label>' +
@@ -1949,9 +1871,6 @@
 
                 const levelMod = parseInt(card.querySelector('.spawn-levelmod').value, 10);
                 if (levelMod) s.LevelMod = levelMod;
-
-                const scriptTag = card.querySelector('.spawn-scripttag').value.trim();
-                if (scriptTag) s.ScriptTag = scriptTag;
 
                 const buffIds = Array.from(card.querySelectorAll('.spawn-buffids .buff-chip'))
                     .map(c => parseInt(c.dataset.buffId, 10)).filter(n => !isNaN(n));
@@ -2123,8 +2042,6 @@
         const btn = document.getElementById('save-btn');
         btn.disabled = true; btn.textContent = 'Saving...';
 
-        const script = document.getElementById('f-script').value;
-
         const payload = {
             Zone:          document.getElementById('f-zone').value,
             Title:         document.getElementById('f-title').value.trim(),
@@ -2143,17 +2060,12 @@
             Nouns:         collectNouns(),
         };
 
-        const [patchRes, scriptRes] = await AdminAPI.all([
-            AdminAPI.patch('/admin/api/v1/rooms/' + currentRoomId, payload),
-            AdminAPI.put('/admin/api/v1/rooms/' + currentRoomId + '/script', { script: script, lang: ScriptEditor.getLang('f-script') }),
-        ]);
+        const patchRes = await AdminAPI.patch('/admin/api/v1/rooms/' + currentRoomId, payload);
 
         btn.disabled = false; btn.textContent = 'Save Room';
 
         if (!patchRes.ok) { showStatus('Save failed: ' + patchRes.error, false); return; }
-        if (!scriptRes.ok) { showStatus('Room saved but script save failed: ' + scriptRes.error, false); return; }
 
-        ScriptEditor.lockLang('f-script', script.trim().length > 0);
         showStatus('Room saved.', true);
         const saved = patchRes.data.data;
         document.getElementById('editor-title').textContent = saved.Title;

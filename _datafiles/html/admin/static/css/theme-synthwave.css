@@ -154,7 +154,7 @@
 /* Dark surface overrides */
 .sidebar, .editor-panel, .card, .runtime-card, .section-block, .section-panel,
 .api-entry, .config-table-wrap, .section-card, #pending-panel, .user-display,
-.picker-wrap, .script-editor-wrap, .select-dialog-backdrop > div,
+.picker-wrap, .select-dialog-backdrop > div,
 .dialog-inner, .zone-edit-dialog > div {
     background: var(--color-surface) !important; color: var(--color-text);
 }
@@ -174,7 +174,7 @@ input[type="range"] { color-scheme: dark; }
 .toggle-knob { background: var(--color-surface) !important; }
 .item-picker-display, .shop-picker-display, .music-picker-display, .picker-display { background: var(--color-surface-raised) !important; color: var(--color-text-muted) !important; }
 .edit-form input[type="text"] { background: var(--color-surface-raised) !important; color: var(--color-text) !important; }
-.script-editor-container, .hljs, pre, code { background: var(--color-surface-raised) !important; }
+.hljs, pre, code { background: var(--color-surface-raised) !important; }
 .select-dialog-list, .picker-list, .picker-row { background: var(--color-surface) !important; color: var(--color-text) !important; }
 .picker-row:hover, .select-dialog-row:hover { background: var(--color-row-hover) !important; }
 .zone-modal-content, .rank-table-wrap { background: var(--color-surface) !important; }

@@ -119,14 +119,6 @@
             'Maximum Processors':   'The value of GOMAXPROCS - the maximum number of OS threads that can execute Go code simultaneously. Typically equals the number of logical CPU cores.',
             'Goroutines Count':     'Number of goroutines currently running or waiting. A steadily growing count may indicate a goroutine leak.',
         },
-        'Scripting': {
-            'roomVMCache':       'Cached JavaScript VM instances for room scripts. Each VM holds a compiled Goja runtime.',
-            'mobVMCache':        'Cached JavaScript VM instances for mob scripts, keyed by script ID.',
-            'itemVMCache':       'Cached JavaScript VM instances for item scripts, keyed by script ID.',
-            'buffVMCache':       'Cached JavaScript VM instances for buff scripts, keyed by buff ID.',
-            'spellVMCache':      'Cached JavaScript VM instances for spell scripts, keyed by spell ID.',
-            'moduleFunctions':   'Go functions registered and exposed to the JavaScript scripting runtime by modules.',
-        },
         'Templates': {
             'templateCache':       'Compiled Go text/template objects cached by file path. Avoids re-parsing template files on every render.',
             'templateConfigCache': 'Per-user template configuration cached by user ID.',

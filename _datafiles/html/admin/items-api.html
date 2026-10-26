@@ -145,13 +145,13 @@
             <span class="perm-badge">items.read</span>
         </summary>
         <div class="api-body">
-            <p>Returns an array of every loaded item specification. Each entry includes a <code>HasScript</code> boolean.</p>
+            <p>Returns an array of every loaded item specification.</p>
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
      <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/items</span></div>
             <div class="response-examples">
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":[{"ItemId":10001,"Name":"Steel Sword","Type":"weapon","Subtype":"slashing","HasScript":false},{"ItemId":10002,"Name":"Iron Dagger","Type":"weapon","Subtype":"stabbing","HasScript":true}]}</div></div>
+                    <div class="resp-body"><div class="curl-block">{"success":true,"data":[{"ItemId":10001,"Name":"Steel Sword","Type":"weapon","Subtype":"slashing"},{"ItemId":10002,"Name":"Iron Dagger","Type":"weapon","Subtype":"stabbing"}]}</div></div>
                 </details>
             </div>
         </div>
@@ -245,11 +245,11 @@
         <summary>
             <span class="method method-delete">DELETE</span>
             <span class="api-path">/admin/api/v1/items/{itemId}</span>
-            <span class="api-desc">Delete an item and its script</span>
+            <span class="api-desc">Delete an item</span>
             <span class="perm-badge">items.write</span>
         </summary>
         <div class="api-body">
-            <p>Permanently removes the item YAML and associated JS script from disk and from the in-memory cache.</p>
+            <p>Permanently removes the item YAML from disk and from the in-memory cache.</p>
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
      <span class="flag">-X</span> DELETE \
      <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/items/10042</span></div>
@@ -257,57 +257,6 @@
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
                     <div class="resp-body"><div class="curl-block">{"success":true}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">404</span> <span class="resp-label">Not Found</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"item not found: 99999"}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-get">GET</span>
-            <span class="api-path">/admin/api/v1/items/{itemId}/script</span>
-            <span class="api-desc">Get the item's JavaScript</span>
-            <span class="perm-badge">items.read</span>
-        </summary>
-        <div class="api-body">
-            <p>Returns the raw script content. <code>script</code> is an empty string if no script file exists.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/items/10042/script</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"script":"function onFound(user, item, room) {\n}\n"}}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-put">PUT</span>
-            <span class="api-path">/admin/api/v1/items/{itemId}/script</span>
-            <span class="api-desc">Replace (or delete) the item's JavaScript</span>
-            <span class="perm-badge">items.write</span>
-        </summary>
-        <div class="api-body">
-            <p>Writes the provided <code>script</code> string to the item's <code>.js</code> file. Send an empty string to delete the script file.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="flag">-X</span> PUT \
-     <span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \
-     <span class="flag">-d</span> <span class="str">'{"script":"function onFound(user,item,room){}"}'</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/items/10042/script</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">400</span> <span class="resp-label">Bad Request</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"malformed request body: ..."}</div></div>
                 </details>
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-err">404</span> <span class="resp-label">Not Found</span></summary>

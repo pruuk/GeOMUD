@@ -14,7 +14,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/users"
@@ -29,13 +28,6 @@ func Suicide(rest string, user *users.UserRecord, room *rooms.Room, flags events
 	if user.Character.Zone == `Shadow Realm` {
 		user.SendText(`You're already dead!`)
 		return true, errors.New(`already dead`)
-	}
-
-	// Give the global user script a chance to override death entirely (e.g. a
-	// phoenix-style revival). If it returns true, the death is aborted and the
-	// script is responsible for whatever happens instead.
-	if handled, _ := scripting.TryUserDieEvent(user.UserId); handled {
-		return true, nil
 	}
 
 	// Send a death msg to everyone in the room.
@@ -273,7 +265,9 @@ func Suicide(rest string, user *users.UserRecord, room *rooms.Room, flags events
 
 	user.Character.CancelBuffsWithFlag(buffs.All)
 
-	user.Character.Health = -10
+	// Phase 5 stand-in: revive at 1 health. The death_recovery buff's script used to
+	// heal the player up from -10; with scripting gone, nothing would (Calabe, 2026-10-26).
+	user.Character.Health = 1
 	user.Character.Mana = 0
 	events.AddToQueue(events.CharacterVitalsChanged{UserId: user.UserId})
 

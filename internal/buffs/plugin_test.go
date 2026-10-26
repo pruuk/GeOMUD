@@ -42,7 +42,6 @@ func (f *fakeFS) AllFileSubSystems(yield func(fs.ReadFileFS) bool) { yield(f) }
 
 func resetPluginState() {
 	pluginFileSystems = nil
-	pluginScripts = map[int]string{}
 }
 
 func TestLoadPluginBuffs_MergesValidBuff(t *testing.T) {
@@ -130,23 +129,5 @@ func TestLoadPluginBuffs_DiskWinsOnDuplicate(t *testing.T) {
 
 	if dst[9005].Name != "Disk" {
 		t.Fatalf("expected disk buff to win, got %q", dst[9005].Name)
-	}
-}
-
-func TestRegisterBuffScript_ReturnedByGetScript(t *testing.T) {
-	resetPluginState()
-	defer resetPluginState()
-
-	RegisterBuffScript(9006, "onApply()")
-
-	spec := &BuffSpec{BuffId: 9006, Name: "Scripted"}
-	if got := spec.GetScript(); got != "onApply()" {
-		t.Fatalf("expected plugin script, got %q", got)
-	}
-
-	// Negative ids resolve to the same registered script.
-	spec.BuffId = -9006
-	if got := spec.GetScript(); got != "onApply()" {
-		t.Fatalf("expected plugin script for negative id, got %q", got)
 	}
 }

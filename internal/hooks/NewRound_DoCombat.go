@@ -13,7 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/users"
@@ -137,26 +136,13 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				continue
 			}
 
-			if blocked, err := scripting.TryRoomTryExitEvent(exitName, user.UserId, user.Character.RoomId); err == nil && blocked {
-				user.SendText(`Something prevents you from fleeing!`)
-				continue
-			}
-
-			if blocked, err := scripting.TryRoomTryEnterEvent(user.UserId, exitRoomId); err == nil && blocked {
-				user.SendText(`Something prevents you from fleeing!`)
-				continue
-			}
-
 			user.SendText(fmt.Sprintf(`You flee to the <ansi fg="exit">%s</ansi> exit!`, exitName))
 			uRoom.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> flees to the <ansi fg="exit">%s</ansi> exit!`, user.Character.Name, exitName), user.UserId)
 
 			user.Character.Aggro = nil
 			events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
 
-			originRoomId := user.Character.RoomId
 			if err := rooms.MoveToRoom(user.UserId, exitRoomId); err == nil {
-
-				scripting.TryRoomScriptEvent(`onExit`, user.UserId, originRoomId)
 
 				for _, instId := range uRoom.GetMobs(rooms.FindCharmed) {
 					if mob := mobs.GetInstance(instId); mob != nil {
@@ -169,9 +155,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 				newRoom := rooms.LoadRoom(exitRoomId)
 
-				if doLook, err := scripting.TryRoomScriptEvent(`onEnter`, user.UserId, exitRoomId); err != nil || doLook {
-					usercommands.Look(``, user, newRoom, events.CmdSecretly)
-				}
+				usercommands.Look(``, user, newRoom, events.CmdSecretly)
 
 			}
 
@@ -188,8 +172,6 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 			if user.Character.Aggro.RoundsWaiting > 0 {
 				user.Character.Aggro.RoundsWaiting--
-
-				scripting.TrySpellScriptEvent(`onWait`, user.UserId, 0, user.Character.Aggro.SpellInfo)
 
 				continue
 			}
@@ -221,47 +203,38 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				}
 			}
 
-			allowRetaliation := true
-			if handled, err := scripting.TrySpellScriptEvent(`onMagic`, user.UserId, 0, user.Character.Aggro.SpellInfo); err == nil {
-				if handled {
-					allowRetaliation = false
-				}
-			}
-
 			user.Character.TrackSpellCast(user.Character.Aggro.SpellInfo.SpellId)
 
-			if allowRetaliation {
-				if spellData := spells.GetSpell(user.Character.Aggro.SpellInfo.SpellId); spellData != nil {
+			if spellData := spells.GetSpell(user.Character.Aggro.SpellInfo.SpellId); spellData != nil {
 
-					if spellData.Type == spells.HarmSingle || spellData.Type == spells.HarmMulti || spellData.Type == spells.HarmArea {
+				if spellData.Type == spells.HarmSingle || spellData.Type == spells.HarmMulti || spellData.Type == spells.HarmArea {
 
-						for _, mobId := range user.Character.Aggro.SpellInfo.TargetMobInstanceIds {
+					for _, mobId := range user.Character.Aggro.SpellInfo.TargetMobInstanceIds {
 
-							affectedMobInstanceIds = append(affectedMobInstanceIds, mobId)
+						affectedMobInstanceIds = append(affectedMobInstanceIds, mobId)
 
-							if defMob := mobs.GetInstance(mobId); defMob != nil {
+						if defMob := mobs.GetInstance(mobId); defMob != nil {
 
-								// Track damage done
-								if hBefore, ok := mobHealthBefore[mobId]; ok {
-									hDelta := hBefore - defMob.Character.Health
-									if hDelta > 0 {
-										defMob.Character.TrackPlayerDamage(user.UserId, hDelta)
-									}
+							// Track damage done
+							if hBefore, ok := mobHealthBefore[mobId]; ok {
+								hDelta := hBefore - defMob.Character.Health
+								if hDelta > 0 {
+									defMob.Character.TrackPlayerDamage(user.UserId, hDelta)
 								}
-
-								defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-								if defMob.Character.Health <= 0 {
-									defMob.Character.EndAggro()
-									events.AddToQueue(events.AggroChanged{MobInstanceId: defMob.InstanceId, RoomId: defMob.Character.RoomId})
-								} else if defMob.Character.Aggro == nil {
-									defMob.PreventIdle = true
-								}
-
 							}
-						}
 
+							defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
+
+							if defMob.Character.Health <= 0 {
+								defMob.Character.EndAggro()
+								events.AddToQueue(events.AggroChanged{MobInstanceId: defMob.InstanceId, RoomId: defMob.Character.RoomId})
+							} else if defMob.Character.Aggro == nil {
+								defMob.PreventIdle = true
+							}
+
+						}
 					}
+
 				}
 			}
 
@@ -563,11 +536,6 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				defRoom.SendText(msg, user.UserId)
 			}
 
-			// Handle any scripted behavior now.
-			if roundResult.Hit {
-				scripting.TryMobScriptEvent(`onHurt`, defMob.InstanceId, user.UserId, `user`, map[string]any{`damage`: roundResult.DamageToTarget, `crit`: roundResult.Crit})
-			}
-
 			//
 			// Special mob-only reaction/behavior
 			//
@@ -667,8 +635,6 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 			if mob.Character.Aggro.RoundsWaiting > 0 {
 				mob.Character.Aggro.RoundsWaiting--
 
-				scripting.TrySpellScriptEvent(`onWait`, 0, mob.InstanceId, mob.Character.Aggro.SpellInfo)
-
 				continue
 			}
 
@@ -683,36 +649,27 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			}
 
-			allowRetaliation := true
-			if handled, err := scripting.TrySpellScriptEvent(`onMagic`, 0, mob.InstanceId, mob.Character.Aggro.SpellInfo); err == nil {
-				if handled {
-					allowRetaliation = false
-				}
-			}
+			if spellData := spells.GetSpell(mob.Character.Aggro.SpellInfo.SpellId); spellData != nil {
 
-			if allowRetaliation {
-				if spellData := spells.GetSpell(mob.Character.Aggro.SpellInfo.SpellId); spellData != nil {
+				if spellData.Type == spells.HarmSingle || spellData.Type == spells.HarmMulti || spellData.Type == spells.HarmArea {
 
-					if spellData.Type == spells.HarmSingle || spellData.Type == spells.HarmMulti || spellData.Type == spells.HarmArea {
+					for _, mobId := range mob.Character.Aggro.SpellInfo.TargetMobInstanceIds {
 
-						for _, mobId := range mob.Character.Aggro.SpellInfo.TargetMobInstanceIds {
+						affectedMobInstanceIds = append(affectedMobInstanceIds, mobId)
 
-							affectedMobInstanceIds = append(affectedMobInstanceIds, mobId)
+						if defMob := mobs.GetInstance(mobId); defMob != nil {
 
-							if defMob := mobs.GetInstance(mobId); defMob != nil {
+							defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
 
-								defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-								if defMob.Character.Health <= 0 {
-									defMob.Character.EndAggro()
-								} else if defMob.Character.Aggro == nil {
-									defMob.PreventIdle = true
-								}
-
+							if defMob.Character.Health <= 0 {
+								defMob.Character.EndAggro()
+							} else if defMob.Character.Aggro == nil {
+								defMob.PreventIdle = true
 							}
-						}
 
+						}
 					}
+
 				}
 			}
 
@@ -994,11 +951,6 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			for _, msg := range roundResult.MessagesToTargetRoom {
 				defRoom.SendText(msg)
-			}
-
-			// Handle any scripted behavior now.
-			if roundResult.Hit {
-				scripting.TryMobScriptEvent(`onHurt`, defMob.InstanceId, mob.InstanceId, `mob`, map[string]any{`damage`: roundResult.DamageToTarget, `crit`: roundResult.Crit})
 			}
 
 			// Mobs get aggro when attacked

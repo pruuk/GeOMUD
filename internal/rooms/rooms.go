@@ -3,7 +3,6 @@ package rooms
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -85,7 +84,7 @@ type Room struct {
 	LongTermDataStore map[string]any                    `yaml:"longtermdatastore,omitempty"`         // Long term data store for the room
 	Mutators          mutators.MutatorList              `yaml:"mutators,omitempty"`                  // mutators this room spawns with.
 	Pvp               bool                              `yaml:"pvp,omitempty"`                       // if config pvp is set to `limited`, uses this value
-	Tags              []string                          `yaml:"tags,omitempty"`                      // short tags that can be added to rooms for any purpose (modules, scripting, etc)
+	Tags              []string                          `yaml:"tags,omitempty"`                      // short tags that can be added to rooms for any purpose (modules, etc)
 	MapX              int                               `yaml:"mapx"`
 	MapY              int                               `yaml:"mapy"`
 	MapZ              int                               `yaml:"mapz"`
@@ -364,37 +363,6 @@ func (r *Room) GetTempData(key string) any {
 	return nil
 }
 
-func (r *Room) GetScript() string {
-
-	scriptPath := r.GetScriptPath()
-
-	// Load the script into a string
-	if _, err := os.Stat(scriptPath); err == nil {
-		if bytes, err := util.ReadFile(scriptPath); err == nil {
-			return string(bytes)
-		}
-	}
-
-	return ``
-}
-
-func (r *Room) HasScript() bool {
-
-	scriptPath := r.GetScriptPath()
-
-	// Load the script into a string
-	if _, err := os.Stat(scriptPath); err == nil {
-		return true
-	}
-
-	return false
-}
-
-func (r *Room) GetScriptPath() string {
-	// Load any script for the room (prefers .js, falls back to .lua)
-	return util.ResolveScriptPath(configs.GetFilePathsConfig().DataFiles.String() + `/rooms/` + r.Filepath())
-}
-
 func (r *Room) FindTemporaryExitByUserId(userId int) (exit.TemporaryRoomExit, bool) {
 
 	if r.ExitsTemp != nil {
@@ -633,10 +601,6 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 				// If there are idle commands for this spawn, overwrite.
 				if len(spawnInfo.IdleCommands) > 0 {
 					mob.IdleCommands = append([]string{}, spawnInfo.IdleCommands...)
-				}
-
-				if len(spawnInfo.ScriptTag) > 0 {
-					mob.ScriptTag = spawnInfo.ScriptTag
 				}
 
 				// Does this mob have a special name?

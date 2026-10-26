@@ -10,7 +10,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -79,14 +78,7 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 		// This comes after checks for whether they are in combat, etc.
 		if currentStep := mob.Path.Current(); currentStep != nil || mob.Path.Len() > 0 {
 
-			if currentStep == nil {
-
-				if endPathingAndSkip, _ := scripting.TryMobScriptEvent("onPath", mob.InstanceId, 0, ``, map[string]any{`status`: `start`}); endPathingAndSkip {
-					mob.Path.Clear()
-					continue
-				}
-
-			} else {
+			if currentStep != nil {
 
 				// If their currentStep isn't actually the room they are in
 				// They've somehow been moved. Reclaculate a new path.
@@ -123,10 +115,6 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 			}
 
 			mob.Path.Clear()
-
-			if endPathingAndSkip, _ := scripting.TryMobScriptEvent("onPath", mob.InstanceId, 0, ``, map[string]any{`status`: `end`}); endPathingAndSkip {
-				continue
-			}
 
 			if mob.HomeRoomId == mob.Character.RoomId {
 				mob.WanderCount = 0

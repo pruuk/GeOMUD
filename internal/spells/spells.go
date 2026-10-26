@@ -2,7 +2,6 @@ package spells
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -162,25 +161,6 @@ func (s *SpellData) Validate() error {
 
 func (s *SpellData) GetDifficulty() int {
 	return s.Difficulty
-}
-
-func (s *SpellData) GetScript() string {
-
-	scriptPath := s.GetScriptPath()
-
-	// Load the script into a string
-	if _, err := os.Stat(scriptPath); err == nil {
-		if bytes, err := util.ReadFile(scriptPath); err == nil {
-			return string(bytes)
-		}
-	}
-
-	return ``
-}
-
-func (s *SpellData) GetScriptPath() string {
-	// Load any script for the spell (prefers .js, falls back to .lua)
-	return util.ResolveScriptPath(string(configs.GetFilePathsConfig().DataFiles) + `/spells/` + s.Filepath())
 }
 
 func LoadSpellFiles() {

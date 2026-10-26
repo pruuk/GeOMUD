@@ -3,7 +3,6 @@ package hooks
 import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 )
 
 //
@@ -20,10 +19,7 @@ func CleanupEphemeralRooms(e events.Event) events.ListenerReturn {
 	}
 
 	if rooms.IsEphemeralRoomId(evt.FromRoomId) {
-		removedRoomIds := rooms.TryEphemeralCleanup(evt.FromRoomId)
-		if len(removedRoomIds) > 0 {
-			scripting.PruneRoomVMs(removedRoomIds...)
-		}
+		rooms.TryEphemeralCleanup(evt.FromRoomId)
 	}
 
 	return events.Continue

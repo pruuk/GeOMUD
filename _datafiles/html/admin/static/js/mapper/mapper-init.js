@@ -18,7 +18,7 @@
 /* globals MapperState, MapperRender, MapperTools, MapperCtxMenu, MapperUI, MapperEvents, AdminAPI,
    BASE_STEP_2D, ROOM_SIZE_2D, ROOM_BORDER_COLOR_2D, ROOM_BORDER_WIDTH_2D, SYMBOL_FONT_SIZE_2D,
    MAP_BG_2D, ABNORMAL_CONNECTION_COLOR, SELECTED_ROOM_COLOR, SELECTED_ROOM_TEXT_COLOR,
-   SYMBOL_TEXT_COLOR, ROOM_BORDER_MOB_SPAWN, ROOM_BORDER_SCRIPT_GLOW, ROOM_ARROW_COLOR,
+   SYMBOL_TEXT_COLOR, ROOM_BORDER_MOB_SPAWN, ROOM_ARROW_COLOR,
    BADGE_SECRET_COLOR, BADGE_LOCK_COLOR, ZONE_BOX_COLOR, ZONE_BOX_COLOR_HOV, ZONE_BOX_BORDER,
    ZONE_BOX_BORDER_HOV, ZONE_BOX_PADDING, computeZonePaddedBounds */
 /* globals CONNECTION_COLOR: true, CONNECTION_WIDTH_2D: true */
@@ -620,12 +620,6 @@
         MapperRender.render();
     };
 
-    window.onScriptBorderToggle = function(checked) {
-        MapperState.camera.showScriptBorder = checked;
-        localStorage.setItem('mapper.showScriptBorder', checked);
-        MapperRender.render();
-    };
-
     window.onTagsBorderToggle = function(checked) {
         MapperState.camera.showTagsBorder = checked;
         localStorage.setItem('mapper.showTagsBorder', checked);
@@ -684,8 +678,6 @@
         // Sync border indicator toggles to persisted values
         var mobBorderToggle = document.getElementById('mob-border-toggle');
         if (mobBorderToggle) mobBorderToggle.checked = MapperState.camera.showMobBorder;
-        var scriptBorderToggle = document.getElementById('script-border-toggle');
-        if (scriptBorderToggle) scriptBorderToggle.checked = MapperState.camera.showScriptBorder;
         var tagsBorderToggle = document.getElementById('tags-border-toggle');
         if (tagsBorderToggle) tagsBorderToggle.checked = MapperState.camera.showTagsBorder;
 

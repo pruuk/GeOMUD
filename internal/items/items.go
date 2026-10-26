@@ -66,10 +66,6 @@ func New(itemId int) Item {
 	return newItm
 }
 
-func (i *Item) GetScript() string {
-	return i.GetSpec().GetScript()
-}
-
 func (i *Item) HasAdjective(adj string) bool {
 	if i.Adjectives == nil {
 		return false

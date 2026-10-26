@@ -29,7 +29,7 @@ Set a property of the room. This updates basic properties of the room you are in
         <ansi fg="command">room noun [name] [description]</ansi> - Add or overwrite a noun
 
     Tags:
-        General purpose tags for use by modules, scripts, etc.
+        General purpose tags for use by modules, etc.
         <ansi fg="command">room tags</ansi> - List all tags for the room
         <ansi fg="command">room tag [name]</ansi> - Add tag if absent, remove if already present
 

@@ -375,59 +375,6 @@ func mob_Create(rest string, user *users.UserRecord, room *rooms.Room, flags eve
 	newMob.Hostile = question.Response == `y`
 
 	//
-	// Sample script? (only offered when there are samples)
-	//
-	wantSample := false
-	if len(mobs.SampleScripts) > 0 {
-		question = cmdPrompt.Ask(`Create with a sample script?`, []string{`y`, `n`}, `n`)
-		if !question.Done {
-			return true, nil
-		}
-		wantSample = question.Response == `y`
-	}
-
-	scriptType := ``
-	scriptTemplate := ``
-	if wantSample {
-
-		scriptOptions := []templates.NameDescription{}
-		for about, _ := range mobs.SampleScripts {
-			scriptOptions = append(scriptOptions, templates.NameDescription{
-				Name: about,
-			})
-		}
-
-		sort.SliceStable(scriptOptions, func(i, j int) bool {
-			return scriptOptions[i].Name < scriptOptions[j].Name
-		})
-
-		question = cmdPrompt.Ask(`Which sample script?`, []string{})
-		if !question.Done {
-			tplTxt, _ := templates.Process("tables/numbered-list", scriptOptions, user.UserId)
-			user.SendText(tplTxt)
-			return true, nil
-		}
-
-		scriptType = question.Response
-
-		if restNum, err := strconv.Atoi(scriptType); err == nil {
-			if restNum > 0 && restNum <= len(scriptOptions) {
-				scriptType = scriptOptions[restNum-1].Name
-			}
-		}
-
-		if _, ok := mobs.SampleScripts[scriptType]; !ok {
-			question.RejectResponse()
-
-			tplTxt, _ := templates.Process("tables/numbered-list", scriptOptions, user.UserId)
-			user.SendText(tplTxt)
-			return true, nil
-		}
-
-		scriptTemplate = mobs.SampleScripts[scriptType]
-	}
-
-	//
 	// Confirm?
 	//
 	question = cmdPrompt.Ask(`Does this look correct?`, []string{`y`, `n`}, `n`)
@@ -439,7 +386,6 @@ func mob_Create(rest string, user *users.UserRecord, room *rooms.Room, flags eve
 		user.SendText(`  <ansi fg="yellow-bold">Desc:</ansi>    <ansi fg="white-bold">` + newMob.Character.Description + `</ansi>`)
 		user.SendText(`  <ansi fg="yellow-bold">Wander:</ansi>  <ansi fg="white-bold">` + strconv.Itoa(newMob.MaxWander) + `</ansi>`)
 		user.SendText(`  <ansi fg="yellow-bold">Hostile:</ansi> <ansi fg="white-bold">` + strconv.FormatBool(newMob.Hostile) + `</ansi>`)
-		user.SendText(`  <ansi fg="yellow-bold">Script:</ansi>  <ansi fg="white-bold">` + scriptType + ` (` + scriptTemplate + `)</ansi>`)
 
 		return true, nil
 	}
@@ -451,7 +397,7 @@ func mob_Create(rest string, user *users.UserRecord, room *rooms.Room, flags eve
 		return true, nil
 	}
 
-	mobId, err := mobs.CreateNewMobFile(newMob, scriptTemplate)
+	mobId, err := mobs.CreateNewMobFile(newMob)
 
 	if err != nil {
 		user.SendText("Error: " + err.Error())
@@ -468,9 +414,6 @@ func mob_Create(rest string, user *users.UserRecord, room *rooms.Room, flags eve
 	user.SendText(`  <ansi bg="red" fg="white-bold">MOB CREATED</ansi>`)
 	user.SendText(``)
 	user.SendText(`  <ansi fg="yellow-bold">File Path:</ansi>   <ansi fg="white-bold">` + mobInst.Filepath() + `</ansi>`)
-	if scriptTemplate != `` {
-		user.SendText(`  <ansi fg="yellow-bold">Script Path:</ansi> <ansi fg="white-bold">` + mobInst.GetScriptPath() + `</ansi>`)
-	}
 	user.SendText(``)
 	user.SendText(`  <ansi fg="black-bold">note: Try <ansi fg="command">mob spawn ` + mobInst.Character.Name + `</ansi> to test it.`)
 

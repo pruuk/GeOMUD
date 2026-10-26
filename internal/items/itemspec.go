@@ -3,7 +3,6 @@ package items
 import (
 	"fmt"
 	"math"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -515,30 +514,6 @@ func (i *ItemSpec) Validate() error {
 func (i *ItemSpec) Filename() string {
 	filename := util.ConvertForFilename(i.Name)
 	return fmt.Sprintf("%d-%s.yaml", i.ItemId, filename)
-}
-
-func (i ItemSpec) GetScript() string {
-
-	// Check plugin-registered scripts first.
-	if script := getPluginScript(i.ItemId); script != `` {
-		return script
-	}
-
-	scriptPath := i.GetScriptPath()
-
-	// Load the script into a string
-	if _, err := os.Stat(scriptPath); err == nil {
-		if bytes, err := util.ReadFile(scriptPath); err == nil {
-			return string(bytes)
-		}
-	}
-
-	return ``
-}
-
-func (i *ItemSpec) GetScriptPath() string {
-	// Load any script for the item (prefers .js, falls back to .lua)
-	return util.ResolveScriptPath(string(configs.GetFilePathsConfig().DataFiles) + `/items/` + i.Filepath())
 }
 
 func GetItemSpec(itemId int) *ItemSpec {

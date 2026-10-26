@@ -15,6 +15,9 @@ const smokeItem = "copper ring"
 // startRoomTitle is the title of the start room (room 1, startland).
 const startRoomTitle = "Town Square"
 
+// recoveryRoomTitle is the title of the death recovery room (room 75, shadow_realm).
+const recoveryRoomTitle = "Waiting room"
+
 // prepareItems logs in as the admin and drops n copies of smokeItem on the
 // floor of the start room, then quits. The bots take them from there.
 //

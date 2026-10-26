@@ -78,11 +78,6 @@ The `internal/characters` package is the core character system for GoMud, handli
 - Combat state management
 - Weapon and armor effectiveness
 
-### Scripting Integration
-- JavaScript-accessible character properties
-- Event-driven character updates
-- Scriptable character behaviors for NPCs
-
 ## Dependencies
 - `internal/stats`: Core statistics definitions
 - `internal/items`: Item system integration

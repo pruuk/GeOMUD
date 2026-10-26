@@ -14,7 +14,6 @@ func buildAdminNav() []WebNavItem {
 					Description: "Manage player accounts, roles, and permissions.",
 					Children: []WebNavItem{
 						{Label: "View / Edit", Target: "/admin/users", Description: "Browse, search, and edit player account records."},
-						{Label: "User Script", Target: "/admin/users-script", Description: "Edit the global script that runs for every player."},
 						{Label: "API Docs", Target: "/admin/users-api", Description: "REST API reference for the users endpoint."},
 					},
 				},
@@ -81,7 +80,7 @@ func buildAdminNav() []WebNavItem {
 				{
 					Name:        "Spells",
 					Target:      "/admin/spells",
-					Description: "Configure castable spells and their scripted behaviors.",
+					Description: "Configure castable spells.",
 					Children: []WebNavItem{
 						{Label: "View / Edit", Target: "/admin/spells", Description: "Browse, create, and edit spell definitions."},
 						{Label: "API Docs", Target: "/admin/spells-api", Description: "REST API reference for the spells endpoint."},
@@ -116,7 +115,7 @@ func buildAdminNav() []WebNavItem {
 		},
 		{
 			Name:        "Settings",
-			Description: "Configure the server, manage time, panels, and scripting.",
+			Description: "Configure the server, manage time, and panels.",
 			Children: []WebNavItem{
 				{
 					Name:        "Config",
@@ -181,23 +180,6 @@ func buildAdminNav() []WebNavItem {
 			Name:        "Docs",
 			Description: "Various documentation on how to run this mud as an administrator or content creator.",
 			Children: []WebNavItem{
-				{
-					Name:        "Scripting",
-					Target:      "/admin/scripting",
-					Description: "Reference documentation for the server-side scripting system.",
-					Children: []WebNavItem{
-						{Label: "Overview", Target: "/admin/scripting", Description: "Introduction, time periods, and targeting symbols."},
-						{Label: "Room Scripts", Target: "/admin/scripting-rooms", Description: "Event hooks for room scripts."},
-						{Label: "Mob Scripts", Target: "/admin/scripting-mobs", Description: "Event hooks for mob/NPC scripts."},
-						{Label: "Item Scripts", Target: "/admin/scripting-items", Description: "Event hooks for item scripts."},
-						{Label: "Buff Scripts", Target: "/admin/scripting-buffs", Description: "Event hooks for buff/status effect scripts."},
-						{Label: "Spell Scripts", Target: "/admin/scripting-spells", Description: "Event hooks for spell scripts."},
-						{Label: "User Scripts", Target: "/admin/scripting-users", Description: "Event hooks for the global per-player script."},
-						{Label: "Object Reference", Target: "/admin/scripting-objects", Description: "API reference for ActorObject, RoomObject, ItemObject, PartyObject, and ContainerObject."},
-						{Label: "Function Reference", Target: "/admin/scripting-functions", Description: "Global utility, messaging, and panel layout functions."},
-						{Label: "REST API", Target: "/admin/scripting-api", Description: "REST endpoints for script validation and schema."},
-					},
-				},
 				{
 					Name:        "Coding",
 					Target:      "/admin/docs-coding",

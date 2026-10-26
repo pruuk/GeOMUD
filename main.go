@@ -40,7 +40,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/templates"
@@ -256,8 +255,6 @@ func main() {
 	}
 
 	gametime.GetZodiac(1) // The first time this is called it randomizes all zodiacs
-
-	scripting.Setup(int(c.Scripting.LoadTimeoutMs), int(c.Scripting.RoomTimeoutMs))
 
 	mudlog.Info(`========================`)
 
@@ -1449,7 +1446,7 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 //
 // Single files the loaders also read (ansi-aliases.yaml, color-patterns.yaml,
 // gametime.yaml, keywords.yaml) are not checked here. plugin-data is created
-// on demand, and scripts/ is read only if present, so neither is required.
+// on demand, so it is not required.
 // Remove an entry in the same change that removes its loader.
 var requiredWorldFolders = []string{
 	"biomes",
@@ -1481,9 +1478,6 @@ func loadAllDataFiles(isReload bool) {
 		}()
 
 	}
-
-	// Force clear all cached VM's
-	scripting.PruneVMs(true)
 
 	gametime.LoadGameTimeConfigs()
 	// Load biomes before rooms since rooms reference biomes

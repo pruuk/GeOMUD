@@ -92,10 +92,13 @@ func (s *script) dropItem(step string, timeout time.Duration) {
 	}
 }
 
-// quit logs out the polite way (meditate, then the server hangs up).
+// quit logs out the polite way: quit applies the meditating buff (buff 0) and
+// the server hangs up when it expires. Its "begin your meditation" messages
+// were the buff's JS script, removed in Phase 4, so quit is silent until the
+// disconnect.
 func (s *script) quit(step string) {
-	s.do(step, "quit", "begin your meditation")
 	if s.err == nil {
+		s.c.send("quit")
 		s.err = s.c.waitClosed(s.ctx, time.Minute, step+": disconnect")
 	}
 }
@@ -168,6 +171,16 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.do("relogin: password", b.pass, "Welcome to the Mud!", startRoomTitle)
 	s.do("relogin: character", "online", b.char)
 	s.field("relogin: still holds the item", "inventory", "Carrying:", smokeItem)
+
+	// Death, with the Phase 4 stand-in (docs/plans/2026-10-26-phase-4-scripting-surface.md):
+	// suicide revives the player at 1 health in a private copy of the recovery
+	// room (75, "Waiting room"), which has a fixed portal back to the start room.
+	// Walking out proves the player is not downed (go is refused while downed).
+	// Bots are level 1, under Death.ProtectionLevels, so nothing is dropped.
+	s.do("death: suicide", "suicide", b.char+" has DIED!")
+	s.do("death: in the recovery room", "look", recoveryRoomTitle)
+	s.do("death: walk out", "portal", startRoomTitle)
+	s.field("death: still holds the item", "inventory", "Carrying:", smokeItem)
 	if s.err != nil {
 		return s.err
 	}

@@ -4,10 +4,8 @@ import (
 	"fmt"
 
 	"github.com/GoMudEngine/GoMud/internal/events"
-	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
@@ -29,11 +27,6 @@ func HandlePlayerDrop(e events.Event) events.ListenerReturn {
 		return events.Cancel
 	}
 
-	// Global user script can take over the downed handling for this round.
-	if handled, _ := scripting.TryUserScriptEvent(`onDying`, user.UserId); handled {
-		return events.Continue
-	}
-
 	user.SendText(`<ansi fg="red">you drop to the ground!</ansi>`)
 
 	room := rooms.LoadRoom(evt.RoomId)
@@ -44,28 +37,6 @@ func HandlePlayerDrop(e events.Event) events.ListenerReturn {
 	room.SendText(
 		fmt.Sprintf(`<ansi fg="username">%s</ansi> <ansi fg="red">drops to the ground!</ansi>`, user.Character.Name),
 		user.UserId)
-
-	// Loop through all mobs in the room. If any hate the player, try onPlayerDowned()
-	skipMobIds := map[int]struct{}{}
-	for _, mobInstanceId := range room.GetMobs() {
-		mob := mobs.GetInstance(mobInstanceId)
-		if mob == nil {
-			continue
-		}
-
-		if _, ok := skipMobIds[int(mob.MobId)]; ok {
-			continue
-		}
-
-		if !mob.HasAttackedPlayer(user.UserId) {
-			continue
-		}
-
-		if isUnique, _ := scripting.TryPlayerDownedEvent(mobInstanceId, user.UserId); isUnique {
-			skipMobIds[int(mob.MobId)] = struct{}{}
-		}
-
-	}
 
 	return events.Continue
 }

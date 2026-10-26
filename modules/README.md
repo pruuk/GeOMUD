@@ -24,7 +24,6 @@ Extract any modules into this folder.
 * Add/Over-write existing template files (See `modules/auctions`)
 * Add/Over-write help files (See `modules/auctions`)
 * Add/Over-write user or mob commands  (See `modules/auctions`)
-* Add functions for scripting (See `modules/follow`)
 * Save/Load their own data (See `modules/leaderboards`)
 * Track their own config values (See `modules/leaderboards`)
 * Modify help menu items, command aliases, help aliases  (See `modules/leaderboards`)

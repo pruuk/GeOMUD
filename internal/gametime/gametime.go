@@ -519,7 +519,7 @@ func parsePeriod(periodStr string) (qty int, timeStr string, realTime bool) {
 //
 // It accepts both bare period names ("hour", "day", "week", "month", "year",
 // "noon", "sunrise", "sunset") and the natural-language "start of X" forms used by
-// player/scripting input. The connective words "start", "of" and "the" are
+// player input. The connective words "start", "of" and "the" are
 // stripped during normalisation, so all of these are equivalent:
 //
 //	"start of the hour"   "start of hour"   "start hour"   "hour"

@@ -8,7 +8,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
@@ -57,18 +56,6 @@ func Equip(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 					)
 
 					user.Character.StoreItem(oldItem)
-				}
-			}
-
-			// Trigger any outstanding buff onStart events
-			if len(matchItem.GetSpec().WornBuffIds) > 0 {
-				for _, buff := range user.Character.Buffs.List {
-					if buff.OnStartWaiting {
-						if _, err := scripting.TryBuffScriptEvent(`onStart`, user.UserId, 0, buff.BuffId); err == nil {
-							user.Character.TrackBuffStarted(buff.BuffId)
-						}
-					}
-
 				}
 			}
 

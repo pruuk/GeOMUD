@@ -188,14 +188,6 @@ type ItemOwnership struct {
 
 func (i ItemOwnership) Type() string { return `ItemOwnership` }
 
-// Triggered by a script
-type ScriptedEvent struct {
-	Name string
-	Data map[string]any
-}
-
-func (s ScriptedEvent) Type() string { return `ScriptedEvent` }
-
 // Entered the world
 type PlayerSpawn struct {
 	UserId        int

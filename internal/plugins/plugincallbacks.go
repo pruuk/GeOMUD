@@ -8,9 +8,8 @@ import (
 )
 
 type PluginCallbacks struct {
-	userCommands   map[string]usercommands.CommandAccess
-	mobCommands    map[string]mobcommands.CommandAccess
-	scriptCommands map[string]map[string]any
+	userCommands map[string]usercommands.CommandAccess
+	mobCommands  map[string]mobcommands.CommandAccess
 
 	iacHandler        func(uint64, []byte) bool
 	textPrefixHandler func(uint64, []byte) bool
@@ -21,9 +20,8 @@ type PluginCallbacks struct {
 
 func newPluginCallbacks() PluginCallbacks {
 	return PluginCallbacks{
-		userCommands:   map[string]usercommands.CommandAccess{},
-		mobCommands:    map[string]mobcommands.CommandAccess{},
-		scriptCommands: map[string]map[string]any{},
+		userCommands: map[string]usercommands.CommandAccess{},
+		mobCommands:  map[string]mobcommands.CommandAccess{},
 	}
 }
 

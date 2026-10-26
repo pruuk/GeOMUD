@@ -1406,22 +1406,6 @@ var FIELD_META = {
         inputType: 'bool',
     },
 
-    // --- Scripting ---
-    'Scripting.LoadTimeoutMs': {
-        label: 'Script Load Timeout (ms)',
-        description: 'Maximum milliseconds allowed for the first-time loading and compilation of a script into the JavaScript engine.',
-        implications: 'Higher values allow complex scripts more time to initialize. Lower values protect against runaway initialization. 1000ms (1 second) is a safe default.',
-        inputType: 'number',
-        min: 100, max: 30000, step: 100,
-    },
-    'Scripting.RoomTimeoutMs': {
-        label: 'Script Execution Timeout (ms)',
-        description: 'Maximum milliseconds a script is allowed to run per execution before it is forcibly interrupted.',
-        implications: 'Very low values (< 5ms) may interrupt legitimate scripts. Too high values allow buggy scripts to hang the game loop. 10ms is a tight but reasonable default.',
-        inputType: 'number',
-        min: 1, max: 5000, step: 5,
-    },
-
     // --- TextFormats ---
     'TextFormats.Prompt': {
         label: 'Status Prompt',
@@ -1675,15 +1659,6 @@ var SECTIONS = [
         iconBg: '#edf5e4',
         icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
         fields: ['LootGoblin.RoomId','LootGoblin.RoundCount','LootGoblin.MinimumItems','LootGoblin.MinimumGold','LootGoblin.IncludeRecentRooms'],
-    },
-    {
-        key: 'Scripting',
-        name: 'Scripting',
-        desc: 'Timeout limits for the JavaScript scripting engine.',
-        color: '#c47a00',
-        iconBg: '#fdf4e0',
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
-        fields: ['Scripting.LoadTimeoutMs','Scripting.RoomTimeoutMs'],
     },
     {
         key: 'TextFormats',

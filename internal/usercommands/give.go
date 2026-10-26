@@ -9,7 +9,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -196,12 +195,6 @@ func Give(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 						Gained:        true,
 					})
 
-				}
-
-				if handled, err := scripting.TryMobScriptEvent(`onGive`, m.InstanceId, user.UserId, `user`, map[string]any{`gold`: giveGoldAmount, `item`: giveItem}); err == nil {
-					if handled {
-						return true, nil
-					}
 				}
 
 				if giveGoldAmount > 0 {

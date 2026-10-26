@@ -42,7 +42,7 @@ func SaveBuffSpec(spec *BuffSpec) error {
 	return nil
 }
 
-// DeleteBuffSpec removes a buff spec from disk (YAML + JS script) and from the
+// DeleteBuffSpec removes a buff spec from disk (YAML) and from the
 // in-memory cache.
 func DeleteBuffSpec(buffId int) error {
 	spec := GetBuffSpec(buffId)
@@ -57,32 +57,6 @@ func DeleteBuffSpec(buffId int) error {
 		return fmt.Errorf("removing buff yaml: %w", err)
 	}
 
-	scriptPath := spec.GetScriptPath()
-	if err := os.Remove(scriptPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("removing buff script: %w", err)
-	}
-
 	delete(buffs, buffId)
 	return nil
-}
-
-// SaveBuffScript writes (or overwrites) the JavaScript file for a buff.  If
-// content is empty the script file is deleted instead.
-func SaveBuffScript(buffId int, content string, lang string) error {
-	spec := GetBuffSpec(buffId)
-	if spec == nil {
-		return fmt.Errorf("buff %d not found", buffId)
-	}
-
-	scriptPath := spec.GetScriptPath()
-
-	if content == "" {
-		if err := os.Remove(scriptPath); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("removing buff script: %w", err)
-		}
-		return nil
-	}
-
-	scriptPath = util.ApplyScriptLang(scriptPath, lang)
-	return util.WriteFile(scriptPath, []byte(content), 0644)
 }

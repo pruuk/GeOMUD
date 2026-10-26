@@ -42,7 +42,6 @@ func (f *fakeFS) AllFileSubSystems(yield func(fs.ReadFileFS) bool) { yield(f) }
 
 func resetPluginState() {
 	pluginFileSystems = nil
-	pluginScripts = map[mobScriptKey]string{}
 }
 
 func TestIsMobSpecPath(t *testing.T) {
@@ -124,26 +123,5 @@ func TestLoadPluginMobs_DiskWinsOnDuplicate(t *testing.T) {
 
 	if dst[9003].Character.Name != "Disk Goblin" {
 		t.Fatalf("expected disk mob to win, got %q", dst[9003].Character.Name)
-	}
-}
-
-func TestRegisterMobScript_ReturnedByGetScript(t *testing.T) {
-	resetPluginState()
-	defer resetPluginState()
-
-	RegisterMobScript(9004, "", "onIdle()")
-	RegisterMobScript(9004, "combat", "onCombat()")
-
-	base := &Mob{MobId: 9004}
-	if got := base.GetScript(); got != "onIdle()" {
-		t.Fatalf("expected base plugin script, got %q", got)
-	}
-	if !base.HasScript() {
-		t.Fatalf("expected HasScript true for base plugin script")
-	}
-
-	tagged := &Mob{MobId: 9004, ScriptTag: "combat"}
-	if got := tagged.GetScript(); got != "onCombat()" {
-		t.Fatalf("expected tagged plugin script, got %q", got)
 	}
 }

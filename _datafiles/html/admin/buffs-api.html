@@ -122,11 +122,11 @@
         <summary>
             <span class="method method-delete">DELETE</span>
             <span class="api-path">/admin/api/v1/buffs/{buffId}</span>
-            <span class="api-desc">Delete a buff and its script</span>
+            <span class="api-desc">Delete a buff</span>
             <span class="perm-badge">buffs.write</span>
         </summary>
         <div class="api-body">
-            <p>Permanently removes the buff YAML and associated JS script from disk and from the in-memory cache.</p>
+            <p>Permanently removes the buff YAML from disk and from the in-memory cache.</p>
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
      <span class="flag">-X</span> DELETE \
      <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/buffs/1</span></div>
@@ -134,61 +134,6 @@
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
                     <div class="resp-body"><div class="curl-block">{"success":true}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">404</span> <span class="resp-label">Not Found</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"buff not found: 999"}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-get">GET</span>
-            <span class="api-path">/admin/api/v1/buffs/{buffId}/script</span>
-            <span class="api-desc">Get the buff's JavaScript</span>
-            <span class="perm-badge">buffs.read</span>
-        </summary>
-        <div class="api-body">
-            <p>Returns the raw script content. <code>script</code> is an empty string if no script file exists.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/buffs/1/script</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"script":"function onStart(actor) {\n}\n"}}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">404</span> <span class="resp-label">Not Found</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"buff not found: 999"}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-put">PUT</span>
-            <span class="api-path">/admin/api/v1/buffs/{buffId}/script</span>
-            <span class="api-desc">Replace (or delete) the buff's JavaScript</span>
-            <span class="perm-badge">buffs.write</span>
-        </summary>
-        <div class="api-body">
-            <p>Writes the provided <code>script</code> string to the buff's <code>.js</code> file. Send an empty string to delete the script file.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="flag">-X</span> PUT \
-     <span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \
-     <span class="flag">-d</span> <span class="str">'{"script":"function onStart(actor){}"}'</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/buffs/1/script</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">400</span> <span class="resp-label">Bad Request</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"malformed request body: ..."}</div></div>
                 </details>
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-err">404</span> <span class="resp-label">Not Found</span></summary>

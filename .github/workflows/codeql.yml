@@ -93,9 +93,7 @@ jobs:
                   .github/actions/setup-go/* | .github/actions/go-checks/*)
                   go_changed=true
                   ;;
-                _datafiles/html/admin/static/js/monaco* | \
-                  _datafiles/html/admin/static/js/highlight.js | \
-                  _datafiles/html/admin/static/css/monaco-editor.css | \
+                _datafiles/html/admin/static/js/highlight.js | \
                   _datafiles/html/public/static/js/xterm/*)
                   ;;
                 *.html | *.htm | *.js | *.jsx | *.ts | *.tsx | *.mjs | *.cjs | \

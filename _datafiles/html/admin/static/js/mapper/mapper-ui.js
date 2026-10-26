@@ -1047,13 +1047,6 @@ var MapperUI = (function() {
                 '<div class="field-hint">Added to resolved level. Can be negative.</div>'+
             '</div>'+
 
-            // --- Script Tag (mob) ---
-            '<div class="re-spawn-field" style="' + (isMob ? shown : hidden) + '">'+
-                '<label>Script Tag</label>'+
-                '<input type="text" class="re-spawn-scripttag" value="' + _reEsc(s.ScriptTag || '') + '" placeholder="Overrides mob script tag">'+
-                '<div class="field-hint">Leave blank for mob template default.</div>'+
-            '</div>'+
-
             // --- Buff IDs (mob) ---
             '<div class="re-spawn-field span2" style="' + (isMob ? shown : hidden) + '">'+
                 '<label>Permanent Buffs</label>'+
@@ -1125,8 +1118,6 @@ var MapperUI = (function() {
                 if (level) s.Level = level;
                 var lmod = parseInt(card.querySelector('.re-spawn-levelmod').value, 10);
                 if (lmod) s.LevelMod = lmod;
-                var stag = card.querySelector('.re-spawn-scripttag').value.trim();
-                if (stag) s.ScriptTag = stag;
                 var bi = Array.from(card.querySelectorAll('.re-spawn-buffids [data-buff-id]')).map(function(c) { return parseInt(c.dataset.buffId, 10); }).filter(function(n) { return !isNaN(n); });
                 if (bi.length) s.BuffIds = bi;
                 var ic = card.querySelector('.re-spawn-idlecommands').value.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);

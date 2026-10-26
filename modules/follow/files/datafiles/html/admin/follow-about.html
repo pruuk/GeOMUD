@@ -23,7 +23,6 @@
     <p>The Follow module lets players and mobs trail another character through the world. When a leader moves through an exit, all followers automatically move through the same exit in their wake.</p>
     <p>Players use <code>follow &lt;name&gt;</code> to begin following a player or mob, <code>follow stop</code> to stop following, and <code>follow lose</code> to shed all followers. An optional duration argument (e.g. <code>follow guard 30 real minutes</code>) limits how long the follow lasts. The <code>DefaultFollowPeriod</code> config key sets the default duration when none is given.</p>
     <p>Following is automatically cancelled on party changes, player death, mob death, or if the leader teleports (moves without using a named exit). Mobs that are following suppress their idle AI so they do not wander away.</p>
-    <p>A scripting export <code>GetFollowers</code> is available for scripts that need to inspect who is following a given actor.</p>
 </div>
 
 <div class="about-section">
