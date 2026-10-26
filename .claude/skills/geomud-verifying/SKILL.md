@@ -46,7 +46,7 @@ stops the server by PID. The repo's `_datafiles` are never written. Flow:
    A drop the floor-item limit refuses is retried. `quit` is silent until the server hangs up (its
    meditation messages were a JS script, gone since Phase 4); the step waits for the disconnect.
    The death steps exercise the Phase 4 death stand-in (revive at 1 health, fixed exit from
-   room 75), recorded in `docs/plans/2026-10-26-phase-4-scripting-surface.md`.
+   room 75), recorded in `docs/completed/2026-10-26-phase-4-scripting-surface.md`.
 
 Each bot's client also records the GMCP package names it receives (it lists Char, Room in
 `Core.Supports.Set`; the server sends `Comm.Channel` without being asked) and the bot fails unless

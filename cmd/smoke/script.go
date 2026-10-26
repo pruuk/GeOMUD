@@ -186,7 +186,7 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.do("relogin: character", "online", b.char)
 	s.field("relogin: still holds the item", "inventory", "Carrying:", smokeItem)
 
-	// Death, with the Phase 4 stand-in (docs/plans/2026-10-26-phase-4-scripting-surface.md):
+	// Death, with the Phase 4 stand-in (docs/completed/2026-10-26-phase-4-scripting-surface.md):
 	// suicide revives the player at 1 health in a private copy of the recovery
 	// room (75, "Waiting room"), which has a fixed portal back to the start room.
 	// Walking out proves the player is not downed (go is refused while downed).
