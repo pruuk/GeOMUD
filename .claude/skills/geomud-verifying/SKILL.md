@@ -16,7 +16,7 @@ git diff --name-only -- '*.go' | xargs -r gofmt -l  # must print nothing
 ## Baseline (upstream `b3f55cc2`, 2026-10-24)
 
 - `go build ./...` passes.
-- `go test ./... -count=1` on Windows: 3 packages fail, all of which pass on Linux CI (PR #1 run,
+- `go test ./... -count=1` on Windows: 36 packages ok (2026-10-26, after `cmd/smoke` landed), 3 fail, all of which pass on Linux CI (PR #1 run,
   2026-10-24). Any other failure is new and is ours.
   - `scripts` `TestHTTPSSetupAutoModeLoadsDefaultAdminURLFromActiveOverride` (`https_setup_test.go:311`): cause not investigated
   - `internal/mobs` `TestLoadPluginMobs_MergesValidMob`: "filepath mismatch", `/` vs `\` in the expected path suffix
@@ -30,8 +30,16 @@ the same commit.
 
 ## Smoke test
 
-Not built yet: it is Phase 0 work in `gomud_strip_plan.md` (telnet login, walk, say, get and drop an
-item, quit, log back in). Until it exists, say "no smoke test run" in any report.
+`go run ./cmd/smoke` from the repo root (`make smoke`; CI runs it as `Smoke Test`). It builds the
+server to a fixed path, runs it on a temp copy of the default world bound to 127.0.0.1 only, plays a
+bot through signup, the tutorial, get/drop, say, quit and re-login, then stops the server by PID.
+The repo's `_datafiles` are never written. Report its summary line. `-bots 50` is the load check;
+`-addr host:port` targets a running server (the Docker one in `provisioning/compose.smoke.yml`).
+Baseline numbers: `docs/phase-0-baseline.md`.
+
+The script plays the stock tutorial, so strip phases that remove tutorial content or scripts
+(Phase 3 world data, Phase 4 scripting) must replace those steps in `cmd/smoke/script.go` in the
+same change.
 
 ## Reporting
 

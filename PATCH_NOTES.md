@@ -5,6 +5,7 @@ Newest day first. One line per finished item.
 ## 2026-10-26
 - Go 1.26.0 to 1.27.3 (`go.mod`); no dependency versions changed, Windows baseline unchanged (same 3 failures)
 - Dependabot off (`.github/dependabot.yml` deleted); Go toolchain workflow is manual-only (schedule removed)
+- Phase 0: telnet smoke test `cmd/smoke` (`make smoke`, CI job), Docker server for load runs (`provisioning/compose.smoke.yml`), baseline in `docs/phase-0-baseline.md` (idle 30.4 MiB, 50 bots held 72.8 MiB); upstream root `AGENTS.md` deleted
 
 ## 2026-10-24
 - Cloned upstream GoMud (`b3f55cc2`, MIT) into this repo; `upstream` remote made fetch-only

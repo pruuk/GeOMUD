@@ -1,0 +1,31 @@
+---
+# Server container for smoke runs and the memory baseline
+# (docs/plans/2026-10-26-phase-0-smoke.md). Separate from compose.yml so
+# `make run-docker` is unchanged. Only telnet is published, on host port
+# 43333; HTTP stays inside the container because host port 80 may be taken.
+#
+#   GO_VERSION=$(awk '/^go /{print $2}' go.mod) docker compose -f provisioning/compose.smoke.yml up -d --build
+#   go run ./cmd/smoke -addr 127.0.0.1:43333 -bots 50 -hold 2m
+#   docker stats --no-stream geomud-smoke-server
+#   docker compose -f provisioning/compose.smoke.yml down
+name: geomud-smoke
+
+services:
+  server:
+    container_name: "geomud-smoke-server"
+    build:
+      context: ..
+      dockerfile: ./provisioning/Dockerfile
+      args:
+        - GO_VERSION=${GO_VERSION:?Set GO_VERSION from go.mod}
+        - BIN=go-mud-server
+    image: localhost/geomud-smoke-server:latest
+    cap_drop:
+      - ALL
+    cap_add:
+      # The image's HTTP listener binds port 80 inside the container.
+      - NET_BIND_SERVICE
+    environment:
+      LOG_NOCOLOR: "1"
+    ports:
+      - 127.0.0.1:43333:33333
