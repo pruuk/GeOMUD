@@ -4,7 +4,6 @@ const teach_commands = ["get cap", "equip cap", "portal"];
 const teacherMobId = 57;
 const teacherName = "Orb of Graduation";
 const capItemId = 20043;
-const newbieKitItemId = 100;
 
 var commandNow = 0; // Which command they are on
 
@@ -101,9 +100,6 @@ function onEnter(user, room) {
 
     itm = CreateItem(capItemId);
     teacherMob.GiveItem(itm);
-
-    itm2 = CreateItem(newbieKitItemId);
-    user.GiveItem(itm2);
 
     teacherMob.Command('emote appears in a ' + UtilApplyColorPattern("flash of light!", "glowing"));
 

@@ -122,7 +122,7 @@ LootGoblin:
   # - RoomId -
   #   The room the loot goblin spawns in (per its spawninfo). Also the room it returns
   #   to to drop off loot it finds. If zero (0), no loot goblin spawning.
-  RoomId: 139
+  RoomId: 0
   # - RoundCount -
   #   How often the Loot Goblin will spawn. It is a good idea to keep this
   #   number low to keep the game from getting bogged down with too many items

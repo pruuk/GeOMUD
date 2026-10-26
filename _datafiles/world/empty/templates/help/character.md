@@ -1,9 +1,0 @@
-# Help for ~character~
-
-The ~character~ command can only be used in special rooms that indicate it is supported.
-
-When used, you can re-create your current character, create an alt character (if enabled), or switch between alt characters.
-
-## Usage:
-
-  ~character~

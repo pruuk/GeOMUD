@@ -9,10 +9,8 @@ colors:
   mobname: 51
   mobname-aggro: 9 # Bright red
   mobname-downed: 124
-  petname: 215
   spellname: magenta
   spell-text: 183
-  nameprefix-pet: 10
   role: 8
   role-admin: 9
   role-mod: 1
@@ -23,7 +21,6 @@ colors:
   skill: 11
   container: 12 # Bright blue
   exit: 10 # Bright green
-  secret-exit: 8 # Bright black
   zone: 124
   map-you: 14
   map-secret: 8 # Bright black
@@ -38,16 +35,10 @@ colors:
   map-target: 9 # Bright red
   map-default: 8
   map-legend: 8
-  trail-dead: 8
-  trail-weak: 7
-  trail-good: 2
-  trail-warm: 1
-  trail-hot: 9
   item: 2
   itemname: 2
   itemdesc: 79
   item-stashed: 8
-  questname: 6
   xp: 11 # Bright yellow
   experience: 11 # Bright yellow
   gold: 220 # light yellow
@@ -55,12 +46,6 @@ colors:
   statmod: 6 # Bright cyan
   damage: 9 # Bright red
   healing: 157
-  shop-qty: 15 # Bright white
-  shop-name: 2
-  shop-price: 220
-  shop-trade: 2
-  shop-pet-type: 215
-  shop-enchantment: 147
   uses-left: 8 # Bright black
   holy: 21
   good: 27
@@ -103,34 +88,20 @@ colors:
   mana-20: 23
   mana-10: 245
   mana-0: 8
-  suggested-text: 8
   night: 19
   day: 228
   day-dusk: 214
   enters-message: 8
   leaves-message: 8
-  spell-neutral: white
-  spell-helpful: 2
-  spell-harmful: 124
-  questflag: 187
   highlight: 238
   saytext: 13
-  saytext-mob: 13 
+  saytext-mob: 13
   alert-5: 196
   alert-4: 203
   alert-3: 210
   alert-2: 210
   alert-1: 217
   noun: 115
-  mail-border: 105
-  mail-title: 51
-  mail-title-read: 37
-  mail-date: 13
-  mail-date-read: 135
-  mail-message: 229
-  mail-message-read: 188
-  mail-note: 10
-  mail-note-read: 2
   mutator: 49
   buff: 147
   buff-text: 14
@@ -141,7 +112,6 @@ colors:
   user-corpse: 143
   elite: 220
   tip-text: 219
-  character-joined: 120
   md-p: 8
   md-h1-prefix: black-bold
   md-h1: magenta

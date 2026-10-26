@@ -9,6 +9,7 @@ Newest day first. One line per finished item.
 - Phase 1: deleted leaf packages `clans`, `integrations/discord`, `migration`, `suggestions` (tab completion), `audio` (MSP), `telemetry`, `conversations`, `quests`, `pets`, with their commands, hooks, events, scripting functions, GMCP pieces, config and admin pages (about 21,000 lines); world data for them stays until Phase 3
 - Ruling: NPCs are players under the hood; new Phase 4b before the rules seam (`gomud_strip_plan.md` decision 4)
 - Phase 2: deleted game commands (economy, character info, every skill and spell command, stripped admin commands), 18 mob commands and 5 game hooks; `suicide` (the death routine) and the combat commands stay until Phase 5; mobs no longer start or join fights until Phase 5
+- Phase 3: server runs on the trimmed `empty` world (376 to 252 files: zones startland, tutorial, shadow_realm); `world/default` deleted (1,574 files); world validation checks the folders the engine loads; restored buff 32 that `empty` lacked (the tutorial fight ran without its bonus); upstream root notes removed
 
 ## 2026-10-24
 - Cloned upstream GoMud (`b3f55cc2`, MIT) into this repo; `upstream` remote made fetch-only

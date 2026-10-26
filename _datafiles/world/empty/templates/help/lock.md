@@ -7,4 +7,4 @@ You'll need an appropriate *key* in your backpack or on your keyring.
 
   ~lock [exit name/container name]~ - This locks it if it is unlocked.
 
-**See also:** ~help unlock~, ~help keyring~, ~help picklock~
+**See also:** ~help unlock~, ~help keyring~

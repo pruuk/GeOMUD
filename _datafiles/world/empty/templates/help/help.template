@@ -7,7 +7,7 @@ The <ansi fg="command">help</ansi> command looks up guidance on a command.
   <ansi fg="command">help say</ansi>
   Find help on the command <ansi fg="command">say</ansi>.
 
-Here are some <ansi fg="skill">skills</ansi> and <ansi fg="command">commands</ansi> to look up to get started:
+Here are some <ansi fg="command">commands</ansi> to look up to get started:
 {{/* padRight 80 "" "-" */}}
 {{ if gt (len .Commands) 0 -}}
 Commands:
