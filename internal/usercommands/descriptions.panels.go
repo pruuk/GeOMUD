@@ -370,47 +370,6 @@ func buildInsideContainerPanel(itemNames []string, itemNamesFormatted []string) 
 	return layout.Render() + term.CRLFStr
 }
 
-func buildTrainPanel(data TrainingOptions) string {
-	var out strings.Builder
-
-	out.WriteString(`Train here to pick up new and interesting skills. You can train skills more than once to increase their effectiveness.` + term.CRLFStr)
-	out.WriteString(term.CRLFStr)
-	out.WriteString(`Type "<ansi fg="command">help [skill_name]</ansi>" to find out more` + term.CRLFStr)
-	out.WriteString(term.CRLFStr)
-
-	layout, err := templates.LoadPanelLayout("room/train")
-	if err != nil {
-		layout = templates.NewPanelLayout("open", "single", 1, 1)
-		layout.AddPanelsToSlot(layout.AddSlot(), "train")
-		layout.Panel("train").SetTitle(` <ansi fg="black-bold">.:</ansi><ansi fg="20">Skills Taught Here</ansi> `).SetWidth(78)
-	}
-	layout.Panel("train").SetLabelWidth(12)
-
-	p := layout.Panel("train")
-	for _, opt := range data.Options {
-		var nameStr string
-		if opt.Cost == 0 {
-			nameStr = fmt.Sprintf(`<ansi fg="white">%s</ansi>`, opt.Name)
-		} else {
-			nameStr = fmt.Sprintf(`<ansi fg="yellow-bold">%s</ansi>`, opt.Name)
-		}
-		value := fmt.Sprintf(`<ansi fg="white">[%-7s]</ansi> <ansi fg="white">%s</ansi>`, opt.CurrentStatus, opt.Message)
-		p.Add(nameStr, nameStr, value)
-	}
-
-	out.WriteString(layout.Render() + term.CRLFStr)
-
-	ptColor := `yellow`
-	if data.TrainingPoints == 0 {
-		ptColor = `red`
-	}
-	out.WriteString(fmt.Sprintf(`  You have <ansi fg="%s-bold">%d Training Points</ansi> to spend. Level up to earn more.`, ptColor, data.TrainingPoints) + term.CRLFStr)
-	out.WriteString(term.CRLFStr)
-	out.WriteString(`To train a skill, type "<ansi fg="command">train [skill_name]</ansi>"` + term.CRLFStr)
-
-	return out.String()
-}
-
 func buildBiomePanel(biome *rooms.BiomeInfo) string {
 	layout, err := templates.LoadPanelLayout("room/biome")
 	if err != nil {

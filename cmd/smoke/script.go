@@ -100,10 +100,16 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.do("walk: east", "east", "You head towards the east exit", "Learning about You")
 
 	// Room 901.
-	s.do("tutorial: status", "status", b.char+" the", "Gold:")
+	// The room teaches status, inventory, experience and conditions, but
+	// only inventory is a command any more. The room script sees each typed
+	// command before the command table does, so the lesson still advances
+	// on the other three; the server then answers "not recognized". These
+	// steps check the teacher's replies, not the commands' output.
+	s.do("tutorial: status", "status", "Good job!", "To only peek at your inventory")
 	s.field("tutorial: inventory", "inventory", "Carrying:", "sharp stick")
-	s.do("tutorial: experience", "experience", "XP:")
-	s.do("tutorial: conditions", "conditions", "Conditions")
+	s.wait("tutorial: inventory lesson", "Good job!", "For quick look at your progress")
+	s.do("tutorial: experience", "experience", "Good job!", "to see any statuses affecting you")
+	s.do("tutorial: conditions", "conditions", "Good job!", "head south for the next lesson")
 	s.do("walk: south", "south", "You head towards the south exit", "Learning to Fight")
 
 	// Room 902.
@@ -143,7 +149,7 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.wait("relogin: prompt", `username (or "new")`)
 	s.do("relogin: username", b.user, "password:")
 	s.do("relogin: password", b.pass, "Welcome to the Mud!", "Town Square")
-	s.do("relogin: character", "status", b.char+" the")
+	s.do("relogin: character", "online", b.char)
 	s.field("relogin: still holds the item", "inventory", "Carrying:", "graduation cap")
 	if s.err != nil {
 		return s.err
