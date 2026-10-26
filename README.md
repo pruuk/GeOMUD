@@ -22,7 +22,7 @@ GeOMUD is a hard fork of [GoMud](https://github.com/GoMudEngine/GoMud) by Dylan 
 
 ## Building
 
-Requires Go 1.24 or later.
+Requires Go 1.27.3 or later (pinned in `go.mod`).
 
 ```
 go build ./...

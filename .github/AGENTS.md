@@ -11,7 +11,7 @@
 - Keep trigger shapes intentional. This repo currently uses pull request triggers such as `opened`, `synchronize`, `reopened`, and `ready_for_review` where needed.
 - Preserve `persist-credentials: false` on checkout steps unless there is a concrete reason to change authentication behavior.
 - Reuse local composite actions in `.github/actions/` when they already capture setup shared across workflows.
-- GeOMUD has no release, Docker publish or Discord workflows (removed 2026-10-24). CI and CodeQL are the only workflows besides the scheduled Go toolchain update.
+- GeOMUD has no release, Docker publish or Discord workflows (removed 2026-10-24). CI and CodeQL are the only workflows besides the manual-only Go toolchain update. Dependabot is off (`dependabot.yml` removed 2026-10-26).
 
 ## Verification
 

@@ -2,9 +2,7 @@
 name: Update Go Toolchain
 
 "on":
-  schedule:
-    # Monthly check near the end of the month, after typical Go patch releases.
-    - cron: '0 6 25 * *'
+  # Manual only: run from the Actions tab when we want a Go bump.
   workflow_dispatch:
 
 concurrency:

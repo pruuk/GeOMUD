@@ -2,6 +2,10 @@
 
 Newest day first. One line per finished item.
 
+## 2026-10-26
+- Go 1.26.0 to 1.27.3 (`go.mod`); no dependency versions changed, Windows baseline unchanged (same 3 failures)
+- Dependabot off (`.github/dependabot.yml` deleted); Go toolchain workflow is manual-only (schedule removed)
+
 ## 2026-10-24
 - Cloned upstream GoMud (`b3f55cc2`, MIT) into this repo; `upstream` remote made fetch-only
 - Wrote `gomud_strip_plan.md`: what we keep from GoMud and the strip roadmap
