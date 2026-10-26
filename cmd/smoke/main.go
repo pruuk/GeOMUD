@@ -1,14 +1,16 @@
-// Command smoke is the end-to-end smoke test: bots log in over telnet,
-// create a character, walk, say, get and drop an item, quit, log back in and
-// check the item is still held.
+// Command smoke is the end-to-end smoke test. First an admin logs in and
+// spawns one item per bot on the floor of the start room. Then the bots log
+// in over telnet, create a character, pick up an item, drop it, pick it up
+// again, walk, say, quit, log back in and check the item is still held.
 //
 // By default it builds and launches its own server on a temp copy of the
 // empty world (run it from the repo root). With -addr it plays against a
-// server that is already running.
+// server that is already running; the admin account is then set with
+// -admin-user and -admin-pass.
 //
 //	go run ./cmd/smoke
 //	go run ./cmd/smoke -bots 50 -hold 2m
-//	go run ./cmd/smoke -addr 127.0.0.1:33333 -bots 50
+//	go run ./cmd/smoke -addr 127.0.0.1:33333 -bots 50 -admin-pass secret
 package main
 
 import (
@@ -34,11 +36,16 @@ func run() int {
 	bots := flag.Int("bots", 1, "number of bots to run at once")
 	hold := flag.Duration("hold", 0, "how long bots stay logged in after the script, e.g. 2m")
 	timeout := flag.Duration("timeout", 30*time.Second, "how long each step waits for the server's reply")
+	serverLog := flag.String("server-log", "", "launch mode: copy the server's log to this file when the run ends")
+	adminUser := flag.String("admin-user", "admin", "admin account that spawns the bots' items (launch mode: the temp world's stock admin)")
+	adminPass := flag.String("admin-pass", "password", "admin's current password (a forced first-login change sets it to this same text)")
 	flag.Parse()
 	if *bots < 1 {
 		fmt.Fprintln(os.Stderr, "smoke: -bots must be at least 1")
 		return 2
 	}
+
+	adm := adminLogin{*adminUser, *adminPass}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -50,19 +57,20 @@ func run() int {
 			fmt.Fprintln(os.Stderr, "smoke: launch:", err)
 			return 2
 		}
+		srv.copyLogTo = *serverLog
 		passed := false
 		defer func() { srv.stop(!passed) }()
 		fmt.Printf("smoke: server pid %d listening on %s (ready in %s)\n",
 			srv.cmd.Process.Pid, srv.addr, time.Since(start).Round(time.Millisecond))
 		*addr = srv.addr
-		passed = runBots(ctx, *addr, *bots, *timeout, *hold)
+		passed = runBots(ctx, *addr, *bots, *timeout, *hold, adm)
 		if !passed {
 			return 1
 		}
 		return 0
 	}
 
-	if !runBots(ctx, *addr, *bots, *timeout, *hold) {
+	if !runBots(ctx, *addr, *bots, *timeout, *hold, adm) {
 		return 1
 	}
 	return 0
@@ -75,13 +83,20 @@ type result struct {
 	err  error
 }
 
-// runBots plays n bots at once and prints a summary. It reports whether
-// every bot passed.
-func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duration) bool {
+type adminLogin struct{ user, pass string }
+
+// runBots has the admin spawn one item per bot, plays n bots at once and
+// prints a summary. It reports whether every bot passed.
+func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duration, adm adminLogin) bool {
 	tag := runTag()
 	fmt.Printf("smoke: %d bot(s) against %s, run tag %s\n", n, addr, tag)
 
 	start := time.Now()
+	if err := prepareItems(ctx, addr, adm.user, adm.pass, n, timeout); err != nil {
+		fmt.Printf("smoke: FAIL admin could not spawn the items: %v\n", err)
+		return false
+	}
+	fmt.Printf("smoke: admin spawned %d %s(s) in %s\n", n, smokeItem, time.Since(start).Round(time.Millisecond))
 	results := make([]result, n)
 	var wg sync.WaitGroup
 	for i := range n {

@@ -609,9 +609,9 @@ SpecialRooms:
   # - TutorialRooms -
   #   This should be an array of all room id's for the pre-start tutorial.
   #   The first one on the list is the room they will be placed in when beginning
-  #   Rooms 900-999 are a special range of RoomId's that tell GoMud the user is
-  #   in a tutorial.
-  TutorialRooms: [900, 901, 902, 903]
+  #   Empty (the default): `start` does not ask about a tutorial and sends the
+  #   new character straight to StartRoom.
+  TutorialRooms: []
 
 ################################################################################
 #

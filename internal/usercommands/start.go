@@ -180,12 +180,18 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 	// Trigger a player changed event
 	events.AddToQueue(events.PlayerChanged{UserId: user.UserId})
 
-	question := cmdPrompt.Ask(`Would you like to skip the tutorial?`, []string{`yes`, `no`}, `yes`)
-	if !question.Done {
-		return true, nil
+	// With no tutorial rooms configured there is nothing to offer: skip the
+	// question and send the new character to the start room.
+	skipTutorial := true
+	if len(configs.GetSpecialRoomsConfig().TutorialRooms) > 0 {
+		question := cmdPrompt.Ask(`Would you like to skip the tutorial?`, []string{`yes`, `no`}, `yes`)
+		if !question.Done {
+			return true, nil
+		}
+		skipTutorial = question.Response != `no`
 	}
 
-	if question.Response != `no` {
+	if skipTutorial {
 
 		user.ClearPrompt()
 
@@ -214,6 +220,12 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 	}
 
 	user.ClearPrompt()
+
+	if len(configs.GetSpecialRoomsConfig().TutorialRooms) == 0 {
+		// The start room failed to load and there is no tutorial to fall back on.
+		user.SendText(`The start room could not be loaded. Please tell an admin.`)
+		return true, nil
+	}
 
 	tutorialRoomIds := []int{}
 	startRoom := 0

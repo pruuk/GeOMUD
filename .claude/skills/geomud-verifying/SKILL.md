@@ -31,15 +31,24 @@ the same commit.
 ## Smoke test
 
 `go run ./cmd/smoke` from the repo root (`make smoke`; CI runs it as `Smoke Test`). It builds the
-server to a fixed path, runs it on a temp copy of the default world bound to 127.0.0.1 only, plays a
-bot through signup, the tutorial, get/drop, say, quit and re-login, then stops the server by PID.
-The repo's `_datafiles` are never written. Report its summary line. `-bots 50` is the load check;
-`-addr host:port` targets a running server (the Docker one in `provisioning/compose.smoke.yml`).
-Baseline numbers: `docs/phase-0-baseline.md`.
+server to a fixed path, runs it on a temp copy of the empty world bound to 127.0.0.1 only, then
+stops the server by PID. The repo's `_datafiles` are never written. Flow:
 
-The script plays the stock tutorial, so strip phases that remove tutorial content or scripts
-(Phase 3 world data, Phase 4 scripting) must replace those steps in `cmd/smoke/script.go` in the
-same change.
+1. An admin logs in (`-admin-user`/`-admin-pass`, default the stock `admin`/`password`), answers
+   GoMud's forced first-login password change (sets it to the same text; if the account was
+   already changed it sees the "current password" question and cancels), goes to the start room
+   and runs `item spawn copper ring` once per bot, checking each lands (`look`). Then it quits.
+2. Each bot signs up, runs `start` (race, name; no tutorial question, the world has no tutorial
+   rooms), lands in Town Square, then get, drop, get the ring (checking inventory and the floor
+   each time), walks north and back, says something, quits, logs back in, checks it still holds
+   the ring, holds (`-hold`), and quits. A drop the floor-item limit refuses is retried.
+
+Report its summary line. `-bots 50` is the load check; `-addr host:port` targets a running server
+(the Docker one in `provisioning/compose.smoke.yml`); `-server-log file` saves the launched
+server's log. Baseline numbers: `docs/phase-0-baseline.md`.
+
+Strip phases that remove items, the start room or the admin account must keep these steps in
+`cmd/smoke` working in the same change.
 
 ## Reporting
 

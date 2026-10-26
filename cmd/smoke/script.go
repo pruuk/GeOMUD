@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -49,6 +51,47 @@ func (s *script) field(step, cmd, label, item string) {
 	}
 }
 
+// dropItem drops smokeItem. The server refuses a drop while the room floor
+// holds Gameplay.FloorItemCountMax items (10 in the stock config) and hands the
+// item back with "too many items on the floor". The admin put one item per bot
+// on the floor, so with more bots than that limit, early droppers are refused
+// until enough bots have picked theirs up. Every bot's first get does not
+// depend on any drop, so the floor empties and the retries end. A refused drop
+// is retried once a second until timeout.
+func (s *script) dropItem(step string, timeout time.Duration) {
+	if s.err != nil {
+		return
+	}
+	deadline := time.Now().Add(timeout)
+	for {
+		s.c.send("drop " + smokeItem)
+		refused := false
+		s.err = s.c.until(s.ctx, s.c.timeout, step, func(got string, _ bool) (bool, string) {
+			switch {
+			case strings.Contains(got, "You drop the "+smokeItem):
+				return true, ""
+			case strings.Contains(got, "too many items on the floor"):
+				refused = true
+				return true, ""
+			}
+			return false, fmt.Sprintf("no %q", "You drop the "+smokeItem)
+		})
+		if s.err != nil || !refused {
+			return
+		}
+		if time.Now().After(deadline) {
+			s.err = &stepError{step, "the floor stayed full (too many items) for " + timeout.String(), s.c.screen()}
+			return
+		}
+		select {
+		case <-time.After(time.Second):
+		case <-s.ctx.Done():
+			s.err = &stepError{step, "interrupted", s.c.screen()}
+			return
+		}
+	}
+}
+
 // quit logs out the polite way (meditate, then the server hangs up).
 func (s *script) quit(step string) {
 	s.do(step, "quit", "begin your meditation")
@@ -60,9 +103,12 @@ func (s *script) quit(step string) {
 // play runs the whole smoke script for one bot against addr, then stays
 // logged in for hold before quitting.
 //
-// New characters go through the tutorial (rooms 900-903) because it is the
-// only place the base world hands each player an item of their own: the
-// graduation cap in room 903. Shared floor items would not survive 50 bots.
+// The admin has already put one smokeItem per bot on the floor of the start
+// room (prepareItems). The item counts need no lock: every bot gets once
+// before it drops, a bot wants at most one item at a time, and the floor
+// always holds one item for every bot that is not carrying one. So a bot's
+// first get, and its get after its own drop, finds an item whatever order
+// the bots run in. (The floor item limit can delay a drop; see dropItem.)
 func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) error {
 	c, err := dial(ctx, addr, timeout)
 	if err != nil {
@@ -89,52 +135,21 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.do("start: race prompt", "start", "Which race will you be?")
 	s.do("start: race", "human", "known as (name)?")
 	s.do("start: name", b.char, "Choose the name "+b.char+"?")
-	s.do("start: confirm name", "yes", "skip the tutorial?")
-	s.do("start: enter tutorial", "no", "Learning to Look")
+	// There is no tutorial question: the world has no tutorial rooms, so a
+	// new character goes straight to the start room.
+	s.do("start: confirm name", "yes", startRoomTitle)
 
-	// Room 900. The tutorial script only accepts its lessons in this order.
-	s.do("tutorial: look", "look", "Learning to Look", "Exits: east")
-	s.do("tutorial: look orb", "look orb", "Orb of Vision is in perfect health")
-	s.do("tutorial: look again", "look", "Learning to Look")
-	s.do("tutorial: look east", "look east", "You peer toward the east", "Learning about You")
-	s.do("walk: east", "east", "You head towards the east exit", "Learning about You")
-
-	// Room 901.
-	// The room teaches status, inventory, experience and conditions, but
-	// only inventory is a command any more. The room script sees each typed
-	// command before the command table does, so the lesson still advances
-	// on the other three; the server then answers "not recognized". These
-	// steps check the teacher's replies, not the commands' output.
-	s.do("tutorial: status", "status", "Good job!", "To only peek at your inventory")
-	s.field("tutorial: inventory", "inventory", "Carrying:", "sharp stick")
-	s.wait("tutorial: inventory lesson", "Good job!", "For quick look at your progress")
-	s.do("tutorial: experience", "experience", "Good job!", "to see any statuses affecting you")
-	s.do("tutorial: conditions", "conditions", "Good job!", "head south for the next lesson")
-	s.do("walk: south", "south", "You head towards the south exit", "Learning to Fight")
-
-	// Room 902.
-	s.do("tutorial: equip stick", "equip stick", "You wield your sharp stick")
-	// One 1d2 hit per 4 s round, and the dummy sometimes dodges.
-	s.doFor("tutorial: attack dummy", 3*time.Minute, "attack dummy", "training dummy has died")
-	s.do("walk: west", "west", "You head towards the west exit", "Training Complete")
-
-	// Room 903: the orb drops a cap on the floor of this player's own copy
-	// of the room. Equipping it is the lesson that frees every command.
-	s.wait("item: cap on the floor", "drops their graduation cap")
-	s.do("item: get", "get cap", "You pick up the graduation cap")
-	s.field("item: carried after get", "inventory", "Carrying:", "graduation cap")
-	s.do("tutorial: equip cap", "equip cap", "You wear your graduation cap")
-	s.do("item: remove", "remove cap", "You remove your graduation cap")
-	s.do("item: drop", "drop cap", "You drop the graduation cap")
-	s.field("item: on the ground after drop", "look", "On the Ground:", "graduation cap")
-	s.do("item: get again", "get cap", "You pick up the graduation cap")
-	s.field("item: carried after get again", "inventory", "Carrying:", "graduation cap")
-	s.do("walk: portal", "portal", "Town Square")
+	s.do("item: get", "get "+smokeItem, "You pick up the "+smokeItem)
+	s.field("item: carried after get", "inventory", "Carrying:", smokeItem)
+	s.dropItem("item: drop", 3*time.Minute)
+	s.field("item: on the ground after drop", "look", "On the Ground:", smokeItem)
+	s.do("item: get again", "get "+smokeItem, "You pick up the "+smokeItem)
+	s.field("item: carried after get again", "inventory", "Carrying:", smokeItem)
 
 	// The start zone (startland) has two rooms: Town Square (1) and End of
 	// the Line (2), joined by north and south.
 	s.do("walk: north", "north", "End of the Line")
-	s.do("walk: south", "south", "Town Square")
+	s.do("walk: south", "south", startRoomTitle)
 	s.do("say", "say hello from "+b.char, `You say, "hello from `+b.char+`"`)
 	s.quit("quit")
 	if s.err != nil {
@@ -150,9 +165,9 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 
 	s.wait("relogin: prompt", `username (or "new")`)
 	s.do("relogin: username", b.user, "password:")
-	s.do("relogin: password", b.pass, "Welcome to the Mud!", "Town Square")
+	s.do("relogin: password", b.pass, "Welcome to the Mud!", startRoomTitle)
 	s.do("relogin: character", "online", b.char)
-	s.field("relogin: still holds the item", "inventory", "Carrying:", "graduation cap")
+	s.field("relogin: still holds the item", "inventory", "Carrying:", smokeItem)
 	if s.err != nil {
 		return s.err
 	}
