@@ -9,7 +9,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/language"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/telemetry"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/users"
@@ -84,7 +83,6 @@ func FinalizeLoginOrCreate(results map[string]string, sharedState map[string]any
 				connections.SendTo(term.CRLF, clientInput.ConnectionId)
 			}
 			mudlog.Info("User logged in", "username", username, "connectionId", clientInput.ConnectionId)
-			telemetry.Track(telemetry.CatPlayerLogin, "", 0, 0, 0)
 			return true // Indicate success, handler can be removed
 
 		} else {

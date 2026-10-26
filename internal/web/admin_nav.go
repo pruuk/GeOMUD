@@ -129,17 +129,8 @@ func buildAdminNav() []WebNavItem {
 		},
 		{
 			Name:        "Metrics",
-			Description: "Inspect runtime stats, search telemetry/event logs.",
+			Description: "Inspect runtime stats.",
 			Children: []WebNavItem{
-				{
-					Name:        "Telemetry",
-					Target:      "/admin/telemetry",
-					Description: "Query and inspect server-side telemetry event data.",
-					Children: []WebNavItem{
-						{Label: "View / Query", Target: "/admin/telemetry", Description: "Browse and filter recorded telemetry events."},
-						{Label: "API Docs", Target: "/admin/telemetry-api", Description: "REST API reference for the telemetry endpoint."},
-					},
-				},
 				{
 					Name:        "Stats",
 					Target:      "/admin/stats",
@@ -153,7 +144,7 @@ func buildAdminNav() []WebNavItem {
 		},
 		{
 			Name:        "Settings",
-			Description: "Configure the server, manage time, audio, panels, and scripting.",
+			Description: "Configure the server, manage time, panels, and scripting.",
 			Children: []WebNavItem{
 				{
 					Name:        "Config",
@@ -180,15 +171,6 @@ func buildAdminNav() []WebNavItem {
 					Children: []WebNavItem{
 						{Label: "View / Edit", Target: "/admin/gametime", Description: "View the current game date and adjust time settings."},
 						{Label: "API Docs", Target: "/admin/gametime-api", Description: "REST API reference for the gametime endpoint."},
-					},
-				},
-				{
-					Name:        "Audio",
-					Target:      "/admin/audio",
-					Description: "Manage ambient and event-triggered audio cues.",
-					Children: []WebNavItem{
-						{Label: "View / Edit", Target: "/admin/audio", Description: "Browse and edit audio cue definitions."},
-						{Label: "API Docs", Target: "/admin/audio-api", Description: "REST API reference for the audio endpoint."},
 					},
 				},
 				{

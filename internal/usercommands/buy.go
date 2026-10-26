@@ -386,8 +386,6 @@ func tryPurchase(request string, user *users.UserRecord, room *rooms.Room, shopM
 		// Give them the item
 		newItm := items.New(matchedShopItem.ItemId)
 
-		user.PlaySound(`purchase`, `other`)
-
 		events.AddToQueue(events.ItemOwnership{
 			UserId: user.UserId,
 			Item:   newItm,

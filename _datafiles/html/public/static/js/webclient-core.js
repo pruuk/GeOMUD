@@ -9,8 +9,6 @@
  *   - VirtualWindows registry (GMCP handler dispatch)
  *   - WebSocket connection management
  *   - Terminal (xterm.js) setup
- *   - MSP audio (music + sound)
- *   - Volume slider UI
  *
  * Window modules call VirtualWindows.register(...) to add themselves.
  * The HTML file calls Client.init() on page load.
@@ -1289,13 +1287,6 @@ const VirtualWindows = (() => {
 const Client = (() => {
 
     // -----------------------------------------------------------------------
-    // Audio
-    // -----------------------------------------------------------------------
-    let baseMp3Url = '';
-    const MusicPlayer = new MP3Player(false);
-    const SoundPlayer = new MP3Player(true);
-
-    // -----------------------------------------------------------------------
     // Terminal
     // -----------------------------------------------------------------------
     const term = new window.Terminal({
@@ -1397,74 +1388,6 @@ const Client = (() => {
         return true;
     }
 
-    function _parseMSPProps(parts, startIndex) {
-        const props = {};
-        for (let i = startIndex; i < parts.length; i++) {
-            const eq = parts[i].indexOf('=');
-            if (eq !== -1) {
-                props[parts[i].slice(0, eq)] = parts[i].slice(eq + 1);
-            }
-        }
-        return props;
-    }
-
-    function _handleMusicCommand(raw) {
-        const inner  = raw.slice(8, raw.length - 1);
-        const parts  = inner.split(' ');
-        const fileName = parts[0];
-        const obj    = _parseMSPProps(parts, 1);
-
-        if (fileName === 'Off') {
-            if (obj.U) {
-                baseMp3Url = obj.U;
-                if (baseMp3Url[baseMp3Url.length - 1] !== '/') {
-                    baseMp3Url += '/';
-                }
-            } else {
-                MusicPlayer.stop();
-            }
-            return;
-        }
-
-        let loopMusic  = true;
-        let soundLevel = 1.0;
-        if (obj.L && obj.L !== '-1') { loopMusic  = false; }
-        if (obj.V)                    { soundLevel = Number(obj.V) / 100; }
-
-        if (!MusicPlayer.isPlaying(baseMp3Url + fileName)) {
-            const mult = _recordSound('music', baseMp3Url + fileName);
-            MusicPlayer.play(baseMp3Url + fileName, loopMusic, soundLevel * (sliderValues['music'] / 100) * mult);
-        }
-    }
-
-    function _handleSoundCommand(raw) {
-        const inner    = raw.slice(8, raw.length - 1);
-        const parts    = inner.split(' ');
-        const fileName = parts[0];
-        const obj      = _parseMSPProps(parts, 1);
-
-        if (fileName === 'Off') {
-            if (obj.U) {
-                baseMp3Url = obj.U;
-                if (baseMp3Url[baseMp3Url.length - 1] !== '/') {
-                    baseMp3Url += '/';
-                }
-            } else {
-                SoundPlayer.stop();
-            }
-            return;
-        }
-
-        let soundLevel = 1.0;
-        let loopSound  = true;
-        if (obj.L && obj.L !== '-1') { loopSound  = false; }
-        if (obj.V)                    { soundLevel = Number(obj.V) / 100; }
-
-        const typeKey = ((obj.T || 'other').toLowerCase()) + ' sounds';
-        const mult = _recordSound(typeKey, baseMp3Url + fileName);
-        SoundPlayer.play(baseMp3Url + fileName, false, soundLevel * (sliderValues[typeKey] / 100) * mult);
-    }
-
     function _handleWebclientCommand(data) {
         if (data.startsWith('TEXTMASK:')) {
             debugLog(data);
@@ -1486,7 +1409,7 @@ const Client = (() => {
             return;
         }
 
-        // MSP / GMCP commands (all start with "!!")
+        // GMCP commands (all start with "!!")
         if (event.data.length > 2 && event.data.slice(0, 2) === '!!') {
 
             if (event.data.slice(0, 7) === '!!GMCP(') {
@@ -1505,15 +1428,6 @@ const Client = (() => {
                 return;
             }
 
-            if (event.data.slice(0, 8) === '!!MUSIC(') {
-                _handleMusicCommand(event.data);
-                return;
-            }
-
-            if (event.data.slice(0, 8) === '!!SOUND(') {
-                _handleSoundCommand(event.data);
-                return;
-            }
         }
 
         term.write(event.data);
@@ -1578,255 +1492,6 @@ const Client = (() => {
             origOnOpen();
             sendData(token);
         };
-    }
-
-    // -----------------------------------------------------------------------
-    // Volume sliders
-    // -----------------------------------------------------------------------
-    const defaultSliders = {
-        'music':               75,
-        'combat sounds':       75,
-        'movement sounds':     75,
-        'environment sounds':  75,
-        'other sounds':        75,
-    };
-
-    let sliderValues        = { ...defaultSliders };
-    let unmutedSliderValues = null;
-
-    // Per-sound volume multipliers: { [categoryKey]: { [soundUrl]: 0-100 } }
-    // A value of 100 means full category volume; lower values reduce further.
-    let soundVolumeOverrides = {};
-
-    // Sounds that have been played, grouped by category key.
-    // { [categoryKey]: string[] }  - ordered by first-play time, deduplicated.
-    let soundHistory = {};
-
-    // Which category rows are expanded in the slider UI.
-    const _categoryExpanded = {};
-
-    function _loadSoundStorage() {
-        try {
-            const h = localStorage.getItem('soundHistory');
-            if (h) { soundHistory = JSON.parse(h) || {}; }
-        } catch (e) { soundHistory = {}; }
-        try {
-            const v = localStorage.getItem('soundVolumeOverrides');
-            if (v) { soundVolumeOverrides = JSON.parse(v) || {}; }
-        } catch (e) { soundVolumeOverrides = {}; }
-    }
-
-    function _saveSoundStorage() {
-        try {
-            localStorage.setItem('soundHistory',        JSON.stringify(soundHistory));
-            localStorage.setItem('soundVolumeOverrides', JSON.stringify(soundVolumeOverrides));
-        } catch (e) { /* ignore */ }
-    }
-
-    // Record that a sound URL was played under a given category key.
-    // Returns the effective per-sound volume multiplier (0-1).
-    function _recordSound(categoryKey, url) {
-        if (!soundHistory[categoryKey]) { soundHistory[categoryKey] = []; }
-        if (!soundHistory[categoryKey].includes(url)) {
-            soundHistory[categoryKey].push(url);
-            _saveSoundStorage();
-        }
-        const cat = soundVolumeOverrides[categoryKey];
-        if (cat && cat[url] !== undefined) {
-            return cat[url] / 100;
-        }
-        return 1.0;
-    }
-
-    // Apply a per-sound override value and immediately update the cached Audio element.
-    function _setSoundOverride(categoryKey, url, value) {
-        if (!soundVolumeOverrides[categoryKey]) { soundVolumeOverrides[categoryKey] = {}; }
-        soundVolumeOverrides[categoryKey][url] = value;
-        _saveSoundStorage();
-        // Update the live Audio element so the change is heard immediately.
-        const player = (categoryKey === 'music') ? MusicPlayer : SoundPlayer;
-        const finalVol = (sliderValues[categoryKey] / 100) * (value / 100);
-        player.setVolume(url, Math.min(1, Math.max(0, finalVol)));
-    }
-
-    // Returns a fingerprint of the current soundHistory (total count across all categories).
-    // Used by the Volume tab polling to detect new sounds without full rebuilds.
-    function _soundHistoryFingerprint() {
-        var total = 0;
-        Object.keys(soundHistory).forEach(function(k) { total += soundHistory[k].length; });
-        return total;
-    }
-
-    function resetVolumeControls() {
-        sliderValues        = { ...defaultSliders };
-        soundVolumeOverrides = {};
-        unmutedSliderValues  = null;
-        localStorage.setItem('sliderValues',         JSON.stringify(sliderValues));
-        localStorage.setItem('soundVolumeOverrides', JSON.stringify(soundVolumeOverrides));
-        localStorage.removeItem('unmutedSliderValues');
-        localStorage.setItem('muteAllSound', JSON.stringify(false));
-        const muteCheckbox = document.getElementById('mute-checkbox');
-        const muteIcon     = document.getElementById('mute-icon');
-        if (muteCheckbox) { muteCheckbox.checked = false; }
-        if (muteIcon)     { muteIcon.textContent = '🔊'; }
-        MusicPlayer.setGlobalVolume(sliderValues['music'] / 100);
-        buildSliders();
-    }
-
-    function getSpeakerIcon(value) {
-        value = Number(value);
-        if (value === 0)       { return '🔇'; }
-        if (value < 33)        { return '🔈'; }
-        if (value < 66)        { return '🔉'; }
-        return '🔊';
-    }
-
-    // Return a short display name for a sound URL (strip path prefix, extension).
-    function _soundDisplayName(url) {
-        const parts = url.split('/');
-        const file  = parts[parts.length - 1] || url;
-        return file.replace(/\.mp3$/i, '').replace(/[-_]/g, ' ');
-    }
-
-    function buildSliders() {
-        const container = document.getElementById('sliders-container');
-        container.innerHTML = '';
-
-        Object.keys(sliderValues).forEach(key => {
-            // --- Category row (header + category slider) ---
-            const categoryBlock = document.createElement('div');
-            categoryBlock.className = 'sound-category-block';
-
-            const headerRow = document.createElement('div');
-            headerRow.className = 'sound-category-header';
-
-            // Expand/collapse arrow
-            const sounds = soundHistory[key] || [];
-            const isExpanded = !!_categoryExpanded[key];
-
-            const arrow = document.createElement('span');
-            arrow.className   = 'sound-category-arrow';
-            arrow.textContent = isExpanded ? '\u25bc' : '\u25b6';
-
-            const label = document.createElement('label');
-            label.className   = 'sound-category-label';
-            label.textContent = key.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-            const slider = document.createElement('input');
-            slider.type  = 'range';
-            slider.min   = 0;
-            slider.max   = 100;
-            slider.value = sliderValues[key];
-
-            const iconSpan = document.createElement('span');
-            iconSpan.className   = 'slider-icon';
-            iconSpan.textContent = getSpeakerIcon(sliderValues[key]);
-
-            slider.addEventListener('input', e => {
-                const val = Number(e.target.value);
-                sliderValues[key] = val;
-                iconSpan.textContent = getSpeakerIcon(val);
-                localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
-                if (key === 'music') {
-                    MusicPlayer.setGlobalVolume(val / 100);
-                }
-                const muteCheckbox = document.getElementById('mute-checkbox');
-                if (muteCheckbox.checked && val > 0) {
-                    muteCheckbox.checked = false;
-                    localStorage.setItem('muteAllSound', JSON.stringify(false));
-                    document.getElementById('mute-icon').textContent = '🔊';
-                }
-            });
-
-            // Clicking the arrow or label toggles expansion
-            function toggleExpand() {
-                _categoryExpanded[key] = !_categoryExpanded[key];
-                buildSliders();
-            }
-            arrow.addEventListener('click', toggleExpand);
-            label.addEventListener('click', toggleExpand);
-            headerRow.style.cursor = 'default';
-
-            headerRow.appendChild(arrow);
-            headerRow.appendChild(label);
-            headerRow.appendChild(slider);
-            headerRow.appendChild(iconSpan);
-            categoryBlock.appendChild(headerRow);
-
-            // --- Per-sound sub-rows (only when expanded and sounds exist) ---
-            if (isExpanded && sounds.length > 0) {
-                const soundList = document.createElement('div');
-                soundList.className = 'sound-list';
-
-                sounds.forEach(url => {
-                    const override = soundVolumeOverrides[key] && soundVolumeOverrides[key][url] !== undefined
-                        ? soundVolumeOverrides[key][url]
-                        : 100;
-
-                    const row = document.createElement('div');
-                    row.className = 'slider-container sound-sub-row';
-
-                    const sLabel = document.createElement('label');
-                    sLabel.className   = 'sound-sub-label';
-                    sLabel.textContent = _soundDisplayName(url);
-                    sLabel.title       = url;
-
-                    const sSlider = document.createElement('input');
-                    sSlider.type  = 'range';
-                    sSlider.min   = 0;
-                    sSlider.max   = 100;
-                    sSlider.value = override;
-
-                    sSlider.addEventListener('input', e => {
-                        const val = Number(e.target.value);
-                        _setSoundOverride(key, url, val);
-                    });
-
-                    row.appendChild(sLabel);
-                    row.appendChild(sSlider);
-                    soundList.appendChild(row);
-                });
-
-                categoryBlock.appendChild(soundList);
-            } else if (isExpanded && sounds.length === 0) {
-                const empty = document.createElement('div');
-                empty.className   = 'sound-list-empty';
-                empty.textContent = 'No sounds played yet in this session.';
-                categoryBlock.appendChild(empty);
-            }
-
-            container.appendChild(categoryBlock);
-        });
-    }
-
-    function toggleMuteAll() {
-        const muteCheckbox = document.getElementById('mute-checkbox');
-        const muteIcon     = document.getElementById('mute-icon');
-        const isChecked    = muteCheckbox.checked;
-
-        if (isChecked) {
-            unmutedSliderValues = { ...sliderValues };
-            localStorage.setItem('unmutedSliderValues', JSON.stringify(unmutedSliderValues));
-            Object.keys(sliderValues).forEach(k => { sliderValues[k] = 0; });
-            localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
-            buildSliders();
-            muteIcon.textContent = '🔇';
-            MusicPlayer.setGlobalVolume(0);
-            localStorage.setItem('muteAllSound', JSON.stringify(true));
-        } else {
-            const savedUnmuted = localStorage.getItem('unmutedSliderValues');
-            if (savedUnmuted) {
-                let loaded = JSON.parse(savedUnmuted) || {};
-                loaded = { ...defaultSliders, ...loaded };
-                unmutedSliderValues = { ...loaded };
-                sliderValues = { ...unmutedSliderValues };
-                localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
-            }
-            buildSliders();
-            muteIcon.textContent = '🔊';
-            MusicPlayer.setGlobalVolume(sliderValues['music'] / 100);
-            localStorage.setItem('muteAllSound', JSON.stringify(false));
-        }
     }
 
     function buildWindowToggles() {
@@ -2116,52 +1781,6 @@ const Client = (() => {
             }
         });
 
-        // Volume sliders: load from localStorage
-        _loadSoundStorage();
-        const savedValues = localStorage.getItem('sliderValues');
-        if (savedValues) {
-            try {
-                sliderValues = { ...defaultSliders, ...JSON.parse(savedValues) };
-            } catch (e) {
-                console.warn('Could not parse saved sliderValues, using defaults.');
-            }
-        } else {
-            localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
-        }
-
-        const savedMute = localStorage.getItem('muteAllSound');
-        if (savedMute) {
-            try {
-                document.getElementById('mute-checkbox').checked = JSON.parse(savedMute);
-            } catch (e) {
-                console.warn('Could not parse muteAllSound, ignoring.');
-            }
-        }
-
-        buildSliders();
-
-        const muteCheckbox = document.getElementById('mute-checkbox');
-        const muteIcon     = document.getElementById('mute-icon');
-
-        if (muteCheckbox.checked) {
-            const savedUnmuted = localStorage.getItem('unmutedSliderValues');
-            if (savedUnmuted) {
-                try {
-                    unmutedSliderValues = { ...defaultSliders, ...JSON.parse(savedUnmuted) };
-                } catch (e) {
-                    console.warn('Could not parse unmutedSliderValues.');
-                }
-            }
-            Object.keys(sliderValues).forEach(k => { sliderValues[k] = 0; });
-            localStorage.setItem('sliderValues', JSON.stringify(sliderValues));
-            buildSliders();
-            muteIcon.textContent = '🔇';
-            MusicPlayer.setGlobalVolume(0);
-        } else {
-            MusicPlayer.setGlobalVolume(sliderValues['music'] / 100);
-            muteIcon.textContent = '🔊';
-        }
-
         // Open all registered virtual windows immediately so they are present
         // on page load rather than waiting for the first GMCP payload.
         // Windows start in the disconnected (grayed-out) state until the
@@ -2186,14 +1805,9 @@ const Client = (() => {
     return {
         // Services
         get term()         { return term; },
-        get MusicPlayer()  { return MusicPlayer; },
-        get SoundPlayer()  { return SoundPlayer; },
 
         // Shared state (read by window modules)
         get GMCPStructs()  { return GMCPStructs; },
-        // sliderValues is a `let` that gets reassigned on mute/unmute, so the
-        // getter captures the variable binding, not a snapshot of the object.
-        get sliderValues() { return sliderValues; },
 
         // Debug toggle: set Client.debug = true from the browser console
         get debug()        { return debugOutput; },
@@ -2205,12 +1819,8 @@ const Client = (() => {
         // Functions called from HTML event handlers
         init,
         toggleMenu,
-        toggleMuteAll,
         toggleDockAutoHide,
         resetLayout,
-        resetVolumeControls,
-        buildSliders,
-        soundHistoryFingerprint: _soundHistoryFingerprint,
 
         // Utility
         sendData,

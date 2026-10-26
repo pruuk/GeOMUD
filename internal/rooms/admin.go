@@ -38,7 +38,6 @@ type ZoneSummary struct {
 	RoomId       int      `json:"RoomId"`
 	RoomCount    int      `json:"RoomCount"`
 	DefaultBiome string   `json:"DefaultBiome"`
-	MusicFile    string   `json:"MusicFile,omitempty"`
 	AutoScaleMin int      `json:"AutoScaleMin"`
 	AutoScaleMax int      `json:"AutoScaleMax"`
 	IdleMessages []string `json:"IdleMessages,omitempty"`
@@ -52,7 +51,6 @@ func GetAllZoneSummaries() []ZoneSummary {
 			RoomId:       zc.RoomId,
 			RoomCount:    len(zc.RoomIds),
 			DefaultBiome: zc.DefaultBiome,
-			MusicFile:    zc.MusicFile,
 			AutoScaleMin: zc.MobAutoScale.Minimum,
 			AutoScaleMax: zc.MobAutoScale.Maximum,
 			IdleMessages: zc.IdleMessages,

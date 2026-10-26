@@ -14,7 +14,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/GoMudEngine/GoMud/internal/audio"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
@@ -47,7 +46,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/GoMudEngine/GoMud/internal/spells"
-	"github.com/GoMudEngine/GoMud/internal/telemetry"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/users"
@@ -206,9 +204,6 @@ func main() {
 	})
 
 	hooks.RegisterListeners()
-
-	telemetry.Load(configs.GetFilePathsConfig().DataFiles.String())
-	telemetry.RegisterListeners()
 
 	mudlog.Info(
 		"Starting server",
@@ -654,12 +649,6 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 		connDetails.ConnectionId(),
 	)
 
-	// Send request to enable MSP
-	connections.SendTo(
-		term.MspEnable.BytesWithPayload(nil),
-		connDetails.ConnectionId(),
-	)
-
 	connections.SendTo(
 		term.TelnetSuppressGoAhead.BytesWithPayload(nil),
 		connDetails.ConnectionId(),
@@ -699,17 +688,6 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 		EnterPressed: false,
 		Clipboard:    []byte{},
 		History:      connections.InputHistory{},
-	}
-
-	if audioConfig := audio.GetFile(`intro`); audioConfig.FilePath != `` {
-		v := 100
-		if audioConfig.Volume > 0 && audioConfig.Volume <= 100 {
-			v = audioConfig.Volume
-		}
-		connections.SendTo(
-			term.MspCommand.BytesWithPayload([]byte("!!MUSIC("+audioConfig.FilePath+" V="+strconv.Itoa(v)+" L=-1 C=1)")),
-			clientInput.ConnectionId,
-		)
 	}
 
 	// --- Send Initial Welcome/Splash ---
@@ -827,12 +805,6 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 		if okContinue && lastHandlerName == "LoginPromptHandler" {
 
 			// Prompt sequence finished successfully
-
-			// Stop intro music if playing
-			connections.SendTo(
-				term.MspCommand.BytesWithPayload([]byte("!!MUSIC(Off)")),
-				clientInput.ConnectionId,
-			)
 
 			// Retrieve the UserObject stored by the completion function
 			if uo, exists := sharedState["UserObject"]; exists {
@@ -971,26 +943,10 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 		History:      connections.InputHistory{},
 	}
 
-	connections.SendTo(
-		[]byte("!!SOUND(Off U="+configs.GetConfig().FilePaths.WebCDNLocation.String()+")"),
-		clientInput.ConnectionId,
-	)
-
 	plugins.OnNetConnect(connDetails)
 
 	loginHandler := inputhandlers.GetLoginPromptHandler()
 	connDetails.AddInputHandler("LoginPromptHandler", loginHandler)
-
-	if audioConfig := audio.GetFile(`intro`); audioConfig.FilePath != `` {
-		v := 100
-		if audioConfig.Volume > 0 && audioConfig.Volume <= 100 {
-			v = audioConfig.Volume
-		}
-		connections.SendTo(
-			[]byte("!!MUSIC("+audioConfig.FilePath+" V="+strconv.Itoa(v)+" L=-1 C=1)"),
-			clientInput.ConnectionId,
-		)
-	}
 
 	splashTxt, _ := templates.Process("login/connect-splash", nil)
 	connections.SendTo([]byte(templates.AnsiParse(splashTxt)), connDetails.ConnectionId())
@@ -1099,12 +1055,6 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 				ConnectionId: clientInput.ConnectionId,
 				Text:         `TEXTMASK:false`,
 			})
-
-			// Stop intro music if playing
-			connections.SendTo(
-				[]byte("!!MUSIC(Off)"),
-				clientInput.ConnectionId,
-			)
 
 			// Retrieve the UserObject stored by the completion function
 			if uo, exists := sharedState["UserObject"]; exists {
@@ -1359,17 +1309,6 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 
 	plugins.OnNetConnect(connDetails)
 
-	if audioConfig := audio.GetFile(`intro`); audioConfig.FilePath != `` {
-		v := 100
-		if audioConfig.Volume > 0 && audioConfig.Volume <= 100 {
-			v = audioConfig.Volume
-		}
-		connections.SendTo(
-			term.MspCommand.BytesWithPayload([]byte("!!MUSIC("+audioConfig.FilePath+" V="+strconv.Itoa(v)+" L=-1 C=1)")),
-			connDetails.ConnectionId(),
-		)
-	}
-
 	splashTxt, _ := templates.Process("login/connect-splash", nil)
 	connections.SendTo([]byte(templates.AnsiParse(splashTxt)), connDetails.ConnectionId())
 
@@ -1435,11 +1374,6 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 		}
 
 		if okContinue && lastHandlerName == "LoginPromptHandler" {
-			connections.SendTo(
-				term.MspCommand.BytesWithPayload([]byte("!!MUSIC(Off)")),
-				clientInput.ConnectionId,
-			)
-
 			if uo, exists := sharedState["UserObject"]; exists {
 				var ok bool
 				userObject, ok = uo.(*users.UserRecord)
@@ -1531,6 +1465,5 @@ func loadAllDataFiles(isReload bool) {
 	keywords.LoadAliases(plugins.GetPluginRegistry())
 	mutators.LoadDataFiles()
 	colorpatterns.LoadColorPatterns()
-	audio.LoadAudioConfig()
 	characters.CompileAdjectiveSwaps() // This should come after loading color patterns.
 }

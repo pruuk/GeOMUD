@@ -184,8 +184,6 @@ func actorObjectType() ObjectTypeDef {
 			m("PathingAtWaypoint", "boolean", "Returns true if the actor is at a path waypoint."),
 			m("Sleep", "void", "Pauses the actor for a number of seconds.", p("seconds", "number")),
 			m("GetLastInputRound", "number", "Returns the round of the actor's last input."),
-			m("PlaySound", "void", "Plays a sound for the actor.", p("soundId", "string"), p("category", "string")),
-			m("PlayMusic", "void", "Plays music for the actor.", p("musicFileOrId", "string")),
 			m("Uncurse", "ItemObject[]", "Uncurses worn items and returns them."),
 			m("GetPet", "PetObject", "Returns the actor's pet, or null."),
 		},
@@ -254,7 +252,6 @@ func roomObjectType() ObjectTypeDef {
 			m("AreMobsAttacking", "boolean", "Returns true if mobs are attacking the user.", p("userId", "number")),
 			m("ArePlayersAttacking", "boolean", "Returns true if players are attacking the user.", p("userId", "number")),
 			m("HasRecentVisitors", "boolean", "Returns true if the room had recent visitors."),
-			m("PlaySound", "void", "Plays a sound for everyone in the room.", p("soundId", "string"), p("category", "string"), p("...excludeUserIds", "number")),
 		},
 	}
 }

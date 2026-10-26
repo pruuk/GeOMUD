@@ -191,28 +191,6 @@
     .tag-chip button { background: none; border: none; cursor: pointer; color: var(--color-chip-text); font-size: 0.82rem; line-height: 1; padding: 0; }
     .tag-chip button:hover { color: var(--color-danger); }
 
-    /* music picker */
-    .music-picker-wrap { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; position: relative; }
-    .music-picker-display { font-family: monospace; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0.4rem 0.6rem; border: 1px solid var(--color-border-medium); border-radius: 4px; font-size: 0.875rem; background: var(--color-surface-alt); min-height: 2rem; display: flex; align-items: center; }
-    .music-picker-display.empty { color: var(--color-text-placeholder); font-style: italic; font-family: inherit; }
-    .music-picker-dropdown {
-        display: none; position: absolute; top: 100%; left: 0; z-index: 300;
-        background: var(--color-surface-white); border: 1px solid var(--color-border-medium); border-radius: 6px;
-        box-shadow: 0 4px 16px var(--color-shadow); min-width: 320px; max-height: 280px;
-        overflow-y: auto; padding: 0.3rem 0;
-    }
-    .music-picker-dropdown.open { display: block; }
-    .music-picker-search { width: calc(100% - 1rem); margin: 0.3rem 0.5rem; padding: 0.3rem 0.5rem; border: 1px solid var(--color-border-medium); border-radius: 4px; font-size: 0.82rem; box-sizing: border-box; }
-    .music-picker-item {
-        padding: 0.3rem 0.75rem; cursor: pointer; font-size: 0.82rem; font-family: monospace;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .music-picker-item:hover { background: var(--color-row-hover); }
-    .music-picker-item.selected { color: var(--color-chip-text); font-weight: 600; background: var(--color-row-hover); }
-    .music-picker-empty { padding: 0.75rem; text-align: center; color: var(--color-text-placeholder); font-size: 0.82rem; }
-    .music-picker-clear { padding: 0.3rem 0.75rem; cursor: pointer; font-size: 0.8rem; color: var(--color-text-faint); border-top: 1px solid var(--color-border-light); margin-top: 0.2rem; }
-    .music-picker-clear:hover { color: var(--color-danger); background: var(--color-error-bg); }
-
     /* tag picker */
     .tag-picker-wrap { position: relative; display: inline-block; }
     .tag-picker-dropdown {
@@ -415,19 +393,6 @@
                         <select id="zf-biome"></select>
                     </div>
                     <div class="field">
-                        <label>Music File</label>
-                        <div class="music-picker-wrap" id="zf-music-wrap">
-                            <span class="music-picker-display empty" id="zf-music-display">none</span>
-                            <input type="hidden" id="zf-music" />
-                            <button type="button" class="btn-add-sm" style="margin-top:0" onclick="openMusicPicker('zf')">Pick&hellip;</button>
-                            <button type="button" class="btn-icon" title="Clear" onclick="clearMusicPicker('zf')">&times;</button>
-                            <div class="music-picker-dropdown" id="zf-music-dropdown">
-                                <input type="search" class="music-picker-search" id="zf-music-search" placeholder="Filter music files..." oninput="filterMusicPicker('zf')" />
-                                <div id="zf-music-list"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="field">
                         <label>Auto-Scale Min Level</label>
                         <input type="number" id="zf-scalemin" min="0" />
                     </div>
@@ -499,20 +464,6 @@
                     <label>Map Legend</label>
                     <input type="text" id="f-maplegend" placeholder="Legend text" />
                 </div>
-                <div class="field">
-                    <label>Music File</label>
-                    <div class="music-picker-wrap" id="f-musicfile-wrap">
-                        <span class="music-picker-display empty" id="f-musicfile-display">none (inherits zone)</span>
-                        <input type="hidden" id="f-musicfile" />
-                        <button type="button" class="btn-add-sm" style="margin-top:0" onclick="openMusicPicker('f')">Pick&hellip;</button>
-                        <button type="button" class="btn-icon" title="Clear" onclick="clearMusicPicker('f')">&times;</button>
-                        <div class="music-picker-dropdown" id="f-musicfile-dropdown">
-                            <input type="search" class="music-picker-search" id="f-musicfile-search" placeholder="Filter music files..." oninput="filterMusicPicker('f')" />
-                            <div id="f-musicfile-list"></div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="section-title">Properties</div>
                 <div class="field">
                     <label>Is Bank</label>
@@ -665,7 +616,6 @@
     let biomes = [];
     let allTags = [];   // [{tag, module}, ...]
     let allBuffs = {};  // id -> spec
-    let allMusicFiles = []; // string[]
     let currentPage = 1;
     let totalRooms = 0;
     let perPage = 1000;
@@ -679,19 +629,17 @@
     // Init
     // -------------------------------------------------------------------------
     async function init() {
-        const [zonesRes, biomesRes, tagsRes, buffsRes, audioRes] = await AdminAPI.all([
+        const [zonesRes, biomesRes, tagsRes, buffsRes] = await AdminAPI.all([
             AdminAPI.get('/admin/api/v1/zones'),
             AdminAPI.get('/admin/api/v1/rooms/biomes'),
             AdminAPI.get('/admin/api/v1/tags'),
             AdminAPI.get('/admin/api/v1/buffs'),
-            AdminAPI.get('/admin/api/v1/audio'),
         ]);
         if (!zonesRes.ok) { showStatus('Failed to load zones: ' + zonesRes.error, false); return; }
         allZones = zonesRes.data.data || [];
         biomes = (biomesRes.ok && biomesRes.data.data) || [];
         allTags = (tagsRes.ok && tagsRes.data.data) || [];
         allBuffs = (buffsRes.ok && buffsRes.data.data && buffsRes.data.data.specs) || {};
-        allMusicFiles = (audioRes.ok && audioRes.data.data && audioRes.data.data.music) || [];
         populateZoneFilter();
         populateBiomeSelects();
         buildTagPickerList('');
@@ -854,7 +802,6 @@
         setVal('f-biome', r.Biome || '');
         setVal('f-mapsymbol', r.MapSymbol || '');
         setVal('f-maplegend', r.MapLegend || '');
-        setMusicPickerValue('f', r.MusicFile || '');
         document.getElementById('f-isbank').checked = !!r.IsBank;
         document.getElementById('f-pvp').checked = !!r.Pvp;
 
@@ -1066,89 +1013,7 @@
 
     document.addEventListener('click', function (e) {
         if (!e.target.closest('.tag-picker-wrap')) closeTagPicker();
-        if (!e.target.closest('.music-picker-wrap')) closeMusicPickers();
     });
-
-    // -------------------------------------------------------------------------
-    // Music file picker
-    // -------------------------------------------------------------------------
-    function setMusicPickerValue(prefix, value) {
-        const hiddenId = prefix === 'f' ? 'f-musicfile' : 'zf-music';
-        const displayId = hiddenId + '-display';
-        const hidden = document.getElementById(hiddenId);
-        const display = document.getElementById(displayId);
-        if (!hidden || !display) return;
-        hidden.value = value;
-        if (value) {
-            display.textContent = value.replace(/^.*\//, '');
-            display.className = 'music-picker-display';
-        } else {
-            display.textContent = prefix === 'f' ? 'none (inherits zone)' : 'none';
-            display.className = 'music-picker-display empty';
-        }
-    }
-
-    function buildMusicPickerList(prefix, filter) {
-        const listId = (prefix === 'f' ? 'f-musicfile' : 'zf-music') + '-list';
-        const hiddenId = prefix === 'f' ? 'f-musicfile' : 'zf-music';
-        const container = document.getElementById(listId);
-        if (!container) return;
-        container.innerHTML = '';
-
-        const current = document.getElementById(hiddenId).value;
-        const filterLc = filter.toLowerCase();
-        const filtered = allMusicFiles.filter(f => !filterLc || f.toLowerCase().includes(filterLc));
-
-        if (filtered.length === 0) {
-            container.innerHTML = '<div class="music-picker-empty">' +
-                (allMusicFiles.length === 0 ? 'No music files found.' : 'No matching files.') +
-                '</div>';
-            return;
-        }
-
-        for (const path of filtered) {
-            const name = path.replace(/^.*\//, '');
-            const item = document.createElement('div');
-            item.className = 'music-picker-item' + (path === current ? ' selected' : '');
-            item.textContent = name;
-            item.title = path;
-            item.onclick = () => { setMusicPickerValue(prefix, path); closeMusicPickers(); };
-            container.appendChild(item);
-        }
-
-        const clearRow = document.createElement('div');
-        clearRow.className = 'music-picker-clear';
-        clearRow.textContent = 'Clear (no music)';
-        clearRow.onclick = () => { setMusicPickerValue(prefix, ''); closeMusicPickers(); };
-        container.appendChild(clearRow);
-    }
-
-    window.openMusicPicker = function (prefix) {
-        closeMusicPickers();
-        const dropdownId = (prefix === 'f' ? 'f-musicfile' : 'zf-music') + '-dropdown';
-        const searchId = (prefix === 'f' ? 'f-musicfile' : 'zf-music') + '-search';
-        const dd = document.getElementById(dropdownId);
-        if (!dd) return;
-        const searchEl = document.getElementById(searchId);
-        if (searchEl) searchEl.value = '';
-        buildMusicPickerList(prefix, '');
-        dd.classList.add('open');
-        if (searchEl) searchEl.focus();
-    };
-
-    window.clearMusicPicker = function (prefix) {
-        setMusicPickerValue(prefix, '');
-    };
-
-    window.filterMusicPicker = function (prefix) {
-        const searchId = (prefix === 'f' ? 'f-musicfile' : 'zf-music') + '-search';
-        const searchEl = document.getElementById(searchId);
-        buildMusicPickerList(prefix, searchEl ? searchEl.value : '');
-    };
-
-    function closeMusicPickers() {
-        document.querySelectorAll('.music-picker-dropdown.open').forEach(d => d.classList.remove('open'));
-    }
 
     // -------------------------------------------------------------------------
     // Map symbol picker
@@ -2301,7 +2166,6 @@
             Biome:         document.getElementById('f-biome').value,
             MapSymbol:     document.getElementById('f-mapsymbol').value.trim(),
             MapLegend:     document.getElementById('f-maplegend').value.trim(),
-            MusicFile:     document.getElementById('f-musicfile').value,
             IsBank:        document.getElementById('f-isbank').checked,
             Pvp:           document.getElementById('f-pvp').checked,
             Tags:          collectTags(),
@@ -2359,7 +2223,6 @@
         document.getElementById('zone-editor-title').textContent = 'Zone: ' + zone.Name;
 
         setVal('zf-biome', zone.DefaultBiome || '');
-        setMusicPickerValue('zf', zone.MusicFile || '');
         setVal('zf-scalemin', zone.AutoScaleMin || 0);
         setVal('zf-scalemax', zone.AutoScaleMax || 0);
         renderIdleMsgs('zf-idle-list', zone.IdleMessages || []);
@@ -2376,7 +2239,6 @@
         if (!zoneName) return;
         const payload = {
             DefaultBiome: document.getElementById('zf-biome').value,
-            MusicFile:    document.getElementById('zf-music').value,
             MobAutoScale: {
                 Minimum: parseInt(document.getElementById('zf-scalemin').value, 10) || 0,
                 Maximum: parseInt(document.getElementById('zf-scalemax').value, 10) || 0,

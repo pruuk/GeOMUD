@@ -69,13 +69,11 @@ var allPermissions = []PermissionDef{
 	{Key: "teleport.direction", Category: "Commands", Description: "Teleport through walls in a direction"},
 	{Key: "teleport.playername", Category: "Commands", Description: "Teleport to a player by name"},
 	{Key: "teleport.roomid", Category: "Commands", Description: "Teleport to a specific room ID"},
-	{Key: "telemetry", Category: "Commands", Description: "Query and clear telemetry data in-game"},
 	{Key: "visit", Category: "Commands", Description: "View room visit statistics"},
 	{Key: "zap", Category: "Commands", Description: "Zap (damage) players or mobs"},
 	{Key: "zone", Category: "Commands", Description: "All zone admin sub-commands"},
 
 	// --- Web API write permissions ---
-	{Key: "audio.write", Category: "Audio", Description: "Edit audio configuration"},
 	{Key: "biomes.write", Category: "Biomes", Description: "Create, edit, and delete biomes"},
 	{Key: "buffs.write", Category: "Buffs", Description: "Create, edit, and delete buffs"},
 	{Key: "color-aliases.write", Category: "Colors", Description: "Create, edit, and delete color aliases"},
@@ -94,7 +92,6 @@ var allPermissions = []PermissionDef{
 	{Key: "rooms.write", Category: "Rooms", Description: "Create, edit, and delete rooms"},
 	{Key: "skills.write", Category: "Skills", Description: "Create, edit, and delete skills and professions"},
 	{Key: "spells.write", Category: "Spells", Description: "Create, edit, and delete spells"},
-	{Key: "telemetry.write", Category: "Server", Description: "Clear telemetry data"},
 	{Key: "users.write", Category: "Users", Description: "Create and edit user accounts"},
 	{Key: "zones.write", Category: "Zones", Description: "Create, rename, edit, and delete zones"},
 }

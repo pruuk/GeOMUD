@@ -39,12 +39,6 @@ func AttackPlayerVsMob(user *users.UserRecord, mob *mobs.Mob) AttackResult {
 	// Remember who has hit him
 	mob.Character.TrackPlayerDamage(user.UserId, attackResult.DamageToTarget)
 
-	if attackResult.Hit {
-		user.PlaySound(`hit-other`, `combat`)
-	} else {
-		user.PlaySound(`miss`, `combat`)
-	}
-
 	return attackResult
 }
 
@@ -63,13 +57,6 @@ func AttackPlayerVsPlayer(userAtk *users.UserRecord, userDef *users.UserRecord) 
 		userDef.WimpyCheck()
 	}
 
-	if attackResult.Hit {
-		userAtk.PlaySound(`hit-other`, `combat`)
-		userDef.PlaySound(`hit-self`, `combat`)
-	} else {
-		userAtk.PlaySound(`miss`, `combat`)
-	}
-
 	return attackResult
 }
 
@@ -83,10 +70,6 @@ func AttackMobVsPlayer(mob *mobs.Mob, user *users.UserRecord) AttackResult {
 	if attackResult.DamageToTarget != 0 {
 		user.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
 		user.WimpyCheck()
-	}
-
-	if attackResult.Hit {
-		user.PlaySound(`hit-self`, `combat`)
 	}
 
 	return attackResult

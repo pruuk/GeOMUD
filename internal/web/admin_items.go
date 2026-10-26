@@ -14,7 +14,6 @@ import (
 // that governs mutations on that page. Pages without a write permission (e.g.
 // read-only views) are not listed.
 var pageWritePermissions = map[string]string{
-	"/admin/audio":                 "audio.write",
 	"/admin/biomes":                "biomes.write",
 	"/admin/buffs":                 "buffs.write",
 	"/admin/buffs-flags":           "buffs.write",
@@ -38,7 +37,6 @@ var pageWritePermissions = map[string]string{
 	"/admin/skills-professions":    "skills.write",
 	"/admin/rooms":                 "rooms.write",
 	"/admin/spells":                "spells.write",
-	"/admin/telemetry":             "telemetry.write",
 	"/admin/users":                 "users.write",
 	"/admin/mapper":                "rooms.write",
 }

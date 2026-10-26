@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoMudEngine/GoMud/internal/audio"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
@@ -46,7 +45,6 @@ type UserRecord struct {
 	EmailAddress   string                `yaml:"emailaddress,omitempty"` // Email address (if provided)
 	TipsComplete   map[string]bool       `yaml:"tipscomplete,omitempty"` // Tips the user has followed/completed so they can be quiet
 	EventLog       UserLog               `yaml:"-"`                      // Do not retain in user file (for now)
-	LastMusic      string                `yaml:"-"`                      // Keeps track of the last music that was played
 	connectionId   uint64
 	unsentText     string
 	connectionTime time.Time
@@ -285,45 +283,6 @@ func (u *UserRecord) DidTip(tipName string, completed ...bool) bool {
 	}
 
 	return u.TipsComplete[tipName]
-}
-
-func (u *UserRecord) PlayMusic(musicFileOrId string) {
-
-	v := 100
-	if soundConfig := audio.GetFile(musicFileOrId); soundConfig.FilePath != `` {
-		musicFileOrId = soundConfig.FilePath
-		if soundConfig.Volume > 0 && soundConfig.Volume <= 100 {
-			v = soundConfig.Volume
-		}
-	}
-
-	events.AddToQueue(events.MSP{
-		UserId:    u.UserId,
-		SoundType: `MUSIC`,
-		SoundFile: musicFileOrId,
-		Volume:    v,
-	})
-
-}
-
-func (u *UserRecord) PlaySound(soundId string, category string) {
-
-	v := 100
-	if soundConfig := audio.GetFile(soundId); soundConfig.FilePath != `` {
-		soundId = soundConfig.FilePath
-		if soundConfig.Volume > 0 && soundConfig.Volume <= 100 {
-			v = soundConfig.Volume
-		}
-	}
-
-	events.AddToQueue(events.MSP{
-		UserId:    u.UserId,
-		SoundType: `SOUND`,
-		SoundFile: soundId,
-		Volume:    v,
-		Category:  category,
-	})
-
 }
 
 func (u *UserRecord) Command(inputTxt string, waitSeconds ...float64) {

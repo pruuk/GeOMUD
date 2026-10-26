@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoMudEngine/GoMud/internal/audio"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/exit"
@@ -65,7 +64,6 @@ type Room struct {
 	//mutex
 	RoomId            int                               `yaml:"roomid"`                              // a unique numeric index of the room. Also the filename.
 	Zone              string                            `yaml:"zone"`                                // zone is a way to partition rooms into groups. Also into folders.
-	MusicFile         string                            `yaml:"musicfile,omitempty"`                 // background music to play when in this room
 	IsBank            bool                              `yaml:"isbank,omitempty"`                    // Is this a bank room? If so, players can deposit/withdraw gold here.
 	Title             string                            `yaml:"title"`                               // Title shown to the user
 	Description       string                            `yaml:"description"`                         // Description shown to the user
@@ -280,45 +278,6 @@ func (r *Room) SendText(txt string, excludeUserIds ...int) {
 		ExcludeUserIds: excludeUserIds,
 		IsQuiet:        false,
 	})
-
-}
-
-func (r *Room) PlaySound(soundId string, category string, excludeUserIds ...int) {
-
-	volume := 100
-	if soundConfig := audio.GetFile(soundId); soundConfig.FilePath != `` {
-		soundId = soundConfig.FilePath
-		if soundConfig.Volume > 0 && soundConfig.Volume <= 100 {
-			volume = soundConfig.Volume
-		}
-	}
-
-	for _, userId := range r.players {
-
-		skip := false
-
-		exLen := len(excludeUserIds)
-		if exLen > 0 {
-			for _, excludeId := range excludeUserIds {
-				if excludeId == userId {
-					skip = true
-					break
-				}
-			}
-		}
-
-		if skip {
-			continue
-		}
-
-		events.AddToQueue(events.MSP{
-			UserId:    userId,
-			SoundType: `SOUND`,
-			SoundFile: soundId,
-			Volume:    volume,
-			Category:  category,
-		})
-	}
 
 }
 

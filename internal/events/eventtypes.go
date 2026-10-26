@@ -140,17 +140,6 @@ type System struct {
 
 func (s System) Type() string { return `System` }
 
-// Payloads describing sound/music to play
-type MSP struct {
-	UserId    int
-	SoundType string // SOUND or MUSIC
-	SoundFile string
-	Volume    int    // 1-100
-	Category  string // special category/type for MSP string
-}
-
-func (m MSP) Type() string { return `MSP` }
-
 // Fired whenever a mob or player changes rooms
 type RoomChange struct {
 	UserId        int

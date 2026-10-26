@@ -14,7 +14,6 @@ type ZoneConfig struct {
 	} `yaml:"autoscale,omitempty"` // level scaling range if any
 	Mutators     mutators.MutatorList `yaml:"mutators,omitempty"`     // mutators defined here apply to entire zone
 	IdleMessages []string             `yaml:"idlemessages,omitempty"` // list of messages that can be displayed to players in the zone, assuming a room has none defined
-	MusicFile    string               `yaml:"musicfile,omitempty"`    // background music to play when in this zone
 	DefaultBiome string               `yaml:"defaultbiome,omitempty"` // city, swamp etc. see biomes.go
 	RoomIds      map[int]struct{}     `yaml:"-"`                      // Does not get written. Built dyanmically when rooms are loaded.
 }

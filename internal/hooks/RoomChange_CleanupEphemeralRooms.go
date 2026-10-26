@@ -8,7 +8,6 @@ import (
 
 //
 // RoomChangeHandler waits for RoomChange events
-// Also sends music changes out
 //
 
 func CleanupEphemeralRooms(e events.Event) events.ListenerReturn {

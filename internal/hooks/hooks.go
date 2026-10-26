@@ -11,7 +11,6 @@ func RegisterListeners() {
 	events.RegisterListener(events.Buff{}, ApplyBuffs)
 
 	// RoomChange Listeners
-	events.RegisterListener(events.RoomChange{}, LocationMusicChange)
 	events.RegisterListener(events.RoomChange{}, CleanupEphemeralRooms)
 
 	// NewRound Listeners
@@ -43,8 +42,6 @@ func RegisterListeners() {
 	// ItemOwnership
 	events.RegisterListener(events.ItemOwnership{}, CheckItemQuests)
 
-	// MSP Sound
-	events.RegisterListener(events.MSP{}, PlaySound)
 	// Quest Events
 	events.RegisterListener(events.Quest{}, HandleQuestUpdate)
 	// Spawn events

@@ -134,8 +134,6 @@ declare interface ActorObject {
     PathingAtWaypoint(): boolean;
     Sleep(seconds: number): void;
     GetLastInputRound(): number;
-    PlaySound(soundId: string, category: string): void;
-    PlayMusic(musicFileOrId: string): void;
     Uncurse(): ItemObject[];
     GetPet(): PetObject | null;
 }
@@ -198,7 +196,6 @@ declare interface RoomObject {
     AreMobsAttacking(userId: number): boolean;
     ArePlayersAttacking(userId: number): boolean;
     HasRecentVisitors(): boolean;
-    PlaySound(soundId: string, category: string, ...excludeUserIds: number[]): void;
 }
 
 declare interface ItemObject {

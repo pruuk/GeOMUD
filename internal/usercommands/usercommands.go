@@ -159,8 +159,7 @@ var (
 		`status`:      {Status, true, false},
 
 		`suicide`:    {Suicide, true, false},
-		`syslogs`:    {SysLogs, true, true},   // Admin only
-		`telemetry`:  {Telemetry, true, true}, // Admin only
+		`syslogs`:    {SysLogs, true, true}, // Admin only
 		`tame`:       {Tame, false, false},
 		`teleport`:   {Teleport, true, true}, // Admin only
 		`throw`:      {Throw, false, false},

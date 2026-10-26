@@ -9,7 +9,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/telemetry"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -64,11 +63,6 @@ func AutoSave(e events.Event) events.ListenerReturn {
 		events.AddToQueue(events.Broadcast{Text: `Saving other...`})
 		// Save plugin states if applicable
 		plugins.Save()
-
-		// Save telemetry data
-		if err := telemetry.Save(); err != nil {
-			mudlog.Error("telemetry.Save", "error", err)
-		}
 
 		events.AddToQueue(events.Broadcast{
 			Text:            `Done.` + term.CRLFStr,

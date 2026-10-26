@@ -394,23 +394,6 @@ func apiV1GetUserYAML(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
-// Audio (single file)
-// ---------------------------------------------------------------------------
-
-// GET /admin/api/v1/audio/yaml
-func apiV1GetAudioYAML(w http.ResponseWriter, r *http.Request) {
-	path := dataFiles() + `/audio.yaml`
-	content, ok := readYAMLFile(w, path)
-	if !ok {
-		return
-	}
-	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
-		Success: true,
-		Data:    yamlResp(content, path),
-	})
-}
-
-// ---------------------------------------------------------------------------
 // Keywords (single file)
 // ---------------------------------------------------------------------------
 

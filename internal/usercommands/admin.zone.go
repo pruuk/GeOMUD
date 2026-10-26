@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -259,35 +258,6 @@ func zone_Edit(rest string, user *users.UserRecord, room *rooms.Room, flags even
 			return true, nil
 		}
 		editZoneConfig.MobAutoScale.Maximum, _ = strconv.Atoi(question.Response)
-
-	}
-
-	//
-	// Music Options
-	//
-	{
-
-		question := cmdPrompt.Ask(`Should the zone have music?`, []string{`yes`, `no`}, util.BoolYN(editZoneConfig.MusicFile != ``))
-		if !question.Done {
-			return true, nil
-		}
-
-		if question.Response == `yes` {
-
-			relativeString := configs.GetFilePathsConfig().WebCDNLocation.String()
-			if len(relativeString) > 0 {
-				user.SendText(`   <ansi fg="red">Note:</ansi> Music file path must be relative to: <ansi fg="red">` + relativeString + `</ansi>`)
-			}
-
-			question := cmdPrompt.Ask(`Zone music file path?`, []string{editZoneConfig.MusicFile}, editZoneConfig.MusicFile)
-			if !question.Done {
-				return true, nil
-			}
-			editZoneConfig.MusicFile = question.Response
-
-		} else {
-			editZoneConfig.MusicFile = ``
-		}
 
 	}
 

@@ -249,201 +249,6 @@
             padding-bottom: 5px;
         }
 
-        .slider-container {
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-        }
-
-        .slider-container label {
-            color: var(--t-text-muted);
-            width: 130px;
-            font-size: 13px;
-            font-family: Arial, sans-serif;
-        }
-
-        .slider-container input[type="range"] {
-            flex: 1;
-            margin: 0 8px;
-            -webkit-appearance: none;
-            appearance: none;
-            height: 4px;
-            border-radius: 2px;
-            background: var(--t-slider-track);
-            outline: none;
-            cursor: pointer;
-        }
-
-        .slider-container input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: var(--t-accent-dim);
-            cursor: pointer;
-            border: 2px solid var(--t-slider-border);
-            transition: background 0.15s;
-        }
-
-        .slider-container input[type="range"]::-moz-range-thumb {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: var(--t-accent-dim);
-            cursor: pointer;
-            border: 2px solid var(--t-slider-border);
-            transition: background 0.15s;
-        }
-
-        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
-            background: var(--t-accent);
-        }
-
-        .slider-container input[type="range"]::-moz-range-thumb:hover {
-            background: var(--t-accent);
-        }
-
-        .slider-icon {
-            width: 24px;
-            text-align: center;
-            font-size: 16px;
-            color: var(--t-text-muted);
-        }
-
-        #mute-container {
-            margin-bottom: 10px;
-            color: var(--t-text-muted);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            font-family: Arial, sans-serif;
-        }
-
-        #mute-container label {
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        /* Sound category blocks */
-        .sound-category-block {
-            margin-bottom: 6px;
-        }
-
-        .sound-category-header {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-bottom: 2px;
-        }
-
-        .sound-category-arrow {
-            font-size: 8px;
-            color: var(--t-accent);
-            width: 12px;
-            text-align: center;
-            flex-shrink: 0;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .sound-category-label {
-            color: var(--t-text-muted);
-            width: 118px;
-            font-size: 13px;
-            font-family: Arial, sans-serif;
-            cursor: pointer;
-            user-select: none;
-            flex-shrink: 0;
-        }
-
-        .sound-category-header input[type="range"] {
-            flex: 1;
-            margin: 0 8px;
-            -webkit-appearance: none;
-            appearance: none;
-            height: 4px;
-            border-radius: 2px;
-            background: var(--t-slider-track);
-            outline: none;
-            cursor: pointer;
-        }
-
-        .sound-category-header input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: var(--t-accent-dim);
-            cursor: pointer;
-            border: 2px solid var(--t-slider-border);
-        }
-
-        .sound-category-header input[type="range"]::-moz-range-thumb {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: var(--t-accent-dim);
-            cursor: pointer;
-            border: 2px solid var(--t-slider-border);
-        }
-
-        /* Per-sound sub-rows */
-        .sound-list {
-            padding-left: 16px;
-            border-left: 1px solid var(--t-border);
-            margin-left: 6px;
-            margin-bottom: 4px;
-        }
-
-        .sound-sub-row {
-            margin-bottom: 4px;
-        }
-
-        .sound-sub-label {
-            color: var(--t-text-secondary);
-            width: 118px;
-            font-size: 11px;
-            font-family: Arial, sans-serif;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            cursor: default;
-        }
-
-        .sound-list-empty {
-            padding: 4px 0 4px 4px;
-            font-size: 11px;
-            font-family: Arial, sans-serif;
-            color: var(--t-text-dim);
-            font-style: italic;
-        }
-
-        /* Volume reset button */
-        #volume-reset-btn {
-            padding: 4px 10px;
-            background: var(--t-bg-surface);
-            border: 1px solid var(--t-btn-border);
-            border-radius: 4px;
-            color: var(--t-text-secondary);
-            font-size: 11px;
-            font-family: Arial, sans-serif;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            transition: background 0.15s, color 0.15s;
-            flex-shrink: 0;
-        }
-
-        #volume-reset-btn:hover {
-            background: var(--t-accent-dim);
-            color: var(--t-text);
-        }
-
         /* Toggle switch */
         .toggle-switch {
             position: relative;
@@ -1245,7 +1050,6 @@
 
     <script src="{{ .ASSET_BASE_URL }}/static/js/xterm/xterm.4.19.0.js"></script>
     <script src="{{ .ASSET_BASE_URL }}/static/js/xterm/xterm-addon-fit.js"></script>
-    <script src="{{ .ASSET_BASE_URL }}/static/js/mp3.js"></script>
     <script src="{{ .ASSET_BASE_URL }}/static/js/fx.js"></script>
     <script src="{{ .ASSET_BASE_URL }}/static/js/vwin.js"></script>
     <script src="{{ .ASSET_BASE_URL }}/static/js/webclient-core.js"></script>
@@ -1290,30 +1094,13 @@
                 <div id="settings-io-error"></div>
             </div>
             <div id="settings-tab-bar">
-                <button class="settings-tab-btn active" data-tab="tab-volume">Volume</button>
-                <button class="settings-tab-btn" data-tab="tab-windows">Windows</button>
+                <button class="settings-tab-btn active" data-tab="tab-windows">Windows</button>
                 <button class="settings-tab-btn" data-tab="tab-triggers">Triggers</button>
                 <button class="settings-tab-btn" data-tab="tab-stats">Stats</button>
                 <button class="settings-tab-btn" data-tab="tab-theme">Theme</button>
             </div>
             <div id="settings-tab-body">
-                <div class="settings-tab-panel active" id="tab-volume">
-                    <div class="settings-section">
-                        <div class="settings-section-title">Volume Controls</div>
-                        <div id="mute-container">
-                            <label>
-                                <span class="toggle-switch">
-                                    <input type="checkbox" id="mute-checkbox" onchange="toggleMuteAll()">
-                                    <span class="toggle-track"></span>
-                                </span>
-                                <span id="mute-icon">&#128266;</span> Mute All Sound
-                            </label>
-                            <button id="volume-reset-btn" onclick="resetVolumeControls()" style="margin-left:auto;">Reset</button>
-                        </div>
-                        <div id="sliders-container"></div>
-                    </div>
-                </div>
-                <div class="settings-tab-panel" id="tab-windows">
+                <div class="settings-tab-panel active" id="tab-windows">
                     <div class="settings-section">
                         <div class="settings-section-title">Layout</div>
                         <div class="win-toggle-row">
@@ -1706,10 +1493,8 @@
         // HTML onload/onclick attributes require globally-scoped functions.
         function init()                  { Client.init(); }
         function toggleMenu()            { Client.toggleMenu(); }
-        function toggleMuteAll()         { Client.toggleMuteAll(); }
         function resetLayout()           { Client.resetLayout(); }
         function toggleDockAutoHide(s,v)  { Client.toggleDockAutoHide(s,v); }
-        function resetVolumeControls()   { Client.resetVolumeControls(); }
 
         // ---------------------------------------------------------------
         // Theme switching
@@ -2182,8 +1967,7 @@
             // Settings backup / restore
             // ---------------------------------------------------------------
             var _BACKUP_KEYS_JSON = [
-                'windowLayout', 'sliderValues', 'muteAllSound',
-                'unmutedSliderValues', 'soundHistory', 'soundVolumeOverrides',
+                'windowLayout',
                 'dockAutoHide', 'triggers', 'gomud_map_settings',
             ];
 
@@ -2266,32 +2050,24 @@
             });
 
             // Restart the stats interval if the modal is reopened with Stats already active.
-            // Also restart the volume interval if Volume tab is active.
             var observer = new MutationObserver(function() {
                 var backdrop  = document.getElementById('settings-backdrop');
                 var isOpen    = backdrop.classList.contains('open');
                 var statsTab  = document.getElementById('tab-stats');
-                var volumeTab = document.getElementById('tab-volume');
                 if (isOpen && statsTab && statsTab.classList.contains('active')) {
                     renderStats();
                     if (!_statsInterval) {
                         _statsInterval = setInterval(renderStats, 500);
                     }
                 }
-                if (isOpen && volumeTab && volumeTab.classList.contains('active')) {
-                    if (!_volumeInterval) {
-                        _volumeInterval = setInterval(_refreshVolumeIfChanged, 500);
-                    }
-                }
                 if (!isOpen) {
                     if (_statsInterval)  { clearInterval(_statsInterval);  _statsInterval  = null; }
-                    if (_volumeInterval) { clearInterval(_volumeInterval); _volumeInterval = null; }
                 }
             });
             observer.observe(document.getElementById('settings-backdrop'), { attributes: true, attributeFilter: ['class'] });
 
             // Re-render the trigger list each time the Triggers tab is activated.
-            // Start/stop the stats and volume live-updates when their tabs are activated.
+            // Start/stop the stats live-update when its tab is activated.
             tabBar.addEventListener('click', function(e) {
                 var btn = e.target.closest('.settings-tab-btn');
                 if (!btn) { return; }
@@ -2322,29 +2098,17 @@
                         _statsInterval = null;
                     }
                 }
-                if (btn.dataset.tab === 'tab-volume') {
-                    if (!_volumeInterval) {
-                        _volumeInterval = setInterval(_refreshVolumeIfChanged, 500);
-                    }
-                } else {
-                    if (_volumeInterval) {
-                        clearInterval(_volumeInterval);
-                        _volumeInterval = null;
-                    }
-                }
             });
 
-            // Stop both intervals when the settings modal closes.
+            // Stop the stats interval when the settings modal closes.
             document.getElementById('settings-backdrop').addEventListener('click', function(e) {
                 if (e.target === this) {
                     if (_statsInterval)  { clearInterval(_statsInterval);  _statsInterval  = null; }
-                    if (_volumeInterval) { clearInterval(_volumeInterval); _volumeInterval = null; }
                     _settingsIoHide();
                 }
             });
             document.getElementById('settings-close').addEventListener('click', function() {
                 if (_statsInterval)  { clearInterval(_statsInterval);  _statsInterval  = null; }
-                if (_volumeInterval) { clearInterval(_volumeInterval); _volumeInterval = null; }
                 _settingsIoHide();
             });
         });
@@ -2358,21 +2122,6 @@
         var _gmcpOutOpen    = false;  // is the GMCP Out section expanded?
         var _nsOpen        = {};      // which namespace payloads are expanded?
         var _nsOutOpen     = {};      // which GMCP Out identifier payloads are expanded?
-
-        // -----------------------------------------------------------------------
-        // Volume tab polling
-        // -----------------------------------------------------------------------
-        var _volumeInterval         = null;
-        var _volumeLastFingerprint  = -1;
-
-        function _refreshVolumeIfChanged() {
-            if (typeof Client === 'undefined' || !Client.soundHistoryFingerprint) { return; }
-            var fp = Client.soundHistoryFingerprint();
-            if (fp !== _volumeLastFingerprint) {
-                _volumeLastFingerprint = fp;
-                Client.buildSliders();
-            }
-        }
 
         function _fmtBytes(b) {
             if (b < 1024 * 1024) { return (b / 1024).toFixed(2) + ' KB'; }

@@ -603,7 +603,6 @@ func UpdateOnlineUser(updated UserRecord) {
 	updated.isLinkDead = u.isLinkDead
 	updated.inputBlocked = u.inputBlocked
 	updated.EventLog = u.EventLog
-	updated.LastMusic = u.LastMusic
 
 	*u = updated
 }
