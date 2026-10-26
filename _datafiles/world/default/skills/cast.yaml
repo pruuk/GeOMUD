@@ -1,5 +1,0 @@
-# [LVL 1-4] Frostfang Magic Academy - ROOM 879
-skillid: cast
-name: Cast
-description: Cast learned spells from your spellbook. Higher levels improve spell proficiency and the rate at which new spells are learned.
-maxlevel: 4

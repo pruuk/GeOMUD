@@ -880,23 +880,12 @@ func StringWildcardMatch(stringToSearch string, patternToSearch string) bool {
 	return stringToSearch == patternToSearch
 }
 
-func ValidateWorldFiles(exampleWorldPath string, worldPath string) error {
+// ValidateWorldFiles checks that every folder named in requiredFolders exists
+// as a directory directly under worldPath. It returns the first problem found.
+func ValidateWorldFiles(worldPath string, requiredFolders []string) error {
 
-	entries, err := os.ReadDir(exampleWorldPath)
-	if err != nil {
-		return fmt.Errorf("unable to read directory %s: %v", exampleWorldPath, err)
-	}
-
-	var subfolders []string
-	// Filter out only directories
-	for _, entry := range entries {
-		if entry.IsDir() {
-			subfolders = append(subfolders, entry.Name())
-		}
-	}
-
-	// Check each source subfolder in the target directory
-	for _, folder := range subfolders {
+	// Check each required folder in the world directory
+	for _, folder := range requiredFolders {
 		testPath := filepath.Join(worldPath, folder)
 
 		info, err := os.Stat(testPath)

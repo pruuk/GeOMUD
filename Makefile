@@ -157,7 +157,6 @@ run: generate ## Start the server with `go run .`.
 run-new: clean-instances generate run ## Delete room instance data and start a fresh world.
 
 clean-instances: ## Delete generated room instance data for bundled worlds.
-	rm -Rf _datafiles/world/default/rooms.instances
 	rm -Rf _datafiles/world/empty/rooms.instances
 
 https-setup: ## Run the interactive HTTPS certificate setup helper.

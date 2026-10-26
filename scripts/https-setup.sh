@@ -103,7 +103,7 @@ is_public_hostname() {
 
 current_data_files=$(read_yaml_value DataFiles)
 bundled_config_path=$(canonicalize_path "$CONFIG_FILE")
-default_override_file="${current_data_files:-_datafiles/world/default}/config-overrides.yaml"
+default_override_file="${current_data_files:-_datafiles/world/empty}/config-overrides.yaml"
 override_file="${CONFIG_PATH:-$default_override_file}"
 override_path=$(canonicalize_path "$override_file")
 

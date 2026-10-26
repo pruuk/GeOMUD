@@ -1,6 +1,0 @@
-buffid: 41
-name: Form Change
-description: You have taken another form.
-secret: false
-triggerrate: 1 round
-triggercount: 20

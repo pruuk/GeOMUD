@@ -188,7 +188,7 @@ FilePaths:
   #   The folder where all datafiles reside.
   #   If you are planning to create your own world, copying the current folder
   #   and its entire tree of content is a good place to start.
-  DataFiles: _datafiles/world/default
+  DataFiles: _datafiles/world/empty
   # - PublicHtml -
   #   The folder where all web html files/templates reside.
   PublicHtml: _datafiles/html/public
@@ -492,7 +492,7 @@ Translation:
   # Specify the game language file paths
   LanguagePaths:
     - '_datafiles/localize'
-    - '_datafiles/world/default/localize'
+    - '_datafiles/world/empty/localize'
 
 ################################################################################
 #

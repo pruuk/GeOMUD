@@ -1,5 +1,0 @@
-# [LVL 1-4] Frostwarden Rangers - ROOM 74
-skillid: map
-name: Map
-description: Display a map of the surrounding area centered on you. Each level covers more area and reveals more detail.
-maxlevel: 4

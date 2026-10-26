@@ -3,7 +3,7 @@
 // check the item is still held.
 //
 // By default it builds and launches its own server on a temp copy of the
-// default world (run it from the repo root). With -addr it plays against a
+// empty world (run it from the repo root). With -addr it plays against a
 // server that is already running.
 //
 //	go run ./cmd/smoke
