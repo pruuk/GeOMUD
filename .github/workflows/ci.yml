@@ -8,6 +8,7 @@ name: CI
 # - conditional JS lint
 # - conditional Lua lint
 # - PR Go race tests
+# - telnet smoke test (make smoke)
 
 "on":
   push:
@@ -245,3 +246,21 @@ jobs:
       - uses: ./.github/actions/setup-go
 
       - uses: ./.github/actions/go-checks
+
+  smoke:
+    name: Smoke Test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: detect-changes
+    if: >-
+      needs.detect-changes.outputs.go_tests == 'true'
+    steps:
+      # actions/checkout v6.0.3
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Run smoke test
+        run: make smoke

@@ -65,7 +65,7 @@ help: ## List documented Makefile targets.
 	@printf "\n"
 
 ## Developer Workflow
-.PHONY: build build_local generate module validate test coverage fmt fmtcheck vet mod js-lint lua-lint
+.PHONY: build build_local generate module validate test smoke coverage fmt fmtcheck vet mod js-lint lua-lint
 
 build: validate build_local ## Validate the code and build ./$(BIN).
 
@@ -93,6 +93,9 @@ validate: fmtcheck vet ## Run the standard Go formatting and vet checks.
 
 test: generate js-lint lua-lint ## Run code generation, JavaScript/Lua linting, and Go tests.
 	@go test -race ./...
+
+smoke: ## Launch a server on a temp copy of the world and play one bot through it.
+	@go run ./cmd/smoke
 
 coverage: ## Generate and open an HTML Go coverage report.
 	@mkdir -p bin/covdatafiles && \
