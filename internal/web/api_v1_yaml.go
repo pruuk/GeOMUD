@@ -9,7 +9,6 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/configs"
-	"github.com/GoMudEngine/GoMud/internal/conversations"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
@@ -345,27 +344,6 @@ func apiV1GetRoomYAML(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
 		Success: true,
 		Data:    yamlResp(content, filePath),
-	})
-}
-
-// ---------------------------------------------------------------------------
-// Conversations
-// ---------------------------------------------------------------------------
-
-// GET /admin/api/v1/conversations/{zone}/{mobId}/yaml
-func apiV1GetConversationYAML(w http.ResponseWriter, r *http.Request) {
-	zone, mobId, ok := resolveConversationPath(w, r)
-	if !ok {
-		return
-	}
-	path := conversations.ConvFilePath(zone, mobId)
-	content, ok := readYAMLFile(w, path)
-	if !ok {
-		return
-	}
-	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
-		Success: true,
-		Data:    yamlResp(content, path),
 	})
 }
 

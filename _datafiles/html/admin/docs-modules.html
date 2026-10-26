@@ -781,7 +781,7 @@ func init() {
 <section class="doc-section" id="api-datafiles">
     <h2>Plugin API: Content Data Files</h2>
 
-    <p>A module can ship gameplay content as embedded YAML that is merged into the world at load time, exactly like the bundled core data files. The supported content systems are <code>items</code>, <code>mutators</code>, <code>buffs</code>, <code>pets</code>, <code>quests</code>, <code>mobs</code>, and <code>conversations</code>. No registration call is required &mdash; simply place correctly-named YAML files under <code>files/datafiles/&lt;system&gt;/</code> and attach the file system with <code>plug.AttachFileSystem(files)</code>. The engine discovers and merges them automatically.</p>
+    <p>A module can ship gameplay content as embedded YAML that is merged into the world at load time, exactly like the bundled core data files. The supported content systems are <code>items</code>, <code>mutators</code>, <code>buffs</code>, <code>pets</code>, <code>quests</code>, and <code>mobs</code>. No registration call is required &mdash; simply place correctly-named YAML files under <code>files/datafiles/&lt;system&gt;/</code> and attach the file system with <code>plug.AttachFileSystem(files)</code>. The engine discovers and merges them automatically.</p>
 
     <div class="callout callout-info">
         <svg class="callout-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -800,9 +800,7 @@ func init() {
 &nbsp;&nbsp;<span class="dir">quests/</span> <span class="note">-- {questId}-{name}.yaml</span><br>
 &nbsp;&nbsp;<span class="dir">mobs/</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">{zone}/</span> <span class="note">-- {mobId}-{charactername}.yaml</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">scripts/</span> <span class="note">-- on-disk mob scripts (not used by embedded modules)</span><br>
-&nbsp;&nbsp;<span class="dir">conversations/</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">{zone}/</span> <span class="note">-- {mobId}.yaml</span>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">scripts/</span> <span class="note">-- on-disk mob scripts (not used by embedded modules)</span>
     </div>
 
     <table class="ref-table">
@@ -814,13 +812,12 @@ func init() {
             <tr><td><code>pets</code></td><td><code>pets/{pettype}.yaml</code></td><td>pet type string</td><td>Yes &mdash; <code>pets.RegisterPetScript</code></td></tr>
             <tr><td><code>quests</code></td><td><code>quests/{questId}-{name}.yaml</code></td><td>numeric quest id</td><td>No</td></tr>
             <tr><td><code>mobs</code></td><td><code>mobs/{zone}/{mobId}-{charactername}.yaml</code></td><td>numeric mob id</td><td>Yes &mdash; <code>mobs.RegisterMobScript</code></td></tr>
-            <tr><td><code>conversations</code></td><td><code>conversations/{zone}/{mobId}.yaml</code></td><td>(zone, mob id) &mdash; looked up on demand</td><td>No</td></tr>
         </tbody>
     </table>
 
     <div class="callout callout-warn">
         <svg class="callout-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <p>Zone names in <code>mobs/</code> and <code>conversations/</code> paths must be sanitised (spaces become underscores, all lowercase) and must match the <code>zone</code> field in the mob/conversation data. For mobs, the <code>{mobId}</code> and <code>{charactername}</code> in the filename must match the <code>mobid</code> and <code>character.name</code> fields, or the file is rejected.</p>
+        <p>Zone names in <code>mobs/</code> paths must be sanitised (spaces become underscores, all lowercase) and must match the <code>zone</code> field in the mob data. For mobs, the <code>{mobId}</code> and <code>{charactername}</code> in the filename must match the <code>mobid</code> and <code>character.name</code> fields, or the file is rejected.</p>
     </div>
 
     <h3>Embedded Scripts</h3>

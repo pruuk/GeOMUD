@@ -11,7 +11,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
-	"github.com/GoMudEngine/GoMud/internal/conversations"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"gopkg.in/yaml.v2"
@@ -66,7 +65,6 @@ type Mob struct {
 	IsElite         bool      `yaml:"-"`                         // Runtime flag: true if this instance is elite
 	Path            PathQueue `yaml:"-"`                         // a pre-calculated path the mob is following.
 	tempDataStore   map[string]any
-	conversationId  int              // Identifier of conversation currently involved in.
 	lastCommandTurn uint64           // The last turn a command was scheduled for
 	playersAttacked map[int]struct{} // all players this mob has attacked at some point
 }
@@ -283,65 +281,6 @@ func (m *Mob) HasAttackedPlayer(userId int) bool {
 	}
 	_, ok := m.playersAttacked[userId]
 	return ok
-}
-
-func (m *Mob) InConversation() bool {
-	return m.conversationId > 0
-}
-
-func (m *Mob) SetConversation(id int) {
-	m.conversationId = id
-}
-
-func (m *Mob) Converse() {
-
-	mobInst1, mobInst2, actions := conversations.GetNextActions(m.conversationId)
-
-	var mob1 *Mob = nil
-	var mob2 *Mob = nil
-
-	if mobInst1 == int(m.InstanceId) {
-		mob1 = m
-		mob2 = GetInstance(mobInst2)
-	} else {
-		mob1 = GetInstance(mobInst1)
-		mob2 = m
-	}
-
-	if mob1 == nil || mob2 == nil {
-		conversations.Destroy(m.conversationId)
-		if mob1 != nil {
-			mob1.SetConversation(0)
-		}
-		if mob2 != nil {
-			mob2.SetConversation(0)
-		}
-		return
-	}
-
-	for _, act := range actions {
-		if len(act) >= 3 {
-
-			target := act[0:3]
-			cmd := act[3:]
-
-			cmd = strings.ReplaceAll(cmd, ` #1 `, ` `+mob1.ShorthandId()+` `)
-			cmd = strings.ReplaceAll(cmd, ` #2 `, ` `+mob2.ShorthandId()+` `)
-
-			if target == `#1 ` {
-				mob1.Command(cmd)
-			} else {
-				mob2.Command(cmd, 1)
-			}
-		}
-	}
-
-	if conversations.IsComplete(m.conversationId) {
-		conversations.Destroy(m.conversationId)
-		mob1.SetConversation(0)
-		mob2.SetConversation(0)
-		return
-	}
 }
 
 // Cause the mob to basically wait and do nothing for x seconds

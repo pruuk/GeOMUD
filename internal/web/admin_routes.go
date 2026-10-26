@@ -55,8 +55,6 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /admin/rooms-api", doBasicAuth(RunWithMUDLocked(adminRoomsAPI)))
 	mux.HandleFunc("GET /admin/biomes", doBasicAuth(RunWithMUDLocked(adminBiomes)))
 	mux.HandleFunc("GET /admin/biomes-api", doBasicAuth(RunWithMUDLocked(adminBiomesAPI)))
-	mux.HandleFunc("GET /admin/conversations", doBasicAuth(RunWithMUDLocked(adminConversations)))
-	mux.HandleFunc("GET /admin/conversations-api", doBasicAuth(RunWithMUDLocked(adminConversationsAPI)))
 	mux.HandleFunc("GET /admin/gametime", doBasicAuth(RunWithMUDLocked(adminGameTime)))
 	mux.HandleFunc("GET /admin/gametime-api", doBasicAuth(RunWithMUDLocked(adminGameTimeAPI)))
 	mux.HandleFunc("GET /admin/stats", doBasicAuth(RunWithMUDLocked(adminStats)))

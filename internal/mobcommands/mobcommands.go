@@ -30,7 +30,6 @@ var (
 		"break":          {Break, false},
 		"broadcast":      {Broadcast, false},
 		"cast":           {Cast, false},
-		"converse":       {Converse, false},
 		"callforhelp":    {CallForHelp, false},
 		"despawn":        {Despawn, false},
 		"drink":          {Drink, false},

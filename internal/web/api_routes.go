@@ -198,13 +198,6 @@ func registerAdminAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /admin/api/v1/pets/{petname}", doBasicAuth(RequirePermission("pets.write", RunWithMUDLocked(apiV1PatchPet))))
 	mux.HandleFunc("DELETE /admin/api/v1/pets/{petname}", doBasicAuth(RequirePermission("pets.write", RunWithMUDLocked(apiV1DeletePet))))
 
-	// Conversations
-	mux.HandleFunc("GET /admin/api/v1/conversations", doBasicAuth(RunWithMUDLocked(apiV1GetConversations)))
-	mux.HandleFunc("GET /admin/api/v1/conversations/{zone}/{mobId}/yaml", doBasicAuth(RunWithMUDLocked(apiV1GetConversationYAML)))
-	mux.HandleFunc("GET /admin/api/v1/conversations/{zone}/{mobId}", doBasicAuth(RunWithMUDLocked(apiV1GetConversation)))
-	mux.HandleFunc("PUT /admin/api/v1/conversations/{zone}/{mobId}", doBasicAuth(RequirePermission("conversations.write", RunWithMUDLocked(apiV1PutConversation))))
-	mux.HandleFunc("DELETE /admin/api/v1/conversations/{zone}/{mobId}", doBasicAuth(RequirePermission("conversations.write", RunWithMUDLocked(apiV1DeleteConversation))))
-
 	// GameTime
 	mux.HandleFunc("GET /admin/api/v1/gametime", doBasicAuth(RunWithMUDLocked(apiV1GetGameTime)))
 	mux.HandleFunc("POST /admin/api/v1/gametime", doBasicAuth(RequirePermission("gametime.write", RunWithMUDLocked(apiV1CreateGameTimeCalendar))))

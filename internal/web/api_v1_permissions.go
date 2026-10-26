@@ -79,7 +79,6 @@ var allPermissions = []PermissionDef{
 	{Key: "color-aliases.write", Category: "Colors", Description: "Create, edit, and delete color aliases"},
 	{Key: "colorpatterns.write", Category: "Colors", Description: "Create, edit, and delete color patterns"},
 	{Key: "config.write", Category: "Server", Description: "Edit server configuration"},
-	{Key: "conversations.write", Category: "Conversations", Description: "Create, edit, and delete NPC conversations"},
 	{Key: "gametime.write", Category: "GameTime", Description: "Create, edit, and delete game time calendars"},
 	{Key: "items.write", Category: "Items", Description: "Create, edit, and delete items"},
 	{Key: "keywords.write", Category: "Keywords", Description: "Edit keyword and alias definitions"},

@@ -347,9 +347,6 @@ GamePlay:
   #   Scales how much XP is gained when characters gain XP. Number is a percentage
   #   Example: 100 = 100%
   XPScale: 100
-  # - MobConverseChance -
-  #   Chance in 100 that the mob will attempt to converse when idle.
-  MobConverseChance: 3
   # - AlignmentDecayRounds -
   #   How many rounds between each alignment decay step toward neutral.
   #   Set to 0 to disable alignment decay entirely.

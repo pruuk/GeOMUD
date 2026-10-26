@@ -522,7 +522,7 @@ func GetAllMapperRooms() []MapperRoomData {
 }
 
 // RenameZoneForAdmin renames a zone: it updates all on-disk files (rooms,
-// mobs, conversations, zone-config) and all in-memory state (room manager,
+// mobs, zone-config) and all in-memory state (room manager,
 // live mob instances, online user records). No players may be present in the
 // zone when this is called.
 func RenameZoneForAdmin(oldName, newName string) error {
@@ -550,8 +550,6 @@ func RenameZoneForAdmin(oldName, newName string) error {
 	newInstancesDir := util.FilePath(basePath, `/rooms.instances/`, newFolder)
 	oldMobsDir := util.FilePath(basePath, `/mobs/`, oldFolder)
 	newMobsDir := util.FilePath(basePath, `/mobs/`, newFolder)
-	oldConvsDir := util.FilePath(basePath, `/conversations/`, ZoneNameSanitize(oldName))
-	newConvsDir := util.FilePath(basePath, `/conversations/`, ZoneNameSanitize(newName))
 
 	// Rename rooms template folder.
 	if err := os.Rename(oldRoomsDir, newRoomsDir); err != nil {
@@ -570,14 +568,6 @@ func RenameZoneForAdmin(oldName, newName string) error {
 		os.Rename(newRoomsDir, oldRoomsDir)
 		os.Rename(newInstancesDir, oldInstancesDir)
 		return fmt.Errorf("renaming mobs folder: %w", err)
-	}
-
-	// Rename conversations folder (may not exist).
-	if err := os.Rename(oldConvsDir, newConvsDir); err != nil && !os.IsNotExist(err) {
-		os.Rename(newRoomsDir, oldRoomsDir)
-		os.Rename(newInstancesDir, oldInstancesDir)
-		os.Rename(newMobsDir, oldMobsDir)
-		return fmt.Errorf("renaming conversations folder: %w", err)
 	}
 
 	// Update zone-config.yaml: name field.

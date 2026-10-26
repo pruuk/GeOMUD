@@ -22,7 +22,6 @@ var pageWritePermissions = map[string]string{
 	"/admin/config":                "config.write",
 	"/admin/config-wizard":         "config.write",
 	"/admin/progression":           "config.write",
-	"/admin/conversations":         "conversations.write",
 	"/admin/gametime":              "gametime.write",
 	"/admin/items":                 "items.write",
 	"/admin/items-attack-messages": "items.write",
@@ -249,14 +248,6 @@ func adminBiomes(w http.ResponseWriter, r *http.Request) {
 
 func adminBiomesAPI(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "biomes-api.html", nil)
-}
-
-func adminConversations(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "conversations.html", nil)
-}
-
-func adminConversationsAPI(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "conversations-api.html", nil)
 }
 
 func adminGameTime(w http.ResponseWriter, r *http.Request) {

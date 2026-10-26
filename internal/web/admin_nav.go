@@ -6,7 +6,7 @@ func buildAdminNav() []WebNavItem {
 	nav := []WebNavItem{
 		{
 			Name:        "Lifeforms",
-			Description: "Manage players, NPCs, conversations, pets, and races.",
+			Description: "Manage players, NPCs, pets, and races.",
 			Children: []WebNavItem{
 				{
 					Name:        "Users",
@@ -26,15 +26,6 @@ func buildAdminNav() []WebNavItem {
 						{Label: "View / Edit", Target: "/admin/mobs", Description: "Browse, create, and edit mob definitions."},
 						{Label: "Rankings", Target: "/admin/mob-rankings", Description: "View mob power and loot rankings across all types."},
 						{Label: "API Docs", Target: "/admin/mobs-api", Description: "REST API reference for the mobs endpoint."},
-					},
-				},
-				{
-					Name:        "Conversations",
-					Target:      "/admin/conversations",
-					Description: "Script dialogue sequences between NPCs.",
-					Children: []WebNavItem{
-						{Label: "View / Edit", Target: "/admin/conversations", Description: "Browse and edit NPC conversation scripts."},
-						{Label: "API Docs", Target: "/admin/conversations-api", Description: "REST API reference for the conversations endpoint."},
 					},
 				},
 				{
