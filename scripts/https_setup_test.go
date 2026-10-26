@@ -10,7 +10,7 @@ import (
 )
 
 const sampleHTTPSConfig = `FilePaths:
-  DataFiles: _datafiles/world/default
+  DataFiles: _datafiles/world/empty
   WebDomain: "localhost"
   HttpsCertFile: "server.crt"
   HttpsKeyFile: "server.key"
@@ -36,7 +36,7 @@ func TestHTTPSSetupManualModePrintsOverrideSnippet(t *testing.T) {
 	}, "\n")
 
 	output := runHTTPSSetup(t, configPath, input, nil)
-	if !strings.Contains(output, "Override target: _datafiles/world/default/config-overrides.yaml") {
+	if !strings.Contains(output, "Override target: _datafiles/world/empty/config-overrides.yaml") {
 		t.Fatalf("https-setup output did not show override target:\n%s", output)
 	}
 	if !strings.Contains(output, "PATCH a running GoMud server via /admin/api/v1/config (recommended)") {
@@ -178,7 +178,7 @@ func TestHTTPSSetupIgnoresConfigPathWhenItTargetsBundledConfig(t *testing.T) {
 	if !strings.Contains(output, "Ignoring CONFIG_PATH="+configPath) {
 		t.Fatalf("https-setup output did not warn about bundled config target:\n%s", output)
 	}
-	if !strings.Contains(output, "Override target: _datafiles/world/default/config-overrides.yaml") {
+	if !strings.Contains(output, "Override target: _datafiles/world/empty/config-overrides.yaml") {
 		t.Fatalf("https-setup output did not fall back to config-overrides target:\n%s", output)
 	}
 }

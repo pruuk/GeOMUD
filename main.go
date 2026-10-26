@@ -186,7 +186,7 @@ func main() {
 	runtime.GOMAXPROCS(int(c.Server.MaxCPUCores))
 
 	// Validate chosen world:
-	if err := util.ValidateWorldFiles(`_datafiles/world/default`, c.FilePaths.DataFiles.String()); err != nil {
+	if err := util.ValidateWorldFiles(c.FilePaths.DataFiles.String(), requiredWorldFolders); err != nil {
 		mudlog.Error("World Validation", "error", err)
 		os.Exit(1)
 	}
@@ -1424,6 +1424,50 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 			time.Sleep(time.Duration(10) * time.Millisecond)
 		}
 	}
+}
+
+// requiredWorldFolders are the top-level folders of a world (FilePaths.DataFiles)
+// that the engine reads or writes at boot or in normal play. Boot exits if one
+// is missing. Derived from the loaders in loadAllDataFiles and their neighbours:
+//
+//	biomes         rooms.LoadBiomeDataFiles
+//	spells         spells.LoadSpellFiles
+//	rooms          rooms.LoadDataFiles (zone-config.yaml and room files)
+//	buffs-flags    buffs.LoadFlagDataFiles (a missing folder panics the load)
+//	buffs          buffs.LoadDataFiles
+//	items          items.LoadDataFiles
+//	combat-messages items.LoadDataFiles
+//	races          races.LoadDataFiles
+//	skills         skills.LoadDataFiles
+//	professions    skills.LoadProfessionDataFiles
+//	mobs           mobs.LoadDataFiles
+//	mutators       mutators.LoadDataFiles
+//	templates      templates package (help, screens, prompts)
+//	panel-layouts  templates.LoadPanelLayout
+//	localize       i18n message files (main.go, LanguagePaths)
+//	users          user records and the user index
+//
+// Single files the loaders also read (ansi-aliases.yaml, color-patterns.yaml,
+// gametime.yaml, keywords.yaml) are not checked here. plugin-data is created
+// on demand, and scripts/ is read only if present, so neither is required.
+// Remove an entry in the same change that removes its loader.
+var requiredWorldFolders = []string{
+	"biomes",
+	"buffs",
+	"buffs-flags",
+	"combat-messages",
+	"items",
+	"localize",
+	"mobs",
+	"mutators",
+	"panel-layouts",
+	"professions",
+	"races",
+	"rooms",
+	"skills",
+	"spells",
+	"templates",
+	"users",
 }
 
 func loadAllDataFiles(isReload bool) {

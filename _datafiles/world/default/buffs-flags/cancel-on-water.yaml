@@ -1,4 +1,0 @@
-flag: cancel-on-water
-name: "Cancel On Water"
-description: "Automatically removes the buff when the character enters a water room."
-locked: true

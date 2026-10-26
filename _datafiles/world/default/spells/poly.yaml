@@ -1,8 +1,0 @@
-spellid: poly
-name: Polymorph
-description: Transforms the target into a random creature.
-type: harmsingle
-school: illusion
-cost: 25
-waitrounds: 2
-difficulty: 40

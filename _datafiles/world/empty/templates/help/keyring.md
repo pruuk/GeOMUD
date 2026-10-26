@@ -22,5 +22,3 @@ Similarly, if you pick a lock, you will always remember the sequence to pick the
     **│ Key      │ #110 Inside of the Catacombs │ west  │ -        │**  
     **│ Lockpick │ #784 Inside a Residence      │ chest │ D U U    │**  
     **└──────────┘──────────────────────────────┘───────┘──────────┘**
-
-**See also:** ~help picklock~

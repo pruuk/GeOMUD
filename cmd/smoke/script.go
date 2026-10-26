@@ -61,7 +61,7 @@ func (s *script) quit(step string) {
 // logged in for hold before quitting.
 //
 // New characters go through the tutorial (rooms 900-903) because it is the
-// only place the stock world hands each player an item of their own: the
+// only place the base world hands each player an item of their own: the
 // graduation cap in room 903. Shared floor items would not survive 50 bots.
 func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) error {
 	c, err := dial(ctx, addr, timeout)
@@ -131,7 +131,9 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.field("item: carried after get again", "inventory", "Carrying:", "graduation cap")
 	s.do("walk: portal", "portal", "Town Square")
 
-	s.do("walk: north", "north", "Cobblestone Way")
+	// The start zone (startland) has two rooms: Town Square (1) and End of
+	// the Line (2), joined by north and south.
+	s.do("walk: north", "north", "End of the Line")
 	s.do("walk: south", "south", "Town Square")
 	s.do("say", "say hello from "+b.char, `You say, "hello from `+b.char+`"`)
 	s.quit("quit")

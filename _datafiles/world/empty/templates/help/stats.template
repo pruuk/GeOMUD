@@ -1,8 +1,7 @@
 <ansi fg="black-bold">.:</ansi> <ansi fg="magenta">Help for </ansi><ansi fg="command">stats</ansi>
 
 Your character has six core statistics that define how you fight, survive, and
-interact with the world. Each can be raised at a trainer using stat points
-earned on level-up.
+interact with the world.
 
 <ansi fg="black-bold">+----------------------+------------------------------------------------------+</ansi>
 <ansi fg="black-bold">|</ansi> <ansi fg="cyan-bold">Stat                 </ansi> <ansi fg="black-bold">|</ansi> <ansi fg="yellow-bold">Effects                                             </ansi><ansi fg="black-bold">|</ansi>
@@ -32,4 +31,4 @@ earned on level-up.
 <ansi fg="black-bold">+----------------------+------------------------------------------------------+</ansi>
 
 <ansi fg="magenta-bold">See also:</ansi> <ansi fg="command">help strength</ansi>, <ansi fg="command">help speed</ansi>, <ansi fg="command">help perception</ansi>, <ansi fg="command">help smarts</ansi>,
-          <ansi fg="command">help vitality</ansi>, <ansi fg="command">help mysticism</ansi>, <ansi fg="command">help stat-train</ansi>
+          <ansi fg="command">help vitality</ansi>, <ansi fg="command">help mysticism</ansi>

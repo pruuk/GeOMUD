@@ -15,7 +15,7 @@ import (
 
 // server is a GeOMUD server this program built and started. It runs from
 // the repo root (the server always reads _datafiles/config.yaml from its
-// working directory) against a copy of the default world in a temp dir, so
+// working directory) against a copy of the empty world in a temp dir, so
 // the repo's _datafiles are never written.
 type server struct {
 	dir  string // temp dir: world copy, overrides, log
@@ -69,7 +69,7 @@ func launch(ctx context.Context) (_ *server, err error) {
 	}()
 
 	world := filepath.Join(dir, "world")
-	if err := os.CopyFS(world, os.DirFS(filepath.Join("_datafiles", "world", "default"))); err != nil {
+	if err := os.CopyFS(world, os.DirFS(filepath.Join("_datafiles", "world", "empty"))); err != nil {
 		return s, fmt.Errorf("copy world: %w", err)
 	}
 

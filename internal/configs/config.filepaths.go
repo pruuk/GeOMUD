@@ -23,7 +23,7 @@ func (f *FilePaths) Validate() {
 	// Ignore CarefulSaveFiles
 
 	if f.DataFiles == `` {
-		f.DataFiles = `_datafiles/world/default` // default
+		f.DataFiles = `_datafiles/world/empty` // default
 	}
 
 	if f.HttpsCacheDir == `` {

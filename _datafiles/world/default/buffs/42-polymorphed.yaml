@@ -1,6 +1,0 @@
-buffid: 42
-name: Polymorphed
-description: You have been polymorphed into another form!
-secret: false
-triggerrate: 1 round
-triggercount: 20

@@ -1050,97 +1050,63 @@ func TestStringWildcardMatch(t *testing.T) {
 }
 
 func TestValidateWorldFiles(t *testing.T) {
-	// 1. Non-existent exampleWorldPath => should fail on os.ReadDir
-	t.Run("NonExistentExampleWorld", func(t *testing.T) {
-		// Provide a path we expect not to exist
-		exampleWorldPath := filepath.Join(t.TempDir(), "nonexistent-subdir")
-		// We won't create it, so it doesn't exist
-		worldPath := t.TempDir()
+	required := []string{"area1", "area2"}
 
-		err := ValidateWorldFiles(exampleWorldPath, worldPath)
+	// 1. Non-existent world path => the first required folder is reported missing
+	t.Run("NonExistentWorld", func(t *testing.T) {
+		worldPath := filepath.Join(t.TempDir(), "nonexistent-subdir")
+
+		err := ValidateWorldFiles(worldPath, required)
 		if err == nil {
-			t.Fatalf("Expected error for non-existent exampleWorldPath, got nil")
+			t.Fatalf("Expected error for non-existent world path, got nil")
 		}
-		// Optional: check if the error message is the expected "unable to read directory ..."
-		if msg := err.Error(); !containsAll(msg, "unable to read directory", exampleWorldPath) {
+		if msg := err.Error(); !containsAll(msg, "missing folder", "area1") {
 			t.Errorf("Unexpected error message: %v", msg)
 		}
 	})
 
-	// 2. Happy path: all subfolders in exampleWorldPath exist in worldPath => no error
-	t.Run("AllSubfoldersMatch", func(t *testing.T) {
-		exampleWorldPath := t.TempDir()
+	// 2. Happy path: all required folders exist (extra folders are allowed)
+	t.Run("AllRequiredPresent", func(t *testing.T) {
 		worldPath := t.TempDir()
-
-		// Create some subfolders in exampleWorldPath
-		subfolders := []string{"area1", "area2"}
-		for _, sf := range subfolders {
-			if err := os.Mkdir(filepath.Join(exampleWorldPath, sf), 0o755); err != nil {
-				t.Fatalf("Failed to create subfolder %s in exampleWorldPath: %v", sf, err)
-			}
-		}
-
-		// Mirror them in worldPath
-		for _, sf := range subfolders {
+		for _, sf := range append([]string{"extra"}, required...) {
 			if err := os.Mkdir(filepath.Join(worldPath, sf), 0o755); err != nil {
-				t.Fatalf("Failed to create subfolder %s in worldPath: %v", sf, err)
+				t.Fatalf("Failed to create subfolder %s: %v", sf, err)
 			}
 		}
 
-		// Should be no error
-		if err := ValidateWorldFiles(exampleWorldPath, worldPath); err != nil {
+		if err := ValidateWorldFiles(worldPath, required); err != nil {
 			t.Errorf("Expected no error, got: %v", err)
 		}
 	})
 
-	// 3. Missing subfolder => triggers "missing folder" error
+	// 3. Missing folder => "missing folder" error naming it
 	t.Run("MissingSubfolder", func(t *testing.T) {
-		exampleWorldPath := t.TempDir()
 		worldPath := t.TempDir()
-
-		// Create subfolders in exampleWorldPath
-		subfolders := []string{"area1", "area2"}
-		for _, sf := range subfolders {
-			if err := os.Mkdir(filepath.Join(exampleWorldPath, sf), 0o755); err != nil {
-				t.Fatalf("Failed to create subfolder %s in exampleWorldPath: %v", sf, err)
-			}
-		}
-		// Create only one subfolder in worldPath, so "area2" is missing
 		if err := os.Mkdir(filepath.Join(worldPath, "area1"), 0o755); err != nil {
-			t.Fatalf("Failed to create subfolder area1 in worldPath: %v", err)
+			t.Fatalf("Failed to create subfolder area1: %v", err)
 		}
 
-		err := ValidateWorldFiles(exampleWorldPath, worldPath)
+		err := ValidateWorldFiles(worldPath, required)
 		if err == nil {
 			t.Fatalf("Expected an error due to missing subfolder, got nil")
 		}
-		// Optional: check the error message
 		if msg := err.Error(); !containsAll(msg, "missing folder", "area2") {
 			t.Errorf("Unexpected error message: %v", msg)
 		}
 	})
 
-	// 4. Subfolder name exists but is a file => triggers "exists but is not a directory" error
+	// 4. Required name exists but is a file => "not a directory" error
 	t.Run("SubfolderIsNotADirectory", func(t *testing.T) {
-		exampleWorldPath := t.TempDir()
 		worldPath := t.TempDir()
-
-		// Create a subfolder "area1" in the exampleWorldPath
-		if err := os.Mkdir(filepath.Join(exampleWorldPath, "area1"), 0o755); err != nil {
-			t.Fatalf("Failed to create subfolder area1 in exampleWorldPath: %v", err)
-		}
-
-		// In worldPath, create a file named "area1" instead of a directory
 		filePath := filepath.Join(worldPath, "area1")
 		if err := os.WriteFile(filePath, []byte("not a directory"), 0o644); err != nil {
-			t.Fatalf("Failed to create file area1 in worldPath: %v", err)
+			t.Fatalf("Failed to create file area1: %v", err)
 		}
 
-		err := ValidateWorldFiles(exampleWorldPath, worldPath)
+		err := ValidateWorldFiles(worldPath, required)
 		if err == nil {
 			t.Fatalf("Expected an error due to subfolder name clashing with a file, got nil")
 		}
-		// Optional: check error message
 		if msg := err.Error(); !containsAll(msg, "exists but is not a directory", filePath) {
 			t.Errorf("Unexpected error message: %v", msg)
 		}

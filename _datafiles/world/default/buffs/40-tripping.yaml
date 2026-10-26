@@ -1,8 +1,0 @@
-buffid: 40
-name: Tripping
-description: You feel connected to everything.
-secret: false
-triggerrate: 15 rounds
-triggercount: 3
-flags:
-  - tripping

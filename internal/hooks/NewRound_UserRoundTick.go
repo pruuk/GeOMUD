@@ -148,16 +148,6 @@ func UserRoundTick(e events.Event) events.ListenerReturn {
 					events.AddToQueue(events.CharacterVitalsChanged{UserId: user.UserId})
 				}
 
-				// Only do this every 15 rounds to keep spam down.
-				if evt.RoundNumber%15 == 0 {
-
-					if !user.DidTip(`status train`) && user.Character.StatPoints > 0 {
-						user.SendText(`<ansi fg="alert-5">TIP:</ansi> <ansi fg="tip-text">Type <ansi fg="command">status train</ansi> to use the status points you've earned through leveling.</ansi>`)
-						user.SendText(``)
-					}
-
-				}
-
 			}
 
 		}
