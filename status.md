@@ -4,20 +4,20 @@
 - Nothing in flight. Strip Phases 0-4 are merged (`gomud_strip_plan.md`)
 
 ## Next
-1. Phase 4b: NPCs are players (decision 4). Starts with a design spec for Calabe's review
-2. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
+1. Rewrite `_datafiles/world/empty/templates/help/about.template` for GeOMUD (still GoMud's text,
+   credits and Discord advert; Calabe queued it for 2026-10-27)
+2. Phase 4b: NPCs are players (decision 4). Starts with a design spec for Calabe's review
+3. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
    `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
    `professions`/`skills`/`spells` world folders, `set shopstyle`, `help spell` and the loot goblin
    config. Spells and scripted buffs do nothing until then
-3. Phase 6: measure and tag. Also measure the Phase 0 engine (`2737986c`) on the trimmed world, since
+4. Phase 6: measure and tag. Also measure the Phase 0 engine (`2737986c`) on the trimmed world, since
    the Phase 0 baseline ran on the deleted `default` world
-4. Security pass before any public server: upstream CodeQL debt (unsalted SHA-256 passwords at
+5. Security pass before any public server: upstream CodeQL debt (unsalted SHA-256 passwords at
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
 - Go-ahead to start the Phase 4b design
-- Whether to rewrite `_datafiles/world/empty/templates/help/about.template` (still GoMud's text,
-  credits and Discord advert) for GeOMUD
 
 ## Watch
 - Phase 5 seam: `buffs` has 11 importers; `characters` imports six rules packages (buffs, races,
