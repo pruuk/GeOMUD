@@ -91,6 +91,28 @@ func TestNegotiationAcceptsGMCPOnly(t *testing.T) {
 	assert.Equal(t, []byte{telnet.IAC, telnet.DONT, 1, telnet.IAC, telnet.DO, telnet.GMCP}, got[:6])
 }
 
+func TestClientRecordsGMCPPackages(t *testing.T) {
+	c, far := fakeServer(t)
+	go func() {
+		far.Write(telnet.FrameGMCP("Room.Info", `{}`))
+		far.Write(telnet.FrameGMCP("Room.Info", `{}`))
+		far.Write(telnet.FrameGMCP("Comm.Channel", `{}`))
+	}()
+	require.Eventually(t, func() bool { return c.gmcpNames()["Comm.Channel"] == 1 }, time.Second, 5*time.Millisecond)
+	assert.Equal(t, map[string]int{"Room.Info": 2, "Comm.Channel": 1}, c.gmcpNames())
+}
+
+func TestCheckGMCP(t *testing.T) {
+	assert.NoError(t, checkGMCP(map[string]int{"Char.Vitals": 1, "Room.Info": 2, "Comm.Channel": 1}))
+
+	err := checkGMCP(map[string]int{"Char.Vitals": 1, "Room.Info": 2, "Party": 1})
+	assert.ErrorContains(t, err, "no Comm.* package received")
+	assert.ErrorContains(t, err, "Char.Vitals(1) Party(1) Room.Info(2)")
+
+	err = checkGMCP(nil)
+	assert.ErrorContains(t, err, "no Char.*, Room.*, Comm.* package received; got: none")
+}
+
 func TestOverridesOnlyLoopback(t *testing.T) {
 	got := overrides(filepath.Join("tmp", "w"), 4242)
 	assert.Contains(t, got, `FilePaths.DataFiles: "tmp/w"`)

@@ -48,6 +48,11 @@ stops the server by PID. The repo's `_datafiles` are never written. Flow:
    The death steps exercise the Phase 4 death stand-in (revive at 1 health, fixed exit from
    room 75), recorded in `docs/plans/2026-10-26-phase-4-scripting-surface.md`.
 
+Each bot's client also records the GMCP package names it receives (it lists Char, Room in
+`Core.Supports.Set`; the server sends `Comm.Channel` without being asked) and the bot fails unless
+it got at least one `Char.*`, `Room.*` and `Comm.*` package (the Mudlet check). The summary prints
+every package name with its message count.
+
 Report its summary line. `-bots 50` is the load check; `-addr host:port` targets a running server
 (the Docker one in `provisioning/compose.smoke.yml`); `-server-log file` saves the launched
 server's log. Baseline numbers: `docs/phase-0-baseline.md`.

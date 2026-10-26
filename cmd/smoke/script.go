@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,8 @@ type script struct {
 	ctx context.Context
 	c   *client
 	err error
+
+	gmcp map[string]int // packages received on connections already quit
 }
 
 func (s *script) do(step, cmd string, wants ...string) {
@@ -101,6 +104,14 @@ func (s *script) quit(step string) {
 		s.c.send("quit")
 		s.err = s.c.waitClosed(s.ctx, time.Minute, step+": disconnect")
 	}
+	// The connection is closed (or the step failed): nothing more will arrive
+	// that the check could count, so fold this connection's packages in.
+	if s.gmcp == nil {
+		s.gmcp = map[string]int{}
+	}
+	for n, k := range s.c.gmcpNames() {
+		s.gmcp[n] += k
+	}
 }
 
 // play runs the whole smoke script for one bot against addr, then stays
@@ -112,13 +123,16 @@ func (s *script) quit(step string) {
 // always holds one item for every bot that is not carrying one. So a bot's
 // first get, and its get after its own drop, finds an item whatever order
 // the bots run in. (The floor item limit can delay a drop; see dropItem.)
-func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) error {
+//
+// It also returns the GMCP package names the bot received (both connections
+// together), and fails the bot unless they include Char, Room and Comm packages.
+func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) (map[string]int, error) {
 	c, err := dial(ctx, addr, timeout)
 	if err != nil {
-		return &stepError{"connect", err.Error(), ""}
+		return nil, &stepError{"connect", err.Error(), ""}
 	}
 	defer c.Close()
-	s := &script{ctx: ctx, c: c}
+	s := &script{ctx: ctx, c: c, gmcp: map[string]int{}}
 
 	s.wait("login prompt", `username (or "new")`)
 	s.do("account: new", "new", "Choose your username")
@@ -156,12 +170,12 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.do("say", "say hello from "+b.char, `You say, "hello from `+b.char+`"`)
 	s.quit("quit")
 	if s.err != nil {
-		return s.err
+		return s.gmcp, s.err
 	}
 
 	c, err = dial(ctx, addr, timeout)
 	if err != nil {
-		return &stepError{"reconnect", err.Error(), ""}
+		return s.gmcp, &stepError{"reconnect", err.Error(), ""}
 	}
 	defer c.Close()
 	s.c = c
@@ -182,7 +196,7 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.do("death: walk out", "portal", startRoomTitle)
 	s.field("death: still holds the item", "inventory", "Carrying:", smokeItem)
 	if s.err != nil {
-		return s.err
+		return s.gmcp, s.err
 	}
 
 	if hold > 0 {
@@ -192,5 +206,49 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 		}
 	}
 	s.quit("final quit")
-	return s.err
+	if s.err == nil {
+		s.err = checkGMCP(s.gmcp)
+	}
+	return s.gmcp, s.err
+}
+
+// requiredGMCP are the package families a Mudlet-style client must receive
+// during the script (the Phase 4 plan's Mudlet check).
+var requiredGMCP = []string{"Char.", "Room.", "Comm."}
+
+// checkGMCP fails unless got holds at least one package under each required family.
+func checkGMCP(got map[string]int) error {
+	var missing []string
+	for _, prefix := range requiredGMCP {
+		found := false
+		for name := range got {
+			if strings.HasPrefix(name, prefix) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			missing = append(missing, prefix+"*")
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	return &stepError{"gmcp", fmt.Sprintf("no %s package received; got: %s", strings.Join(missing, ", "), gmcpList(got)), ""}
+}
+
+// gmcpList formats package names with counts, sorted, for messages.
+func gmcpList(m map[string]int) string {
+	names := make([]string, 0, len(m))
+	for n := range m {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for i, n := range names {
+		names[i] = fmt.Sprintf("%s(%d)", n, m[n])
+	}
+	if len(names) == 0 {
+		return "none"
+	}
+	return strings.Join(names, " ")
 }

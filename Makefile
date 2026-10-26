@@ -23,7 +23,6 @@ CI_LOCAL_DOCKER_SOCK_GID ?= $(shell stat -c '%g' /var/run/docker.sock 2>/dev/nul
 CI_LOCAL_HOME ?= /home/gomud
 CI_LOCAL_ACT_CACHE_DIR ?= $(PWD)/.git/.cache/act
 ACT_FLAGS ?= --pull=false -P ubuntu-24.04=catthehacker/ubuntu:act-latest
-ACT_DRYRUN_SECRETS ?= -s DISCORD_WEBHOOK_URL=https://example.invalid/webhook
 
 JSHINT_VERSION ?= 2.13.6
 JS_LINT_PATHS := $(shell find _datafiles -name '*.js' -print)
@@ -186,7 +185,6 @@ ci-local-inner: ## Run CI checks from inside the local CI tool container.
 	$(MAKE) validate
 	$(MAKE) js-lint
 	ACT_FLAGS="$(ACT_FLAGS)" \
-		ACT_DRYRUN_SECRETS="$(ACT_DRYRUN_SECRETS)" \
 		.github/scripts/ci-local-act.sh
 
 clean: ## Stop compose services, remove their volumes, and prune Docker images.

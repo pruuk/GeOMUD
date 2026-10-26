@@ -81,6 +81,7 @@ type result struct {
 	bot  bot
 	took time.Duration
 	err  error
+	gmcp map[string]int // GMCP packages the bot received
 }
 
 type adminLogin struct{ user, pass string }
@@ -109,12 +110,12 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 		go func() {
 			defer wg.Done()
 			t := time.Now()
-			err := play(ctx, addr, b, timeout, hold)
+			pkgs, err := play(ctx, addr, b, timeout, hold)
 			took := time.Since(t)
 			if err == nil {
 				took -= hold // a failed bot never reached the hold
 			}
-			results[i] = result{i, b, took, err}
+			results[i] = result{i, b, took, err, pkgs}
 		}()
 	}
 	wg.Wait()
@@ -122,7 +123,11 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 
 	var failed []result
 	var times []time.Duration
+	allGMCP := map[string]int{}
 	for _, r := range results {
+		for n, k := range r.gmcp {
+			allGMCP[n] += k
+		}
 		times = append(times, r.took)
 		if r.err != nil {
 			failed = append(failed, r)
@@ -131,6 +136,7 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 	for _, r := range failed {
 		fmt.Printf("FAIL bot %d (%s / %s) after %s: %v\n", r.id, r.bot.user, r.bot.char, r.took.Round(time.Millisecond), r.err)
 	}
+	fmt.Printf("smoke: GMCP packages received (all bots, message counts): %s\n", gmcpList(allGMCP))
 	sort.Slice(times, func(i, j int) bool { return times[i] < times[j] })
 	verdict := "PASS"
 	if len(failed) > 0 {
