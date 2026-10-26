@@ -177,8 +177,6 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 
 	user.EventLog.Add(`char`, fmt.Sprintf(`Created a new character: <ansi fg="username">%s</ansi>`, user.Character.Name))
 
-	events.AddToQueue(events.CharacterCreated{UserId: user.UserId, CharacterName: user.Character.Name})
-
 	// Trigger a player changed event
 	events.AddToQueue(events.PlayerChanged{UserId: user.UserId})
 

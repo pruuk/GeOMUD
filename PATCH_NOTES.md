@@ -7,6 +7,8 @@ Newest day first. One line per finished item.
 - Dependabot off (`.github/dependabot.yml` deleted); Go toolchain workflow is manual-only (schedule removed)
 - Phase 0: telnet smoke test `cmd/smoke` (`make smoke`, CI job), Docker server for load runs (`provisioning/compose.smoke.yml`), baseline in `docs/phase-0-baseline.md` (idle 30.4 MiB, 50 bots held 72.8 MiB); upstream root `AGENTS.md` deleted
 - Phase 1: deleted leaf packages `clans`, `integrations/discord`, `migration`, `suggestions` (tab completion), `audio` (MSP), `telemetry`, `conversations`, `quests`, `pets`, with their commands, hooks, events, scripting functions, GMCP pieces, config and admin pages (about 21,000 lines); world data for them stays until Phase 3
+- Ruling: NPCs are players under the hood; new Phase 4b before the rules seam (`gomud_strip_plan.md` decision 4)
+- Phase 2: deleted game commands (economy, character info, every skill and spell command, stripped admin commands), 18 mob commands and 5 game hooks; `suicide` (the death routine) and the combat commands stay until Phase 5; mobs no longer start or join fights until Phase 5
 
 ## 2026-10-24
 - Cloned upstream GoMud (`b3f55cc2`, MIT) into this repo; `upstream` remote made fetch-only

@@ -256,7 +256,6 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 									events.AddToQueue(events.AggroChanged{MobInstanceId: defMob.InstanceId, RoomId: defMob.Character.RoomId})
 								} else if defMob.Character.Aggro == nil {
 									defMob.PreventIdle = true
-									defMob.Command(fmt.Sprintf("attack @%d", user.UserId)) // @ means player
 								}
 
 							}
@@ -375,22 +374,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 			roundResult := combat.AttackPlayerVsPlayer(user, defUser)
 
-			// If a mob attacks a player, check whether player has a charmed mob helping them, and if so, they will move to attack back
 			room := rooms.LoadRoom(roomId)
-			for _, instanceId := range room.GetMobs(rooms.FindCharmed) {
-				if charmedMob := mobs.GetInstance(instanceId); charmedMob != nil {
-					if charmedMob.Character.IsCharmed(defUser.UserId) && charmedMob.Character.Aggro == nil {
-
-						// Set aggro to something to prevent multiple attack triggers on this conditional
-						charmedMob.Character.Aggro = &characters.Aggro{
-							Type: characters.DefaultAttack,
-						}
-
-						charmedMob.Command(fmt.Sprintf("attack @%d", user.UserId))
-
-					}
-				}
-			}
 
 			for _, buffId := range roundResult.BuffSource {
 				user.AddBuff(buffId, `combat`)
@@ -611,7 +595,6 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 					}
 				}
 
-				defMob.Command(fmt.Sprintf("attack @%d", user.UserId)) // @ means player
 			}
 
 			if roundResult.DamageToSource != 0 {
@@ -724,7 +707,6 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 									defMob.Character.EndAggro()
 								} else if defMob.Character.Aggro == nil {
 									defMob.PreventIdle = true
-									defMob.Command(fmt.Sprintf("attack #%d", mob.InstanceId)) // # means mob
 								}
 
 							}
@@ -868,21 +850,7 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			roundResult = combat.AttackMobVsPlayer(mob, defUser)
 
-			// If a mob attacks a player, check whether player has a charmed mob helping them, and if so, they will move to attack back
 			room := rooms.LoadRoom(roomId)
-			for _, instanceId := range room.GetMobs(rooms.FindCharmed) {
-				if charmedMob := mobs.GetInstance(instanceId); charmedMob != nil {
-					if charmedMob.Character.IsCharmed(defUser.UserId) && charmedMob.Character.Aggro == nil {
-						// This is set to prevent it from triggering more than once
-						charmedMob.Character.Aggro = &characters.Aggro{
-							Type: characters.DefaultAttack,
-						}
-
-						charmedMob.Command(fmt.Sprintf("attack #%d", mob.InstanceId))
-
-					}
-				}
-			}
 
 			for _, buffId := range roundResult.BuffSource {
 				mob.AddBuff(buffId, `combat`)
@@ -1036,10 +1004,6 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 			// Mobs get aggro when attacked
 			if defMob.Character.Aggro == nil {
 				defMob.PreventIdle = true
-				defMob.Character.Aggro = &characters.Aggro{
-					Type: characters.DefaultAttack,
-				}
-				defMob.Command(fmt.Sprintf("attack #%d", mob.InstanceId)) // # means mob
 			}
 
 			// If the attack connected, check for damage to equipment.

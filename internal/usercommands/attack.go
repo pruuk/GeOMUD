@@ -198,16 +198,6 @@ func Attack(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 				)
 			}
 
-			for _, instId := range room.GetMobs(rooms.FindCharmed) {
-				if m := mobs.GetInstance(instId); m != nil {
-					if m.Character.Aggro == nil && m.Character.IsCharmed(user.UserId) { // Charmed mobs help the player
-
-						m.Command(fmt.Sprintf(`attack #%d`, attackMobInstanceId)) // # denotes a specific mob instanceId
-
-					}
-				}
-			}
-
 		}
 
 	} else if attackPlayerId > 0 {
@@ -256,16 +246,6 @@ func Attack(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 				room.SendText(
 					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight <ansi fg="username">%s</ansi>.`, user.Character.Name, p.Character.Name),
 					user.UserId, attackPlayerId)
-			}
-
-			for _, instId := range room.GetMobs(rooms.FindCharmed) {
-				if m := mobs.GetInstance(instId); m != nil {
-					if m.Character.Aggro == nil && m.Character.IsCharmed(user.UserId) { // Charmed mobs help the player
-
-						m.Command(fmt.Sprintf(`attack @%d`, attackPlayerId)) // @ denotes a specific user id
-
-					}
-				}
 			}
 
 		}

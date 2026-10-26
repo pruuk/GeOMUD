@@ -117,12 +117,15 @@ Each phase ends with `go build ./...` and `go test ./...` green (allowing the kn
 | **2. Game commands and hooks** | Remove the stripped command, mob command and hook lists from section 1 | `usercommands` and `mobcommands` hold only the kept lists plus the combat commands waiting for Phase 5 |
 | **3. World data** | Delete `world/default`; point config at a trimmed `empty` world; strip datafile folders whose systems are gone (pets, quests, professions, conversations, audio) | Server boots on the trimmed world with no missing-file warnings |
 | **4. Scripting, web and GMCP surface** | Delete `scripting`, its hooks, the plugin scripting functions and every script datafile. Remove web API routes and GMCP packages that exposed stripped systems; keep the rest. Scripted buff effects go dead here until Phase 5 rebuilds them in Go | `goja` and `gopher-lua` gone from `go.mod`; web admin loads; Mudlet receives GMCP Char, Room and Comm |
+| **4b. NPCs are players** | One actor model (decision 4): an NPC is a player-shaped actor with no connection, running the same commands, combat path, round tick and ID space as players, with NPC behaviour layered on top. `mobcommands` and the player/mob combat variants go. Starts with a design spec for Calabe's review (actor type, IDs, input/output for an unconnected actor, how behaviours attach) | One command set and one combat path serve players and NPCs; smoke passes, including a fight against an NPC |
 | **5. Rules seam** | Add a `Ruleset` interface the core calls (attack resolution, damage, regen, death, starting values). Move `combat` math, `stats`, `statmods`, `races`, `skills`, `spells` behind it as `diku-basic`. Turn `buffs` into engine timed affects with ruleset-defined effects written in Go. Add a guard test that fails if a core package names a `diku-basic` stat | A fight runs entirely through the ruleset; swapping in a stub ruleset changes the outcome with no core edit; the guard test passes |
 | **6. Measure and tag** | Re-measure memory and package counts against Phase 0; tag the result as the stripped base | Before/after numbers in the repo; tag `strip-base` |
 
 **Ordering notes**
 
 - Phases 1 to 4 are mechanical and suit Sonnet subagents, one package or command group per task, each followed by build and smoke. Phase 5 needs judgement (Opus), and it is where most of the risk sits: `buffs` alone has 13 importers, and `characters` imports every rules package.
+- Phase 4b (NPCs are players) comes before Phase 5 so the rules seam has one actor type, not four
+  player/mob pairings, and after Phases 1-4 so less mob-only code is left to convert.
 - Phase 5 comes after the cuts on purpose. Every stripped caller of `stats` or `buffs` is one fewer call site to move behind the interface.
 - The `RoomId int` to `RoomKey` change from `engine_proposal.md` is **not** in this plan. It belongs to the geo work, and doing it on the smaller post-strip codebase is cheaper. Upstream fixes stop applying cleanly once Phase 1 lands, which is accepted: the fork is a one-time base.
 
@@ -133,3 +136,11 @@ Each phase ends with `go build ./...` and `go test ./...` green (allowing the kn
 1. **Rules packages move into `diku-basic`, then shrink.** Keeps a working game to test against at every step of Phase 5.
 2. **No JS or Lua scripting.** Every behaviour in the scripts today (room commands and triggers, mob idle and dialogue, item use, buff and spell effects) is either rules, which go to the ruleset in Go, or content we are deleting. Hand-built areas that need behaviour get named Go behaviours referenced from their YAML. Revisit only if builders who don't write Go join the project.
 3. **Never commit, push or open a PR to upstream GoMud.** Enforced in git (`geomud-git` skill).
+
+## Decisions (Calabe, 2026-10-26)
+
+4. **NPCs are players under the hood, with behaviours layered on top.** GoMud's split between
+   players and mobs (separate command sets, combat variants per pairing, ID spaces and round ticks)
+   is not kept. Any new code that would add a player-only or mob-only path for something both do is
+   wrong by this ruling. Done as its own phase, 4b, before the rules seam, so the `Ruleset` interface
+   is built against one actor type. Until 4b, strip work keeps deleting mob-only code as planned.

@@ -93,10 +93,6 @@ func UserRoundTick(e events.Event) events.ListenerReturn {
 					continue
 				}
 
-				if user.Character.HasAdjective(`zombie`) {
-					user.Command(`zombieact`)
-				}
-
 				// Roundtick any cooldowns
 				user.Character.Cooldowns.RoundTick()
 

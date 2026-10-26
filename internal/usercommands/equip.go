@@ -14,10 +14,6 @@ import (
 
 func Equip(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	if rest == "all" {
-		return Gearup(``, user, room, flags)
-	}
-
 	if rest == "" {
 		user.SendText(`Wear WHAT?`)
 		return true, nil

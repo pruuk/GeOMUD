@@ -315,8 +315,6 @@ func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.Even
 
 					user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> notices you as you enter!`, mob.Character.Name))
 
-					mob.Command(`lookfortrouble`, 4)
-
 				}
 
 			}

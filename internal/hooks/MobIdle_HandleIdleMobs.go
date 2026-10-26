@@ -36,12 +36,6 @@ func HandleIdleMobs(e events.Event) events.ListenerReturn {
 	if !handled {
 
 		if isCharmed {
-			// Only some mobs can apply first aid
-			// If a charmed mob can aid someone, try.
-			if mob.Character.KnowsFirstAid() {
-				mob.Command(`lookforaid`)
-			}
-
 			return events.Continue
 		}
 
@@ -52,17 +46,11 @@ func HandleIdleMobs(e events.Event) events.ListenerReturn {
 			return events.Continue
 		}
 
-		//
-		// Look for trouble
-		//
-		idleCmd := `lookfortrouble`
 		if util.Rand(100) < mob.ActivityLevel {
-			idleCmd = mob.GetIdleCommand()
-			if idleCmd == `` {
-				idleCmd = `lookfortrouble`
+			if idleCmd := mob.GetIdleCommand(); idleCmd != `` {
+				mob.Command(idleCmd)
 			}
 		}
-		mob.Command(idleCmd)
 
 	}
 

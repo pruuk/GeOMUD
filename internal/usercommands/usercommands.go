@@ -51,84 +51,47 @@ var (
 	functionExporters = []FunctionExporter{}
 
 	userCommands map[string]CommandAccess = map[string]CommandAccess{
-		`aid`:         {Aid, false, false},
 		`alias`:       {Alias, true, false},
-		`appraise`:    {Appraise, false, false},
-		`ask`:         {Ask, false, false},
 		`attack`:      {Attack, false, false},
-		`backstab`:    {Backstab, false, false},
 		`badcommands`: {BadCommands, true, true}, // Admin only
 		`biome`:       {Biome, true, false},
 		`broadcast`:   {Broadcast, true, false},
-		`tackle`:      {Tackle, false, false},
-		`bank`:        {Bank, false, false},
-		`break`:       {Break, false, false},
-		`build`:       {Build, false, true}, // Admin only
-		`buff`:        {Buff, false, true},  // Admin only
-		`bump`:        {Bump, false, false},
-		`buy`:         {Buy, false, false},
-		`cast`:        {Cast, false, false},
-		`changeform`:  {ChangeForm, false, false},
-		`cooldowns`:   {Cooldowns, true, false},
+		`build`:       {Build, false, true},   // Admin only
 		`command`:     {Command, false, true}, // Admin only
 		`copyover`:    {Copyover, true, true}, // Admin only
-		`conditions`:  {Conditions, true, false},
 		`consider`:    {Consider, true, false},
 		`default`:     {Default, false, false},
-		`disarm`:      {Disarm, false, false},
 		`drop`:        {Drop, true, false},
-		`drink`:       {Drink, false, false},
-		`eat`:         {Eat, false, false},
 		`emote`:       {Emote, true, false},
-		`enchant`:     {Enchant, false, false},
-		`experience`:  {Experience, true, false},
 		`equip`:       {Equip, false, false},
 		`flee`:        {Flee, false, false},
-		`formset`:     {FormSet, false, true}, // Admin only
-		`gearup`:      {Gearup, false, false},
 		`get`:         {Get, false, false},
 		`give`:        {Give, false, false},
 		`go`:          {Go, false, false},
 		`grant`:       {Grant, true, true}, // Admin only
 		`help`:        {Help, true, false},
 		`keyring`:     {KeyRing, true, false},
-		`killstats`:   {Killstats, true, false},
 		`history`:     {History, true, false},
-		`inspect`:     {Inspect, false, false},
 		`inventory`:   {Inventory, true, false},
-		`item`:        {Item, true, true}, // Admin only
-		`jobs`:        {Jobs, true, false},
-		`list`:        {List, false, false},
+		`item`:        {Item, true, true},   // Admin only
 		`locate`:      {Locate, true, true}, // Admin only
 		`lock`:        {Lock, false, false},
 		`look`:        {Look, true, false},
-		`map`:         {Map, false, false},
 		`macros`:      {Macros, true, false},
 		`mob`:         {Mob, true, true},    // Admin only
 		`modify`:      {Modify, true, true}, // Admin only
 		`motd`:        {Motd, true, false},
 		`mute`:        {Mute, true, true},
 		`noop`:        {Noop, true, false},
-		`offer`:       {Offer, false, false},
 		`online`:      {Online, true, false},
 		`party`:       {Party, true, false},
 		`password`:    {Password, true, false},
-		`paz`:         {Paz, true, true}, // Admin only
-		`peep`:        {Peep, false, false},
-		`picklock`:    {Picklock, false, false},
-		`pickpocket`:  {Pickpocket, false, false},
 		`prepare`:     {Prepare, true, true}, // Admin only
-		`portal`:      {Portal, false, false},
-		`pray`:        {Pray, false, false},
 		`print`:       {Print, true, false},
 		`printline`:   {PrintLine, true, false},
 		`put`:         {Put, false, false},
-		`pvp`:         {Pvp, true, false},
 		`quit`:        {Quit, true, false},
-		`rank`:        {Rank, false, false},
-		`rankings`:    {Rankings, false, true}, // Admin only
 		`read`:        {Read, false, false},
-		`recover`:     {Recover, false, false},
 		`reload`:      {Reload, true, true}, // Admin only
 		`remove`:      {Remove, false, false},
 		`rename`:      {Rename, false, true},     // Admin only
@@ -136,46 +99,26 @@ var (
 		`room`:        {Room, false, true},       // Admin only
 		`save`:        {Save, true, false},
 		`say`:         {Say, true, false},
-		`scribe`:      {Scribe, false, false},
-		`search`:      {Search, false, false},
-		`sell`:        {Sell, false, false},
 		`server`:      {Server, false, true}, // Admin only
 		`set`:         {Set, true, false},
-		`share`:       {Share, false, false},
 		`shoot`:       {Shoot, false, false},
 		`shout`:       {Shout, true, false},
 		`show`:        {Show, true, false},
-		`skills`:      {Skills, true, false},
-		`skillset`:    {Skillset, false, true}, // Admin only
-		`sneak`:       {Sneak, false, false},
 		`spawn`:       {Spawn, false, true}, // Admin only
-		`spell`:       {Spell, true, true},  // Admin only
-		`spells`:      {Spells, true, false},
-		`stash`:       {Stash, false, false},
-		`status`:      {Status, true, false},
 
-		`suicide`:    {Suicide, true, false},
-		`syslogs`:    {SysLogs, true, true}, // Admin only
-		`tame`:       {Tame, false, false},
-		`teleport`:   {Teleport, true, true}, // Admin only
-		`throw`:      {Throw, false, false},
-		`track`:      {Track, false, false},
-		`train`:      {Train, false, false},
-		`unenchant`:  {Unenchant, false, false},
-		`uncurse`:    {Uncurse, false, false},
-		`unlock`:     {Unlock, false, false},
-		`unmute`:     {UnMute, true, true}, // Admin only
-		`use`:        {Use, false, false},
-		`dual-wield`: {DualWield, true, false},
-		`whisper`:    {Whisper, true, false},
-		`who`:        {Who, true, false},
-		`visit`:      {Visit, true, true}, // Admin only
-		`visited`:    {Visited, true, false},
-		`zap`:        {Zap, true, true},   // Admin only
-		`zone`:       {Zone, false, true}, // Admin only
+		// Kept until Phase 5: NewRound_AutoHeal and NewRound_DoCombat dispatch it as player death.
+		`suicide`:  {Suicide, true, false},
+		`syslogs`:  {SysLogs, true, true},  // Admin only
+		`teleport`: {Teleport, true, true}, // Admin only
+		`unlock`:   {Unlock, false, false},
+		`unmute`:   {UnMute, true, true}, // Admin only
+		`whisper`:  {Whisper, true, false},
+		`who`:      {Who, true, false},
+		`visit`:    {Visit, true, true}, // Admin only
+		`visited`:  {Visited, true, false},
+		`zone`:     {Zone, false, true}, // Admin only
 		// Special command only used upon creating a new account
-		`start`:     {Start, false, false},
-		`zombieact`: {ZombieAct, false, false},
+		`start`: {Start, false, false},
 	}
 
 	selfKeywords = []string{
@@ -308,7 +251,7 @@ func TryCommand(cmd string, rest string, userId int, flags events.EventFlag) (bo
 
 	// Experimental, not sure if will have unexpected consequences.
 	// Turn keywords for targetting self into actual string of self
-	if cmd == `look` || cmd == `cast` {
+	if cmd == `look` {
 		for _, selfWord := range selfKeywords {
 			wordLen := len(selfWord)
 			if rest == selfWord {
@@ -367,14 +310,6 @@ func TryCommand(cmd string, rest string, userId int, flags events.EventFlag) (bo
 	if _, ok := emoteAliases[cmd]; ok {
 		handled, err := Emote(cmd, user, room, flags)
 		return handled, err
-	}
-
-	if user.Character.HasSpell(cmd) {
-		castCmd := cmd
-		if len(rest) > 0 {
-			castCmd += ` ` + rest
-		}
-		return Cast(castCmd, user, room, flags)
 	}
 
 	// "go" attempt
