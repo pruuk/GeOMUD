@@ -1,0 +1,24 @@
+The <ansi fg="command">visit</ansi> command manages room visit tracking for players:
+
+<ansi fg="command">visit list</ansi>
+  List visit progress across all zones for yourself.
+
+<ansi fg="command">visit list [username]</ansi>
+  List visit progress across all zones for the specified user.
+
+<ansi fg="command">visit set [zonename|all]</ansi>
+  Mark all rooms in the specified zone as visited for yourself.
+  Use <ansi fg="command">all</ansi> to mark every zone.
+
+<ansi fg="command">visit set [zonename|all] [username]</ansi>
+  Mark all rooms in the specified zone as visited for the target user.
+
+<ansi fg="command">visit unset [zonename|all]</ansi>
+  Reset all rooms in the specified zone to unvisited for yourself.
+  Use <ansi fg="command">all</ansi> to reset every zone.
+
+<ansi fg="command">visit unset [zonename|all] [username]</ansi>
+  Reset all rooms in the specified zone to unvisited for the target user.
+
+Zone names support partial matching. The username can be an online character
+name or an offline account username.
