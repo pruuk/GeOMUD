@@ -49,7 +49,6 @@ type UserRecord struct {
 	LastMusic      string                `yaml:"-"`                      // Keeps track of the last music that was played
 	connectionId   uint64
 	unsentText     string
-	suggestText    string
 	connectionTime time.Time
 	lastInputRound uint64
 	tempDataStore  map[string]any
@@ -522,15 +521,14 @@ func (u *UserRecord) RoundTick() {
 // of typing.
 // I don't like the idea of capturing it every time they hit a key though
 // There is probably a better way.
-func (u *UserRecord) SetUnsentText(t string, suggest string) {
+func (u *UserRecord) SetUnsentText(t string) {
 
 	u.unsentText = t
-	u.suggestText = suggest
 }
 
-func (u *UserRecord) GetUnsentText() (unsent string, suggestion string) {
+func (u *UserRecord) GetUnsentText() string {
 
-	return u.unsentText, u.suggestText
+	return u.unsentText
 }
 
 // Replace a characters information with another.

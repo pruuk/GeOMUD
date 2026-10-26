@@ -596,7 +596,6 @@ func UpdateOnlineUser(updated UserRecord) {
 
 	updated.connectionId = u.connectionId
 	updated.unsentText = u.unsentText
-	updated.suggestText = u.suggestText
 	updated.connectionTime = u.connectionTime
 	updated.lastInputRound = u.lastInputRound
 	updated.tempDataStore = u.tempDataStore

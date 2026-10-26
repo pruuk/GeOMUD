@@ -199,55 +199,6 @@ func GetExportedFunction(fName string) (any, bool) {
 	return nil, false
 }
 
-// Returns a list of close match commands
-func GetCmdSuggestions(text string, includeAdmin bool) []string {
-
-	text = strings.ToLower(text)
-
-	results := []string{}
-
-	for _, info := range keywords.GetAllHelpTopicInfo() {
-		if info.AdminOnly && !includeAdmin {
-			continue
-		}
-
-		testCmd := strings.ToLower(info.Command)
-		if testCmd != text && strings.HasPrefix(testCmd, text) {
-			results = append(results, info.Command[len(text):])
-		}
-	}
-
-	for alias, _ := range keywords.GetAllCommandAliases() {
-		testCmd := strings.ToLower(alias)
-		if testCmd != text && strings.HasPrefix(testCmd, text) {
-			results = append(results, alias[len(text):])
-		}
-	}
-
-	return results
-}
-
-func GetHelpSuggestions(text string, includeAdmin bool) []string {
-
-	results := []string{}
-
-	for _, cmd := range keywords.GetAllHelpTopics() {
-		testCmd := strings.ToLower(cmd)
-		if testCmd != text && strings.HasPrefix(testCmd, text) {
-			results = append(results, cmd[len(text):])
-		}
-	}
-
-	for alias, _ := range keywords.GetAllHelpAliases() {
-		testCmd := strings.ToLower(alias)
-		if testCmd != text && strings.HasPrefix(testCmd, text) {
-			results = append(results, alias[len(text):])
-		}
-	}
-
-	return results
-}
-
 func TryCommand(cmd string, rest string, userId int, flags events.EventFlag) (bool, error) {
 
 	// Do not allow scripts to intercept server commands

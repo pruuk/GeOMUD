@@ -176,7 +176,6 @@
         <a href="#hook-OnShopList">usercommands.OnShopList</a>
         <a href="#hook-OnShopListRendered">usercommands.OnShopListRendered</a>
         <a href="#hook-OnInsufficientFunds">usercommands.OnInsufficientFunds</a>
-        <a href="#hook-OnAutoComplete">suggestions.OnAutoComplete</a>
         <a href="#hook-OnBuildPrompt">users.OnBuildPrompt</a>
         <a href="#hook-OnGetHelpContents">usercommands.OnGetHelpContents</a>
     </div>
@@ -567,70 +566,6 @@ d.Alert(
         shortfall,
     ))
     r.Handled = true
-    return r
-})</code></pre>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="doc-section" id="hook-OnAutoComplete">
-    <h2>suggestions.OnAutoComplete</h2>
-
-    <div class="hook-card">
-        <div class="hook-card-header">
-            <span class="hook-card-name">OnAutoComplete</span>
-            <span class="hook-card-pkg">internal/suggestions</span>
-        </div>
-        <div class="hook-card-body">
-            <p>Fired after the engine's built-in autocomplete logic has run. Modules register handlers here to contribute tab-completion suggestions for their own commands. Each handler receives the accumulated results from all previous handlers and should append to — not replace — <code>r.Results</code>.</p>
-
-            <div class="fire-point">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span>Fires on every tab-press when the player has typed at least one argument. Results are sorted shortest-first before being sent to the client.</span>
-            </div>
-
-            <h4>What you can do</h4>
-            <ul>
-                <li>Provide completions for module-added commands</li>
-                <li>Return early (without modifying <code>r.Results</code>) when <code>r.Cmd</code> is not your command</li>
-                <li>Use <code>r.Parts</code> for multi-word completions (e.g. sub-commands or named arguments)</li>
-                <li>Use <code>r.UserId</code> to personalize completions based on the player's state</li>
-            </ul>
-
-            <h4>Important: result format</h4>
-            <p>Each entry in <code>Results</code> is the <strong>suffix to append</strong> to the current input, not a full replacement string. If the player has typed <code>fish c</code> and you want to suggest <code>cast</code>, append <code>"ast"</code> — not <code>"cast"</code>.</p>
-
-            <h4>Data type: <code>suggestions.AutoCompleteRequest</code></h4>
-            <table class="field-table">
-                <thead><tr><th>Field</th><th>Type</th><th>Access</th><th>Description</th></tr></thead>
-                <tbody>
-                    <tr><td><code>UserId</code></td><td><span class="type-badge">int</span></td><td><span class="rw-badge rw-ro">read</span></td><td>ID of the player requesting completions.</td></tr>
-                    <tr><td><code>Cmd</code></td><td><span class="type-badge">string</span></td><td><span class="rw-badge rw-ro">read</span></td><td>The resolved command name after alias expansion (e.g. <code>"fish"</code>). Always check this first and return early if it is not your command.</td></tr>
-                    <tr><td><code>Parts</code></td><td><span class="type-badge">[]string</span></td><td><span class="rw-badge rw-ro">read</span></td><td>The original input split on whitespace. <code>Parts[0]</code> is the raw command token (before alias expansion). <code>Parts[1:]</code> are the arguments typed so far.</td></tr>
-                    <tr><td><code>Results</code></td><td><span class="type-badge">[]string</span></td><td><span class="rw-badge rw-rw">read/write</span></td><td>Accumulated completion suffixes. Append your suggestions here; do not replace the slice.</td></tr>
-                </tbody>
-            </table>
-
-            <h4>Example registration</h4>
-            <div class="code-block">
-                <div class="code-block-header">modules/fishing/fishing.go</div>
-                <pre><code class="language-go">suggestions.OnAutoComplete.Register(func(r suggestions.AutoCompleteRequest) suggestions.AutoCompleteRequest {
-    if r.Cmd != "fish" {
-        return r // not our command — leave results untouched
-    }
-
-    subcommands := []string{"cast", "release", "inventory"}
-    typed := ""
-    if len(r.Parts) > 1 {
-        typed = strings.ToLower(r.Parts[1])
-    }
-
-    for _, sub := range subcommands {
-        if strings.HasPrefix(sub, typed) {
-            r.Results = append(r.Results, sub[len(typed):])
-        }
-    }
     return r
 })</code></pre>
             </div>

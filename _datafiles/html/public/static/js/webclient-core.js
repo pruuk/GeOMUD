@@ -2007,46 +2007,6 @@ const Client = (() => {
     }
 
     // -----------------------------------------------------------------------
-    // Tab-completion (web client autocomplete)
-    // -----------------------------------------------------------------------
-    const _tabSug = {
-        input:       '',   // the original typed text when tab was first pressed
-        suggestions: [],   // full completed strings returned by the server
-        index:       -1,   // which suggestion is currently displayed (-1 = none)
-    };
-
-    function _tabSugReset() {
-        _tabSug.input       = '';
-        _tabSug.suggestions = [];
-        _tabSug.index       = -1;
-    }
-
-    // Apply suggestion at _tabSug.index to the input field, selecting the
-    // appended portion so the user can backspace it away quickly.
-    function _tabSugApply() {
-        if (_tabSug.suggestions.length === 0) { return; }
-        const sug    = _tabSug.suggestions[_tabSug.index];
-        const prefix = _tabSug.input;
-        textInput.value = sug;
-        // Select only the suggested suffix so the user can see what was added
-        // and delete it with a single backspace.
-        if (sug.length > prefix.length) {
-            textInput.setSelectionRange(prefix.length, sug.length);
-        }
-    }
-
-    // Called from VirtualWindows.handleGMCP when the server sends Suggestion data.
-    function _onSuggestionGMCP(namespace, body) {
-        if (!body || !Array.isArray(body.suggestions)) { return; }
-        // Only act on the response if the input still matches what we sent.
-        if (body.input !== _tabSug.input) { return; }
-        if (body.suggestions.length === 0) { return; }
-        _tabSug.suggestions = body.suggestions;
-        _tabSug.index       = 0;
-        _tabSugApply();
-    }
-
-    // -----------------------------------------------------------------------
     // DOM references (resolved at init time)
     // -----------------------------------------------------------------------
     let connectButton, textOutput, textInput;
@@ -2108,36 +2068,9 @@ const Client = (() => {
 
         // Input keydown
         textInput.addEventListener('keydown', function(event) {
-        // Space while a suggestion is active: accept the suggestion and append
-        // a space so the user can keep typing (mirrors telnet behaviour).
-            if (event.key === ' ' && _tabSug.suggestions.length > 0) {
-                event.preventDefault();
-                const accepted = _tabSug.suggestions[_tabSug.index];
-                _tabSugReset();
-                textInput.value = accepted + ' ';
-                textInput.setSelectionRange(textInput.value.length, textInput.value.length);
-                return false;
-            }
-
-        // Tab: request or cycle autocomplete suggestions
+            // Tab: keep focus in the input (no completion)
             if (event.key === 'Tab') {
                 event.preventDefault();
-                const currentText = textInput.value;
-                const selStart    = textInput.selectionStart;
-                // The confirmed typed prefix is everything before the selection.
-                const typedPrefix = currentText.substring(0, selStart);
-                // If we already have suggestions for this typed prefix, cycle them.
-                if (_tabSug.suggestions.length > 0 && _tabSug.input === typedPrefix) {
-                    _tabSug.index = (_tabSug.index + 1) % _tabSug.suggestions.length;
-                    _tabSugApply();
-                } else {
-                    // New request: use the typed prefix (excludes any selected suffix).
-                    // Fall back to the full value if there is no selection (cursor at end).
-                    const typed = typedPrefix || currentText;
-                    _tabSugReset();
-                    _tabSug.input = typed;
-                    GMCPRequest('Suggestion', typed);
-                }
                 return false;
             }
 
@@ -2155,7 +2088,6 @@ const Client = (() => {
                 if (historyPosition < 0) { historyPosition = 0; }
                 if (historyPosition > commandHistory.length) { historyPosition = commandHistory.length; }
                 event.target.value = historyPosition === 0 ? '' : commandHistory[commandHistory.length - historyPosition];
-                _tabSugReset();
                 return;
             }
 
@@ -2168,10 +2100,6 @@ const Client = (() => {
 
             // Enter
             if (event.key === 'Enter') {
-                // Accept any active suggestion before submitting
-                if (_tabSug.suggestions.length > 0) {
-                    _tabSugReset();
-                }
                 if (event.target.value !== '' && textInput.type !== 'password') {
                     commandHistory.push(event.target.value);
                     historyPosition = 0;
@@ -2186,12 +2114,6 @@ const Client = (() => {
                     term.writeln('Not connected to the server. Did you click the Connect button?');
                 }
             }
-        });
-
-        // Clear tab-completion state whenever the input value changes by means
-        // other than the tab handler (typing, paste, cut, etc.).
-        textInput.addEventListener('input', function() {
-            _tabSugReset();
         });
 
         // Volume sliders: load from localStorage
@@ -2239,14 +2161,6 @@ const Client = (() => {
             MusicPlayer.setGlobalVolume(sliderValues['music'] / 100);
             muteIcon.textContent = '🔊';
         }
-
-        // Register GMCP handler for tab-completion responses
-        VirtualWindows.register({
-            gmcpHandlers: ['Suggestion'],
-            onGMCP: function(namespace, body) {
-                _onSuggestionGMCP(namespace, body);
-            },
-        });
 
         // Open all registered virtual windows immediately so they are present
         // on page load rather than waiting for the first GMCP payload.

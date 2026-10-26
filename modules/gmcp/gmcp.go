@@ -308,26 +308,6 @@ func (g *GMCPModule) HandleWebGMCP(connectionId uint64, webGMCP []byte) bool {
 			return true
 		}
 
-		if identifier == `Suggestion` {
-			for _, user := range users.GetAllActiveUsers() {
-				if user.ConnectionId() == connectionId {
-					// Use the raw payload after the first space - do not TrimSpace,
-					// because a trailing space is meaningful (e.g. "look " requests
-					// argument completions, not command completions).
-					partialText := ``
-					if spaceIdx := strings.Index(payloadStr, ` `); spaceIdx != -1 {
-						partialText = payloadStr[spaceIdx+1:]
-					}
-					events.AddToQueue(GMCPSuggestionRequest{
-						UserId:      user.UserId,
-						PartialText: partialText,
-					})
-					break
-				}
-			}
-			return true
-		}
-
 		if identifier == `Help` {
 			for _, user := range users.GetAllActiveUsers() {
 				if user.ConnectionId() == connectionId {

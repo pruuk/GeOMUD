@@ -454,20 +454,6 @@ GamePlay:
 
 ################################################################################
 #
-#   INTEGRATIONS
-#   Special settings for third party integrations such as discord messages
-#
-################################################################################
-Integrations:
-  # - Discord settings -
-  Discord:
-    # Optional webhook URL to send mud event messages to, such as joins/disconnects
-    # Can also be set via environment variable: DISCORD_WEBHOOK_URL
-    WebhookUrl: ''
-
-
-################################################################################
-#
 #   TEXT FORMATS
 #   Basic text strings that occur often, and may need customization
 #

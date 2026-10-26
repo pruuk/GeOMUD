@@ -109,11 +109,7 @@ func (u *UserRecord) GetCommandPrompt() string {
 
 	}
 
-	unsent, suggested := u.GetUnsentText()
-	if len(suggested) > 0 {
-		suggested = `<ansi fg="suggested-text">` + suggested + `</ansi>`
-	}
-	return term.AnsiMoveCursorColumn.String() + term.AnsiEraseLine.String() + promptOut + unsent + suggested + goAhead
+	return term.AnsiMoveCursorColumn.String() + term.AnsiEraseLine.String() + promptOut + u.GetUnsentText() + goAhead
 
 }
 
