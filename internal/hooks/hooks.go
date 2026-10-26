@@ -18,7 +18,6 @@ func RegisterListeners() {
 	events.RegisterListener(events.NewRound{}, InactivePlayers)
 	events.RegisterListener(events.NewRound{}, UpdateZoneMutators)
 	events.RegisterListener(events.NewRound{}, CheckNewDay)
-	events.RegisterListener(events.NewRound{}, SpawnLootGoblin)
 	events.RegisterListener(events.NewRound{}, UserRoundTick)
 	events.RegisterListener(events.NewRound{}, MobRoundTick)
 	events.RegisterListener(events.NewRound{}, HandleRespawns)
@@ -48,15 +47,8 @@ func RegisterListeners() {
 	events.RegisterListener(events.PlayerDespawn{}, UserScriptLogout)         // Must run before the final HandleLeave cleanup
 	events.RegisterListener(events.PlayerDespawn{}, HandleLeave, events.Last) // This is a final listener, has to happen last
 
-	// Levelup Notifications
-	events.RegisterListener(events.LevelUp{}, SendLevelNotifications)
+	// Levelup
 	events.RegisterListener(events.LevelUp{}, UserScriptLevelUp)
-
-	// Day/Night cycle
-	events.RegisterListener(events.DayNightCycle{}, NotifySunriseSunset)
-
-	// Looking
-	events.RegisterListener(events.Looking{}, HandleLookHints)
 
 	// Messages
 	events.RegisterListener(events.Message{}, Message_SendMessage)
@@ -68,9 +60,6 @@ func RegisterListeners() {
 
 	events.RegisterListener(events.PlayerDrop{}, HandlePlayerDrop)
 	events.RegisterListener(events.WebClientCommand{}, WebClientCommand_SendWebClientCommand)
-
-	events.RegisterListener(events.CharacterCreated{}, BroadcastNewChar)
-	events.RegisterListener(events.CharacterChanged{}, BroadcastNewChar)
 
 	events.RegisterListener(events.Broadcast{}, Broadcast_SendToAll)
 

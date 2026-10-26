@@ -298,23 +298,6 @@ type DayNightCycle struct {
 
 func (l DayNightCycle) Type() string { return `DayNightCycle` }
 
-type Looking struct {
-	UserId int
-	RoomId int
-	Target string
-	Hidden bool
-}
-
-func (l Looking) Type() string { return `Looking` }
-
-// Fired after creating a new character and giving the character a name.
-type CharacterCreated struct {
-	UserId        int
-	CharacterName string
-}
-
-func (p CharacterCreated) Type() string { return `CharacterCreated` }
-
 // Fired when a character alt change has occured.
 type CharacterChanged struct {
 	UserId            int

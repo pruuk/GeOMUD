@@ -1209,7 +1209,6 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
             <tbody>
                 <tr><td><span class="ev-badge">LevelUp</span></td><td><code>UserId</code>, <code>NewLevel int</code>, <code>LevelsGained int</code>, <code>StatsDelta</code>, <code>TrainingPoints int</code></td><td>Player gained one or more levels.</td></tr>
                 <tr><td><span class="ev-badge">GainExperience</span></td><td><code>UserId</code>, <code>Experience int</code>, <code>Scale int</code></td><td>Player gained experience points.</td></tr>
-                <tr><td><span class="ev-badge">CharacterCreated</span></td><td><code>UserId</code>, <code>CharacterName</code></td><td>New character was created.</td></tr>
                 <tr><td><span class="ev-badge">CharacterChanged</span></td><td><code>UserId</code>, <code>LastCharacterName</code>, <code>CharacterName</code></td><td>Player switched to a different alt character.</td></tr>
                 <tr><td><span class="ev-badge">CharacterVitalsChanged</span></td><td><code>UserId</code></td><td>Health, mana, or action points changed.</td></tr>
                 <tr><td><span class="ev-badge">CharacterStatsChanged</span></td><td><code>UserId</code></td><td>Core stats or stat maxima changed.</td></tr>
@@ -1228,7 +1227,6 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
                 <tr><td><span class="ev-badge">RoomChange</span></td><td><code>UserId</code>, <code>MobInstanceId</code>, <code>FromRoomId</code>, <code>ToRoomId</code>, <code>Unseen bool</code></td><td>Player or mob moved between rooms. One of UserId or MobInstanceId is non-zero.</td></tr>
                 <tr><td><span class="ev-badge">RoomAction</span></td><td><code>RoomId</code>, <code>SourceUserId</code>, <code>SourceMobId</code>, <code>Action string</code>, <code>Details any</code>, <code>ReadyTurn uint64</code></td><td>Delayed room action queued for a future turn.</td></tr>
                 <tr><td><span class="ev-badge">DayNightCycle</span></td><td><code>IsSunrise bool</code>, <code>Day int</code>, <code>Month int</code>, <code>Year int</code>, <code>Time string</code></td><td>In-game sunrise or sunset occurred.</td></tr>
-                <tr><td><span class="ev-badge">Looking</span></td><td><code>UserId</code>, <code>RoomId</code>, <code>Target string</code>, <code>Hidden bool</code></td><td>Player looked at something.</td></tr>
                 <tr><td><span class="ev-badge">FireBlaze</span></td><td><code>RoomId</code></td><td>A fire-starting event occurred in this room.</td></tr>
             </tbody>
         </table>

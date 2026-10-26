@@ -1,20 +1,20 @@
 # Status (updated 2026-10-26)
 
 ## Now
-- Phase 1 (leaf packages) done on branch `strip/phase-1-leaf-packages`, waiting on its PR
+- Phase 2 (game commands and hooks) done on branch `strip/phase-2-commands-hooks`, waiting on its PR
 
 ## Next
-1. Phase 2: delete game commands and hooks
-2. Phase 3: trim world data (the smoke script plays the stock tutorial; replace those steps here).
-   Also removes world data left by Phase 1: quests, pets, conversations folders, `audio.yaml`,
-   `musicfile` keys, pet and quest help templates and keywords
-3. Phase 4: scripting, web and GMCP surface. Also decide on Mudlet "Discord Rich Presence" GMCP
+1. Phase 3: trim world data (the smoke script plays the stock tutorial; replace those steps here).
+   Also removes world data left by Phases 1-2: quests, pets, conversations folders, `audio.yaml`,
+   `musicfile` keys, help templates and keywords for removed commands, and mob idle or angry
+   commands naming a removed command (such a mob emotes "looks a little confused" until then)
+2. Phase 4: scripting, web and GMCP surface. Also decide on Mudlet "Discord Rich Presence" GMCP
    (`modules/gmcp/gmcp.Mudlet.go`, about 450 lines), kept through Phase 1
-4. Phase 4b: NPCs are players (decision 4, 2026-10-26). Design spec for Calabe first
-5. Phase 5: rules seam
+3. Phase 4b: NPCs are players (decision 4, 2026-10-26). Design spec for Calabe first
+4. Phase 5: rules seam. `suicide` (player and mob death) and the combat commands move here
 
 ## Waiting on Calabe
-- Go-ahead to start Phase 2 (`gomud_strip_plan.md`)
+- Go-ahead to start Phase 3 (`gomud_strip_plan.md`)
 
 ## Watch
 - Phase 5 rules seam: `buffs` has 13 importers and `characters` imports every rules package
