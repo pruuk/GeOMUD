@@ -52,10 +52,6 @@ func init() {
 	events.RegisterListener(events.BuffsRemoved{}, g.buffsRemovedHandler)
 	events.RegisterListener(events.AlignmentChanged{}, g.alignmentChangedHandler)
 
-	events.RegisterListener(events.PetLevelChange{}, g.petLevelChangeHandler)
-	events.RegisterListener(events.PetFed{}, g.petFedHandler)
-	events.RegisterListener(events.PetItemChange{}, g.petItemChangeHandler)
-
 	events.RegisterListener(events.MobDeath{}, g.killsChangedHandler)
 	events.RegisterListener(events.PlayerDeath{}, g.killsChangedHandler)
 
@@ -171,63 +167,6 @@ func (g *GMCPCharModule) buffsRemovedHandler(e events.Event) events.ListenerRetu
 	events.AddToQueue(GMCPCharUpdate{
 		UserId:     evt.UserId,
 		Identifier: `Char`,
-	})
-
-	return events.Continue
-}
-
-func (g *GMCPCharModule) petLevelChangeHandler(e events.Event) events.ListenerReturn {
-
-	evt, typeOk := e.(events.PetLevelChange)
-	if !typeOk {
-		return events.Continue
-	}
-
-	if evt.UserId == 0 {
-		return events.Continue
-	}
-
-	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
-		Identifier: `Char.Pets`,
-	})
-
-	return events.Continue
-}
-
-func (g *GMCPCharModule) petItemChangeHandler(e events.Event) events.ListenerReturn {
-
-	evt, typeOk := e.(events.PetItemChange)
-	if !typeOk {
-		return events.Continue
-	}
-
-	if evt.UserId == 0 {
-		return events.Continue
-	}
-
-	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
-		Identifier: `Char.Pets`,
-	})
-
-	return events.Continue
-}
-
-func (g *GMCPCharModule) petFedHandler(e events.Event) events.ListenerReturn {
-
-	evt, typeOk := e.(events.PetFed)
-	if !typeOk {
-		return events.Continue
-	}
-
-	if evt.UserId == 0 {
-		return events.Continue
-	}
-
-	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
-		Identifier: `Char.Pets`,
 	})
 
 	return events.Continue
@@ -487,46 +426,6 @@ func (g *GMCPCharModule) GetCharNode(user *users.UserRecord, gmcpModule string) 
 
 		if !all {
 			return payload.Info, `Char.Info`
-		}
-	}
-
-	if all || g.wantsGMCPPayload(`Char.Pets`, gmcpModule) {
-
-		payload.Pets = []GMCPCharModule_Payload_Pet{}
-
-		if user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
-
-			p := GMCPCharModule_Payload_Pet{
-				Name:     user.Character.Pet.Name,
-				Type:     user.Character.Pet.Type,
-				Level:    user.Character.Pet.Level,
-				Hunger:   user.Character.Pet.Food.String(),
-				Capacity: user.Character.Pet.GetEffectiveCapacity(),
-				Buffs:    []string{},
-				Items:    []GMCPCharModule_Payload_Inventory_Item{},
-			}
-
-			if abDisplay := user.Character.Pet.GetCurrentAbilityDisplay(); abDisplay != nil {
-				p.Ability = &GMCPCharModule_Payload_Pet_Ability{
-					LevelGranted: abDisplay.LevelGranted,
-					CombatChance: abDisplay.CombatChance,
-					DiceRoll:     abDisplay.DiceRoll,
-					StatMods:     abDisplay.StatMods,
-				}
-				if len(abDisplay.BuffNames) > 0 {
-					p.Buffs = abDisplay.BuffNames
-				}
-			}
-
-			for _, itm := range user.Character.Pet.Items {
-				p.Items = append(p.Items, newInventory_Item(itm))
-			}
-
-			payload.Pets = append(payload.Pets, p)
-		}
-
-		if !all {
-			return payload.Pets, `Char.Pets`
 		}
 	}
 
@@ -855,7 +754,6 @@ type GMCPCharModule_Payload struct {
 	Stats     *GMCPCharModule_Payload_Stats            `json:"Stats,omitempty"`
 	Vitals    *GMCPCharModule_Payload_Vitals           `json:"Vitals,omitempty"`
 	Worth     *GMCPCharModule_Payload_Worth            `json:"Worth,omitempty"`
-	Pets      []GMCPCharModule_Payload_Pet             `json:"Pets,omitempty"`
 	Skills    []GMCPCharModule_Payload_Skill           `json:"Skills,omitempty"`
 	Jobs      []GMCPCharModule_Payload_Job             `json:"Jobs,omitempty"`
 	Kills     *GMCPCharModule_Payload_Kills            `json:"Kills,omitempty"`
@@ -1011,27 +909,6 @@ type GMCPCharModule_Payload_Affect struct {
 	DurationLeft int            `json:"duration_left"`
 	Type         string         `json:"type"`
 	Mods         map[string]int `json:"affects"`
-}
-
-// /////////////////
-// Char.Pets
-// /////////////////
-type GMCPCharModule_Payload_Pet struct {
-	Name     string                                  `json:"name"`
-	Type     string                                  `json:"type"`
-	Level    int                                     `json:"level"`
-	Hunger   string                                  `json:"hunger"`
-	Ability  *GMCPCharModule_Payload_Pet_Ability     `json:"ability,omitempty"`
-	Buffs    []string                                `json:"buffs"`
-	Items    []GMCPCharModule_Payload_Inventory_Item `json:"items"`
-	Capacity int                                     `json:"capacity"`
-}
-
-type GMCPCharModule_Payload_Pet_Ability struct {
-	LevelGranted int            `json:"level_granted"`
-	CombatChance int            `json:"combat_chance"`
-	DiceRoll     string         `json:"dice_roll"`
-	StatMods     map[string]int `json:"stat_mods,omitempty"`
 }
 
 // /////////////////

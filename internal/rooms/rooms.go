@@ -48,7 +48,6 @@ const (
 	FindDowned         FindFlag = 0b00001000000 // hp < 1
 	FindBuffed         FindFlag = 0b00010000000 // has a buff
 	FindHasLight       FindFlag = 0b00100000000 // has a light source
-	FindHasPet         FindFlag = 0b01000000000 // has a pet
 	FindNative         FindFlag = 0b10000000000 // spawns in this room
 
 	// Combinatorial flags
@@ -1210,11 +1209,6 @@ func (r *Room) GetMobs(findTypes ...FindFlag) []int {
 			mobMatches = append(mobMatches, mobId)
 			continue
 		}
-
-		if typeFlag&FindHasPet == FindHasPet && mob.Character.Pet.Exists() && !mob.Character.Pet.IsMissing() {
-			mobMatches = append(mobMatches, mobId)
-			continue
-		}
 	}
 
 	return mobMatches
@@ -1297,11 +1291,6 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 		}
 
 		if typeFlag&FindBuffed == FindBuffed && len(user.Character.Buffs.List) > 0 {
-			playerMatches = append(playerMatches, userId)
-			continue
-		}
-
-		if typeFlag&FindHasPet == FindHasPet && user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
 			playerMatches = append(playerMatches, userId)
 			continue
 		}
@@ -1447,29 +1436,6 @@ func (r *Room) FindByName(searchName string, findTypes ...FindFlag) (playerId in
 	mobInstanceId, _ = r.findMobByName(searchName, findTypes...)
 	playerId, _ = r.findPlayerByName(searchName, findTypes...)
 	return playerId, mobInstanceId
-}
-
-func (r *Room) FindByPetName(searchName string) (playerId int) {
-	// Map name to display name
-	petOwners := map[string]int{}
-	petNames := []string{}
-
-	for _, uId := range r.GetPlayers(FindHasPet) {
-		if u := users.GetByUserId(uId); u != nil {
-			petOwners[u.Character.Pet.Name] = u.UserId
-			petNames = append(petNames, u.Character.Pet.Name)
-		}
-	}
-
-	match, closeMatch := util.FindMatchIn(searchName, petNames...)
-	if match == `` {
-		if closeMatch == `` {
-			return 0
-		}
-		return petOwners[closeMatch]
-	}
-
-	return petOwners[match]
 }
 
 func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, error) {

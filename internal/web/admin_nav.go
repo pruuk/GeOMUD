@@ -6,7 +6,7 @@ func buildAdminNav() []WebNavItem {
 	nav := []WebNavItem{
 		{
 			Name:        "Lifeforms",
-			Description: "Manage players, NPCs, pets, and races.",
+			Description: "Manage players, NPCs, and races.",
 			Children: []WebNavItem{
 				{
 					Name:        "Users",
@@ -26,16 +26,6 @@ func buildAdminNav() []WebNavItem {
 						{Label: "View / Edit", Target: "/admin/mobs", Description: "Browse, create, and edit mob definitions."},
 						{Label: "Rankings", Target: "/admin/mob-rankings", Description: "View mob power and loot rankings across all types."},
 						{Label: "API Docs", Target: "/admin/mobs-api", Description: "REST API reference for the mobs endpoint."},
-					},
-				},
-				{
-					Name:        "Pets",
-					Target:      "/admin/pets",
-					Description: "Configure tameable companion types and rankings.",
-					Children: []WebNavItem{
-						{Label: "View / Edit", Target: "/admin/pets", Description: "Browse and edit pet type definitions."},
-						{Label: "Rankings", Target: "/admin/pets-ranks", Description: "View pet power rankings across all types."},
-						{Label: "API Docs", Target: "/admin/pets-api", Description: "REST API reference for the pets endpoint."},
 					},
 				},
 				{
@@ -202,9 +192,8 @@ func buildAdminNav() []WebNavItem {
 						{Label: "Item Scripts", Target: "/admin/scripting-items", Description: "Event hooks for item scripts."},
 						{Label: "Buff Scripts", Target: "/admin/scripting-buffs", Description: "Event hooks for buff/status effect scripts."},
 						{Label: "Spell Scripts", Target: "/admin/scripting-spells", Description: "Event hooks for spell scripts."},
-						{Label: "Pet Scripts", Target: "/admin/scripting-pets", Description: "Event hooks for pet scripts."},
 						{Label: "User Scripts", Target: "/admin/scripting-users", Description: "Event hooks for the global per-player script."},
-						{Label: "Object Reference", Target: "/admin/scripting-objects", Description: "API reference for ActorObject, RoomObject, ItemObject, PetObject, PartyObject, and ContainerObject."},
+						{Label: "Object Reference", Target: "/admin/scripting-objects", Description: "API reference for ActorObject, RoomObject, ItemObject, PartyObject, and ContainerObject."},
 						{Label: "Function Reference", Target: "/admin/scripting-functions", Description: "Global utility, messaging, and panel layout functions."},
 						{Label: "REST API", Target: "/admin/scripting-api", Description: "REST endpoints for script validation and schema."},
 					},

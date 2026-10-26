@@ -11,7 +11,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/pets"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/scripting"
 	"github.com/GoMudEngine/GoMud/internal/users"
@@ -114,9 +113,6 @@ func tryPurchase(request string, user *users.UserRecord, room *rooms.Room, shopM
 	buffNames := []string{}
 	buffPrices := map[int]int{}
 
-	petNames := []string{}
-	petPrices := map[string]int{}
-
 	var saleItems characters.Shop
 	if shopMob != nil {
 		shopReq := OnShopList.Fire(ShopListRequest{
@@ -198,33 +194,12 @@ func tryPurchase(request string, user *users.UserRecord, room *rooms.Room, shopM
 			continue
 		}
 
-		if saleItem.PetType != `` {
-			petInfo := pets.GetPetCopy(saleItem.PetType)
-			if !petInfo.Exists() {
-				continue
-			}
-			petNames = append(petNames, petInfo.Type)
-			nameToShopItem[petInfo.Type] = saleItem
-
-			price := saleItem.Price
-			if price == 0 {
-				price = 10000
-			} else if price < 0 {
-				price = 0
-			}
-
-			petPrices[saleItem.PetType] = price
-
-			continue
-		}
-
 	}
 
 	allNames := []string{}
 	allNames = append(allNames, itemNames...)
 	allNames = append(allNames, mercNames...)
 	allNames = append(allNames, buffNames...)
-	allNames = append(allNames, petNames...)
 
 	match, closeMatch := util.FindMatchIn(request, allNames...)
 	if match == `` {
@@ -245,9 +220,6 @@ func tryPurchase(request string, user *users.UserRecord, room *rooms.Room, shopM
 			} else if len(mercNames) > 0 {
 				randSelection := util.Rand(len(mercNames))
 				extraSay = fmt.Sprintf(` <ansi fg="mobname">%s</ansi> is a loyal mercenary, if you're interested.`, mercNames[randSelection])
-			} else if len(petNames) > 0 {
-				randSelection := util.Rand(len(petNames))
-				extraSay = fmt.Sprintf(` <ansi fg="petname">%s</ansi> is a loyal mercenary, if you're interested.`, petNames[randSelection])
 			}
 
 			shopMob.Command(`say Sorry, I can't offer that right now.` + extraSay)
@@ -273,8 +245,6 @@ func tryPurchase(request string, user *users.UserRecord, room *rooms.Room, shopM
 		price = mercPrices[matchedShopItem.MobId]
 	} else if matchedShopItem.BuffId > 0 {
 		price = buffPrices[matchedShopItem.BuffId]
-	} else if matchedShopItem.PetType != `` {
-		price = petPrices[matchedShopItem.PetType]
 	}
 
 	if user.Character.Gold < price {
@@ -570,88 +540,6 @@ func tryPurchase(request string, user *users.UserRecord, room *rooms.Room, shopM
 				SellerMobId:  sellerMobId,
 				SellerUserId: sellerUserId,
 				BuffId:       matchedShopItem.BuffId,
-			})
-		}
-
-		return true
-	}
-
-	if matchedShopItem.PetType != `` {
-
-		petInfo := pets.GetPetCopy(matchedShopItem.PetType)
-
-		if shopMob != nil {
-
-			user.EventLog.Add(`shop`, fmt.Sprintf(`Purchased a %s pet from <ansi fg="mobname">%s</ansi> for %s`, petInfo.DisplayName(), shopMob.Character.Name, tradeInString))
-
-			user.SendText(
-				fmt.Sprintf(`You pay %s to <ansi fg="mobname">%s</ansi>.`, tradeInString, shopMob.Character.Name),
-			)
-
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> pays %s to <ansi fg="mobname">%s</ansi>.`, user.Character.Name, tradeInString, shopMob.Character.Name),
-				user.UserId,
-			)
-
-		} else if shopUser != nil {
-
-			user.EventLog.Add(`shop`, fmt.Sprintf(`Purchased a %s pet from <ansi fg="mobname">%s</ansi> for %s`, petInfo.DisplayName(), shopUser.Character.Name, tradeInString))
-
-			user.SendText(
-				fmt.Sprintf(`You pay %s to <ansi fg="mobname">%s</ansi>.`, tradeInString, shopUser.Character.Name),
-			)
-
-			shopUser.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> pays you %s for the %s.`, user.Character.Name, tradeInString, petInfo.DisplayName()))
-
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> pays to <ansi fg="username">%s</ansi> for the %s.`, user.Character.Name, shopUser.Character.Name, petInfo.DisplayName()),
-				user.UserId, shopUser.UserId)
-
-		}
-
-		// Apply the buff
-		if shopMob != nil {
-			shopMob.Command(fmt.Sprintf(`say Take care of your %s, it will always be loyal to you.`, petInfo.DisplayName()), 1)
-			shopMob.Command(`say You can name your pet with the <ansi fg="command">pet</ansi> command.`, 1)
-		}
-
-		if user.Character.Pet.Exists() {
-
-			if len(user.Character.Pet.Items) > 0 {
-
-				room.SendText(fmt.Sprintf(`%s drops everything they were carrying.`, user.Character.Pet.DisplayName()))
-
-				for _, item := range user.Character.Pet.Items {
-					room.AddItem(item, false)
-				}
-			}
-
-			room.SendText(fmt.Sprintf(`%s sadly slinks away into the shadows. Never to be seen again.`, user.Character.Pet.DisplayName()))
-		}
-
-		petInfo.Food = 3
-		petInfo.Level = 1
-
-		petInfo.Name = petInfo.Type
-		user.Character.Pet = petInfo
-		// make sure new pet buffs get applied
-		user.Character.Validate(true)
-
-		if price > 0 {
-			sellerMobId := 0
-			sellerUserId := 0
-			if shopMob != nil {
-				sellerMobId = int(shopMob.MobId)
-			} else if shopUser != nil {
-				sellerUserId = shopUser.UserId
-			}
-			events.AddToQueue(events.Purchase{
-				UserId:       user.UserId,
-				RoomId:       room.RoomId,
-				Cost:         price,
-				SellerMobId:  sellerMobId,
-				SellerUserId: sellerUserId,
-				PetName:      matchedShopItem.PetType,
 			})
 		}
 

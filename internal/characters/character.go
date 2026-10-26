@@ -13,7 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/pets"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/GoMudEngine/GoMud/internal/spells"
@@ -83,7 +82,6 @@ type Character struct {
 	MiscData            map[string]any                 `yaml:"miscdata,omitempty"`       // Any random other data that needs to be stored
 	ExtraLives          int                            `yaml:"extralives,omitempty"`     // How many lives remain. If enabled, players can perma-die if they die at zero
 	MobMastery          MobMasteries                   `yaml:"mobmastery,omitempty"`     // Tracks particular masteries around a given mob
-	Pet                 pets.Pet                       `yaml:"pet,omitempty"`            // Do they have a pet?
 	Created             time.Time                      `yaml:"created"`                  // When this character was created
 	Timers              map[string]gametime.RoundTimer `yaml:"timers,omitempty"`         // any special timers added to this character
 	ZonesVisited        map[string]RoomBitset          `yaml:"zonesvisited,omitempty"`   // permanent record of every room visited, keyed by zone name
@@ -685,10 +683,6 @@ func (c *Character) getFormattedName(viewingUserId int, uType string, renderFlag
 		f.Suffix = `downed`
 	} else if c.Aggro != nil && c.Aggro.UserId == viewingUserId {
 		f.Suffix = `aggro`
-	}
-
-	if c.Pet.Exists() {
-		f.PetName = c.Pet.DisplayName()
 	}
 
 	return OnGetFormattedName.Fire(f)
@@ -1389,11 +1383,7 @@ func (c *Character) MovementCost() int {
 }
 
 func (c *Character) StatMod(statName string) int {
-	petMod := 0
-	if !c.Pet.IsMissing() {
-		petMod = c.Pet.StatMod(statName)
-	}
-	return c.Equipment.StatMod(statName) + c.Buffs.StatMod(statName) + petMod
+	return c.Equipment.StatMod(statName) + c.Buffs.StatMod(statName)
 }
 
 // returns true if something has changed.
@@ -1541,10 +1531,6 @@ func (c *Character) Validate(recalcPermaBuffs ...bool) error {
 
 	if c.Created.IsZero() {
 		c.Created = time.Now()
-	}
-
-	if c.Pet.Exists() {
-		c.Pet.Validate()
 	}
 
 	if c.SpellBook == nil {
@@ -2088,13 +2074,6 @@ func (c *Character) reapplyPermabuffs(removedItems ...items.Item) {
 	if rInfo := races.GetRace(c.GetRaceId()); rInfo != nil {
 		for _, buffId := range rInfo.BuffIds {
 			buffIdCount[buffId] = 100 // Don't allow racial buffs to be removed, keep this number high
-		}
-	}
-
-	// Apply any buffs from pet
-	if c.Pet.Exists() && !c.Pet.IsMissing() {
-		for _, buffId := range c.Pet.GetBuffs() {
-			buffIdCount[buffId] = 100 // Don't allow pet buffs to be removed, keep this number high
 		}
 	}
 

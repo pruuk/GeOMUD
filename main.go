@@ -37,7 +37,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
-	"github.com/GoMudEngine/GoMud/internal/pets"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -174,7 +173,6 @@ func main() {
 	mutators.RegisterFS(plugins.GetPluginRegistry())
 	buffs.RegisterFS(plugins.GetPluginRegistry())
 	buffs.RegisterFlagFS(plugins.GetPluginRegistry())
-	pets.RegisterFS(plugins.GetPluginRegistry())
 	mobs.RegisterFS(plugins.GetPluginRegistry())
 	usercommands.AddFunctionExporter(plugins.GetPluginRegistry())
 	users.AddFunctionExporter(plugins.GetPluginRegistry())
@@ -1455,7 +1453,6 @@ func loadAllDataFiles(isReload bool) {
 	skills.LoadDataFiles()           // skills before professions for cross-ref warnings
 	skills.LoadProfessionDataFiles() // professions reference skills
 	mobs.LoadDataFiles()
-	pets.LoadDataFiles()
 	templates.LoadAliases(plugins.GetPluginRegistry())
 	keywords.LoadAliases(plugins.GetPluginRegistry())
 	mutators.LoadDataFiles()

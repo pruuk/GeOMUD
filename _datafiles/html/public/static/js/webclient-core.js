@@ -990,7 +990,6 @@ const WINDOW_DOCK_DEFAULTS = [
     { id: 'Character',      side: 'left' },
     { id: 'Worth',          side: 'left' },
     { id: 'Gear',           side: 'left' },
-    { id: 'Pet',            side: 'left' },    
     { id: 'Map',            side: 'right' },
     { id: 'Online',         side: 'right' },
     { id: 'KillStats',      side: 'right' },

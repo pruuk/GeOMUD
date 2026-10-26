@@ -83,7 +83,6 @@ var (
 		`enchant`:     {Enchant, false, false},
 		`experience`:  {Experience, true, false},
 		`equip`:       {Equip, false, false},
-		`feed`:        {Feed, false, false},
 		`flee`:        {Flee, false, false},
 		`formset`:     {FormSet, false, true}, // Admin only
 		`gearup`:      {Gearup, false, false},
@@ -116,7 +115,6 @@ var (
 		`password`:    {Password, true, false},
 		`paz`:         {Paz, true, true}, // Admin only
 		`peep`:        {Peep, false, false},
-		`pet`:         {Pet, false, false},
 		`picklock`:    {Picklock, false, false},
 		`pickpocket`:  {Pickpocket, false, false},
 		`prepare`:     {Prepare, true, true}, // Admin only
@@ -285,13 +283,6 @@ func TryCommand(cmd string, rest string, userId int, flags events.EventFlag) (bo
 			handled, err := scripting.TryBuffCommand(cmd, rest, user.UserId, 0, b.BuffId)
 			if handled { // For this event, handled represents whether to reject the move.
 				return handled, err
-			}
-		}
-
-		// Check if the pet script intercepts this command
-		if user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
-			if handled, err := scripting.TryPetCommand(cmd, rest, user.UserId); err == nil && handled {
-				return true, nil
 			}
 		}
 

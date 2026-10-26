@@ -192,29 +192,6 @@ func statusBonuses(user *users.UserRecord) (bool, error) {
 	sb.WriteString(` └────────────────────────────────────────────────────────────────────────────┘`)
 
 	sb.WriteString(term.CRLFStr)
-	sb.WriteString(` ┌─ <ansi fg="black-bold">.:</ansi><ansi fg="20">Pet Bonuses</ansi> ────────────────────────────────────────────────────────────┐`)
-
-	if user.Character.Pet.Exists() {
-		mods := user.Character.Pet.GetEffectiveStatMods()
-		if len(mods) > 0 {
-			sb.WriteString(term.CRLFStr)
-			sb.WriteString(fmt.Sprintf(`   %s`, user.Character.Pet.DisplayName()))
-			sb.WriteString(term.CRLFStr)
-			sb.WriteString(`            `)
-			sb.WriteString(formatStatMods(mods))
-		} else {
-			sb.WriteString(term.CRLFStr)
-			sb.WriteString(fmt.Sprintf(`   %s <ansi fg="black-bold">(no stat bonuses)</ansi>`, user.Character.Pet.DisplayName()))
-		}
-	} else {
-		sb.WriteString(term.CRLFStr)
-		sb.WriteString(`   <ansi fg="black-bold">No pet</ansi>`)
-	}
-
-	sb.WriteString(term.CRLFStr)
-	sb.WriteString(` └────────────────────────────────────────────────────────────────────────────┘`)
-
-	sb.WriteString(term.CRLFStr)
 	sb.WriteString(term.CRLFStr)
 	sb.WriteString(` <ansi fg="yellow">Total Stat Modifiers:</ansi>`)
 

@@ -123,7 +123,7 @@ func GetDetails(r *Room, user *users.UserRecord, tinymap ...[]string) RoomTempla
 	// End Room Alerts
 	//
 	renderNouns := user.HasRolePermission(`room.nouns`)
-	if user.Character.Pet.Exists() && user.Character.HasBuffFlag("see-nouns") {
+	if user.Character.HasBuffFlag("see-nouns") {
 		renderNouns = true
 	}
 
@@ -254,7 +254,7 @@ func GetDetails(r *Room, user *users.UserRecord, tinymap ...[]string) RoomTempla
 			if player != nil {
 
 				if player.Character.HasBuffFlag("hidden") { // Don't show them if they are sneaking
-					if !user.Character.Pet.Exists() || !user.Character.HasBuffFlag("see-hidden") {
+					if !user.Character.HasBuffFlag("see-hidden") {
 						continue
 					}
 				}
@@ -265,17 +265,13 @@ func GetDetails(r *Room, user *users.UserRecord, tinymap ...[]string) RoomTempla
 		}
 	}
 
-	if user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() && r.RoomId == user.Character.RoomId {
-		details.VisiblePlayers = append(details.VisiblePlayers, fmt.Sprintf(`%s (your pet)`, user.Character.Pet.DisplayName()))
-	}
-
 	visibleFriendlyMobs := []string{}
 
 	for idx, mobInstanceId := range r.mobs {
 		if mob := mobs.GetInstance(mobInstanceId); mob != nil {
 
 			if mob.Character.HasBuffFlag("hidden") { // Don't show them if they are sneaking
-				if !user.Character.Pet.Exists() || !user.Character.HasBuffFlag("see-hidden") {
+				if !user.Character.HasBuffFlag("see-hidden") {
 					continue
 				}
 			}

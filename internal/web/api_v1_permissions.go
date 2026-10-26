@@ -84,7 +84,6 @@ var allPermissions = []PermissionDef{
 	{Key: "mobs.write", Category: "Mobs", Description: "Create, edit, and delete mobs"},
 	{Key: "mutators.write", Category: "Mutators", Description: "Create, edit, and delete room mutators"},
 	{Key: "panels.write", Category: "Panels", Description: "Create and edit display panels"},
-	{Key: "pets.write", Category: "Pets", Description: "Create, edit, and delete pets"},
 	{Key: "races.write", Category: "Races", Description: "Create, edit, and delete races"},
 	{Key: "rooms.write", Category: "Rooms", Description: "Create, edit, and delete rooms"},
 	{Key: "skills.write", Category: "Skills", Description: "Create, edit, and delete skills and professions"},

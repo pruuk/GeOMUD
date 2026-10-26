@@ -12,7 +12,7 @@ type ObjectMethod struct {
 }
 
 // ObjectTypeDef describes an engine object type (the runtime value bound to a
-// script variable such as `mob`, `room`, `item`, `pet`) and the methods that
+// script variable such as `mob`, `room`, `item`) and the methods that
 // can be called on it.
 type ObjectTypeDef struct {
 	Name        string         `json:"name"`
@@ -40,7 +40,6 @@ func GetScriptObjectTypes() *ScriptObjectTypes {
 			"ActorObject":       actorObjectType(),
 			"RoomObject":        roomObjectType(),
 			"ItemObject":        itemObjectType(),
-			"PetObject":         petObjectType(),
 			"PartyObject":       partyObjectType(),
 			"ContainerObject":   containerScriptObjectType(),
 			"PanelLayoutObject": panelLayoutObjectType(),
@@ -181,7 +180,6 @@ func actorObjectType() ObjectTypeDef {
 			m("Sleep", "void", "Pauses the actor for a number of seconds.", p("seconds", "number")),
 			m("GetLastInputRound", "number", "Returns the round of the actor's last input."),
 			m("Uncurse", "ItemObject[]", "Uncurses worn items and returns them."),
-			m("GetPet", "PetObject", "Returns the actor's pet, or null."),
 		},
 	}
 }
@@ -285,35 +283,6 @@ func itemObjectType() ObjectTypeDef {
 			m("IsWeapon", "boolean", "Returns true if the item is a weapon."),
 			m("SetTempData", "void", "Stores temporary data on the item.", p("key", "string"), p("value", "any")),
 			m("GetTempData", "any", "Retrieves temporary data from the item.", p("key", "string")),
-		},
-	}
-}
-
-func petObjectType() ObjectTypeDef {
-	return ObjectTypeDef{
-		Name:        "PetObject",
-		Description: "A pet companion.",
-		Methods: []ObjectMethod{
-			m("Name", "string", "Returns the pet's display name."),
-			m("NameSimple", "string", "Returns the pet's simple name."),
-			m("SetName", "void", "Sets the pet's name.", p("name", "string")),
-			m("Type", "string", "Returns the pet type."),
-			m("Level", "number", "Returns the pet's level."),
-			m("Food", "string", "Returns the pet's food type."),
-			m("FoodLevel", "number", "Returns the pet's food level."),
-			m("Feed", "void", "Feeds the pet."),
-			m("Starve", "void", "Reduces the pet's food level."),
-			m("GetStatMod", "number", "Returns a named stat modifier the pet grants.", p("statName", "string")),
-			m("GetCapacity", "number", "Returns the pet's item capacity."),
-			m("ItemCount", "number", "Returns the number of items the pet carries."),
-			m("IsMissing", "boolean", "Returns true if the pet is missing."),
-			m("GoMissing", "void", "Sends the pet missing for a number of rounds.", p("rounds", "number")),
-			m("HasScript", "boolean", "Returns true if the pet type has a script."),
-			m("GetItems", "ItemObject[]", "Returns the items the pet carries."),
-			m("FindItem", "ItemObject", "Finds a carried item by name.", p("itemName", "string")),
-			m("StoreItem", "boolean", "Stores an item on the pet.", p("item", "ItemObject")),
-			m("RemoveItem", "boolean", "Removes an item from the pet.", p("item", "ItemObject")),
-			m("GetBuffIds", "number[]", "Returns buffs the pet grants its owner."),
 		},
 	}
 }

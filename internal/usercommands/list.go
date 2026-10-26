@@ -12,7 +12,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
-	"github.com/GoMudEngine/GoMud/internal/pets"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
@@ -80,7 +79,6 @@ func List(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 		itemsAvailable := characters.Shop{}
 		mercsAvailable := characters.Shop{}
 		buffsAvailable := characters.Shop{}
-		petsAvailable := characters.Shop{}
 
 		for _, saleItem := range shopReq.Stock {
 
@@ -98,13 +96,9 @@ func List(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 				buffsAvailable = append(buffsAvailable, saleItem)
 			}
 
-			if saleItem.PetType != `` {
-				petsAvailable = append(petsAvailable, saleItem)
-			}
-
 		}
 
-		if len(itemsAvailable) == 0 && len(mercsAvailable) == 0 && len(buffsAvailable) == 0 && len(petsAvailable) == 0 {
+		if len(itemsAvailable) == 0 && len(mercsAvailable) == 0 && len(buffsAvailable) == 0 {
 			mob.Command(`say I have nothing to sell right now, but check again later.`)
 			continue
 		}
@@ -342,85 +336,6 @@ func List(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 			user.SendText(fmt.Sprintf(`To buy an enchantment, type: <ansi fg="command">buy [name]</ansi>%s`, term.CRLFStr))
 		}
 
-		if len(petsAvailable) > 0 {
-
-			hasGoldItems := false
-			hasTradeItems := false
-			for _, stockItm := range petsAvailable {
-				if stockItm.TradeItemId > 0 {
-					hasTradeItems = true
-				}
-				if stockItm.Price >= 0 {
-					hasGoldItems = true
-				}
-			}
-
-			headers := []string{"Qty", "Pet-Type"}
-			if hasGoldItems {
-				headers = append(headers, "Price")
-			}
-			if hasTradeItems {
-				headers = append(headers, "Trade")
-			}
-
-			rows := [][]string{}
-
-			for _, stockPet := range petsAvailable {
-
-				petInfo := pets.GetPetCopy(stockPet.PetType)
-				if !petInfo.Exists() {
-					continue
-				}
-
-				qtyStr := `N/A`
-				if stockPet.QuantityMax != 0 {
-					qtyStr = strconv.Itoa(stockPet.Quantity)
-				}
-
-				price := stockPet.Price
-				if price == 0 {
-					price = 10000
-				} else if price < 0 {
-					price = 0
-				}
-
-				entryRow := []string{
-					qtyStr,
-					petInfo.Type,
-				}
-
-				if hasGoldItems {
-					if price > 0 {
-						entryRow = append(entryRow, strconv.Itoa(price))
-					} else {
-						entryRow = append(entryRow, ``)
-					}
-				}
-
-				if hasTradeItems {
-					if stockPet.TradeItemId > 0 {
-						tradeItm := items.New(stockPet.TradeItemId)
-						entryRow = append(entryRow, tradeItm.DisplayName())
-					} else {
-						entryRow = append(entryRow, ``)
-					}
-				}
-
-				rows = append(rows, entryRow)
-			}
-
-			sort.Slice(rows, func(i, j int) bool {
-				num1, _ := strconv.Atoi(rows[i][2])
-				num2, _ := strconv.Atoi(rows[j][2])
-				return num1 < num2
-			})
-
-			saleItemsData := templates.GetTable(fmt.Sprintf(`%s by <ansi fg="mobname">%s</ansi>`, colorpatterns.ApplyColorPattern(`Pets`, `turquoise`), mob.Character.Name), headers, rows)
-			tplTxt, _ := templates.Process(shopTemplate, saleItemsData, user.UserId, user.UserId)
-			user.SendText(tplTxt)
-			user.SendText(fmt.Sprintf(`To buy a pet, type: <ansi fg="command">buy [name]</ansi>%s`, term.CRLFStr))
-		}
-
 		OnShopListRendered.Fire(shopReq)
 	}
 
@@ -451,7 +366,6 @@ func List(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 		itemsAvailable := characters.Shop{}
 		mercsAvailable := characters.Shop{}
 		buffsAvailable := characters.Shop{}
-		petsAvailable := characters.Shop{}
 
 		for _, saleItem := range shopReq.Stock {
 
@@ -468,13 +382,9 @@ func List(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 			if saleItem.BuffId > 0 {
 				buffsAvailable = append(buffsAvailable, saleItem)
 			}
-
-			if saleItem.PetType != `` {
-				petsAvailable = append(petsAvailable, saleItem)
-			}
 		}
 
-		if len(itemsAvailable) == 0 && len(mercsAvailable) == 0 && len(buffsAvailable) == 0 && len(petsAvailable) == 0 {
+		if len(itemsAvailable) == 0 && len(mercsAvailable) == 0 && len(buffsAvailable) == 0 {
 			continue
 		}
 
@@ -714,86 +624,6 @@ func List(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 			tplTxt, _ := templates.Process(shopTemplate, saleItemsData, user.UserId, user.UserId)
 			user.SendText(tplTxt)
 			user.SendText(fmt.Sprintf(`To buy an enchantment, type: <ansi fg="command">buy [name]</ansi>%s`, term.CRLFStr))
-		}
-
-		if len(petsAvailable) > 0 {
-
-			hasGoldItems := false
-			hasTradeItems := false
-			for _, stockPet := range itemsAvailable {
-				if stockPet.TradeItemId > 0 {
-					hasTradeItems = true
-				}
-				if stockPet.Price >= 0 { // zero means assign a flat price
-					hasGoldItems = true
-				}
-			}
-
-			headers := []string{"Qty", "Pet-Type"}
-
-			if hasGoldItems {
-				headers = append(headers, `Price`)
-			}
-			if hasTradeItems {
-				headers = append(headers, `Trade`)
-			}
-
-			rows := [][]string{}
-
-			for _, stockPet := range petsAvailable {
-
-				petInfo := pets.GetPetCopy(stockPet.PetType)
-				if !petInfo.Exists() {
-					continue
-				}
-
-				qtyStr := `N/A`
-				if stockPet.QuantityMax != 0 {
-					qtyStr = strconv.Itoa(stockPet.Quantity)
-				}
-
-				price := stockPet.Price
-				if price == 0 {
-					price = 10000
-				} else if price < 0 {
-					price = 0
-				}
-
-				entryRow := []string{
-					qtyStr,
-					petInfo.Type,
-				}
-
-				if hasGoldItems {
-					if price > 0 {
-						entryRow = append(entryRow, strconv.Itoa(price))
-					} else {
-						entryRow = append(entryRow, ``)
-					}
-				}
-
-				if hasTradeItems {
-					if stockPet.TradeItemId > 0 {
-						tradeItm := items.New(stockPet.TradeItemId)
-						entryRow = append(entryRow, tradeItm.DisplayName())
-					} else {
-						entryRow = append(entryRow, ``)
-					}
-				}
-
-				rows = append(rows, entryRow)
-			}
-
-			sort.Slice(rows, func(i, j int) bool {
-				num1, _ := strconv.Atoi(rows[i][2])
-				num2, _ := strconv.Atoi(rows[j][2])
-				return num1 < num2
-			})
-
-			saleItemsData := templates.GetTable(fmt.Sprintf(`%s by <ansi fg="username">%s</ansi>`, colorpatterns.ApplyColorPattern(`Pets`, `turquoise`), user.Character.Name), headers, rows)
-			tplTxt, _ := templates.Process(shopTemplate, saleItemsData, user.UserId, user.UserId)
-			user.SendText(tplTxt)
-			user.SendText(fmt.Sprintf(`To buy a pet, type: <ansi fg="command">buy [name]</ansi>%s`, term.CRLFStr))
 		}
 
 		OnShopListRendered.Fire(shopReq)

@@ -10,7 +10,7 @@ import (
 
 // handwritten interface declarations for the engine's script object types.
 // These correspond to the Go structs ScriptActor, ScriptRoom, ScriptItem,
-// ScriptPet, and the schema-driven ContainerObject.
+// and the schema-driven ContainerObject.
 const engineObjectInterfaces = `
 declare interface ActorObject {
     UserId(): number;
@@ -131,7 +131,6 @@ declare interface ActorObject {
     Sleep(seconds: number): void;
     GetLastInputRound(): number;
     Uncurse(): ItemObject[];
-    GetPet(): PetObject | null;
 }
 
 declare interface RoomObject {
@@ -223,29 +222,6 @@ declare interface ItemObject {
     IsWeapon(): boolean;
     SetTempData(key: string, value: any): void;
     GetTempData(key: string): any;
-}
-
-declare interface PetObject {
-    Name(): string;
-    NameSimple(): string;
-    SetName(name: string): void;
-    Type(): string;
-    Level(): number;
-    Food(): string;
-    FoodLevel(): number;
-    Feed(): void;
-    Starve(): void;
-    GetStatMod(statName: string): number;
-    GetCapacity(): number;
-    ItemCount(): number;
-    IsMissing(): boolean;
-    GoMissing(rounds: number): void;
-    HasScript(): boolean;
-    GetItems(): ItemObject[];
-    FindItem(itemName: string): ItemObject | null;
-    StoreItem(item: ItemObject): boolean;
-    RemoveItem(item: ItemObject): boolean;
-    GetBuffIds(): number[];
 }
 
 declare interface PartyObject {
@@ -437,8 +413,6 @@ func goTypeToTS(t string) string {
 		return "ActorObject"
 	case "ItemObject":
 		return "ItemObject"
-	case "PetObject":
-		return "PetObject"
 	case "PartyObject":
 		return "PartyObject"
 	case "ContainerObject":

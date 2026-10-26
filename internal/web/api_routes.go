@@ -182,16 +182,6 @@ func registerAdminAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /admin/api/v1/professions/{professionId}", doBasicAuth(RequirePermission("skills.write", RunWithMUDLocked(apiV1PatchProfession))))
 	mux.HandleFunc("DELETE /admin/api/v1/professions/{professionId}", doBasicAuth(RequirePermission("skills.write", RunWithMUDLocked(apiV1DeleteProfession))))
 
-	// Pets
-	mux.HandleFunc("GET /admin/api/v1/pets/ranks", doBasicAuth(RunWithMUDLocked(apiV1GetPetRanks)))
-	mux.HandleFunc("GET /admin/api/v1/pets", doBasicAuth(RunWithMUDLocked(apiV1GetPets)))
-	mux.HandleFunc("POST /admin/api/v1/pets", doBasicAuth(RequirePermission("pets.write", RunWithMUDLocked(apiV1CreatePet))))
-	mux.HandleFunc("GET /admin/api/v1/pets/{petname}/script", doBasicAuth(RunWithMUDLocked(apiV1GetPetScript)))
-	mux.HandleFunc("PUT /admin/api/v1/pets/{petname}/script", doBasicAuth(RequirePermission("pets.write", RunWithMUDLocked(apiV1PutPetScript))))
-	mux.HandleFunc("GET /admin/api/v1/pets/{petname}/yaml", doBasicAuth(RunWithMUDLocked(apiV1GetPetYAML)))
-	mux.HandleFunc("PATCH /admin/api/v1/pets/{petname}", doBasicAuth(RequirePermission("pets.write", RunWithMUDLocked(apiV1PatchPet))))
-	mux.HandleFunc("DELETE /admin/api/v1/pets/{petname}", doBasicAuth(RequirePermission("pets.write", RunWithMUDLocked(apiV1DeletePet))))
-
 	// GameTime
 	mux.HandleFunc("GET /admin/api/v1/gametime", doBasicAuth(RunWithMUDLocked(apiV1GetGameTime)))
 	mux.HandleFunc("POST /admin/api/v1/gametime", doBasicAuth(RequirePermission("gametime.write", RunWithMUDLocked(apiV1CreateGameTimeCalendar))))

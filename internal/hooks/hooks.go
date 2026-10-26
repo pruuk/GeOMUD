@@ -52,14 +52,8 @@ func RegisterListeners() {
 	events.RegisterListener(events.LevelUp{}, SendLevelNotifications)
 	events.RegisterListener(events.LevelUp{}, UserScriptLevelUp)
 
-	// Pet level change notifications
-	events.RegisterListener(events.PetLevelChange{}, SendPetLevelNotifications)
-
 	// Day/Night cycle
 	events.RegisterListener(events.DayNightCycle{}, NotifySunriseSunset)
-
-	// Pet daily tick (round-based, checks game day change per-pet)
-	events.RegisterListener(events.NewRound{}, PetDailyTick)
 
 	// Looking
 	events.RegisterListener(events.Looking{}, HandleLookHints)

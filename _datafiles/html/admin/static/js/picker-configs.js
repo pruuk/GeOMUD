@@ -238,7 +238,7 @@ const attachHoverTooltip = (function () {
 })();
 
 // BuffTooltip - any element carrying a `data-buff-id` attribute (e.g. selected
-// buff chips on items/mobs/pets/races/rooms/mutators pages) gets a hover tooltip
+// buff chips on items/mobs/races/rooms/mutators pages) gets a hover tooltip
 // showing the buff name and description.
 attachHoverTooltip('[data-buff-id]', function (target) {
     const id = target.getAttribute('data-buff-id');

@@ -39,7 +39,6 @@ func Get(rest string, user *users.UserRecord, room *rooms.Room, flags events.Eve
 
 	getFromStash := false
 	containerName := ``
-	petUserId := 0
 	var corpseRef *rooms.Corpse
 
 	if len(args) >= 2 {
@@ -72,33 +71,8 @@ func Get(rest string, user *users.UserRecord, room *rooms.Room, flags events.Eve
 			}
 		}
 
-		//
-		// Look for any pets in the room
-		//
-		petUserId = room.FindByPetName(args[len(args)-1])
-		if petUserId == 0 && args[len(args)-1] == `pet` && user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() {
-			petUserId = user.UserId
-		}
-		if petUserId > 0 {
-
-			if petUserId != user.UserId {
-				user.SendText(`You can't do that!`)
-				return true, nil
-			}
-
-			getFromStash = false
-			if petUser := users.GetByUserId(petUserId); petUser != nil {
-
-				if args[len(args)-2] == "from" {
-					rest = strings.Join(args[0:len(args)-2], " ")
-				} else {
-					rest = strings.Join(args[0:len(args)-1], " ")
-				}
-			}
-		}
-
 		// Look for a corpse as the source when CorpseItems is enabled
-		if containerName == `` && petUserId == 0 && configs.GetGamePlayConfig().Death.CorpseItems {
+		if containerName == `` && configs.GetGamePlayConfig().Death.CorpseItems {
 			if c, ok := room.FindCorpseByRef(args[len(args)-1]); ok {
 				corpseRef = c
 				if len(args) >= 2 && args[len(args)-2] == "from" {
@@ -108,44 +82,6 @@ func Get(rest string, user *users.UserRecord, room *rooms.Room, flags events.Eve
 				}
 			}
 		}
-	}
-
-	if petUserId == user.UserId {
-
-		matchItem, found := user.Character.Pet.FindItem(rest)
-		if !found {
-			user.SendText(fmt.Sprintf(`You don't see a %s carried by %s.`, rest, user.Character.Pet.DisplayName()))
-		} else {
-
-			if user.Character.Pet.RemoveItem(matchItem) {
-				if !user.Character.StoreItem(matchItem) {
-					user.Character.Pet.StoreItem(matchItem)
-				} else {
-
-					events.AddToQueue(events.ItemOwnership{
-						UserId: user.UserId,
-						Item:   matchItem,
-						Gained: true,
-					})
-
-					events.AddToQueue(events.PetItemChange{
-						UserId: user.UserId,
-					})
-				}
-
-				user.SendText(
-					fmt.Sprintf(`You remove a <ansi fg="itemname">%s</ansi> from %s.`, matchItem.DisplayName(), user.Character.Pet.DisplayName()),
-				)
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> removes a <ansi fg="itemname">%s</ansi> from %s...`, user.Character.Name, matchItem.DisplayName(), user.Character.Pet.DisplayName()),
-					user.UserId,
-				)
-
-			}
-		}
-
-		return true, nil
-
 	}
 
 	// Handle getting from a corpse

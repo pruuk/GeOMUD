@@ -75,7 +75,7 @@ Sent when items are picked up, dropped, or equipped. Contains backpack and worn 
   <ansi fg="cyan">type</ansi>     <ansi fg="green">string</ansi>  - Item category (e.g. "weapon", "armor", "food")
   <ansi fg="cyan">subtype</ansi>  <ansi fg="green">string</ansi>  - Item sub-category (e.g. "sword", "chest", "potion")
   <ansi fg="cyan">uses</ansi>     <ansi fg="yellow">number</ansi>  - Remaining uses (0 for items without charges)
-  <ansi fg="cyan">details</ansi>  <ansi fg="magenta">array</ansi>   - Flags such as "cursed", "quest", "2-handed"
+  <ansi fg="cyan">details</ansi>  <ansi fg="magenta">array</ansi>   - Flags such as "cursed", "2-handed"
 
   <ansi fg="white-bold">Char.Inventory.Backpack</ansi> and <ansi fg="white-bold">Char.Inventory.Backpack.Summary</ansi> can be requested independently.
 
@@ -89,14 +89,6 @@ Sent when the list of combatants in the room changes.
   <ansi fg="cyan">hp</ansi>        <ansi fg="yellow">number</ansi>  - Current hit points
   <ansi fg="cyan">hp_max</ansi>    <ansi fg="yellow">number</ansi>  - Maximum hit points
   <ansi fg="cyan">engaged</ansi>   <ansi fg="red">bool</ansi>    - True if this mob is the one currently attacking the player
-
-<ansi fg="yellow-bold">Char.Quests</ansi>
-Sent when quest progress changes. Secret quests are excluded.
-
-  Each entry contains:
-  <ansi fg="cyan">name</ansi>         <ansi fg="green">string</ansi>  - Quest name
-  <ansi fg="cyan">description</ansi>  <ansi fg="green">string</ansi>  - Description of the current quest step
-  <ansi fg="cyan">completion</ansi>   <ansi fg="yellow">number</ansi>  - Percentage complete (0-100)
 
 <ansi fg="yellow-bold">Char.Skills</ansi>
 Sent when skills are gained or trained.
@@ -113,23 +105,6 @@ Sent when profession progress changes. Jobs are derived from skill rank combinat
   <ansi fg="cyan">name</ansi>         <ansi fg="green">string</ansi>  - Profession name
   <ansi fg="cyan">proficiency</ansi>  <ansi fg="green">string</ansi>  - Proficiency title (e.g. "Apprentice", "Master")
   <ansi fg="cyan">completion</ansi>   <ansi fg="yellow">number</ansi>  - Percentage progress toward the next proficiency tier (0-100)
-
-<ansi fg="yellow-bold">Char.Pets</ansi>
-Sent when the player's pet status changes.
-
-  Each entry contains:
-  <ansi fg="cyan">name</ansi>      <ansi fg="green">string</ansi>  - Pet's name
-  <ansi fg="cyan">type</ansi>      <ansi fg="green">string</ansi>  - Pet species or type
-  <ansi fg="cyan">level</ansi>     <ansi fg="yellow">number</ansi>  - Pet's current level
-  <ansi fg="cyan">hunger</ansi>    <ansi fg="green">string</ansi>  - Hunger state (e.g. "full")
-  <ansi fg="cyan">capacity</ansi>  <ansi fg="yellow">number</ansi>  - Number of items the pet can carry
-  <ansi fg="cyan">buffs</ansi>     <ansi fg="magenta">array</ansi>   - List of buff names the pet grants to the owner
-  <ansi fg="cyan">items</ansi>     <ansi fg="magenta">array</ansi>   - Items currently stored in the pet's inventory (same structure as backpack items)
-  <ansi fg="cyan">ability</ansi>   <ansi fg="blue-bold">object</ansi>  - Current combat ability (omitted if none). Contains:
-                   <ansi fg="cyan">level_granted</ansi>  <ansi fg="yellow">number</ansi>           - Level at which this ability was granted
-                   <ansi fg="cyan">combat_chance</ansi>  <ansi fg="yellow">number</ansi>           - Percentage chance to trigger per combat round
-                   <ansi fg="cyan">dice_roll</ansi>      <ansi fg="green">string</ansi>           - Damage dice expression (e.g. "2d6+3")
-                   <ansi fg="cyan">stat_mods</ansi>      <ansi fg="blue-bold">object</ansi>(<ansi fg="green">string</ansi>-><ansi fg="yellow">number</ansi>)  - Stat modifiers granted by the ability
 
 <ansi fg="yellow-bold">Char.Kills</ansi>
 Sent on login and updated whenever a mob or player kill or death is recorded.

@@ -97,21 +97,6 @@ func UserRoundTick(e events.Event) events.ListenerReturn {
 					user.Command(`zombieact`)
 				}
 
-				// Decrement pet missing countdown each round.
-				petJustReturned := false
-				if user.Character.Pet.Exists() && user.Character.Pet.IsMissing() {
-					if user.Character.Pet.DecrementMissing() {
-						petJustReturned = true
-						scripting.TryPetScriptEvent(`PetReturn`, uId)
-					}
-				}
-
-				// Fire PetAct script using the pet type's configured RoundActChance.
-				// Not called while the owner is in combat, or on the same round the pet returns.
-				if !petJustReturned && user.Character.Pet.Exists() && !user.Character.Pet.IsMissing() && user.Character.Aggro == nil && user.Character.Pet.RoundActChance > 0 && util.Rand(100) < user.Character.Pet.RoundActChance {
-					scripting.TryPetScriptEvent(`PetAct`, uId)
-				}
-
 				// Roundtick any cooldowns
 				user.Character.Cooldowns.RoundTick()
 

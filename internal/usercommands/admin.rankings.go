@@ -43,8 +43,6 @@ func Rankings(rest string, user *users.UserRecord, room *rooms.Room, flags event
 	subCmd := strings.ToLower(args[0])
 
 	switch subCmd {
-	case "pets":
-		return rankings_Pets(args[1:], user)
 	case "weapons":
 		return rankings_Weapons(args[1:], user)
 	case "armor":
@@ -54,78 +52,6 @@ func Rankings(rest string, user *users.UserRecord, room *rooms.Room, flags event
 		user.SendText(infoOutput)
 		return true, nil
 	}
-}
-
-func rankings_Pets(args []string, user *users.UserRecord) (bool, error) {
-
-	mode := "overall"
-	if len(args) > 0 {
-		switch strings.ToLower(args[0]) {
-		case "combat", "utility", "overall":
-			mode = strings.ToLower(args[0])
-		default:
-			user.SendText(fmt.Sprintf(`Unknown sort mode "<ansi fg="red">%s</ansi>". Valid options: <ansi fg="command">combat</ansi>, <ansi fg="command">utility</ansi>, <ansi fg="command">overall</ansi>`, args[0]))
-			return true, nil
-		}
-	}
-
-	byCombat, byUtility, byOverall := combat.RankPets()
-
-	var ranked []combat.PetRank
-	var scoreLabel string
-	var titleSuffix string
-
-	switch mode {
-	case "combat":
-		ranked = byCombat
-		scoreLabel = "Combat"
-		titleSuffix = "Combat Score"
-	case "utility":
-		ranked = byUtility
-		scoreLabel = "Utility"
-		titleSuffix = "Utility Score"
-	default:
-		ranked = byOverall
-		scoreLabel = "Overall"
-		titleSuffix = "Overall Score"
-	}
-
-	headers := []string{"Rank", "Type", "PeakDPS", "PeakStats", "PeakCap", "Buffs", "BuffVal", scoreLabel}
-	rows := make([][]string, 0, len(ranked))
-	formatting := make([][]string, 0, len(ranked))
-
-	for i, r := range ranked {
-		var score string
-		switch mode {
-		case "combat":
-			score = colorNum(fmt.Sprintf("%.3f", r.CombatScore))
-		case "utility":
-			score = colorNum(fmt.Sprintf("%.3f", r.UtilityScore))
-		default:
-			score = colorNum(fmt.Sprintf("%.3f", r.OverallScore))
-		}
-		rows = append(rows, []string{
-			fmt.Sprintf("%d", i+1),
-			r.Type,
-			colorNum(fmt.Sprintf("%.2f", r.PeakDPS)),
-			colorNum(fmt.Sprintf("%d", r.PeakStatTotal)),
-			colorNum(fmt.Sprintf("%d", r.PeakCapacity)),
-			colorNum(fmt.Sprintf("%d", r.PeakBuffCount)),
-			colorNum(fmt.Sprintf("%d", r.PeakBuffValue)),
-			score,
-		})
-		formatting = append(formatting, []string{
-			`<ansi fg="yellow">%s</ansi>`,
-			`<ansi fg="petname">%s</ansi>`,
-			`%s`, `%s`, `%s`, `%s`, `%s`, `%s`,
-		})
-	}
-
-	tblData := templates.GetTable(fmt.Sprintf("Pet Rankings by %s", titleSuffix), headers, rows, formatting...)
-	tplTxt, _ := templates.Process("tables/generic", tblData, user.UserId)
-	user.SendText(tplTxt)
-
-	return true, nil
 }
 
 func rankings_Weapons(args []string, user *users.UserRecord) (bool, error) {

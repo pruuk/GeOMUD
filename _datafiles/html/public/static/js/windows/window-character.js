@@ -662,7 +662,7 @@
             }
             const modEl = el.querySelector('#cw-stat-mod-' + d.key);
             if (modEl) {
-                modEl.addEventListener('mouseenter', () => showStatTooltip(modEl, 'How much of this stat is due to equipment, buffs and pets.'));
+                modEl.addEventListener('mouseenter', () => showStatTooltip(modEl, 'How much of this stat is due to equipment and buffs.'));
                 modEl.addEventListener('mouseleave', hideStatTooltip);
             }
         });

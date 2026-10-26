@@ -19,7 +19,6 @@ type ShopItem struct {
 	MobId       int    `yaml:"mobid,omitempty"`       // Is it a mercenary for sale?
 	ItemId      int    `yaml:"itemid,omitempty"`      // Is it an item for sale?
 	BuffId      int    `yaml:"buffid,omitempty"`      // Does this shop keeper apply a buff if purchased?
-	PetType     string `yaml:"pettype,omitempty"`     // Does this shop sell pets?
 	Quantity    int    `yaml:"quantity,omitempty"`    // How many currently avilable
 	QuantityMax int    `yaml:"quantitymax,omitempty"` // 0 for unlimited, or a maximum that can be stocked at one time
 	Price       int    `yaml:"price,omitempty"`       // If a price is provided, use it

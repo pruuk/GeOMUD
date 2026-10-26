@@ -202,7 +202,6 @@
     .shop-type-item   { background: var(--color-success-bg); color: var(--color-success-text); }
     .shop-type-mob    { background: var(--color-info-bg); color: var(--color-info-text); }
     .shop-type-buff   { background: var(--color-method-put-bg); color: var(--color-method-put-text); }
-    .shop-type-pet    { background: var(--color-warning-bg); color: var(--color-warning-text); }
     .shop-card-remove {
         position: absolute; top: 0.5rem; right: 0.6rem;
         background: none; border: none; cursor: pointer; font-size: 1.1rem;
@@ -492,7 +491,6 @@
                             <button class="btn-add-sm" onclick="addShopEntry('item')">+ Item</button>
                             <button class="btn-add-sm" onclick="addShopEntry('mob')">+ Mob for Hire</button>
                             <button class="btn-add-sm" onclick="addShopEntry('buff')">+ Buff</button>
-                            <button class="btn-add-sm" onclick="addShopEntry('pet')">+ Pet</button>
                         </div>
                         <div class="field-hint">Leave empty if not a shopkeeper. QuantityMax: 0 = always in stock, -1 = never restocks (temporary).</div>
                     </div>
@@ -1103,7 +1101,6 @@
     // Shop entries
     // -------------------------------------------------------------------------
     function detectShopType(entry) {
-        if (entry.PetType)  return 'pet';
         if (entry.BuffId)   return 'buff';
         if (entry.MobId)    return 'mob';
         return 'item';
@@ -1135,7 +1132,6 @@
         item: { label: 'Item',         badge: 'shop-type-item', idField: 'ItemId',  idLabel: 'Item' },
         mob:  { label: 'Mob for Hire', badge: 'shop-type-mob',  idField: 'MobId',   idLabel: 'Mob' },
         buff: { label: 'Buff',         badge: 'shop-type-buff', idField: 'BuffId',  idLabel: 'Buff' },
-        pet:  { label: 'Pet',          badge: 'shop-type-pet',  idField: 'PetType', idLabel: 'Pet Type' },
     };
 
     const restockOptions = [
@@ -1280,7 +1276,7 @@
 
     function appendShopCard(list, entry, forcedType) {
         const e = entry || {};
-        // New entries (from the +Item/+Mob/+Buff/+Pet buttons) pass an explicit
+        // New entries (from the +Item/+Mob/+Buff buttons) pass an explicit
         // type; loaded entries are detected from their populated id field.
         const type = forcedType || detectShopType(e);
         const meta = shopTypeMeta[type];
@@ -1289,7 +1285,7 @@
         card.className = 'shop-card';
         card.dataset.shopType = type;
 
-        const idVal  = type === 'pet' ? (e.PetType || '') : (e[meta.idField] || 0);
+        const idVal  = e[meta.idField] || 0;
         const qtyMax = e.QuantityMax != null ? e.QuantityMax : 0;
         const restockVal = e.RestockRate || '';
         const tradeVal   = e.TradeItemId || 0;
@@ -1340,18 +1336,9 @@
 
         // Insert id field
         const idSlot = card.querySelector('[data-slot="id"]');
-        if (type === 'pet') {
-            const inp = document.createElement('input');
-            inp.type = 'text';
-            inp.setAttribute('data-field', 'id');
-            inp.value = String(idVal);
-            inp.placeholder = 'e.g. cat, mule';
-            idSlot.appendChild(inp);
-        } else {
-            const pickerWrap = buildPickerField(type, idVal, null);
-            pickerWrap.setAttribute('data-field', 'id');
-            idSlot.appendChild(pickerWrap);
-        }
+        const pickerWrap = buildPickerField(type, idVal, null);
+        pickerWrap.setAttribute('data-field', 'id');
+        idSlot.appendChild(pickerWrap);
 
         // Insert trade-item field
         const tradeSlot = card.querySelector('[data-slot="trade"]');
@@ -1374,14 +1361,9 @@
             const idEl = card.querySelector('[data-field="id"]');
             const entry = {};
 
-            if (type === 'pet') {
-                entry.PetType = idEl.value.trim();
-                if (!entry.PetType) return;
-            } else {
-                const idVal = parseInt(idEl.dataset.value, 10) || 0;
-                if (idVal < 1) return;
-                entry[meta.idField] = idVal;
-            }
+            const idVal = parseInt(idEl.dataset.value, 10) || 0;
+            if (idVal < 1) return;
+            entry[meta.idField] = idVal;
 
             entry.Price        = parseInt(card.querySelector('[data-field="price"]').value, 10) || 0;
             entry.QuantityMax  = parseInt(card.querySelector('[data-field="qtymax"]').value, 10) || 0;

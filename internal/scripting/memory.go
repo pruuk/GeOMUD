@@ -8,7 +8,6 @@ func GetMemoryUsage() map[string]util.MemoryResult {
 	ret["roomVMCache"] = util.MemoryResult{Memory: util.MemoryUsage(roomVMCache), Count: len(roomVMCache)}
 	ret["mobVMCache"] = util.MemoryResult{Memory: util.MemoryUsage(mobVMCache), Count: len(mobVMCache)}
 	ret["itemVMCache"] = util.MemoryResult{Memory: util.MemoryUsage(itemVMCache), Count: len(itemVMCache)}
-	ret["petVMCache"] = util.MemoryResult{Memory: util.MemoryUsage(petVMCache), Count: len(petVMCache)}
 	ret["buffVMCache"] = util.MemoryResult{Memory: util.MemoryUsage(buffVMCache), Count: len(buffVMCache)}
 	ret["spellVMCache"] = util.MemoryResult{Memory: util.MemoryUsage(spellVMCache), Count: len(spellVMCache)}
 	ret["moduleFunctions"] = util.MemoryResult{Memory: util.MemoryUsage(moduleFunctions), Count: len(moduleFunctions)}

@@ -233,7 +233,7 @@
             <span class="perm-badge">mobs.write</span>
         </summary>
         <div class="api-body">
-            <p>Appends a shop entry to the mob's shop inventory and saves to disk. The entry can be an item, mob-for-hire, buff, or pet. Set exactly one of <code>ItemId</code>, <code>MobId</code>, <code>BuffId</code>, or <code>PetType</code>.</p>
+            <p>Appends a shop entry to the mob's shop inventory and saves to disk. The entry can be an item, mob-for-hire, or buff. Set exactly one of <code>ItemId</code>, <code>MobId</code>, or <code>BuffId</code>.</p>
             <p><strong>QuantityMax values:</strong> <code>0</code> = always in stock (unlimited), <code>-1</code> = temporary (never restocks, removed when depleted), <code>&gt;0</code> = restocks up to that amount.</p>
             <p><strong>Optional fields:</strong> <code>Price</code> (0 = auto from item value), <code>TradeItemId</code> (item required in trade), <code>RestockRate</code> (e.g. "1 hour", "1 day", "1 week").</p>
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
@@ -249,7 +249,7 @@
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
      <span class="flag">-X</span> PUT \
      <span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \
-     <span class="flag">-d</span> <span class="str">'{"PetType":"cat","Price":1200,"QuantityMax":0}'</span> \
+     <span class="flag">-d</span> <span class="str">'{"BuffId":1,"Price":1200,"QuantityMax":0}'</span> \
      <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/mobs/44/stock</span></div>
             <div class="response-examples">
                 <details class="resp-entry">

@@ -12,7 +12,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
-	"github.com/GoMudEngine/GoMud/internal/pets"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/skills"
@@ -204,33 +203,6 @@ func apiV1GetProfessionYAML(w http.ResponseWriter, r *http.Request) {
 	}
 	spec := skills.GetProfessionSpec(professionId)
 	path := dataFiles() + `/professions/` + spec.Filepath()
-	content, ok := readYAMLFile(w, path)
-	if !ok {
-		return
-	}
-	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
-		Success: true,
-		Data:    yamlResp(content, path),
-	})
-}
-
-// ---------------------------------------------------------------------------
-// Pets
-// ---------------------------------------------------------------------------
-
-// GET /admin/api/v1/pets/{petname}/yaml
-func apiV1GetPetYAML(w http.ResponseWriter, r *http.Request) {
-	petname := strings.TrimSpace(r.PathValue("petname"))
-	if petname == "" {
-		writeAPIError(w, http.StatusBadRequest, "petname is required")
-		return
-	}
-	spec := pets.GetPetCopy(petname)
-	if !spec.Exists() {
-		writeAPIError(w, http.StatusNotFound, "pet not found: "+petname)
-		return
-	}
-	path := dataFiles() + `/pets/` + spec.Filepath()
 	content, ok := readYAMLFile(w, path)
 	if !ok {
 		return
