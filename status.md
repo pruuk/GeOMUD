@@ -10,6 +10,8 @@
    `musicfile` keys, pet and quest help templates and keywords
 3. Phase 4: scripting, web and GMCP surface. Also decide on Mudlet "Discord Rich Presence" GMCP
    (`modules/gmcp/gmcp.Mudlet.go`, about 450 lines), kept through Phase 1
+4. Phase 4b: NPCs are players (decision 4, 2026-10-26). Design spec for Calabe first
+5. Phase 5: rules seam
 
 ## Waiting on Calabe
 - Go-ahead to start Phase 2 (`gomud_strip_plan.md`)
