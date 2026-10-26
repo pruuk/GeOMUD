@@ -11,13 +11,7 @@ import (
 )
 
 var (
-	SampleScripts = map[string]string{
-		`item and gold`: `item-gold-quest.js`,
-	}
-)
-
-const (
-	ScriptTemplateQuest = `item-gold-quest.js`
+	SampleScripts = map[string]string{}
 )
 
 func CreateNewMobFile(newMobInfo Mob, copyScript string) (MobId, error) {
@@ -26,10 +20,6 @@ func CreateNewMobFile(newMobInfo Mob, copyScript string) (MobId, error) {
 
 	if newMobInfo.MobId == 0 {
 		return 0, errors.New(`Could not find a new mob id to assign.`)
-	}
-
-	if copyScript == ScriptTemplateQuest {
-		newMobInfo.QuestFlags = []string{`1000000-start`}
 	}
 
 	if err := newMobInfo.Validate(); err != nil {

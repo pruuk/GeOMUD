@@ -52,7 +52,7 @@ func buildAdminNav() []WebNavItem {
 
 		{
 			Name:        "Content",
-			Description: "Manage items, rooms, buffs, spells, and quests.",
+			Description: "Manage items, rooms, buffs, and spells.",
 			Children: []WebNavItem{
 				{
 					Name:        "Items",
@@ -95,15 +95,6 @@ func buildAdminNav() []WebNavItem {
 					Children: []WebNavItem{
 						{Label: "View / Edit", Target: "/admin/spells", Description: "Browse, create, and edit spell definitions."},
 						{Label: "API Docs", Target: "/admin/spells-api", Description: "REST API reference for the spells endpoint."},
-					},
-				},
-				{
-					Name:        "Quests",
-					Target:      "/admin/quests",
-					Description: "Design multi-step quest chains with token-based progression.",
-					Children: []WebNavItem{
-						{Label: "View / Edit", Target: "/admin/quests", Description: "Browse, create, and edit quest definitions."},
-						{Label: "API Docs", Target: "/admin/quests-api", Description: "REST API reference for the quests endpoint."},
 					},
 				},
 				{

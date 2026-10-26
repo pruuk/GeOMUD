@@ -40,10 +40,8 @@ func RegisterListeners() {
 	events.RegisterListener(events.NewTurn{}, ActionPoints)
 
 	// ItemOwnership
-	events.RegisterListener(events.ItemOwnership{}, CheckItemQuests)
+	events.RegisterListener(events.ItemOwnership{}, ItemScriptEvents)
 
-	// Quest Events
-	events.RegisterListener(events.Quest{}, HandleQuestUpdate)
 	// Spawn events
 	events.RegisterListener(events.PlayerSpawn{}, HandleJoin)
 	events.RegisterListener(events.PlayerSpawn{}, UserScriptLogin)

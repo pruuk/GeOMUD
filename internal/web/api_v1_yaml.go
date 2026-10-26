@@ -13,7 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/pets"
-	"github.com/GoMudEngine/GoMud/internal/quests"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/skills"
@@ -282,34 +281,6 @@ func apiV1GetBiomeYAML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := dataFiles() + `/biomes/` + biome.Filepath()
-	content, ok := readYAMLFile(w, path)
-	if !ok {
-		return
-	}
-	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
-		Success: true,
-		Data:    yamlResp(content, path),
-	})
-}
-
-// ---------------------------------------------------------------------------
-// Quests
-// ---------------------------------------------------------------------------
-
-// GET /admin/api/v1/quests/{questId}/yaml
-func apiV1GetQuestYAML(w http.ResponseWriter, r *http.Request) {
-	questIdStr := r.PathValue("questId")
-	questId, err := strconv.Atoi(questIdStr)
-	if err != nil {
-		writeAPIError(w, http.StatusBadRequest, "questId must be an integer: "+questIdStr)
-		return
-	}
-	q := quests.GetQuestById(questId)
-	if q == nil {
-		writeAPIError(w, http.StatusNotFound, "quest not found: "+questIdStr)
-		return
-	}
-	path := dataFiles() + `/quests/` + q.Filepath()
 	content, ok := readYAMLFile(w, path)
 	if !ok {
 		return

@@ -258,7 +258,6 @@
             line-height: 1;
         }
 
-        .rw-icon.quest  { color: var(--t-warning); }
         .rw-icon.aggro  { color: var(--t-badge-pvp-text); }
         .rw-icon.locked { color: var(--t-exit-locked-text); }
         .rw-icon.usable { color: var(--t-badge-trainer-text); }
@@ -396,14 +395,6 @@
             row.appendChild(icon);
         }
 
-        if (opts.quest) {
-            const icon = document.createElement('span');
-            icon.className   = 'rw-icon quest';
-            icon.textContent = '\u25c6';
-            icon.title       = 'quest';
-            row.appendChild(icon);
-        }
-
         const nameEl = document.createElement('span');
         nameEl.className   = 'rw-row-name';
         nameEl.textContent = name;
@@ -514,7 +505,6 @@
             }
             return makeRow(c.name, {
                 aggro: c.aggro,
-                quest: c.quest_flag,
                 adj:   c.adjectives,
                 menuItems: menuItems,
             });
@@ -541,7 +531,6 @@
         const items = (room.Contents && room.Contents.Items) || [];
         setSection('items', items.map(function(itm) {
             return makeRow(itm.name, {
-                quest:     itm.quest_flag,
                 menuItems: [{ label: 'get ' + itm.name, cmd: 'get ' + itm.id }],
             });
         }));

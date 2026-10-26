@@ -386,7 +386,6 @@ d.Alert(
             <ul>
                 <li>Set <code>f.Title</code> to append a title after the name (e.g. <code>"Mayor of Frostfang"</code>)</li>
                 <li>Append to <code>f.Adjectives</code> to add a visible status indicator</li>
-                <li>Set <code>f.QuestAlert</code> to show the quest star prefix</li>
                 <li>Inspect <code>f.Type</code> to distinguish mob names (<code>"mob"</code>) from player names (<code>"user"</code>)</li>
             </ul>
 
@@ -400,7 +399,6 @@ d.Alert(
                     <tr><td><code>Title</code></td><td><span class="type-badge">string</span></td><td><span class="rw-badge rw-rw">read/write</span></td><td>Optional title appended after the name, separated by a comma. Set this to add a role or rank.</td></tr>
                     <tr><td><code>Adjectives</code></td><td><span class="type-badge">[]string</span></td><td><span class="rw-badge rw-rw">read/write</span></td><td>Status indicators shown in parentheses after the name (e.g. <code>"sleeping"</code>, <code>"poisoned"</code>). Append to add custom states.</td></tr>
                     <tr><td><code>UseShortAdjectives</code></td><td><span class="type-badge">bool</span></td><td><span class="rw-badge rw-ro">read</span></td><td>Whether to use short symbol forms for adjectives (player preference).</td></tr>
-                    <tr><td><code>QuestAlert</code></td><td><span class="type-badge">bool</span></td><td><span class="rw-badge rw-rw">read/write</span></td><td>When true, a quest star <code>&#9733;</code> is prepended to the name.</td></tr>
                     <tr><td><code>PetName</code></td><td><span class="type-badge">string</span></td><td><span class="rw-badge rw-rw">read/write</span></td><td>If set, rendered as <code>"[Name] and [PetName]"</code>.</td></tr>
                 </tbody>
             </table>

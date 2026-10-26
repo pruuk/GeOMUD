@@ -201,27 +201,6 @@
         color: var(--color-chip-text);
     }
 
-    /* quest progress */
-    .quest-progress-list { display: flex; flex-direction: column; gap: 0.5rem; }
-    .quest-progress-item {
-        display: flex; align-items: center; gap: 0.75rem;
-        padding: 0.5rem 0.75rem; background: var(--color-surface-white); border: 1px solid var(--color-border-strong);
-        border-radius: 5px; font-size: 0.85rem;
-    }
-    .quest-progress-item.quest-done { border-color: var(--color-success-text); background: var(--color-success-bg); }
-    .quest-progress-item.quest-started { border-color: var(--color-warning-text); background: var(--color-warning-bg); }
-    .quest-name { font-weight: 600; color: var(--color-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .quest-step-badge {
-        font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 3px;
-        font-weight: 600; text-transform: uppercase; flex-shrink: 0;
-    }
-    .quest-step-badge.step-done { background: var(--color-success-bg); color: var(--color-success-text); }
-    .quest-step-badge.step-mid  { background: var(--color-warning-bg); color: var(--color-warning-text); }
-    .quest-step-badge.step-start { background: var(--color-info-bg); color: var(--color-info-text); }
-    .quest-id-badge { font-size: 0.72rem; color: var(--color-text-placeholder); font-family: monospace; flex-shrink: 0; }
-    .quest-secret-badge { font-size: 0.68rem; padding: 0.1rem 0.35rem; border-radius: 3px; background: var(--color-warning-bg); color: var(--color-warning-text); flex-shrink: 0; }
-    .no-quests-msg { color: var(--color-text-placeholder); font-size: 0.85rem; font-style: italic; padding: 0.5rem 0; }
-
     /* pet panel */
     .pet-empty {
         color: var(--color-text-placeholder); font-style: italic; font-size: 0.85rem;
@@ -519,14 +498,6 @@
                     <div class="field-hint">Leave empty if not a shopkeeper. QuantityMax: 0 = always in stock, -1 = never restocks.</div>
                 </div>
 
-                <div class="section-title" style="margin-top:0.5rem;">Quest Progress</div>
-
-                <div class="field span2">
-                    <div id="quest-progress-list" class="quest-progress-list">
-                        <div class="no-quests-msg">No quest data loaded.</div>
-                    </div>
-                </div>
-
                 <div class="section-title" style="margin-top:0.5rem;">Pet</div>
 
                 <div class="field span2">
@@ -550,7 +521,6 @@
     let allItems  = [];
     let allRaces  = {};
     let buffSpecs = {};
-    let allQuests = {}; // keyed by QuestId
     let allPetTypes = {}; // keyed by type string
     let currentUserId = null;
 
@@ -560,11 +530,10 @@
     let ALL_SKILLS = [];
 
     async function init() {
-        const [racesRes, buffsRes, itemsRes, questsRes, petsRes, slotsRes, skillsRes] = await AdminAPI.all([
+        const [racesRes, buffsRes, itemsRes, petsRes, slotsRes, skillsRes] = await AdminAPI.all([
             AdminAPI.get('/admin/api/v1/races'),
             AdminAPI.get('/admin/api/v1/buffs'),
             AdminAPI.get('/admin/api/v1/items'),
-            AdminAPI.get('/admin/api/v1/quests'),
             AdminAPI.get('/admin/api/v1/pets'),
             AdminAPI.get('/admin/api/v1/items/equip-slots'),
             AdminAPI.get('/admin/api/v1/skills'),
@@ -579,11 +548,6 @@
         }
         if (itemsRes.ok) {
             allItems = (itemsRes.data.data || []).sort((a, b) => a.ItemId - b.ItemId);
-        }
-        if (questsRes.ok) {
-            for (const q of (questsRes.data.data || [])) {
-                allQuests[q.QuestId] = q;
-            }
         }
         if (petsRes.ok) {
             allPetTypes = petsRes.data.data || {};
@@ -740,9 +704,6 @@
 
         // Shop
         renderShopEntries(ch.Shop || []);
-
-        // Quest progress
-        renderQuestProgress(ch.QuestProgress || {});
 
         // Pet
         renderPet(ch.Pet || {});
@@ -1446,64 +1407,6 @@
             }
         }
         return skills;
-    }
-
-    // -------------------------------------------------------------------------
-    // Quest progress (read-only)
-    // -------------------------------------------------------------------------
-    function renderQuestProgress(questProgress) {
-        const container = document.getElementById('quest-progress-list');
-        container.innerHTML = '';
-
-        const entries = Object.entries(questProgress);
-        if (entries.length === 0) {
-            container.innerHTML = '<div class="no-quests-msg">No quest progress.</div>';
-            return;
-        }
-
-        // Sort: in-progress first, then done, by quest id
-        entries.sort((a, b) => {
-            const aDone = a[1] === 'end';
-            const bDone = b[1] === 'end';
-            if (aDone !== bDone) return aDone ? 1 : -1;
-            return parseInt(a[0], 10) - parseInt(b[0], 10);
-        });
-
-        for (const [questIdStr, step] of entries) {
-            const questId = parseInt(questIdStr, 10);
-            const quest = allQuests[questId];
-            const questName = quest ? quest.Name : 'Quest #' + questId;
-            const isDone = step === 'end';
-            const isStart = step === 'start';
-
-            const item = document.createElement('div');
-            item.className = 'quest-progress-item' + (isDone ? ' quest-done' : ' quest-started');
-
-            const idBadge = document.createElement('span');
-            idBadge.className = 'quest-id-badge';
-            idBadge.textContent = '#' + questId;
-            item.appendChild(idBadge);
-
-            const nameEl = document.createElement('span');
-            nameEl.className = 'quest-name';
-            nameEl.textContent = questName;
-            nameEl.title = questName;
-            item.appendChild(nameEl);
-
-            if (quest && quest.Secret) {
-                const secretBadge = document.createElement('span');
-                secretBadge.className = 'quest-secret-badge';
-                secretBadge.textContent = 'Secret';
-                item.appendChild(secretBadge);
-            }
-
-            const stepBadge = document.createElement('span');
-            stepBadge.className = 'quest-step-badge ' + (isDone ? 'step-done' : isStart ? 'step-start' : 'step-mid');
-            stepBadge.textContent = isDone ? 'Complete' : step;
-            item.appendChild(stepBadge);
-
-            container.appendChild(item);
-        }
     }
 
     // -------------------------------------------------------------------------

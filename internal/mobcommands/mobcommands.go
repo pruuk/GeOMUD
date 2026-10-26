@@ -39,7 +39,6 @@ var (
 		"equip":          {Equip, false},
 		"get":            {Get, false},
 		"give":           {Give, false},
-		"givequest":      {GiveQuest, false},
 		"gearup":         {Gearup, false},
 		"go":             {Go, false},
 		"look":           {Look, false},

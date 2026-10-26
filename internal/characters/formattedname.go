@@ -44,7 +44,6 @@ type FormattedName struct {
 	Title              string // Optional title appended after name (e.g. "Mayor of Frostfang")
 	Adjectives         []string
 	UseShortAdjectives bool   // Whether to failover to short adjectives
-	QuestAlert         bool   // Whether this mob is relevant to a current quest
 	PetName            string // Name of pet (if any)
 }
 
@@ -81,10 +80,6 @@ func (f FormattedName) String() string {
 			}
 		}
 		output += `)</ansi>`
-	}
-
-	if f.QuestAlert {
-		output = `<ansi fg="questflag">★</ansi>` + output
 	}
 
 	if f.PetName != `` {

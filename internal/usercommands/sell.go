@@ -24,11 +24,6 @@ func Sell(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 		return true, nil
 	}
 
-	if itemSpec.QuestToken != `` {
-		user.SendText("Quest items cannot be sold!")
-		return true, nil
-	}
-
 	for _, mobId := range room.GetMobs(rooms.FindMerchant) {
 
 		mob := mobs.GetInstance(mobId)

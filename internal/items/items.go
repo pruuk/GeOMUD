@@ -438,9 +438,6 @@ func (i *Item) DisplayName() string {
 	}
 
 	prefix := ``
-	if i.GetSpec().QuestToken != `` {
-		prefix = `<ansi fg="questflag">★</ansi>`
-	}
 
 	suffix := ``
 	if adjLen := len(i.Adjectives); adjLen > 0 {

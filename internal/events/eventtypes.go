@@ -50,14 +50,6 @@ type BuffsRemoved struct {
 
 func (b BuffsRemoved) Type() string { return `BuffsRemoved` }
 
-// Used for giving/taking quest progress
-type Quest struct {
-	UserId     int
-	QuestToken string
-}
-
-func (q Quest) Type() string { return `Quest` }
-
 // For special room-targetting actions
 type RoomAction struct {
 	RoomId       int

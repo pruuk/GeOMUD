@@ -33,11 +33,6 @@
         background: var(--color-warning-bg); color: var(--color-warning-text); flex-shrink: 0;
     }
     .item-row.active .item-script-badge { background: var(--color-warning-text); color: var(--color-surface-white); }
-    .item-quest-badge {
-        font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 3px;
-        background: var(--color-success-bg); color: var(--color-success-text); flex-shrink: 0;
-    }
-    .item-row.active .item-quest-badge { background: var(--color-success-text); color: var(--color-surface-white); }
     .item-buff-badge {
         font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 3px;
         background: var(--color-info-bg); color: var(--color-info-text); flex-shrink: 0;
@@ -318,16 +313,6 @@
                     <input type="number" id="f-breakchance" min="0" max="100" placeholder="0" />
                 </div>
                 <div class="field">
-                    <label>Quest Token</label>
-                    <div class="field-with-btn">
-                        <span id="f-questtoken-display" style="flex:1; padding:0.4rem 0.6rem; border:1px solid var(--color-border-medium); border-radius:4px; font-size:0.875rem; background:var(--color-surface-white); color:var(--color-empty-text); font-style:italic; min-height:2rem; display:flex; align-items:center;">none</span>
-                        <button class="btn-search" onclick="pickQuestToken()" title="Browse quests">&#x1F50D;</button>
-                        <button class="btn-search" onclick="clearQuestToken()" title="Clear" style="font-size:0.85rem;">&times;</button>
-                    </div>
-                    <input type="hidden" id="f-questtoken" />
-                    <div class="field-hint">Quest progress granted when item is obtained</div>
-                </div>
-                <div class="field">
                     <label>Cursed</label>
                     <div class="toggle-wrap">
                         <input type="checkbox" id="f-cursed" />
@@ -454,7 +439,6 @@
                 <span class="item-id">#${item.ItemId}</span>
                 <span>${esc(item.Name)}</span>
                 ${item.HasScript ? '<span class="item-script-badge">{}</span>' : ''}
-                ${item.QuestToken ? '<span class="item-quest-badge">Q</span>' : ''}
                 ${item.BuffCount ? '<span class="item-buff-badge">B' + item.BuffCount + '</span>' : ''}
                 <span class="item-type-badge">${esc(item.Type || '')}</span>`;
             row.onclick = () => loadItem(item.ItemId);
@@ -564,19 +548,6 @@
         setVal('f-uses', item.Uses || 0);
         setVal('f-damagereduction', item.DamageReduction || 0);
         setVal('f-breakchance', item.BreakChance || 0);
-        setVal('f-questtoken', item.QuestToken || '');
-        const qtDisplay = document.getElementById('f-questtoken-display');
-        if (item.QuestToken) {
-            qtDisplay.textContent = item.QuestToken;
-            qtDisplay.dataset.questToken = item.QuestToken;
-            qtDisplay.style.color = 'var(--color-text-strong)';
-            qtDisplay.style.fontStyle = 'normal';
-        } else {
-            qtDisplay.textContent = 'none';
-            delete qtDisplay.dataset.questToken;
-            qtDisplay.style.color = 'var(--color-empty-text)';
-            qtDisplay.style.fontStyle = 'italic';
-        }
         setVal('f-cursed', item.Cursed);
 
         // Weapon
@@ -724,7 +695,6 @@
             Uses:            parseInt(document.getElementById('f-uses').value, 10) || 0,
             DamageReduction: parseInt(document.getElementById('f-damagereduction').value, 10) || 0,
             BreakChance:     parseInt(document.getElementById('f-breakchance').value, 10) || 0,
-            QuestToken:      document.getElementById('f-questtoken').value.trim(),
             Cursed:          document.getElementById('f-cursed').checked,
             Hands:           parseInt(document.getElementById('f-hands').value, 10) || 1,
             WaitRounds:      parseInt(document.getElementById('f-waitrounds').value, 10) || 0,
@@ -853,26 +823,6 @@
     function esc(s) {
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
-
-    window.pickQuestToken = function () {
-        QuestTokenPicker.pick((token, label) => {
-            document.getElementById('f-questtoken').value = token;
-            const display = document.getElementById('f-questtoken-display');
-            display.textContent = label;
-            display.dataset.questToken = token;
-            display.style.color = 'var(--color-text-strong)';
-            display.style.fontStyle = 'normal';
-        });
-    };
-
-    window.clearQuestToken = function () {
-        document.getElementById('f-questtoken').value = '';
-        const display = document.getElementById('f-questtoken-display');
-        display.textContent = 'none';
-        delete display.dataset.questToken;
-        display.style.color = 'var(--color-empty-text)';
-        display.style.fontStyle = 'italic';
-    };
 
     window.openAnsiComposer = function () {
         const input = document.getElementById('f-displayname');

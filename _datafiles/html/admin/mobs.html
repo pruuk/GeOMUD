@@ -384,14 +384,7 @@
                         <div class="field-hint">Randomly chosen during combat</div>
                     </div>
 
-                    <div class="section-title" style="margin-top:0.5rem;">Quest &amp; Buffs</div>
-
-                    <div class="field span2">
-                        <label>Quest Flags</label>
-                        <div class="tags-wrap" id="questflags-list"></div>
-                        <button class="btn-add-sm" style="margin-top:0.4rem;" onclick="pickQuestFlag()">+ Add Quest Flag</button>
-                        <div class="field-hint">Quest flags set on this mob (e.g. 5-start, 5-return). If the quest is available to a player, this will cause a symbol to show next to the mob name.</div>
-                    </div>
+                    <div class="section-title" style="margin-top:0.5rem;">Buffs</div>
 
                     <div class="field span2">
                         <label>Buff IDs (applied on spawn)</label>
@@ -879,10 +872,9 @@
 
         setVal('f-gold', ch.Gold || 0);
 
-        // Groups, Hates, QuestFlags
+        // Groups, Hates
         renderTags('groups-list', mob.Groups || []);
         renderTags('hates-list', mob.Hates || []);
-        renderTags('questflags-list', mob.QuestFlags || []);
 
         // Commands
         setVal('f-idlecommands', (mob.IdleCommands || []).join('\n'));
@@ -951,7 +943,7 @@
     };
 
     // -------------------------------------------------------------------------
-    // Tags (groups, hates, quest flags)
+    // Tags (groups, hates)
     // -------------------------------------------------------------------------
     function renderTags(listId, values) {
         const list = document.getElementById(listId);
@@ -963,20 +955,9 @@
         const chip = document.createElement('span');
         chip.className = 'tag-chip';
         chip.dataset.value = value;
-        // Quest flags are quest tokens (questId-stepId); tag them so the shared
-        // QuestTooltip can show the quest name and step description on hover.
-        if (list.id === 'questflags-list') chip.dataset.questToken = value;
         chip.innerHTML = `${esc(value)} <button title="Remove" onclick="this.closest('.tag-chip').remove()">&times;</button>`;
         list.appendChild(chip);
     }
-
-    window.pickQuestFlag = function () {
-        QuestTokenPicker.pick((token) => {
-            const existing = collectTags('questflags-list');
-            if (existing.includes(token)) return;
-            appendTagChip(document.getElementById('questflags-list'), token);
-        });
-    };
 
     window.addTag = function (listId, inputId) {
         const input = document.getElementById(inputId);
@@ -1437,7 +1418,6 @@
             EliteChance:    parseInt(document.getElementById('f-elitechance').value, 10) || 0,
             Groups:         collectTags('groups-list'),
             Hates:          collectTags('hates-list'),
-            QuestFlags:     collectTags('questflags-list'),
             BuffIds:        collectBuffIds('buffids-list'),
             IdleCommands:   textToArray('f-idlecommands'),
             AngryCommands:  textToArray('f-angrycommands'),

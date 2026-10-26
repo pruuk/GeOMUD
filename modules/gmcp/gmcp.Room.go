@@ -313,9 +313,8 @@ func (g *GMCPRoomModule) GetRoomNode(user *users.UserRecord, gmcpModule string) 
 		payload.Contents.Items = []GMCPRoomModule_Payload_Contents_Item{}
 		for _, itm := range room.Items {
 			payload.Contents.Items = append(payload.Contents.Items, GMCPRoomModule_Payload_Contents_Item{
-				Id:        itm.ShorthandId(),
-				Name:      itm.Name(),
-				QuestFlag: itm.GetSpec().QuestToken != ``,
+				Id:   itm.ShorthandId(),
+				Name: itm.Name(),
 			})
 		}
 
@@ -378,15 +377,6 @@ func (g *GMCPRoomModule) GetRoomNode(user *users.UserRecord, gmcpModule string) 
 				Name:       mob.Character.Name,
 				Adjectives: mob.Character.GetAdjectives(),
 				Aggro:      mob.Character.Aggro != nil,
-			}
-
-			if len(mob.QuestFlags) > 0 {
-				for _, qFlag := range mob.QuestFlags {
-					if user.Character.HasQuest(qFlag) || (len(qFlag) >= 5 && qFlag[len(qFlag)-5:] == `start`) {
-						c.QuestFlag = true
-						break
-					}
-				}
 			}
 
 			payload.Contents.Npcs = append(payload.Contents.Npcs, c)
@@ -582,13 +572,11 @@ type GMCPRoomModule_Payload_Contents_Character struct {
 	Name       string   `json:"name"`
 	Adjectives []string `json:"adjectives"`
 	Aggro      bool     `json:"aggro"`
-	QuestFlag  bool     `json:"quest_flag"`
 }
 
 type GMCPRoomModule_Payload_Contents_Item struct {
-	Id        string `json:"id"`
-	Name      string `json:"name"`
-	QuestFlag bool   `json:"quest_flag"`
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type GMCPRoomModule_Payload_Contents_Container struct {

@@ -161,13 +161,6 @@ func (i ScriptItem) GetDescription() string {
 	return i.itemRecord.GetSpec().Description
 }
 
-func (i ScriptItem) GetQuestToken() string {
-	if i.itemRecord == nil {
-		return ``
-	}
-	return i.itemRecord.GetSpec().QuestToken
-}
-
 func (i ScriptItem) GetElement() string {
 	if i.itemRecord == nil {
 		return ``

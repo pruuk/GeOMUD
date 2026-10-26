@@ -362,14 +362,14 @@ end</code></pre></div>
     if (eventDetails.sourceType === 'user') {
         var killer = GetUser(eventDetails.sourceId);
         if (killer) {
-            killer.GiveQuest('5-end');
+            killer.AddGold(5);
         }
     }
 }</code></pre><pre class="scriptlang-block" data-lang="lua"><code class="language-lua">function onDie(mob, room, eventDetails)
     if eventDetails.sourceType == "user" then
         local killer = GetUser(eventDetails.sourceId)
         if killer then
-            killer:GiveQuest("5-end")
+            killer:AddGold(5)
         end
     end
 end</code></pre></div>

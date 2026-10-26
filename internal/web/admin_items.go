@@ -30,7 +30,6 @@ var pageWritePermissions = map[string]string{
 	"/admin/mutators":              "mutators.write",
 	"/admin/panels":                "panels.write",
 	"/admin/pets":                  "pets.write",
-	"/admin/quests":                "quests.write",
 	"/admin/races":                 "races.write",
 	"/admin/skills":                "skills.write",
 	"/admin/skills-professions":    "skills.write",
@@ -124,14 +123,6 @@ func adminBuffsFlags(w http.ResponseWriter, r *http.Request) {
 
 func adminBuffsAPI(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "buffs-api.html", nil)
-}
-
-func adminQuests(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "quests.html", nil)
-}
-
-func adminQuestsAPI(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "quests-api.html", nil)
 }
 
 func adminUsers(w http.ResponseWriter, r *http.Request) {

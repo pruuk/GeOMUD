@@ -86,10 +86,6 @@ declare interface ActorObject {
     DisableSpell(spellId: string): boolean;
     EnableSpell(spellId: string): boolean;
     GetSpells(): {[spellId: string]: number};
-    HasQuest(questId: string): boolean;
-    GiveQuest(questId: string): void;
-    IsQuestDone(questToken: string): boolean;
-    ClearQuestToken(questToken: string): void;
     GetParty(excludeSelf?: boolean): PartyObject;
     GetPartyPresent(excludeSelf?: boolean): PartyObject;
     GetPartyMissing(): PartyObject;
@@ -174,8 +170,6 @@ declare interface RoomObject {
     AddMutator(mutName: string): void;
     RemoveMutator(mutName: string): void;
     GetExits(): {Name: string, RoomId: number, Secret: boolean, Lock: any, temporary: boolean}[];
-    HasQuest(questId: string, partyUserId?: number): number[];
-    MissingQuest(questId: string, partyUserId?: number): number[];
     SendText(msg: string, ...excludeUserIds: number[]): void;
     SendTextToExits(msg: string, isQuiet: boolean, ...excludeUserIds: number[]): void;
     GetGold(): number;
@@ -211,7 +205,6 @@ declare interface ItemObject {
     GetSubtype(): string;
     GetValue(): number;
     GetElement(): string;
-    GetQuestToken(): string;
     GetBuffIds(): number[];
     GetWornBuffIds(): number[];
     GetStatMods(): {[stat: string]: number};
@@ -259,7 +252,6 @@ declare interface PartyObject {
     GetMembers(): ActorObject[];
     SendText(msg: string): void;
     SetResetRoomId(roomId: number): void;
-    GiveQuest(questId: string): void;
     AddGold(amount: number, bankAmount?: number): void;
     AddHealth(amt: number): void;
     AddMana(amt: number): void;

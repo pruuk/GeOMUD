@@ -395,7 +395,6 @@
         }
 
         .pw-item-badge.cursed { background:var(--t-cursed-badge-bg); color:var(--t-cursed-text); border:1px solid var(--t-cursed-badge-border); }
-        .pw-item-badge.quest  { background:var(--t-quest-badge-bg); color:var(--t-quest-text); border:1px solid var(--t-quest-badge-border); }
         .pw-item-badge.uses   { background:var(--t-uses-badge-bg); color:var(--t-uses-badge-text); border:1px solid var(--t-uses-badge-border); }
     `);
 
@@ -622,7 +621,6 @@
 
         items.forEach(function(item) {
             var isCursed = item.details && item.details.includes('cursed');
-            var isQuest  = item.details && item.details.includes('quest');
 
             var row = document.createElement('div');
             row.className = 'pw-item-row';
@@ -632,15 +630,13 @@
             typeEl.textContent = item.type || '';
 
             var nameEl = document.createElement('span');
-            nameEl.className   = 'pw-item-name' + (isCursed ? ' cursed' : isQuest ? ' quest' : '');
+            nameEl.className   = 'pw-item-name' + (isCursed ? ' cursed' : '');
             nameEl.textContent = item.name || '';
 
             var badgeEl = document.createElement('span');
             badgeEl.className = 'pw-item-badge';
             if (isCursed) {
                 badgeEl.textContent = 'cursed'; badgeEl.classList.add('cursed');
-            } else if (isQuest) {
-                badgeEl.textContent = 'quest';  badgeEl.classList.add('quest');
             } else if (item.uses > 0) {
                 badgeEl.textContent = item.uses + 'x'; badgeEl.classList.add('uses');
             } else {

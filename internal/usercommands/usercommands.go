@@ -126,9 +126,7 @@ var (
 		`printline`:   {PrintLine, true, false},
 		`put`:         {Put, false, false},
 		`pvp`:         {Pvp, true, false},
-		`quests`:      {Quests, true, false},
 		`quit`:        {Quit, true, false},
-		`questtoken`:  {QuestToken, false, true}, // Admin only
 		`rank`:        {Rank, false, false},
 		`rankings`:    {Rankings, false, true}, // Admin only
 		`read`:        {Read, false, false},

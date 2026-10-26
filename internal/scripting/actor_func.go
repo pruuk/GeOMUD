@@ -229,19 +229,6 @@ func (a ScriptActor) GetRoomId() int {
 	return a.characterRecord.RoomId
 }
 
-func (a ScriptActor) HasQuest(questId string) bool {
-	return a.characterRecord.HasQuest(questId)
-}
-
-func (a ScriptActor) GiveQuest(questId string) {
-
-	events.AddToQueue(events.Quest{
-		UserId:     a.UserId(),
-		QuestToken: questId,
-	})
-
-}
-
 // Gets a party object that indexes ALL members of the party
 func (a ScriptActor) GetParty(excludeSelf ...bool) ScriptParty {
 	return ScriptParty{
@@ -950,14 +937,6 @@ func (a ScriptActor) FindOnBody(itemName string) *ScriptItem {
 	}
 	si := newScriptItem(itm)
 	return &si
-}
-
-func (a ScriptActor) IsQuestDone(questToken string) bool {
-	return a.characterRecord.IsQuestDone(questToken)
-}
-
-func (a ScriptActor) ClearQuestToken(questToken string) {
-	a.characterRecord.ClearQuestToken(questToken)
 }
 
 func (a ScriptActor) GetAllSkills() map[string]int {

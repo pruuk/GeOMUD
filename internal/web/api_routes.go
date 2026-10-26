@@ -72,12 +72,6 @@ func registerAdminAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /admin/api/v1/buff-flags/{flag}", doBasicAuth(RequirePermission("buffs.write", RunWithMUDLocked(apiV1PatchBuffFlag))))
 	mux.HandleFunc("DELETE /admin/api/v1/buff-flags/{flag}", doBasicAuth(RequirePermission("buffs.write", RunWithMUDLocked(apiV1DeleteBuffFlag))))
 
-	// Quests
-	mux.HandleFunc("GET /admin/api/v1/quests", doBasicAuth(RunWithMUDLocked(apiV1GetQuests)))
-	mux.HandleFunc("GET /admin/api/v1/quests/{questId}/yaml", doBasicAuth(RunWithMUDLocked(apiV1GetQuestYAML)))
-	mux.HandleFunc("PATCH /admin/api/v1/quests", doBasicAuth(RequirePermission("quests.write", RunWithMUDLocked(apiV1PatchQuest))))
-	mux.HandleFunc("DELETE /admin/api/v1/quests/{questId}", doBasicAuth(RequirePermission("quests.write", RunWithMUDLocked(apiV1DeleteQuest))))
-
 	// Users
 	mux.HandleFunc("GET /admin/api/v1/users/search", doBasicAuth(RunWithMUDLocked(apiV1SearchUsers)))
 	mux.HandleFunc("POST /admin/api/v1/users", doBasicAuth(RequirePermission("users.write", RunWithMUDLocked(apiV1CreateUser))))

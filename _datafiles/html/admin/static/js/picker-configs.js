@@ -68,18 +68,6 @@ const PickerConfigs = {
         sort: (a, b) => a.ItemId - b.ItemId,
     },
 
-    quests: {
-        title:   'Select Quest',
-        source:  '/admin/api/v1/quests',
-        idKey:   'QuestId',
-        columns: [
-            { key: 'QuestId', label: '#',    width: '4rem', mono: true },
-            { key: 'Name',    label: 'Name', flex: true },
-        ],
-        searchKeys: ['QuestId', 'Name'],
-        sort: (a, b) => a.QuestId - b.QuestId,
-    },
-
     mobs: {
         title:   'Select Mob',
         idKey:   'MobId',
@@ -157,16 +145,6 @@ PickerConfigs.buffDescription = function (id) {
 AdminAPI.get('/admin/api/v1/buffs').then(res => {
     if (res.ok && res.data && res.data.data && res.data.data.specs) {
         window._adminBuffSpecs = res.data.data.specs;
-    }
-});
-
-// Pre-warm _adminQuestSpecs (keyed by QuestId) so quest tooltips can resolve a
-// token's quest name and step description synchronously at hover time.
-AdminAPI.get('/admin/api/v1/quests').then(res => {
-    if (res.ok && res.data && Array.isArray(res.data.data)) {
-        const byId = {};
-        for (const q of res.data.data) byId[String(q.QuestId)] = q;
-        window._adminQuestSpecs = byId;
     }
 });
 
@@ -286,50 +264,6 @@ attachHoverTooltip('[data-buff-id]', function (target) {
     return wrap;
 });
 
-// QuestTooltip - any element carrying a `data-quest-token` attribute (e.g. quest
-// flag chips on mobs/rooms/mapper pages) gets a hover tooltip showing the quest
-// name and the matching step's description. The token format is `questId-stepId`.
-attachHoverTooltip('[data-quest-token]', function (target) {
-    const token = target.getAttribute('data-quest-token');
-    if (token == null || token === '') return null;
-    const dash = token.indexOf('-');
-    const questId = dash >= 0 ? token.slice(0, dash) : token;
-    const stepId  = dash >= 0 ? token.slice(dash + 1) : '';
-    const quest = (window._adminQuestSpecs || {})[String(questId)];
-    if (!quest) return null; // cache not warm / unknown quest - skip silently
-
-    const wrap = document.createElement('div');
-    const title = document.createElement('div');
-    title.style.cssText = 'font-weight:700;margin-bottom:0.15rem;';
-    title.textContent = '#' + questId + ' ' + (quest.Name || '');
-    wrap.appendChild(title);
-
-    let step = null;
-    if (stepId && Array.isArray(quest.Steps)) {
-        step = quest.Steps.find(s => String(s.Id) === stepId) || null;
-    }
-
-    const body = document.createElement('div');
-    if (step) {
-        const label = document.createElement('span');
-        label.style.cssText = 'font-weight:600;';
-        label.textContent = stepId + ': ';
-        body.appendChild(label);
-        const desc = document.createElement('span');
-        desc.style.cssText = 'color:var(--color-text-muted);';
-        desc.textContent = step.Description || '(no description)';
-        body.appendChild(desc);
-    } else if (stepId) {
-        body.style.cssText = 'color:var(--color-text-faint);font-style:italic;';
-        body.textContent = 'Step "' + stepId + '" not found.';
-    } else {
-        body.style.cssText = 'color:var(--color-text-faint);font-style:italic;';
-        body.textContent = quest.Description || 'No description.';
-    }
-    wrap.appendChild(body);
-    return wrap;
-});
-
 // Pre-warm _adminItemSpecs (keyed by ItemId) so item info-card tooltips can
 // resolve an item's details synchronously at hover time.
 AdminAPI.get('/admin/api/v1/items').then(res => {
@@ -342,7 +276,7 @@ AdminAPI.get('/admin/api/v1/items').then(res => {
 
 // ItemTooltip - any element carrying a `data-item-id` attribute (e.g. selected
 // item chips / spawn displays on mobs/users/rooms pages) gets a hover "info
-// card" with at-a-glance details: name, type/subtype, description, quest token.
+// card" with at-a-glance details: name, type/subtype, description.
 attachHoverTooltip('[data-item-id]', function (target) {
     const id = target.getAttribute('data-item-id');
     if (id == null || id === '' || id === '0') return null;
@@ -374,20 +308,6 @@ attachHoverTooltip('[data-item-id]', function (target) {
         desc.textContent = 'No description.';
     }
     wrap.appendChild(desc);
-
-    if (spec.QuestToken) {
-        const q = document.createElement('div');
-        q.style.cssText = 'margin-top:0.3rem;font-size:0.75rem;color:var(--color-text-subtle);';
-        const label = document.createElement('span');
-        label.style.fontWeight = '600';
-        label.textContent = 'Quest token: ';
-        q.appendChild(label);
-        const tok = document.createElement('span');
-        tok.style.fontFamily = 'monospace';
-        tok.textContent = spec.QuestToken;
-        q.appendChild(tok);
-        wrap.appendChild(q);
-    }
 
     return wrap;
 });
@@ -438,57 +358,6 @@ attachHoverTooltip('[data-spell-id]', function (target) {
 
     return wrap;
 });
-
-// QuestTokenPicker
-//
-// Usage:
-//   QuestTokenPicker.pick((token, label) => {
-//     // token: e.g. "1001-start"
-//     // label: e.g. "#1001 The Lost Artifact - start"
-//   });
-//
-// Optional: pass excludeQuestId to filter out the quest currently being edited
-// (prevents a quest from referencing its own tokens).
-//   QuestTokenPicker.pick(callback, { excludeQuestId: currentQuestId });
-
-const QuestTokenPicker = (() => {
-    function pick(onPicked, opts) {
-        const exclude = opts && opts.excludeQuestId;
-
-        Picker.open({
-            ...PickerConfigs.quests,
-            title:  'Select Quest',
-            filter: exclude != null ? (q => q.QuestId !== exclude) : undefined,
-            onSelect: (quest) => {
-                const steps = (quest.Steps || []);
-
-                // Build step items - always include start/end even if Steps is sparse
-                const stepItems = steps.map(s => ({
-                    Id:          s.Id,
-                    Description: s.Description || '',
-                }));
-
-                Picker.open({
-                    title:   'Select Step - #' + quest.QuestId + ' ' + quest.Name,
-                    source:  async () => stepItems,
-                    idKey:   'Id',
-                    columns: [
-                        { key: 'Id',          label: 'Step',        width: '8rem', mono: true },
-                        { key: 'Description', label: 'Description', flex: true },
-                    ],
-                    searchKeys: ['Id', 'Description'],
-                    onSelect: (step) => {
-                        const token = quest.QuestId + '-' + step.Id;
-                        const label = '#' + quest.QuestId + ' ' + quest.Name + ' \u2014 ' + step.Id;
-                        onPicked(token, label);
-                    },
-                });
-            },
-        });
-    }
-
-    return { pick };
-})();
 
 // UserPicker - search-driven user picker backed by /admin/api/v1/users/search.
 //

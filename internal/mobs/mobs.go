@@ -55,15 +55,14 @@ type Mob struct {
 	AngryCommands   []string `yaml:"angrycommands,omitempty"`  // randomly chosen to queue when they are angry/entering combat.
 	CombatCommands  []string `yaml:"combatcommands,omitempty"` // Commands they may do while in combat
 	Character       characters.Character
-	MaxWander       int       `yaml:"maxwander,omitempty"`       // Max rooms to wander from home
-	WanderCount     int       `yaml:"-"`                         // How many times this mob has wandered
-	PreventIdle     bool      `yaml:"-"`                         // Whether they can't possibly be idle
-	ScriptTag       string    `yaml:"scripttag,omitempty"`       // Script for this mob: mobs/frostfang/scripts/{mobId}-{mobname}-{ScriptTag}.js
-	QuestFlags      []string  `yaml:"questflags,omitempty,flow"` // What quest flags are set on this mob?
-	BuffIds         []int     `yaml:"buffids,omitempty"`         // Buff Id's this mob always has upon spawn
-	EliteChance     int       `yaml:"elitechance,omitempty"`     // Percent chance (0-100) this mob spawns as elite
-	IsElite         bool      `yaml:"-"`                         // Runtime flag: true if this instance is elite
-	Path            PathQueue `yaml:"-"`                         // a pre-calculated path the mob is following.
+	MaxWander       int       `yaml:"maxwander,omitempty"`   // Max rooms to wander from home
+	WanderCount     int       `yaml:"-"`                     // How many times this mob has wandered
+	PreventIdle     bool      `yaml:"-"`                     // Whether they can't possibly be idle
+	ScriptTag       string    `yaml:"scripttag,omitempty"`   // Script for this mob: mobs/frostfang/scripts/{mobId}-{mobname}-{ScriptTag}.js
+	BuffIds         []int     `yaml:"buffids,omitempty"`     // Buff Id's this mob always has upon spawn
+	EliteChance     int       `yaml:"elitechance,omitempty"` // Percent chance (0-100) this mob spawns as elite
+	IsElite         bool      `yaml:"-"`                     // Runtime flag: true if this instance is elite
+	Path            PathQueue `yaml:"-"`                     // a pre-calculated path the mob is following.
 	tempDataStore   map[string]any
 	lastCommandTurn uint64           // The last turn a command was scheduled for
 	playersAttacked map[int]struct{} // all players this mob has attacked at some point

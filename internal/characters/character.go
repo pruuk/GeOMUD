@@ -14,7 +14,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/pets"
-	"github.com/GoMudEngine/GoMud/internal/quests"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/GoMudEngine/GoMud/internal/spells"
@@ -79,7 +78,6 @@ type Character struct {
 	Skills              map[string]int                 `yaml:"skills,omitempty"`         // The skills the character has, and what level they are at
 	Cooldowns           Cooldowns                      `yaml:"cooldowns,omitempty"`      // How many rounds until it is cooled down
 	Settings            map[string]string              `yaml:"settings,omitempty"`       // custom setting tracking, used for anything.
-	QuestProgress       map[int]string                 `yaml:"questprogress,omitempty"`  // quest progress tracking
 	KeyRing             map[string]string              `yaml:"keyring,omitempty"`        // key is the lock id, value is the sequence
 	KD                  KDStats                        `yaml:"kd,omitempty"`             // Kill/Death stats
 	MiscData            map[string]any                 `yaml:"miscdata,omitempty"`       // Any random other data that needs to be stored
@@ -1071,84 +1069,6 @@ func (c *Character) ZoneVisitPercent(zone string, validRoomIds map[int]struct{})
 		return 0
 	}
 	return int(float64(visited) / float64(total) * 100)
-}
-
-func (c *Character) IsQuestDone(questToken string) bool {
-	testQuestId, _ := quests.TokenToParts(questToken)
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	stage := c.QuestProgress[testQuestId]
-
-	return stage == `end`
-}
-
-func (c *Character) HasQuest(questToken string) bool {
-
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	testQuestId, testQuestStep := quests.TokenToParts(questToken)
-
-	currentStep, ok := c.QuestProgress[testQuestId]
-	if !ok {
-		return false
-	}
-
-	// If on that step currently, then true
-	if currentStep == testQuestStep {
-		return true
-	}
-
-	currentToken := quests.PartsToToken(testQuestId, currentStep)
-
-	// If the current token comes after the test token then they've already done that quest
-	return quests.IsTokenAfter(questToken, currentToken)
-}
-
-func (c *Character) GetQuestProgress() map[int]string {
-
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	retMap := make(map[int]string)
-	for questId, stepName := range c.QuestProgress {
-		retMap[questId] = stepName
-	}
-	return retMap
-}
-
-func (c *Character) GiveQuestToken(questToken string) bool {
-
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	questId, newStep := quests.TokenToParts(questToken)
-	currentProgress := c.QuestProgress[questId]
-
-	currentToken := quests.PartsToToken(questId, currentProgress)
-
-	if quests.IsTokenAfter(currentToken, questToken) {
-		c.QuestProgress[questId] = newStep
-		return true
-	}
-
-	return false
-}
-
-func (c *Character) ClearQuestToken(questToken string) {
-
-	if c.QuestProgress == nil {
-		c.QuestProgress = make(map[int]string)
-	}
-
-	questId, _ := quests.TokenToParts(questToken)
-
-	delete(c.QuestProgress, questId)
 }
 
 func (c *Character) SetAggroRemote(exitName string, userId int, mobInstanceId int, aggroType AggroType, roundsWaitTime ...int) {

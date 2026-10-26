@@ -1795,14 +1795,6 @@
                 '<div class="field-hint">Overrides which script file this mob uses. Leave blank for mob template default.</div>' +
             '</div>' +
 
-            // Quest Flags (mob only)
-            '<div class="spawn-field span2" style="' + (isMob ? shown : hidden) + '">' +
-                '<label>Quest Flags</label>' +
-                '<div class="buff-ids-wrap spawn-questflags-wrap">' + renderSpawnQuestFlagChips(s.QuestFlags || []) + '</div>' +
-                '<button class="btn-add-sm" style="margin-top:0.3rem" onclick="pickSpawnQuestFlag(this)">+ Add Quest Flag</button>' +
-                '<div class="field-hint">Quest flag tokens assigned to this mob instance (e.g. 1001-start). Click to pick from the quest list.</div>' +
-            '</div>' +
-
             // Buff IDs (mob only)
             '<div class="spawn-field span2" style="' + (isMob ? shown : hidden) + '">' +
                 '<label>Permanent Buffs</label>' +
@@ -1897,28 +1889,6 @@
         updateSpawnHeader(card);
     };
 
-    function renderSpawnQuestFlagChips(flags) {
-        return (flags || []).map(token => {
-            return '<span class="buff-chip" data-quest-token="' + esc(token) + '">' + esc(token) +
-                ' <button onclick="this.closest(\'.buff-chip\').remove()" title="Remove">&times;</button></span>';
-        }).join('');
-    }
-
-    window.pickSpawnQuestFlag = function (btn) {
-        const card = btn.closest('.spawn-card');
-        const wrap = card.querySelector('.spawn-questflags-wrap');
-        QuestTokenPicker.pick((token, label) => {
-            // avoid duplicates
-            const existing = Array.from(wrap.querySelectorAll('.buff-chip')).map(c => c.dataset.questToken);
-            if (existing.includes(token)) return;
-            const chip = document.createElement('span');
-            chip.className = 'buff-chip';
-            chip.dataset.questToken = token;
-            chip.innerHTML = esc(label) + ' <button onclick="this.closest(\'.buff-chip\').remove()" title="Remove">&times;</button>';
-            wrap.appendChild(chip);
-        });
-    };
-
     window.pickSpawnBuff = function (btn) {
         const card = btn.closest('.spawn-card');
         const wrap = card.querySelector('.spawn-buffids');
@@ -1982,10 +1952,6 @@
 
                 const scriptTag = card.querySelector('.spawn-scripttag').value.trim();
                 if (scriptTag) s.ScriptTag = scriptTag;
-
-                const questFlagsRaw = Array.from(card.querySelectorAll('.spawn-questflags-wrap .buff-chip'))
-                    .map(c => c.dataset.questToken).filter(Boolean);
-                if (questFlagsRaw.length) s.QuestFlags = questFlagsRaw;
 
                 const buffIds = Array.from(card.querySelectorAll('.spawn-buffids .buff-chip'))
                     .map(c => parseInt(c.dataset.buffId, 10)).filter(n => !isNaN(n));

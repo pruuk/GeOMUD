@@ -8,7 +8,6 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
-	"github.com/GoMudEngine/GoMud/internal/quests"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
@@ -358,33 +357,6 @@ func item_Create(rest string, user *users.UserRecord, room *rooms.Room, flags ev
 	}
 
 	//
-	// Description
-	//
-	{
-		qToken := newItemSpec.QuestToken
-		qTokenDefault := qToken
-		if qToken == `` {
-			qToken = `_`
-		}
-
-		question := cmdPrompt.Ask(`Quest token given if acquired (if any):`, []string{qTokenDefault}, qToken)
-		if !question.Done {
-			return true, nil
-		}
-
-		if question.Response != `_` {
-
-			if quests.GetQuest(question.Response) == nil {
-				user.SendText(`Invalid quest token`)
-				question.RejectResponse()
-				return true, nil
-			}
-
-			newItemSpec.QuestToken = question.Response
-		}
-	}
-
-	//
 	// Name Selection
 	//
 	{
@@ -431,10 +403,6 @@ func item_Create(rest string, user *users.UserRecord, room *rooms.Room, flags ev
 
 			if newItemSpec.Value > 0 {
 				user.SendText(`  <ansi fg="yellow-bold">Value:</ansi>       <ansi fg="white-bold">` + strconv.Itoa(newItemSpec.Value) + `</ansi>`)
-			}
-
-			if newItemSpec.QuestToken != `` {
-				user.SendText(`  <ansi fg="yellow-bold">Quest Token:</ansi> <ansi fg="white-bold">` + newItemSpec.QuestToken + `</ansi>`)
 			}
 
 			user.SendText(`  <ansi fg="yellow-bold">SubType:</ansi>     <ansi fg="white-bold">` + string(newItemSpec.Subtype) + `</ansi>`)

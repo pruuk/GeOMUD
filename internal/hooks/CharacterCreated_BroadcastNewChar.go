@@ -9,7 +9,7 @@ import (
 )
 
 //
-// Checks for quests on the item
+// Announces a newly created character
 //
 
 func BroadcastNewChar(e events.Event) events.ListenerReturn {

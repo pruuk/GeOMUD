@@ -375,16 +375,20 @@ func mob_Create(rest string, user *users.UserRecord, room *rooms.Room, flags eve
 	newMob.Hostile = question.Response == `y`
 
 	//
-	// Quest Script?
+	// Sample script? (only offered when there are samples)
 	//
-	question = cmdPrompt.Ask(`Create with a sample script?`, []string{`y`, `n`}, `n`)
-	if !question.Done {
-		return true, nil
+	wantSample := false
+	if len(mobs.SampleScripts) > 0 {
+		question = cmdPrompt.Ask(`Create with a sample script?`, []string{`y`, `n`}, `n`)
+		if !question.Done {
+			return true, nil
+		}
+		wantSample = question.Response == `y`
 	}
 
 	scriptType := ``
 	scriptTemplate := ``
-	if question.Response == `y` {
+	if wantSample {
 
 		scriptOptions := []templates.NameDescription{}
 		for about, _ := range mobs.SampleScripts {

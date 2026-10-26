@@ -11,7 +11,7 @@ import (
 )
 
 //
-// Checks for quests on the item
+// Applies triggered buffs
 //
 
 func ApplyBuffs(e events.Event) events.ListenerReturn {

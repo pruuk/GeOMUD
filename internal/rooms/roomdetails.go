@@ -284,13 +284,6 @@ func GetDetails(r *Room, user *users.UserRecord, tinymap ...[]string) RoomTempla
 
 			mobName := mob.Character.GetMobName(user.UserId, tmpNameFlags...)
 
-			for _, qFlag := range mob.QuestFlags {
-				if user.Character.HasQuest(qFlag) || (len(qFlag) >= 5 && qFlag[len(qFlag)-5:] == `start`) {
-					mobName.QuestAlert = true
-					break
-				}
-			}
-
 			if mob.Character.IsCharmed() {
 				visibleFriendlyMobs = append(visibleFriendlyMobs, mobName.String())
 			} else {
