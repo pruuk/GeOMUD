@@ -1,10 +1,13 @@
 package mobs
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
@@ -108,6 +111,49 @@ func TestRestoreKeepsTheIdAndFires(t *testing.T) {
 	assert.Error(t, err, "restoring an NPC that is already live is refused")
 	Rest(m.Character.Id)
 	assert.Nil(t, GetInstance(m.Character.Id))
+}
+
+func TestRestoreThroughDiskKeepsWhatItHas(t *testing.T) {
+	for _, id := range []int{901, 902, 903} {
+		t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{BuffId: id, Name: fmt.Sprintf("test buff %d", id), TriggerRate: "1 round", TriggerCount: 5}))
+	}
+
+	m := Mob{MobId: 8}
+	m.Character = *characters.New()
+	m.Character.Id = ids.New(ids.NoCell)
+	m.Character.Level = 20
+	m.Character.HealthMax.Base, m.Character.ManaMax.Base = 0, 0 // as a mob loaded from YAML has (they are not saved)
+	m.Character.Items = []items.Item{{ItemId: 30001}}
+	m.Character.Equipment.Body = items.Item{ItemId: 20001}
+	m.Character.SetAdjective("elite", true)
+	m.Character.SetPermaBuffs([]int{901, 902}) // a spawn slot's permabuffs, replacing the template's
+	m.Character.Validate(true)
+	m.Character.AddBuff(903, false) // a buff that runs out
+	m.Character.Validate()
+	require.Greater(t, m.Character.ManaMax.Value, 1)
+	m.Character.Mana = m.Character.ManaMax.Value - 1
+	mana := m.Character.Mana
+	require.True(t, m.Character.HasBuff(901) && m.Character.HasBuff(902) && m.Character.HasBuff(903))
+
+	b, err := yaml.Marshal(Snapshot(&m))
+	require.NoError(t, err)
+	var back SavedNPC
+	require.NoError(t, yaml.Unmarshal(b, &back))
+
+	r, err := Restore(back)
+	require.NoError(t, err)
+	t.Cleanup(func() { Rest(r.Character.Id) })
+
+	assert.Equal(t, m.Character.Id, r.Character.Id)
+	require.Len(t, r.Character.Items, 1)
+	assert.Equal(t, 30001, r.Character.Items[0].ItemId)
+	assert.Equal(t, 20001, r.Character.Equipment.Body.ItemId)
+	assert.Contains(t, r.Character.Adjectives, "elite")
+	assert.Equal(t, mana, r.Character.Mana)
+	assert.Equal(t, []int{901, 902}, r.Character.PermaBuffIds())
+	assert.True(t, r.Character.HasBuff(901), "spawn permabuffs survive Validate(true)")
+	assert.True(t, r.Character.HasBuff(902))
+	assert.True(t, r.Character.HasBuff(903), "and so does a buff that runs out")
 }
 
 func TestRestoreRefusesAZeroId(t *testing.T) {
