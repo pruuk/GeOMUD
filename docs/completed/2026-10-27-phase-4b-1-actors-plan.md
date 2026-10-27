@@ -1578,6 +1578,237 @@ EOF
 
 ---
 
+### Task 9b: Hooks fire in the order the online map changes (added on review, 2026-10-27)
+
+The Task 8-9 design review found a race. `accounts` changes the online map under `userManagerMu`,
+unlocks, then fires the hook; `actors` then does a lookup and an action in two separate critical
+sections. A logout racing a fresh login of the same account (a player reconnecting as their
+link-dead timer expires) can fire `OnDeactivate` for the old record after `OnActivate` rebound the
+actor to the new one, and `accountOffline` then removes the live player's actor. Two activations
+seeing no actor can also spawn two.
+
+**Files:**
+- Modify: `internal/accounts/lifecycle.go`, `internal/accounts/users.go` (`CopyoverReconnectUser`, `LoginUser`, `CreateUser`, `LogOutUserByConnectionId`), `internal/accounts/copyover.go` (`CopyoverRestore`)
+- Modify: `internal/actors/registry.go`, `internal/actors/wire.go`, `internal/actors/registry_test.go`, `internal/actors/wire_test.go`
+
+- [ ] **Step 1: Write the failing tests**
+
+Append to `internal/actors/wire_test.go`:
+
+```go
+func TestStaleLogoutDoesNotRemoveTheLiveActor(t *testing.T) {
+	Reset()
+	old := &accounts.Account{UserId: 71, Character: characters.New()}
+	accounts.OnActivate.Fire(old)
+	id := ByUserId(71).Id
+
+	fresh := &accounts.Account{UserId: 71, Character: characters.New()} // a new login of the same account
+	accounts.OnActivate.Fire(fresh)
+	accounts.OnDeactivate.Fire(old) // the old record's logout lands late
+
+	a := ByUserId(71)
+	require.NotNil(t, a, "the live login keeps its actor")
+	assert.Equal(t, id, a.Id)
+	assert.Same(t, fresh, a.Controller().Account())
+
+	accounts.OnDeactivate.Fire(fresh)
+	assert.Nil(t, ByUserId(71))
+	assert.Empty(t, All())
+}
+```
+
+In `TestMobSpawnAndDestroy`, after `assert.Nil(t, ByMobInstanceId(41))` add `assert.Empty(t, All())`.
+
+Append to `internal/actors/registry_test.go`:
+
+```go
+func TestRemovingAnOlderActorKeepsTheNewerIndex(t *testing.T) {
+	Reset()
+	a := Spawn(characters.New(), NewConnectionController(&accounts.Account{UserId: 5}))
+	b := Spawn(characters.New(), NewConnectionController(&accounts.Account{UserId: 5}))
+	Remove(a.Id)
+	assert.Same(t, b, ByUserId(5))
+
+	m := &mobs.Mob{InstanceId: 6}
+	x := Spawn(&m.Character, NewBehaviourController(m))
+	y := Spawn(&m.Character, NewBehaviourController(m))
+	Remove(x.Id)
+	assert.Same(t, y, ByMobInstanceId(6))
+}
+
+func TestControllerSwapRoundTrip(t *testing.T) {
+	Reset()
+	m := &mobs.Mob{InstanceId: 8}
+	a := Spawn(&m.Character, NewBehaviourController(m))
+	acc := &accounts.Account{UserId: 12}
+
+	require.NoError(t, SetController(a.Id, NewConnectionController(acc)))
+	require.NoError(t, SetController(a.Id, NewBehaviourController(m)))
+
+	assert.Same(t, a, ByMobInstanceId(8))
+	assert.Nil(t, ByUserId(12))
+	assert.Nil(t, a.Controller().Account())
+}
+```
+
+- [ ] **Step 2: Run them, expect FAIL**
+
+Run: `go test ./internal/actors/ -count=1`
+Expected: `TestStaleLogoutDoesNotRemoveTheLiveActor` FAILS ("the live login keeps its actor"); the
+other new tests pass already (they pin behaviour the fix must keep).
+
+- [ ] **Step 3: Atomic bind and unbind in the registry** (`internal/actors/registry.go`)
+
+Replace `rebind` with:
+
+```go
+// bindAccount gives u an actor, or points the account's existing actor at u
+// when u is a different record for the same account. The lookup and the
+// change happen under one lock. It reports what it did, for logging.
+func bindAccount(u *accounts.Account) (a *Actor, spawned, rebound bool) {
+	mu.Lock()
+	defer mu.Unlock()
+	if id, ok := byUserId[u.UserId]; ok {
+		a = byId[id]
+		if a.controller.Account() != u {
+			unindex(a)
+			a.Character = u.Character
+			a.controller = NewConnectionController(u)
+			index(a)
+			rebound = true
+		}
+		return a, false, rebound
+	}
+	lastId++
+	a = &Actor{Id: lastId, Character: u.Character, controller: NewConnectionController(u)}
+	byId[a.Id] = a
+	index(a)
+	return a, true, false
+}
+
+// unbindAccount removes the actor u drives, but only while u is still the
+// record driving it: a late logout of an older record leaves a newer login's
+// actor alone. It returns the removed actor, or nil.
+func unbindAccount(u *accounts.Account) *Actor {
+	mu.Lock()
+	defer mu.Unlock()
+	id, ok := byUserId[u.UserId]
+	if !ok {
+		return nil
+	}
+	a := byId[id]
+	if a.controller.Account() != u {
+		return nil
+	}
+	unindex(a)
+	delete(byId, id)
+	return a
+}
+
+// unbindMob removes the actor for a mob instance and returns it, or nil.
+func unbindMob(instanceId int) *Actor {
+	mu.Lock()
+	defer mu.Unlock()
+	id, ok := byMobInstanceId[instanceId]
+	if !ok {
+		return nil
+	}
+	a := byId[id]
+	unindex(a)
+	delete(byId, id)
+	return a
+}
+```
+
+Add `"github.com/GoMudEngine/GoMud/internal/accounts"` to `registry.go`'s imports. Make
+`Actor.Controller()` (`actor.go`) take the read lock: `mu.RLock(); defer mu.RUnlock(); return a.controller`.
+
+- [ ] **Step 4: Use them in `wire.go`**
+
+```go
+func accountOnline(u *accounts.Account) {
+	a, spawned, rebound := bindAccount(u)
+	switch {
+	case spawned:
+		mudlog.Debug("actor", "event", "spawned", "kind", "player", "actorId", a.Id, "userId", u.UserId)
+	case rebound:
+		mudlog.Debug("actor", "event", "rebound", "kind", "player", "actorId", a.Id, "userId", u.UserId)
+	}
+}
+
+func accountOffline(u *accounts.Account) {
+	if a := unbindAccount(u); a != nil {
+		mudlog.Debug("actor", "event", "removed", "kind", "player", "actorId", a.Id, "userId", u.UserId)
+	}
+}
+
+func mobDestroyed(instanceId int) {
+	if a := unbindMob(instanceId); a != nil {
+		mudlog.Debug("actor", "event", "removed", "kind", "npc", "actorId", a.Id, "mobInstanceId", instanceId)
+	}
+}
+```
+
+`mobSpawned` is unchanged.
+
+- [ ] **Step 5: Serialise going online and offline with their hooks** (`internal/accounts/lifecycle.go`)
+
+Add to the `var` block:
+
+```go
+	// lifecycleMu makes each online or offline change and its hook one step,
+	// so OnActivate and OnDeactivate fire in the order the online map
+	// changes. Lock order: lifecycleMu before userManagerMu. Hook handlers
+	// must not call a function that takes lifecycleMu.
+	lifecycleMu sync.Mutex
+```
+
+and `"sync"` to the imports. Then, as the first statement of each of `CopyoverReconnectUser`,
+`LoginUser`, `CreateUser` and `LogOutUserByConnectionId` (`users.go`) and `CopyoverRestore`
+(`copyover.go`), add:
+
+```go
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
+```
+
+No other change in those functions: `activated`/`deactivated` already fire after `userManagerMu`
+is released, and now fire before `lifecycleMu` is.
+
+- [ ] **Step 6: Check nothing takes the locks in the wrong order**
+
+```bash
+grep -n 'lifecycleMu' internal/accounts/*.go
+grep -rn 'accounts\.\(LoginUser\|CreateUser\|CopyoverReconnectUser\|LogOutUserByConnectionId\)' internal/actors/
+```
+
+Expected: `lifecycleMu` appears only in `lifecycle.go` and at the top of the five functions; the
+second grep prints nothing (no hook handler calls back into a lifecycle function).
+
+- [ ] **Step 7: Run the tests, expect PASS**
+
+Run: `go build ./... && go test ./internal/actors/ ./internal/accounts/ ./internal/inputhandlers/ ./internal/web/ -count=1`
+Then: `go run ./cmd/smoke 2>&1 | tail -1`
+Expected: all `ok`; `smoke: PASS 1/1`.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add internal/accounts/lifecycle.go internal/accounts/users.go internal/accounts/copyover.go internal/actors/actor.go internal/actors/registry.go internal/actors/wire.go internal/actors/registry_test.go internal/actors/wire_test.go
+git commit -F - <<'EOF'
+Account hooks fire in online-map order; atomic actor bind and unbind
+
+A logout racing a fresh login of the same account could remove the
+live player's actor. lifecycleMu makes each online or offline change and
+its hook one step, and the registry looks up and changes an account's
+actor under one lock, removing it only while that record still drives it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+EOF
+```
+
+---
+
 ### Task 10: Guards: no controller type assertion outside `actors`; one way online
 
 **Files:**
@@ -2051,12 +2282,16 @@ Expected: build clean; only the 3 known Windows failures; gofmt prints nothing; 
 - [ ] **Step 2: Evidence that actors follow the lifecycles**
 
 ```bash
-grep -c 'msg=actor event=spawned kind=player' "$LOG"
-grep -c 'msg=actor event=removed kind=player' "$LOG"
-grep -c 'msg=actor event=spawned kind=npc' "$LOG"
+grep 'msg="actor ' "$LOG" | grep -c 'event=spawned kind=player'
+grep 'msg="actor ' "$LOG" | grep -c 'event=removed kind=player'
+grep 'msg="actor ' "$LOG" | grep -c 'event=spawned kind=npc'
 ```
 
-Expected with one bot: 3 player spawns and 3 player removals (the admin once, the bot at signup and
+(The logger pads and quotes the message, `msg="actor                   " event=...`; the first
+pattern in this plan, `msg=actor event=...`, matched nothing. Fixed in execution, Task 9.)
+
+Expected with one bot, on Windows or with `-copyover=false` (a copyover restarts the server and
+adds a second set): 3 player spawns and 3 player removals (the admin once, the bot at signup and
 at relogin), and at least 1 NPC spawn. If the counts differ, read the log around each line and
 explain the difference before going on; do not adjust the expectation to fit.
 
@@ -2097,7 +2332,8 @@ gh run view "$RUN" --repo pruuk/GeOMUD --log | grep -E 'smoke: (copyover step|PA
 ```
 
 Expected: every check passes, and the Smoke Test log shows
-`smoke: copyover step ran: every bot kept its connection, room and item` and `smoke: PASS`. The
+`smoke: copyover step ran (each bot's checks are in the bot results)` (the wording after the Task
+11 review fix) and `smoke: PASS`. The
 slice is not done until this line is seen: it is the only live evidence for copyover, since Windows
 skips the step. Report it to Calabe with the run link.
 

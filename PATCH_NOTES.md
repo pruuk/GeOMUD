@@ -5,6 +5,8 @@ Newest day first. One line per finished item.
 ## 2026-10-27
 - `help about` rewritten for GeOMUD: what it is, its status, credit to GoMud (Dylan Squires and contributors, MIT) and both repo links; GoMud's history, Discord advert and thanks list removed. `help geomud` added as an alias (`help gomud` kept); the `help` index points to `help about`
 - Login splash rewritten for GeOMUD (gridded globe and GeOMUD logo, one-line pitch, our repo link); `Server.MudName` is `GeOMUD` (web pages, GMCP `Game.Info`, Mudlet, server log)
+- Phase 4b design spec (`2026-10-27-phase-4b-npcs-are-players-design.md`): one actor model, unified messaging, seven slices with one plan each
+- Phase 4b slice 1: every player and mob is an actor (`internal/actors`: one `ActorId` space, swappable controller, registry wired to account and mob lifecycle hooks); `users` renamed `accounts` (`UserRecord` is `Account`) with connection state in `Session`; account hooks fire in online-map order; guard tests in `internal/guards`; smoke `-transcript` with the pre-4b baseline and a live copyover step (Linux CI); copyover no longer drops a link-dead player's flag (upstream bug)
 
 ## 2026-10-26
 - Go 1.26.0 to 1.27.3 (`go.mod`); no dependency versions changed, Windows baseline unchanged (same 3 failures)
