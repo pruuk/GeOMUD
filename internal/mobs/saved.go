@@ -1,6 +1,11 @@
 package mobs
 
-import "github.com/GoMudEngine/GoMud/internal/characters"
+import (
+	"fmt"
+
+	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/ids"
+)
 
 // SavedNPC is a live NPC as saved to disk (Phase 4b decision 13): what it is,
 // has and is tangled with. It is separate from Mob so template saves
@@ -38,4 +43,32 @@ func (s SavedNPC) Mob() Mob {
 	m.WanderCount, m.BoredomCounter, m.LastIdleCommand = 0, 0, 0
 	m.Path = PathQueue{}
 	return m
+}
+
+// Restore puts a saved NPC back in memory under its saved ID and fires
+// OnInstanceCreated. It never makes an ID (decision 11).
+func Restore(s SavedNPC) (*Mob, error) {
+	m := s.Mob()
+	if m.Character.Id.IsZero() {
+		return nil, fmt.Errorf("mobs: saved NPC %d has no body ID", m.MobId)
+	}
+	if _, live := mobInstances[m.Character.Id]; live {
+		return nil, fmt.Errorf("mobs: NPC %s is already live", m.Character.Id)
+	}
+	m.Validate()
+	m.Character.Validate(true) // permaBuffIds is set, so permabuffs survive
+	mobInstances[m.Character.Id] = &m
+	stored := mobInstances[m.Character.Id]
+	OnInstanceCreated.Fire(stored)
+	return stored, nil
+}
+
+// Rest takes a live NPC out of memory without ending it (decision 15). The
+// caller has saved it first. Actors drop it through OnInstanceDestroyed.
+func Rest(id ids.ID) {
+	if _, ok := mobInstances[id]; !ok {
+		return
+	}
+	delete(mobInstances, id)
+	OnInstanceDestroyed.Fire(id)
 }

@@ -52,3 +52,27 @@ func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
 	assert.Zero(t, got.BoredomCounter)
 	assert.Zero(t, got.LastIdleCommand)
 }
+
+func TestRestoreKeepsTheIdAndFires(t *testing.T) {
+	var created []*Mob
+	OnInstanceCreated.Register(func(m *Mob) *Mob { created = append(created, m); return m })
+	m := Mob{MobId: 8}
+	m.Character = *characters.New()
+	m.Character.Id = ids.New(ids.NoCell)
+	r, err := Restore(Snapshot(&m))
+	require.NoError(t, err)
+	assert.Equal(t, m.Character.Id, r.Character.Id)
+	assert.Same(t, r, GetInstance(m.Character.Id))
+	assert.Contains(t, created, r)
+	_, err = Restore(Snapshot(&m))
+	assert.Error(t, err, "restoring an NPC that is already live is refused")
+	Rest(m.Character.Id)
+	assert.Nil(t, GetInstance(m.Character.Id))
+}
+
+func TestRestoreRefusesAZeroId(t *testing.T) {
+	m := Mob{MobId: 9}
+	m.Character = *characters.New()
+	_, err := Restore(Snapshot(&m))
+	assert.Error(t, err)
+}
