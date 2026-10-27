@@ -205,6 +205,7 @@ func main() {
 	mudlog.Info(
 		"Starting server",
 		"name", string(c.Server.MudName),
+		"pid", os.Getpid(),
 	)
 
 	mudlog.Info(`========================`)

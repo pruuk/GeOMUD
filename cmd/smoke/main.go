@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"sync"
 	"syscall"
@@ -41,6 +42,7 @@ func run() int {
 	adminUser := flag.String("admin-user", "admin", "admin account that spawns the bots' items (launch mode: the temp world's stock admin)")
 	adminPass := flag.String("admin-pass", "password", "admin's current password (a forced first-login change sets it to this same text)")
 	transcript := flag.String("transcript", "", "directory to write each bot's transcript to (bot<N>.txt); empty writes none")
+	copyoverStep := flag.Bool("copyover", true, "launch mode, not Windows: run copyover once while every bot is online")
 	flag.Parse()
 	if *bots < 1 {
 		fmt.Fprintln(os.Stderr, "smoke: -bots must be at least 1")
@@ -65,14 +67,14 @@ func run() int {
 		fmt.Printf("smoke: server pid %d listening on %s (ready in %s)\n",
 			srv.cmd.Process.Pid, srv.addr, time.Since(start).Round(time.Millisecond))
 		*addr = srv.addr
-		passed = runBots(ctx, *addr, *bots, *timeout, *hold, adm, *transcript)
+		passed = runBots(ctx, *addr, *bots, *timeout, *hold, adm, *transcript, srv, *copyoverStep)
 		if !passed {
 			return 1
 		}
 		return 0
 	}
 
-	if !runBots(ctx, *addr, *bots, *timeout, *hold, adm, *transcript) {
+	if !runBots(ctx, *addr, *bots, *timeout, *hold, adm, *transcript, nil, *copyoverStep) {
 		return 1
 	}
 	return 0
@@ -90,7 +92,7 @@ type adminLogin struct{ user, pass string }
 
 // runBots has the admin spawn one item per bot, plays n bots at once and
 // prints a summary. It reports whether every bot passed.
-func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duration, adm adminLogin, transcriptDir string) bool {
+func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duration, adm adminLogin, transcriptDir string, srv *server, copyoverStep bool) bool {
 	if transcriptDir != "" {
 		if err := os.MkdirAll(transcriptDir, 0o755); err != nil {
 			fmt.Printf("smoke: FAIL transcript dir: %v\n", err)
@@ -106,6 +108,19 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 		return false
 	}
 	fmt.Printf("smoke: admin spawned %d %s(s) in %s\n", n, smokeItem, time.Since(start).Round(time.Millisecond))
+	var co *copyoverCheck
+	switch {
+	case !copyoverStep:
+		fmt.Println("smoke: copyover step off (-copyover=false)")
+	case srv == nil:
+		fmt.Println("smoke: copyover step skipped (-addr mode never restarts a server it did not start)")
+	case runtime.GOOS == "windows":
+		fmt.Println("smoke: copyover step skipped (copyover is not supported on Windows; Linux CI runs it)")
+	default:
+		co = newCopyoverCheck(n)
+		go co.run(ctx, addr, adm, timeout, srv)
+	}
+
 	results := make([]result, n)
 	var wg sync.WaitGroup
 	for i := range n {
@@ -122,7 +137,7 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 			if transcriptDir != "" {
 				rec = &recorder{}
 			}
-			pkgs, err := play(ctx, addr, b, timeout, hold, rec)
+			pkgs, err := play(ctx, addr, b, timeout, hold, rec, co)
 			if rec != nil {
 				name := filepath.Join(transcriptDir, fmt.Sprintf("bot%d.txt", i))
 				if werr := os.WriteFile(name, []byte(rec.String()), 0o644); werr != nil && err == nil {
@@ -137,6 +152,16 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 		}()
 	}
 	wg.Wait()
+	copyoverFailed := false
+	if co != nil {
+		<-co.done
+		if co.err != nil {
+			copyoverFailed = true
+			fmt.Printf("smoke: FAIL copyover step: %v\n", co.err)
+		} else {
+			fmt.Println("smoke: copyover step ran: every bot kept its connection, room and item")
+		}
+	}
 	total := time.Since(start)
 
 	var failed []result
@@ -157,14 +182,14 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 	fmt.Printf("smoke: GMCP packages received (all bots, message counts): %s\n", gmcpList(allGMCP))
 	sort.Slice(times, func(i, j int) bool { return times[i] < times[j] })
 	verdict := "PASS"
-	if len(failed) > 0 {
+	if len(failed) > 0 || copyoverFailed {
 		verdict = "FAIL"
 	}
 	fmt.Printf("smoke: %s %d/%d bots passed in %s (script time per bot: min %s, median %s, max %s; hold %s)\n",
 		verdict, n-len(failed), n, total.Round(time.Millisecond),
 		times[0].Round(time.Millisecond), times[len(times)/2].Round(time.Millisecond),
 		times[len(times)-1].Round(time.Millisecond), hold)
-	return len(failed) == 0
+	return len(failed) == 0 && !copyoverFailed
 }
 
 // runTag makes account names unique per run, so -addr runs against a

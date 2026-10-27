@@ -127,7 +127,18 @@ func (s *script) quit(step string) {
 // It also returns the GMCP package names the bot received (both connections
 // together), and fails the bot unless they include Char, Room and Comm packages.
 // rec, when not nil, records the bot's transcript across both connections.
-func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, rec *recorder) (map[string]int, error) {
+// co, when not nil, is the copyover step: the bot waits online for it after
+// the death block, and calls co.arrived.Done exactly once on every path.
+func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, rec *recorder, co *copyoverCheck) (map[string]int, error) {
+	arrived := false
+	arrive := func() {
+		if co != nil && !arrived {
+			arrived = true
+			co.arrived.Done()
+		}
+	}
+	defer arrive() // a bot that fails early, even at connect, must not hold up the copyover
+
 	c, err := dial(ctx, addr, timeout, rec)
 	if err != nil {
 		return nil, &stepError{"connect", err.Error(), ""}
@@ -198,6 +209,21 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, 
 	s.field("death: still holds the item", "inventory", "Carrying:", smokeItem)
 	if s.err != nil {
 		return s.gmcp, s.err
+	}
+
+	// Copyover (Linux launch mode only): every bot waits here, online, while
+	// the admin restarts the server in place. The bot must keep its
+	// connection, its room and its item.
+	if co != nil {
+		arrive()
+		if co.wait(ctx) {
+			s.wait("copyover: complete", "Copyover complete.")
+			s.do("copyover: still in the start room", "look", startRoomTitle)
+			s.field("copyover: still holds the item", "inventory", "Carrying:", smokeItem)
+			if s.err != nil {
+				return s.gmcp, s.err
+			}
+		}
 	}
 
 	if hold > 0 {

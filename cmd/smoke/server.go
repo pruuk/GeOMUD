@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -22,6 +23,8 @@ type server struct {
 	addr string
 	cmd  *exec.Cmd
 	done chan struct{} // closed when the process exits
+
+	children []int // server processes copyover started; stop kills them too
 
 	copyLogTo string // if set, stop copies the server log here before deleting the temp dir
 }
@@ -117,6 +120,42 @@ func launch(ctx context.Context) (_ *server, err error) {
 
 func (s *server) logPath() string { return filepath.Join(s.dir, "server.log") }
 
+// adoptCopyoverChild waits for the server copyover started to log its start
+// (it inherits the log file) and records its PID so stop kills it: the
+// process this program started exits during copyover.
+func (s *server) adoptCopyoverChild(timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		b, _ := os.ReadFile(s.logPath())
+		if pid := lastStartPid(string(b)); pid != 0 && pid != s.cmd.Process.Pid {
+			s.children = append(s.children, pid)
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("copyover: no new server start in the log after %s", timeout)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// lastStartPid returns the pid of the last "Starting server" log line, or 0.
+func lastStartPid(log string) int {
+	pid := 0
+	for _, line := range strings.Split(log, "\n") {
+		if !strings.Contains(line, `msg="Starting server`) {
+			continue
+		}
+		if i := strings.Index(line, " pid="); i >= 0 {
+			if f := strings.Fields(line[i+len(" pid="):]); len(f) > 0 {
+				if n, err := strconv.Atoi(f[0]); err == nil {
+					pid = n
+				}
+			}
+		}
+	}
+	return pid
+}
+
 // waitReady dials the telnet port until it answers.
 func (s *server) waitReady(ctx context.Context, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
@@ -144,6 +183,11 @@ func (s *server) stop(showLog bool) {
 	if s.cmd != nil && s.cmd.Process != nil {
 		s.cmd.Process.Kill()
 		<-s.done
+	}
+	for _, pid := range s.children {
+		if p, err := os.FindProcess(pid); err == nil {
+			p.Kill()
+		}
 	}
 	if s.copyLogTo != "" {
 		if b, err := os.ReadFile(s.logPath()); err == nil {

@@ -25,27 +25,11 @@ const recoveryRoomTitle = "Waiting room"
 // player change before any other command works. The change is handled in
 // changePasswordIfForced.
 func prepareItems(ctx context.Context, addr, user, pass string, n int, timeout time.Duration) error {
-	c, err := dial(ctx, addr, timeout, nil)
+	s, err := loginAdmin(ctx, addr, user, pass, timeout)
 	if err != nil {
-		return &stepError{"admin: connect", err.Error(), ""}
+		return err
 	}
-	defer c.Close()
-	s := &script{ctx: ctx, c: c}
-
-	s.wait("admin: login prompt", `username (or "new")`)
-	s.do("admin: username", user, "password:")
-	// A forced-change account gets the "must change your password" notice
-	// instead of the message of the day.
-	if s.err == nil {
-		s.c.send(pass)
-		s.err = s.c.until(ctx, timeout, "admin: password", func(got string, _ bool) (bool, string) {
-			if strings.Contains(got, "Welcome to the Mud!") || strings.Contains(got, "You must change your password") {
-				return true, ""
-			}
-			return false, "neither the welcome nor the password-change notice"
-		})
-	}
-	changePasswordIfForced(s, pass)
+	defer s.c.Close()
 
 	// Stand in the start room (the stock admin character already does).
 	if s.err == nil {
@@ -67,6 +51,36 @@ func prepareItems(ctx context.Context, addr, user, pass string, n int, timeout t
 	}
 	s.quit("admin: quit")
 	return s.err
+}
+
+// loginAdmin logs in as the admin and answers a forced password change. The
+// caller closes s.c.
+func loginAdmin(ctx context.Context, addr, user, pass string, timeout time.Duration) (*script, error) {
+	c, err := dial(ctx, addr, timeout, nil)
+	if err != nil {
+		return nil, &stepError{"admin: connect", err.Error(), ""}
+	}
+	s := &script{ctx: ctx, c: c}
+
+	s.wait("admin: login prompt", `username (or "new")`)
+	s.do("admin: username", user, "password:")
+	// A forced-change account gets the "must change your password" notice
+	// instead of the message of the day.
+	if s.err == nil {
+		s.c.send(pass)
+		s.err = s.c.until(ctx, timeout, "admin: password", func(got string, _ bool) (bool, string) {
+			if strings.Contains(got, "Welcome to the Mud!") || strings.Contains(got, "You must change your password") {
+				return true, ""
+			}
+			return false, "neither the welcome nor the password-change notice"
+		})
+	}
+	changePasswordIfForced(s, pass)
+	if s.err != nil {
+		c.Close()
+		return nil, s.err
+	}
+	return s, nil
 }
 
 // changePasswordIfForced answers GoMud's forced first-login password change.
