@@ -9,9 +9,9 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 const (
@@ -674,7 +674,7 @@ func (r *mapper) GetLimitedMap(centerRoomId int, c Config) mapRender {
 
 				if c.UserId > 0 {
 
-					user := users.GetByUserId(c.UserId)
+					user := accounts.GetByUserId(c.UserId)
 					if user != nil {
 						hasKey, hasSequence := user.Character.HasKey(exitInfo.LockId, exitInfo.LockDifficulty)
 						showLocked = hasKey || hasSequence
@@ -691,7 +691,7 @@ func (r *mapper) GetLimitedMap(centerRoomId int, c Config) mapRender {
 				}
 
 				if c.UserId >= 0 {
-					user := users.GetByUserId(c.UserId)
+					user := accounts.GetByUserId(c.UserId)
 					if user == nil || !user.Character.HasVisitedRoom(exitInfo.RoomId, targetRoom.Zone) {
 						continue
 					}

@@ -4,13 +4,13 @@ import (
 	"embed"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 var (
@@ -100,7 +100,7 @@ func (g *GMCPMudletModule) save() {
 }
 
 // Helper function to get user config option with default boolean value
-func getUserBoolOption(user *users.UserRecord, key string, defaultValue bool) bool {
+func getUserBoolOption(user *accounts.Account, key string, defaultValue bool) bool {
 	val := user.GetConfigOption(key)
 	if val == nil {
 		return defaultValue
@@ -239,7 +239,7 @@ func (g *GMCPMudletModule) mudletDetectedHandler(e events.Event) events.Listener
 }
 
 // Helper function for handling command toggles
-func (g *GMCPMudletModule) handleToggleCommand(user *users.UserRecord, settingName string, value bool, enableMsg string, disableMsg string) {
+func (g *GMCPMudletModule) handleToggleCommand(user *accounts.Account, settingName string, value bool, enableMsg string, disableMsg string) {
 	user.SetConfigOption(settingName, value)
 	if value {
 		user.SendText("\n<ansi fg=\"green\">" + enableMsg + "</ansi>\n")
@@ -249,7 +249,7 @@ func (g *GMCPMudletModule) handleToggleCommand(user *users.UserRecord, settingNa
 }
 
 // sendUICommand handles UI-related commands
-func (g *GMCPMudletModule) sendUICommand(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (g *GMCPMudletModule) sendUICommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 	// Only proceed if client is Mudlet
 	connId := user.ConnectionId()
 	if gmcpData, ok := gmcpModule.cache.Get(connId); !ok || !gmcpData.Client.IsMudlet {
@@ -319,7 +319,7 @@ func (g *GMCPMudletModule) sendUICommand(rest string, user *users.UserRecord, ro
 }
 
 // sendMapCommand sends map configuration
-func (g *GMCPMudletModule) sendMapCommand(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (g *GMCPMudletModule) sendMapCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 	// Only send if the client is Mudlet
 	connId := user.ConnectionId()
 	if gmcpData, ok := gmcpModule.cache.Get(connId); ok && gmcpData.Client.IsMudlet {
@@ -330,7 +330,7 @@ func (g *GMCPMudletModule) sendMapCommand(rest string, user *users.UserRecord, r
 }
 
 // checkClientCommand checks if client is Mudlet and shows info
-func (g *GMCPMudletModule) checkClientCommand(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (g *GMCPMudletModule) checkClientCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 	// Check if client is Mudlet
 	connId := user.ConnectionId()
 	if gmcpData, ok := gmcpModule.cache.Get(connId); ok && gmcpData.Client.IsMudlet {

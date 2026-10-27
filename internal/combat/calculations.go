@@ -3,12 +3,12 @@ package combat
 import (
 	"math"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/races"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -362,7 +362,7 @@ func chanceToTame(
 }
 
 // ChanceToTame returns the probability that a user successfully tames a mob.
-func ChanceToTame(s *users.UserRecord, t *mobs.Mob) int {
+func ChanceToTame(s *accounts.Account, t *mobs.Mob) int {
 	raceInfo := races.GetRace(s.Character.GetRaceId())
 	return chanceToTame(
 		s.Character.MobMastery.GetTame(int(t.MobId)),

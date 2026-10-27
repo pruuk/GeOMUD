@@ -13,7 +13,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/util"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 /*
@@ -22,7 +22,7 @@ import (
 * item.create		(Create a new item)
 * item.spawn		(Spawn a new item in the room)
  */
-func Item(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Item(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(rest)
 
@@ -68,7 +68,7 @@ func Item(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 	return true, nil
 }
 
-func item_List(rest string, user *users.UserRecord, _ *rooms.Room, _ events.EventFlag) (bool, error) {
+func item_List(rest string, user *accounts.Account, _ *rooms.Room, _ events.EventFlag) (bool, error) {
 
 	itmNames := []templates.NameDescription{}
 	longestName := 0
@@ -113,7 +113,7 @@ func item_List(rest string, user *users.UserRecord, _ *rooms.Room, _ events.Even
 	return true, nil
 }
 
-func item_Spawn(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func item_Spawn(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	itemId := items.FindItem(rest)
 	if itemId != 0 {
@@ -142,7 +142,7 @@ func item_Spawn(rest string, user *users.UserRecord, room *rooms.Room, flags eve
 	return true, nil
 }
 
-func item_Create(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	var newItemSpec = items.ItemSpec{}
 

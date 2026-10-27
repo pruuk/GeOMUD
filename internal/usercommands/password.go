@@ -1,12 +1,12 @@
 package usercommands
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
-func Password(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Password(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	// Get if already exists, otherwise create new
 	cmdPrompt, _ := user.StartPrompt(`password`, rest)
@@ -50,7 +50,7 @@ func Password(rest string, user *users.UserRecord, room *rooms.Room, flags event
 		return true, nil
 	}
 
-	users.SaveUser(*user)
+	accounts.SaveUser(*user)
 
 	user.SendText(`<ansi fg="alert-1">Your password has been changed!</ansi>`)
 

@@ -1,11 +1,11 @@
 package gmcp
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/ansitags"
 )
 
@@ -52,7 +52,7 @@ func (g *GMCPHelpModule) helpRequestHandler(e events.Event) events.ListenerRetur
 		return events.Cancel
 	}
 
-	user := users.GetByUserId(evt.UserId)
+	user := accounts.GetByUserId(evt.UserId)
 	if user == nil {
 		return events.Continue
 	}

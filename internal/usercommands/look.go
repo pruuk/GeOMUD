@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
@@ -14,10 +15,9 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
-func Look(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	secretLook := flags.Has(events.CmdSecretly)
 
@@ -75,7 +75,7 @@ func Look(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 
 		if playerId > 0 {
 
-			uPtr := users.GetByUserId(playerId)
+			uPtr := accounts.GetByUserId(playerId)
 			if uPtr == nil {
 				return true, nil
 			}
@@ -394,7 +394,7 @@ func Look(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 
 }
 
-func lookRoom(user *users.UserRecord, roomId int, secretLook bool) {
+func lookRoom(user *accounts.Account, roomId int, secretLook bool) {
 
 	room := rooms.LoadRoom(roomId)
 

@@ -27,6 +27,7 @@ type client struct {
 	mark    int            // waits search the text after this offset; send moves it
 	closed  bool           // the server closed the connection
 	gmcp    map[string]int // GMCP package names received, with counts
+	rec     *recorder      // the bot's transcript; nil records nothing
 	changed chan struct{}
 }
 
@@ -41,20 +42,20 @@ func (c *client) gmcpNames() map[string]int {
 	return out
 }
 
-func dial(ctx context.Context, addr string, timeout time.Duration) (*client, error) {
+func dial(ctx context.Context, addr string, timeout time.Duration, rec *recorder) (*client, error) {
 	var d net.Dialer
 	conn, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
-	return newClient(conn, timeout), nil
+	return newClient(conn, timeout, rec), nil
 }
 
-func newClient(conn net.Conn, timeout time.Duration) *client {
+func newClient(conn net.Conn, timeout time.Duration, rec *recorder) *client {
 	// lastSend starts at connect: the server's drop window also opens when it
 	// sends the first prompt (main.go handleTelnetConnection sets lastInput
 	// after the prompt), so an instant first reply is lost too.
-	c := &client{conn: conn, timeout: timeout, changed: make(chan struct{}, 1), gmcp: map[string]int{}, lastSend: time.Now()}
+	c := &client{conn: conn, timeout: timeout, changed: make(chan struct{}, 1), gmcp: map[string]int{}, lastSend: time.Now(), rec: rec}
 	go c.read()
 	return c
 }
@@ -78,6 +79,7 @@ func (c *client) read() {
 				clean := strings.ReplaceAll(string(telnet.StripAnsi(tok.Text)), "\r", "")
 				c.mu.Lock()
 				c.text.WriteString(clean)
+				c.rec.text(clean)
 				c.mu.Unlock()
 				c.notify()
 			case telnet.TokenIAC:
@@ -132,6 +134,7 @@ func (c *client) send(line string) {
 		time.Sleep(d)
 	}
 	c.lastSend = time.Now()
+	c.rec.sent(line)
 	c.mu.Lock()
 	c.mark = c.text.Len()
 	c.mu.Unlock()

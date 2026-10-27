@@ -3,9 +3,9 @@ package hooks
 import (
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 func MobRoundTick(e events.Event) events.ListenerReturn {
@@ -47,7 +47,7 @@ func MobRoundTick(e events.Event) events.ListenerReturn {
 		if mob.Character.IsCharmed() && mob.Character.Charmed.RoundsRemaining == 0 {
 			cmd := mob.Character.Charmed.ExpiredCommand
 			if charmedUserId := mob.Character.RemoveCharm(); charmedUserId > 0 {
-				if charmedUser := users.GetByUserId(charmedUserId); charmedUser != nil {
+				if charmedUser := accounts.GetByUserId(charmedUserId); charmedUser != nil {
 					charmedUser.Character.TrackCharmed(mob.InstanceId, false)
 				}
 			}

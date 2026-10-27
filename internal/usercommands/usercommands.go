@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -27,7 +27,7 @@ type CommandAccess struct {
 }
 
 // Signature of user command
-type UserCommand func(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error)
+type UserCommand func(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error)
 
 type FunctionExporter interface {
 	GetExportedFunction(funcName string) (any, bool)
@@ -139,7 +139,7 @@ func GetExportedFunction(fName string) (any, bool) {
 func TryCommand(cmd string, rest string, userId int, flags events.EventFlag) (bool, error) {
 
 	userDisabled := false
-	user := users.GetByUserId(userId)
+	user := accounts.GetByUserId(userId)
 	if user == nil {
 		return false, fmt.Errorf(`user %d not found`, userId)
 	}

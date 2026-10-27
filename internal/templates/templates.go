@@ -11,12 +11,12 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
 	"github.com/GoMudEngine/GoMud/internal/markdown"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/ansitags"
 	"github.com/mattn/go-runewidth"
 	"gopkg.in/yaml.v2"
@@ -150,7 +150,7 @@ func Process(fname string, data any, receivingUserId ...int) (string, error) {
 		tplConfig = templateConfig{}
 
 		if userId > 0 {
-			if tmpU := users.GetByUserId(userId); tmpU != nil {
+			if tmpU := accounts.GetByUserId(userId); tmpU != nil {
 				tplConfig.ScreenReader = tmpU.ScreenReader
 			}
 		} else if userId == ForceScreenReaderUserId {

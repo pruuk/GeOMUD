@@ -7,9 +7,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -47,7 +47,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := users.SaveUser(*adminUser); err != nil {
+	if err := accounts.SaveUser(*adminUser); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to save admin user: %v\n", err)
 		os.Exit(1)
 	}
@@ -55,11 +55,11 @@ func main() {
 	fmt.Printf("Admin password updated for %q.\n", adminUser.Username)
 }
 
-func findAdminUser() (*users.UserRecord, error) {
-	var adminUser *users.UserRecord
+func findAdminUser() (*accounts.Account, error) {
+	var adminUser *accounts.Account
 
-	users.SearchOfflineUsers(func(u *users.UserRecord) bool {
-		if strings.EqualFold(u.Role, users.RoleAdmin) {
+	accounts.SearchOfflineUsers(func(u *accounts.Account) bool {
+		if strings.EqualFold(u.Role, accounts.RoleAdmin) {
 			copyUser := *u
 			adminUser = &copyUser
 			return false

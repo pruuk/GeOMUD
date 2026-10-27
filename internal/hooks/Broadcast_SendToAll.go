@@ -1,12 +1,12 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // Checks whether their level is too high for a guide
@@ -28,7 +28,7 @@ func Broadcast_SendToAll(e events.Event) events.ListenerReturn {
 		textOutSR = templates.AnsiParse(broadcast.TextScreenReader)
 	}
 
-	for _, u := range users.GetAllActiveUsers() {
+	for _, u := range accounts.GetAllActiveUsers() {
 
 		events.AddToQueue(events.RedrawPrompt{UserId: u.UserId}, 100)
 

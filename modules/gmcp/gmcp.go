@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	lru "github.com/hashicorp/golang-lru/v2"
 )
 
@@ -242,7 +242,7 @@ func (g *GMCPModule) HandleWebGMCP(connectionId uint64, webGMCP []byte) bool {
 
 		if strings.HasPrefix(identifier, `Room`) {
 			// Try to find the user ID associated with this connection
-			for _, user := range users.GetAllActiveUsers() {
+			for _, user := range accounts.GetAllActiveUsers() {
 				if user.ConnectionId() == connectionId {
 					events.AddToQueue(GMCPRoomUpdate{
 						UserId:     user.UserId,
@@ -256,7 +256,7 @@ func (g *GMCPModule) HandleWebGMCP(connectionId uint64, webGMCP []byte) bool {
 
 		if strings.HasPrefix(identifier, `Char`) {
 			// Try to find the user ID associated with this connection
-			for _, user := range users.GetAllActiveUsers() {
+			for _, user := range accounts.GetAllActiveUsers() {
 				if user.ConnectionId() == connectionId {
 					events.AddToQueue(GMCPCharUpdate{
 						UserId:     user.UserId,
@@ -270,7 +270,7 @@ func (g *GMCPModule) HandleWebGMCP(connectionId uint64, webGMCP []byte) bool {
 
 		if strings.HasPrefix(identifier, `Party`) {
 			// Try to find the user ID associated with this connection
-			for _, user := range users.GetAllActiveUsers() {
+			for _, user := range accounts.GetAllActiveUsers() {
 				if user.ConnectionId() == connectionId {
 					events.AddToQueue(events.PartyUpdated{
 						Action:  "Update",
@@ -284,7 +284,7 @@ func (g *GMCPModule) HandleWebGMCP(connectionId uint64, webGMCP []byte) bool {
 
 		if strings.HasPrefix(identifier, `World`) {
 			// Try to find the user ID associated with this connection
-			for _, user := range users.GetAllActiveUsers() {
+			for _, user := range accounts.GetAllActiveUsers() {
 				if user.ConnectionId() == connectionId {
 					events.AddToQueue(GMCPWorldUpdate{
 						UserId:     user.UserId,
@@ -297,7 +297,7 @@ func (g *GMCPModule) HandleWebGMCP(connectionId uint64, webGMCP []byte) bool {
 		}
 
 		if strings.HasPrefix(identifier, `Game`) {
-			for _, user := range users.GetAllActiveUsers() {
+			for _, user := range accounts.GetAllActiveUsers() {
 				if user.ConnectionId() == connectionId {
 					events.AddToQueue(GMCPGameRequest{
 						UserId: user.UserId,
@@ -309,7 +309,7 @@ func (g *GMCPModule) HandleWebGMCP(connectionId uint64, webGMCP []byte) bool {
 		}
 
 		if identifier == `Help` {
-			for _, user := range users.GetAllActiveUsers() {
+			for _, user := range accounts.GetAllActiveUsers() {
 				if user.ConnectionId() == connectionId {
 					events.AddToQueue(GMCPHelpRequest{
 						UserId: user.UserId,
@@ -404,7 +404,7 @@ func (g *GMCPModule) HandleIAC(connectionId uint64, iacCmd []byte) bool {
 					// Trigger the Mudlet detected event
 					userId := 0
 					// Try to find the user ID associated with this connection
-					for _, user := range users.GetAllActiveUsers() {
+					for _, user := range accounts.GetAllActiveUsers() {
 						if user.ConnectionId() == connectionId {
 							userId = user.UserId
 							break
@@ -501,7 +501,7 @@ func (g *GMCPModule) dispatchGMCP(e events.Event) events.ListenerReturn {
 		return events.Continue
 	}
 
-	connId := users.GetConnectionId(gmcp.UserId)
+	connId := accounts.GetConnectionId(gmcp.UserId)
 	if connId == 0 {
 		return events.Continue
 	}

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 func Look(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
@@ -93,7 +93,7 @@ func Look(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 		if playerId > 0 {
 
-			uPtr := users.GetByUserId(playerId)
+			uPtr := accounts.GetByUserId(playerId)
 			if uPtr == nil {
 				return true, nil
 			}

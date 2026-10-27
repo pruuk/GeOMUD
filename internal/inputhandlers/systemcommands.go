@@ -7,11 +7,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 func SystemCommandInputHandler(clientInput *connections.ClientInput, sharedState map[string]any) (nextHandler bool) {
@@ -111,8 +111,8 @@ func trySystemCommand(cmd string, connectionId connections.ConnectionId) bool {
 
 	// /quit is allowed for all users. Privileged commands require admin role.
 	if cmd != "quit" {
-		user := users.GetByConnectionId(connectionId)
-		if user == nil || user.Role != users.RoleAdmin {
+		user := accounts.GetByConnectionId(connectionId)
+		if user == nil || user.Role != accounts.RoleAdmin {
 			mudlog.Warn("Unauthorized system command attempt", "cmd", cmd, "connectionId", connectionId)
 			return false
 		}

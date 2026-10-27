@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Shoot(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if user.Character.Equipment.Weapon.GetSpec().Subtype != items.Shooting {
 		user.SendText(`You don't have a shooting weapon.`)
@@ -98,7 +98,7 @@ func Shoot(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 
 	} else if attackPlayerId > 0 {
 
-		p := users.GetByUserId(attackPlayerId)
+		p := accounts.GetByUserId(attackPlayerId)
 
 		if p != nil {
 

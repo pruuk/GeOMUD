@@ -16,7 +16,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/util"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 /*
@@ -25,7 +25,7 @@ import (
 * mob.create		(Create new mobs)
 * mob.spawn			(Spawn a mob in the room)
  */
-func Mob(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Mob(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(rest)
 
@@ -71,7 +71,7 @@ func Mob(rest string, user *users.UserRecord, room *rooms.Room, flags events.Eve
 	return true, nil
 }
 
-func mob_List(rest string, user *users.UserRecord, _ *rooms.Room, _ events.EventFlag) (bool, error) {
+func mob_List(rest string, user *accounts.Account, _ *rooms.Room, _ events.EventFlag) (bool, error) {
 
 	mobList := []templates.NameDescription{}
 	longestName := 0
@@ -116,7 +116,7 @@ func mob_List(rest string, user *users.UserRecord, _ *rooms.Room, _ events.Event
 	return true, nil
 }
 
-func mob_Spawn(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func mob_Spawn(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	c := configs.GetLootGoblinConfig()
 
@@ -160,7 +160,7 @@ func mob_Spawn(rest string, user *users.UserRecord, room *rooms.Room, flags even
 	return true, nil
 }
 
-func mob_Create(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func mob_Create(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	var newMob = mobs.Mob{}
 

@@ -18,9 +18,34 @@ import (
 func fakeServer(t *testing.T) (*client, net.Conn) {
 	t.Helper()
 	near, far := net.Pipe()
-	c := newClient(near, time.Second)
+	c := newClient(near, time.Second, nil)
 	t.Cleanup(func() { c.Close(); far.Close() })
 	return c, far
+}
+
+func TestRecorderKeepsTextAndSentLines(t *testing.T) {
+	rec := &recorder{}
+	near, far := net.Pipe()
+	c := newClient(near, time.Second, rec)
+	t.Cleanup(func() { c.Close(); far.Close() })
+
+	far.Write([]byte("\x1b[33mWelcome\x1b[0m\r\n"))
+	require.NoError(t, c.wait(context.Background(), "welcome", "Welcome"))
+	go func() {
+		buf := make([]byte, 64)
+		far.Read(buf)
+		far.Write([]byte("You say, \"hi\"\r\n"))
+	}()
+	require.NoError(t, c.do(context.Background(), "say", "say hi", `You say, "hi"`))
+
+	assert.Equal(t, "Welcome\n\n> say hi\nYou say, \"hi\"\n", rec.String())
+}
+
+func TestNilRecorderIsSafe(t *testing.T) {
+	var rec *recorder
+	rec.text("x")
+	rec.sent("y")
+	assert.Equal(t, "", rec.String())
 }
 
 func TestField(t *testing.T) {

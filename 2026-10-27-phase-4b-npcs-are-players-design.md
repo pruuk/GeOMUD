@@ -79,6 +79,9 @@ actors.Controller       interface
 
   ConnectionController  connectionId, unsent text, active prompt, link-dead and input-blocked
                         state, last input round, and the Account. Renders perceptions as text.
+                        (As built in slice 1: that state lives in accounts.Session, which the
+                        Account points to and the controller reaches through it, because
+                        accounts cannot import actors. Moving the controller still moves it.)
   BehaviourController   the mob runtime state listed in the facts table and its spawn data.
                         Receives perceptions as structured events. Tick runs idle and wander.
 

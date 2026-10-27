@@ -3,12 +3,12 @@ package gmcp
 import (
 	"strconv"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // ////////////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ func (g *GMCPWorldModule) buildAndSendGMCPPayload(e events.Event) events.Listene
 		return events.Continue
 	}
 
-	user := users.GetByUserId(evt.UserId)
+	user := accounts.GetByUserId(evt.UserId)
 	if user == nil {
 		return events.Continue
 	}
@@ -79,7 +79,7 @@ func (g *GMCPWorldModule) buildAndSendGMCPPayload(e events.Event) events.Listene
 
 // buildWorldMap assembles a payload containing every visited room the player
 // has seen, plus the full biome color lookup table.
-func (g *GMCPWorldModule) buildWorldMap(user *users.UserRecord) GMCPWorldMap_Payload {
+func (g *GMCPWorldModule) buildWorldMap(user *accounts.Account) GMCPWorldMap_Payload {
 
 	entries := []GMCPWorldMap_RoomEntry{}
 

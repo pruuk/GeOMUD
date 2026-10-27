@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -64,7 +64,7 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 		// Don't do idle actions
 		if mob.Character.Aggro != nil {
 			if mob.Character.Aggro.UserId > 0 {
-				user := users.GetByUserId(mob.Character.Aggro.UserId)
+				user := accounts.GetByUserId(mob.Character.Aggro.UserId)
 				if user == nil || user.Character.RoomId != mob.Character.RoomId {
 					mob.Command(`emote mumbles about losing their quarry.`)
 					mob.Character.Aggro = nil

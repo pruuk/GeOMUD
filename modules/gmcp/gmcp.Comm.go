@@ -1,13 +1,13 @@
 package gmcp
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/ansitags"
 )
 
@@ -67,7 +67,7 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 		roomId := 0
 
 		if evt.SourceUserId > 0 {
-			if user := users.GetByUserId(evt.SourceUserId); user != nil {
+			if user := accounts.GetByUserId(evt.SourceUserId); user != nil {
 				roomId = user.Character.RoomId
 			}
 		}
@@ -94,7 +94,7 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 
 	} else if evt.CommType == `broadcast` {
 
-		sendToUserIds = append([]int{}, users.GetOnlineUserIds()...)
+		sendToUserIds = append([]int{}, accounts.GetOnlineUserIds()...)
 
 	} else if evt.CommType == `whisper` {
 

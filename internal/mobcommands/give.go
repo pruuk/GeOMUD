@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -58,7 +58,7 @@ func Give(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 		mob.Character.CancelBuffsWithFlag("hidden")
 
-		targetUser := users.GetByUserId(playerId)
+		targetUser := accounts.GetByUserId(playerId)
 		if targetUser == nil {
 			return true, nil
 		}

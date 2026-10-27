@@ -1,17 +1,17 @@
 package usercommands
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 /*
 * Role Permissions:
 * copyover			(All)
  */
-func Copyover(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Copyover(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 	user.SendText(`Initiating copyover...`)
 	if err := triggerCopyoverFunc(); err != nil {
 		mudlog.Error("copyover command", "error", err)

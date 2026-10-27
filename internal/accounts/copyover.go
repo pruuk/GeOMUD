@@ -1,0 +1,117 @@
+package accounts
+
+import (
+	"strconv"
+	"time"
+
+	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/connections"
+	"github.com/GoMudEngine/GoMud/internal/copyover"
+	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/util"
+
+	"gopkg.in/yaml.v2"
+)
+
+type userEntry struct {
+	UserId       int                      `json:"user_id"`
+	ConnectionId connections.ConnectionId `json:"connection_id"`
+	IsLinkDead   bool                     `json:"is_link_dead"`
+	LinkDeadTurn uint64                   `json:"link_dead_turn,omitempty"`
+}
+
+type usersState struct {
+	Entries []userEntry `json:"entries"`
+}
+
+type usersCopyoverContributor struct{}
+
+func (u *usersCopyoverContributor) CopyoverName() string {
+	return "users"
+}
+
+func (u *usersCopyoverContributor) CopyoverSave(enc *copyover.Encoder) error {
+	state := usersState{}
+
+	for userId, user := range userManager.Users {
+		connId := userManager.UserConnections[userId]
+		isLinkDead := false
+		linkDeadTurn := uint64(0)
+		if turn, ok := userManager.LinkDeadConnections[connId]; ok {
+			isLinkDead = true
+			linkDeadTurn = turn
+		}
+		state.Entries = append(state.Entries, userEntry{
+			UserId:       userId,
+			ConnectionId: connId,
+			IsLinkDead:   isLinkDead,
+			LinkDeadTurn: linkDeadTurn,
+		})
+		_ = user
+	}
+
+	return enc.WriteSection(u.CopyoverName(), state)
+}
+
+func (u *usersCopyoverContributor) CopyoverRestore(dec *copyover.Decoder) error {
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
+
+	var state usersState
+	if err := dec.ReadSection(u.CopyoverName(), &state); err != nil {
+		return err
+	}
+
+	for _, entry := range state.Entries {
+		user, err := restoreLoad(entry.UserId)
+		if err != nil {
+			mudlog.Error("copyover: restore user", "userId", entry.UserId, "error", err)
+			continue
+		}
+
+		user.sess().connectionTime = time.Now()
+		user.SetLastInputRound(util.GetRoundCount())
+
+		userManagerMu.Lock()
+		activateLocked(user, entry.ConnectionId)
+
+		if entry.IsLinkDead {
+			userManager.LinkDeadConnections[user.sess().connectionId] = entry.LinkDeadTurn
+			user.sess().isLinkDead = true
+		}
+		userManagerMu.Unlock()
+
+		activated(user)
+	}
+
+	return nil
+}
+
+// restoreLoad loads an account for CopyoverRestore. Tests replace it to
+// restore from memory instead of the data folder.
+var restoreLoad = loadUserById
+
+// loadUserById loads a user record directly from disk by userId.
+func loadUserById(userId int) (*Account, error) {
+	userFilePath := util.FilePath(string(configs.GetFilePathsConfig().DataFiles), `/`, `users`, `/`, strconv.Itoa(userId)+`.yaml`)
+
+	data, err := util.ReadFile(userFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &Account{}
+	if err := yaml.Unmarshal(data, user); err != nil {
+		return nil, err
+	}
+
+	user.Character.Validate()
+	user.sess() // a restored account always has a session, as LoadUser's do
+
+	return user, nil
+}
+
+// CopyoverContributor returns the users contributor for registration.
+func CopyoverContributor() copyover.Contributor {
+	return &usersCopyoverContributor{}
+}

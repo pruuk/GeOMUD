@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
@@ -16,7 +17,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/skills"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // ////////////////////////////////////////////////////////////////////
@@ -368,7 +368,7 @@ func (g *GMCPCharModule) buildAndSendGMCPPayload(e events.Event) events.Listener
 	}
 
 	// Make sure they have this gmcp module enabled.
-	user := users.GetByUserId(evt.UserId)
+	user := accounts.GetByUserId(evt.UserId)
 	if user == nil {
 		return events.Continue
 	}
@@ -405,7 +405,7 @@ func (g *GMCPCharModule) buildAndSendGMCPPayload(e events.Event) events.Listener
 	return events.Continue
 }
 
-func (g *GMCPCharModule) GetCharNode(user *users.UserRecord, gmcpModule string) (data any, moduleName string) {
+func (g *GMCPCharModule) GetCharNode(user *accounts.Account, gmcpModule string) (data any, moduleName string) {
 
 	all := gmcpModule == `Char`
 

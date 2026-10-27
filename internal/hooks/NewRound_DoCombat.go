@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/configs"
@@ -15,7 +16,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -42,9 +42,9 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 	tStart := time.Now()
 
-	for _, userId := range users.GetOnlineUserIds() {
+	for _, userId := range accounts.GetOnlineUserIds() {
 
-		user := users.GetByUserId(userId)
+		user := accounts.GetByUserId(userId)
 
 		// If has a buff that prevents combat, skip the player
 		if user.Character.HasBuffFlag("no-combat") {
@@ -95,7 +95,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 			blockedByPlayer := ``
 			blockedByPlayerId := 0
 			for _, userId := range uRoom.GetPlayers(rooms.FindFighting) {
-				if u := users.GetByUserId(userId); u != nil {
+				if u := accounts.GetByUserId(userId); u != nil {
 					if u.Character.Aggro == nil || u.Character.Aggro.UserId != userId {
 						continue
 					}
@@ -259,7 +259,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 		// In combat with another player
 		if user.Character.Aggro != nil && user.Character.Aggro.UserId > 0 {
 
-			defUser := users.GetByUserId(user.Character.Aggro.UserId)
+			defUser := accounts.GetByUserId(user.Character.Aggro.UserId)
 
 			uRoom := rooms.LoadRoom(roomId)
 
@@ -730,7 +730,7 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 		// mob attacks player
 		if mob.Character.Aggro != nil && mob.Character.Aggro.UserId > 0 {
 
-			defUser := users.GetByUserId(mob.Character.Aggro.UserId)
+			defUser := accounts.GetByUserId(mob.Character.Aggro.UserId)
 			if defUser == nil || mob.Character.RoomId != defUser.Character.RoomId {
 				mob.Character.Aggro = nil
 				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.InstanceId, RoomId: mob.Character.RoomId})
@@ -1031,7 +1031,7 @@ func handleAffected(affectedPlayerIds []int, affectedMobInstanceIds []int) {
 		}
 		playersHandled[userId] = struct{}{}
 
-		if user := users.GetByUserId(userId); user != nil {
+		if user := accounts.GetByUserId(userId); user != nil {
 
 			if user.Character.Health <= -10 {
 

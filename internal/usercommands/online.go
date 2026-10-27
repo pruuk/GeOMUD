@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/language"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
-func Online(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Online(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	headers := []string{
 		language.T(`User.Name`),
@@ -22,7 +22,7 @@ func Online(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 		language.T(`Role`),
 	}
 
-	if user.Role != users.RoleUser {
+	if user.Role != accounts.RoleUser {
 		headers = append([]string{language.T(`UserId`)}, headers...)
 		headers = append(headers, []string{language.T(`Zone`), language.T(`RoomId`), language.T(`Conn Type`)}...)
 	}
@@ -32,9 +32,9 @@ func Online(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 	rows := [][]string{}
 
 	userCt := 0
-	for _, uid := range users.GetOnlineUserIds() {
+	for _, uid := range accounts.GetOnlineUserIds() {
 
-		u := users.GetByUserId(uid)
+		u := accounts.GetByUserId(uid)
 
 		if u != nil {
 
@@ -48,8 +48,8 @@ func Online(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 			}
 
 			permClass := `user`
-			if onlineInfo.Role != users.RoleUser {
-				if onlineInfo.Role == users.RoleAdmin {
+			if onlineInfo.Role != accounts.RoleUser {
+				if onlineInfo.Role == accounts.RoleAdmin {
 					permClass = `admin`
 				} else {
 					permClass = `mod`
@@ -74,7 +74,7 @@ func Online(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 				`<ansi fg="role-` + permClass + `-bold">%s</ansi>`,
 			}
 
-			if user.Role != users.RoleUser {
+			if user.Role != accounts.RoleUser {
 				row = append([]string{strconv.Itoa(u.UserId)}, row...)
 				row = append(row, []string{u.Character.Zone, strconv.Itoa(u.Character.RoomId), onlineInfo.ConnType}...)
 

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -26,7 +26,7 @@ func SayTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	playerId, mobInstanceId := room.FindByName(args[0])
 	if playerId > 0 {
 
-		toUser := users.GetByUserId(playerId)
+		toUser := accounts.GetByUserId(playerId)
 		if toUser == nil {
 			return true, nil
 		}
@@ -97,7 +97,7 @@ func SayToOnly(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	playerId, _ := room.FindByName(args[0])
 	if playerId > 0 {
 
-		toUser := users.GetByUserId(playerId)
+		toUser := accounts.GetByUserId(playerId)
 		if toUser == nil {
 			return true, nil
 		}
@@ -138,7 +138,7 @@ func ReplyTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	playerId, mobInstanceId := room.FindByName(args[0])
 	if playerId > 0 {
 
-		toUser := users.GetByUserId(playerId)
+		toUser := accounts.GetByUserId(playerId)
 		if toUser == nil {
 			return true, nil
 		}

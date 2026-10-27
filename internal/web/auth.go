@@ -5,16 +5,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 var (
 	authCacheMu = sync.RWMutex{}
 	// authCache maps the Authorization header value to its expiry time.
 	authCache = map[string]time.Time{}
-	// authUserCache maps the Authorization header value to the loaded UserRecord.
-	authUserCache = map[string]*users.UserRecord{}
+	// authUserCache maps the Authorization header value to the loaded Account.
+	authUserCache = map[string]*accounts.Account{}
 )
 
 func handlerToHandlerFunc(h http.Handler) http.HandlerFunc {
@@ -24,7 +24,7 @@ func handlerToHandlerFunc(h http.Handler) http.HandlerFunc {
 }
 
 // doBasicAuth authenticates the request using HTTP Basic Auth. Both the
-// "admin" and "mod" roles are accepted. The authenticated UserRecord is stored
+// "admin" and "mod" roles are accepted. The authenticated Account is stored
 // in the request context so downstream handlers can access it via
 // GetAuthedUser(r).
 func doBasicAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -58,9 +58,9 @@ func doBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 
 		username, password, ok := r.BasicAuth()
 		if ok {
-			uRecord, err := users.LoadUser(username, true)
+			uRecord, err := accounts.LoadUser(username, true)
 			if err == nil && uRecord.PasswordMatches(password) {
-				if uRecord.Role == users.RoleAdmin || uRecord.Role == users.RoleMod {
+				if uRecord.Role == accounts.RoleAdmin || uRecord.Role == accounts.RoleMod {
 
 					mudlog.Warn("ADMIN LOGIN", "username", username, "role", uRecord.Role, "success", true)
 

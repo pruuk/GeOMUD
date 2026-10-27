@@ -3,11 +3,11 @@ package web
 import (
 	"sync"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 type Stats struct {
-	OnlineUsers          []users.OnlineInfo
+	OnlineUsers          []accounts.OnlineInfo
 	TelnetPorts          []int
 	WebSocketPort        int
 	SSHPort              int
@@ -21,7 +21,7 @@ var (
 	serverStats = Stats{
 		WebSocketPort: 0,
 		SSHPort:       0,
-		OnlineUsers:   []users.OnlineInfo{},
+		OnlineUsers:   []accounts.OnlineInfo{},
 		TelnetPorts:   []int{},
 	}
 )
@@ -45,7 +45,7 @@ func UpdateStats(s Stats) {
 func (s *Stats) Reset() {
 	s.WebSocketPort = 0
 	s.SSHPort = 0
-	s.OnlineUsers = []users.OnlineInfo{}
+	s.OnlineUsers = []accounts.OnlineInfo{}
 	s.TelnetPorts = []int{}
 	s.TelnetConnections = 0
 	s.WebSocketConnections = 0

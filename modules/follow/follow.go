@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -166,9 +166,9 @@ func (f *FollowModule) loseFollowers(followTarget followId) []followId {
 // Event Handlers
 //
 
-func (f followId) getFollowIdInstance() (user *users.UserRecord, mob *mobs.Mob) {
+func (f followId) getFollowIdInstance() (user *accounts.Account, mob *mobs.Mob) {
 	if f.userId > 0 {
-		return users.GetByUserId(f.userId), nil
+		return accounts.GetByUserId(f.userId), nil
 	}
 	if f.mobInstanceId > 0 {
 		return nil, mobs.GetInstance(f.mobInstanceId)
@@ -287,7 +287,7 @@ func (f *FollowModule) roomChangeHandler(e events.Event) events.ListenerReturn {
 	// End the follow
 	if followExitName == `` {
 		if evt.UserId > 0 {
-			if user := users.GetByUserId(evt.UserId); user != nil {
+			if user := accounts.GetByUserId(evt.UserId); user != nil {
 				user.Command(`follow lose`)
 			}
 		}
@@ -312,7 +312,7 @@ func (f *FollowModule) roomChangeHandler(e events.Event) events.ListenerReturn {
 
 			} else if fId.userId > 0 {
 
-				if user := users.GetByUserId(fId.userId); user != nil {
+				if user := accounts.GetByUserId(fId.userId); user != nil {
 					if fromRoom.RoomId == user.Character.RoomId {
 						user.Command(followExitName, .25)
 						continue
@@ -369,7 +369,7 @@ func (f *FollowModule) onPlayerDeath(e events.Event) events.ListenerReturn {
 // Commands
 //
 
-func (f *FollowModule) followUserCommand(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if rest == "" {
 		user.SendText(`Follow whom? Try <ansi fg="command">help command</ansi>`)
@@ -429,7 +429,7 @@ func (f *FollowModule) followUserCommand(rest string, user *users.UserRecord, ro
 					continue
 				}
 
-				if followerUser := users.GetByUserId(fId.userId); followerUser != nil {
+				if followerUser := accounts.GetByUserId(fId.userId); followerUser != nil {
 					followerUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, user.Character.Name))
 				}
 			}
@@ -448,7 +448,7 @@ func (f *FollowModule) followUserCommand(rest string, user *users.UserRecord, ro
 
 		if wasFollowing.userId > 0 {
 
-			if followUser := users.GetByUserId(wasFollowing.userId); followUser != nil {
+			if followUser := accounts.GetByUserId(wasFollowing.userId); followUser != nil {
 				followUser.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> stopped following you.`, followUser.Character.Name))
 				user.SendText(fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followUser.Character.Name))
 				return true, nil
@@ -475,7 +475,7 @@ func (f *FollowModule) followUserCommand(rest string, user *users.UserRecord, ro
 
 		f.startFollow(followCommandTarget, followCommandSource, followEndRound)
 
-		targetUser := users.GetByUserId(followCommandTarget.userId)
+		targetUser := accounts.GetByUserId(followCommandTarget.userId)
 
 		user.SendText(fmt.Sprintf(`You start following <ansi fg="username">%s</ansi>.`, targetUser.Character.Name))
 
@@ -557,7 +557,7 @@ func (f *FollowModule) followMobCommand(rest string, mob *mobs.Mob, room *rooms.
 					continue
 				}
 
-				if followerUser := users.GetByUserId(fId.userId); followerUser != nil {
+				if followerUser := accounts.GetByUserId(fId.userId); followerUser != nil {
 					followerUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, mob.Character.Name))
 				}
 			}
@@ -575,7 +575,7 @@ func (f *FollowModule) followMobCommand(rest string, mob *mobs.Mob, room *rooms.
 
 		if wasFollowing.userId > 0 {
 
-			if followUser := users.GetByUserId(wasFollowing.userId); followUser != nil {
+			if followUser := accounts.GetByUserId(wasFollowing.userId); followUser != nil {
 				followUser.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> stopped following you.`, followUser.Character.Name))
 				return true, nil
 			}
@@ -594,7 +594,7 @@ func (f *FollowModule) followMobCommand(rest string, mob *mobs.Mob, room *rooms.
 
 		f.startFollow(followCommandTarget, followCommandSource, followEndRound)
 
-		targetUser := users.GetByUserId(followCommandTarget.userId)
+		targetUser := accounts.GetByUserId(followCommandTarget.userId)
 
 		targetUser.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is following you.`, mob.Character.Name))
 

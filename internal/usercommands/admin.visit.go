@@ -5,10 +5,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -16,7 +16,7 @@ import (
 * Role Permissions:
 * visit 				(All)
  */
-func Visit(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Visit(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(rest)
 
@@ -44,21 +44,21 @@ func Visit(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 	return true, nil
 }
 
-func visit_resolveTarget(args []string, invoker *users.UserRecord) (*users.UserRecord, bool, error) {
+func visit_resolveTarget(args []string, invoker *accounts.Account) (*accounts.Account, bool, error) {
 	if len(args) == 0 {
 		return invoker, false, nil
 	}
 
 	username := args[0]
 
-	if online := users.GetByCharacterName(username); online != nil {
+	if online := accounts.GetByCharacterName(username); online != nil {
 		return online, false, nil
 	}
 
 	return nil, false, fmt.Errorf(`user "%s" not found`, username)
 }
 
-func visit_List(args []string, user *users.UserRecord) (bool, error) {
+func visit_List(args []string, user *accounts.Account) (bool, error) {
 
 	targetUser, isOffline, err := visit_resolveTarget(args, user)
 	if err != nil {
@@ -106,7 +106,7 @@ func visit_List(args []string, user *users.UserRecord) (bool, error) {
 	return true, nil
 }
 
-func visit_SetUnset(args []string, user *users.UserRecord, markVisited bool) (bool, error) {
+func visit_SetUnset(args []string, user *accounts.Account, markVisited bool) (bool, error) {
 
 	if len(args) == 0 {
 		infoOutput, _ := templates.Process("admincommands/help/command.visit", nil, user.UserId)
@@ -135,7 +135,7 @@ func visit_SetUnset(args []string, user *users.UserRecord, markVisited bool) (bo
 		}
 
 		if isOffline {
-			users.SaveUser(*targetUser)
+			accounts.SaveUser(*targetUser)
 		}
 
 		user.SendText(fmt.Sprintf(`All zones %s for <ansi fg="username">%s</ansi>.`, action, targetUser.Character.Name))
@@ -156,7 +156,7 @@ func visit_SetUnset(args []string, user *users.UserRecord, markVisited bool) (bo
 	visit_applyZone(targetUser, resolvedZone, markVisited)
 
 	if isOffline {
-		users.SaveUser(*targetUser)
+		accounts.SaveUser(*targetUser)
 	}
 
 	user.SendText(fmt.Sprintf(`Zone <ansi fg="yellow">%s</ansi> %s for <ansi fg="username">%s</ansi>.`, resolvedZone, action, targetUser.Character.Name))
@@ -164,7 +164,7 @@ func visit_SetUnset(args []string, user *users.UserRecord, markVisited bool) (bo
 	return true, nil
 }
 
-func visit_applyZone(targetUser *users.UserRecord, zoneName string, markVisited bool) {
+func visit_applyZone(targetUser *accounts.Account, zoneName string, markVisited bool) {
 	zCfg := rooms.GetZoneConfig(zoneName)
 	if zCfg == nil {
 		return

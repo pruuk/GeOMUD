@@ -6,10 +6,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -620,7 +620,7 @@ func RenameZoneForAdmin(oldName, newName string) error {
 	}
 
 	// Update online users.
-	for _, u := range users.GetAllActiveUsers() {
+	for _, u := range accounts.GetAllActiveUsers() {
 		if u.Character.Zone == oldName {
 			u.Character.Zone = newName
 		}

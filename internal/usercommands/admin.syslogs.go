@@ -3,10 +3,10 @@ package usercommands
 import (
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -14,7 +14,7 @@ import (
 * Role Permissions:
 * syslogs 				(All)
  */
-func SysLogs(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func SysLogs(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.syslogs", nil, user.UserId)

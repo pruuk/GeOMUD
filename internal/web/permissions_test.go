@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 func TestRequirePermission_AdminAlwaysPasses(t *testing.T) {
-	admin := &users.UserRecord{Role: users.RoleAdmin}
+	admin := &accounts.Account{Role: accounts.RoleAdmin}
 	req := httptest.NewRequest(http.MethodGet, "/admin/mobs", nil)
 	req = req.WithContext(withAuthedUser(req.Context(), admin))
 
@@ -32,7 +32,7 @@ func TestRequirePermission_AdminAlwaysPasses(t *testing.T) {
 }
 
 func TestRequirePermission_ModWithPermissionPasses(t *testing.T) {
-	mod := &users.UserRecord{Role: users.RoleMod, Permissions: []string{"mobs.read"}}
+	mod := &accounts.Account{Role: accounts.RoleMod, Permissions: []string{"mobs.read"}}
 	req := httptest.NewRequest(http.MethodGet, "/admin/mobs", nil)
 	req = req.WithContext(withAuthedUser(req.Context(), mod))
 
@@ -54,7 +54,7 @@ func TestRequirePermission_ModWithPermissionPasses(t *testing.T) {
 }
 
 func TestRequirePermission_ModWithoutPermissionForbidden(t *testing.T) {
-	mod := &users.UserRecord{Role: users.RoleMod, Permissions: []string{"rooms.read"}}
+	mod := &accounts.Account{Role: accounts.RoleMod, Permissions: []string{"rooms.read"}}
 	// Use an API path so writeForbidden returns JSON without needing template files.
 	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/mobs", nil)
 	req = req.WithContext(withAuthedUser(req.Context(), mod))
@@ -77,7 +77,7 @@ func TestRequirePermission_ModWithoutPermissionForbidden(t *testing.T) {
 }
 
 func TestRequirePermission_APIRouteReturnJSON(t *testing.T) {
-	mod := &users.UserRecord{Role: users.RoleMod, Permissions: []string{}}
+	mod := &accounts.Account{Role: accounts.RoleMod, Permissions: []string{}}
 	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/mobs", nil)
 	req = req.WithContext(withAuthedUser(req.Context(), mod))
 
@@ -147,7 +147,7 @@ func TestRequirePermission_InternalRequestBypasses(t *testing.T) {
 
 func TestRequirePermission_ModPrefixGrantPasses(t *testing.T) {
 	// Granting "room" should satisfy "room.edit.exits" via prefix match.
-	mod := &users.UserRecord{Role: users.RoleMod, Permissions: []string{"room"}}
+	mod := &accounts.Account{Role: accounts.RoleMod, Permissions: []string{"room"}}
 	// Use an API path so the handler path is clean.
 	req := httptest.NewRequest(http.MethodGet, "/admin/api/v1/rooms", nil)
 	req = req.WithContext(withAuthedUser(req.Context(), mod))

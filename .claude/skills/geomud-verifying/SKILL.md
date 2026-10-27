@@ -16,7 +16,7 @@ git diff --name-only -- '*.go' | xargs -r gofmt -l  # must print nothing
 ## Baseline (upstream `b3f55cc2`, 2026-10-24)
 
 - `go build ./...` passes.
-- `go test ./... -count=1` on Windows: 32 packages ok (2026-10-26, after Phase 4's scripting removal; it was 33 before, and `internal/scripting` took its tests with it. Phase 1 took it from 36 by removing `telemetry`, `conversations`, `quests` and `pets`), 3 fail, all of which pass on Linux CI (PR #1 run,
+- `go test ./... -count=1` on Windows: 34 packages ok (2026-10-27, Phase 4b slice 1 added `internal/actors` and `internal/guards`; `internal/users` became `internal/accounts`). It was 32 on 2026-10-26, after Phase 4's scripting removal; it was 33 before, and `internal/scripting` took its tests with it. Phase 1 took it from 36 by removing `telemetry`, `conversations`, `quests` and `pets`), 3 fail, all of which pass on Linux CI (PR #1 run,
   2026-10-24). Any other failure is new and is ours.
   - `scripts` `TestHTTPSSetupAutoModeLoadsDefaultAdminURLFromActiveOverride` (`https_setup_test.go:311`): cause not investigated
   - `internal/mobs` `TestLoadPluginMobs_MergesValidMob`: "filepath mismatch", `/` vs `\` in the expected path suffix

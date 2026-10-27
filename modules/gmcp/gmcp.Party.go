@@ -4,13 +4,13 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // ////////////////////////////////////////////////////////////////////
@@ -204,7 +204,7 @@ func (g *GMCPPartyModule) GetPartyNode(party *parties.Party, gmcpModule string) 
 
 	for _, uId := range party.GetMembers() {
 
-		if user := users.GetByUserId(uId); user != nil {
+		if user := accounts.GetByUserId(uId); user != nil {
 
 			hPct := int(math.Floor((float64(user.Character.Health) / float64(user.Character.HealthMax.Value)) * 100))
 			if hPct < 0 {
@@ -304,7 +304,7 @@ func (g *GMCPPartyModule) GetPartyNode(party *parties.Party, gmcpModule string) 
 
 	for _, uId := range party.GetInvited() {
 
-		if user := users.GetByUserId(uId); user != nil {
+		if user := accounts.GetByUserId(uId); user != nil {
 
 			partyPayload.Vitals[user.Character.Name] = GMCPPartyModule_Payload_Vitals{
 				Level:         0,

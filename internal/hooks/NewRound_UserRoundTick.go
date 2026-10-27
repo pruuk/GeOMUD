@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -76,7 +76,7 @@ func UserRoundTick(e events.Event) events.ListenerReturn {
 
 			for _, uId := range room.GetPlayers() {
 
-				user := users.GetByUserId(uId)
+				user := accounts.GetByUserId(uId)
 				if user == nil {
 					continue
 				}

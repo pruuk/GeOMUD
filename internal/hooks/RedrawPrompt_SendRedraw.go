@@ -1,11 +1,11 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // Checks whether their level is too high for a guide
@@ -17,7 +17,7 @@ func RedrawPrompt_SendRedraw(e events.Event) events.ListenerReturn {
 		return events.Cancel
 	}
 
-	if user := users.GetByUserId(evt.UserId); user != nil {
+	if user := accounts.GetByUserId(evt.UserId); user != nil {
 
 		newCmdPrompt := user.GetCommandPrompt()
 

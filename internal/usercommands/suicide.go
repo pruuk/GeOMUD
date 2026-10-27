@@ -6,6 +6,7 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
@@ -16,11 +17,10 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Suicide(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	config := configs.GetGamePlayConfig()
 	currentRound := util.GetRoundCount()
@@ -49,7 +49,7 @@ func Suicide(rest string, user *users.UserRecord, room *rooms.Room, flags events
 	killedBy := ``
 	for uid, _ := range user.Character.PlayerDamage {
 
-		if u := users.GetByUserId(uid); u != nil {
+		if u := accounts.GetByUserId(uid); u != nil {
 
 			// Update PK stats
 			user.Character.KD.AddPlayerDeath(u.UserId, u.Character.Name)
@@ -130,7 +130,7 @@ func Suicide(rest string, user *users.UserRecord, room *rooms.Room, flags events
 
 			rooms.MoveToRoom(user.UserId, -1)
 
-			user.Character = characters.New()
+			*user.Character = *characters.New()
 
 			return true, nil
 		}

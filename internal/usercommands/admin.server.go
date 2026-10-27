@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -30,7 +30,7 @@ const (
 * Role Permissions:
 * server 				(All)
  */
-func Server(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Server(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.server", nil, user.UserId)
@@ -311,7 +311,7 @@ func Server(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 	return true, nil
 }
 
-func server_Config(_ string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func server_Config(_ string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	// Get if already exists, otherwise create new
 	cmdPrompt, isNew := user.StartPrompt(`server config`, "")

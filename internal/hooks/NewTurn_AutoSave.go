@@ -4,13 +4,13 @@ package hooks
 import (
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -38,7 +38,7 @@ func AutoSave(e events.Event) events.ListenerReturn {
 		//////////////////////////////////////////
 		events.AddToQueue(events.Broadcast{Text: `Saving users...`})
 
-		users.SaveAllUsers(true)
+		accounts.SaveAllUsers(true)
 
 		events.AddToQueue(events.Broadcast{
 			Text:            `Done.` + term.CRLFStr,

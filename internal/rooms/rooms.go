@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/exit"
@@ -15,7 +16,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -422,7 +422,7 @@ func (r *Room) ApplyBuffIdToPlayers(buffIds []int, source string) {
 
 	for _, uid := range r.GetPlayers() {
 
-		if u := users.GetByUserId(uid); u != nil {
+		if u := accounts.GetByUserId(uid); u != nil {
 
 			for _, bId := range buffIds {
 				if u.Character.HasBuff(bId) {
@@ -1203,7 +1203,7 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 
 	for _, userId := range r.players {
 
-		user := users.GetByUserId(userId)
+		user := accounts.GetByUserId(userId)
 		if user == nil {
 			continue
 		}
@@ -1273,7 +1273,7 @@ func (r *Room) ArePlayersAttacking(userId int) bool {
 		if playerId == userId {
 			continue
 		}
-		if u := users.GetByUserId(playerId); u != nil {
+		if u := accounts.GetByUserId(playerId); u != nil {
 			if u.Character.Aggro != nil && (userId == 0 || u.Character.Aggro.UserId == userId) {
 				return true
 			}
@@ -1428,7 +1428,7 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	// are they looking at a player?
 	playerLookup := map[string]int{}
 	for _, uId := range r.GetPlayers(findTypes...) {
-		u := users.GetByUserId(uId)
+		u := accounts.GetByUserId(uId)
 		playerLookup[u.Character.Name] = u.UserId
 		namesInRoom = append(namesInRoom, u.Character.Name)
 	}
@@ -1864,7 +1864,7 @@ func (r *Room) isInRoom(mobName string, userName string) bool {
 
 	if userName != `` {
 		for _, userId := range r.players {
-			if user := users.GetByUserId(userId); user != nil {
+			if user := accounts.GetByUserId(userId); user != nil {
 				if strings.HasPrefix(user.Character.Name, userName) {
 					return true
 				}
@@ -1943,7 +1943,7 @@ func (r *Room) findUserExit(userId int, userName string) string {
 				continue
 			}
 
-			if visitorUser := users.GetByUserId(uId); visitorUser != nil {
+			if visitorUser := accounts.GetByUserId(uId); visitorUser != nil {
 
 				if len(userName) > 0 && !strings.HasPrefix(visitorUser.Character.Name, userName) {
 					continue
@@ -2104,7 +2104,7 @@ func (r *Room) RepeatSpawnItem(itemId int, roundFrequency int, containerName ...
 	// If someone is carrying it, abort
 	for _, userId := range r.GetPlayers() {
 
-		if user := users.GetByUserId(userId); user != nil {
+		if user := accounts.GetByUserId(userId); user != nil {
 
 			for _, item := range user.Character.GetAllBackpackItems() {
 				if item.ItemId == itemId {
@@ -2283,7 +2283,7 @@ func (r *Room) IsPvp() bool {
 }
 
 // Returns an error with a reason why they cannot PVP, or nil
-func (r *Room) CanPvp(attUser *users.UserRecord, defUser *users.UserRecord) error {
+func (r *Room) CanPvp(attUser *accounts.Account, defUser *accounts.Account) error {
 
 	if attUser.Character.RoomId == -1 || attUser.Character.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom) {
 		return errors.New(`Fighting is not allowed here.`)

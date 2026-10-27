@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -18,7 +18,7 @@ import (
 * Role Permissions:
 * zone 				(All)
  */
-func Zone(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Zone(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	handled := true
 
@@ -123,7 +123,7 @@ func Zone(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 	return true, nil
 }
 
-func zone_Edit(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func zone_Edit(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	originalZoneConfig := rooms.GetZoneConfig(room.Zone)
 	if originalZoneConfig == nil {

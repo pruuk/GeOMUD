@@ -3,6 +3,7 @@ package usercommands
 import (
 	"fmt"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -10,11 +11,10 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if user.Character.Aggro != nil {
 		user.SendText("You can't do that! You are in combat!")
@@ -213,7 +213,7 @@ func Go(rest string, user *users.UserRecord, room *rooms.Room, flags events.Even
 						if partyMemberId == user.UserId {
 							continue
 						}
-						if partyUser := users.GetByUserId(partyMemberId); partyUser != nil {
+						if partyUser := accounts.GetByUserId(partyMemberId); partyUser != nil {
 							if partyUser.Character.RoomId == room.RoomId {
 								partyUser.SendText(`You follow the party leader.`)
 								partyUser.Command(rest)

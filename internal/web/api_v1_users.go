@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 // resolveUserId resolves a path segment that is a numeric user ID.
@@ -20,13 +20,13 @@ func resolveUserId(w http.ResponseWriter, idStr string) int {
 	return id
 }
 
-// loadUserRecord loads a UserRecord by id, checking the online cache first.
+// loadUserRecord loads an Account by id, checking the online cache first.
 // Writes a 404 error response and returns nil when the user does not exist.
-func loadUserRecord(w http.ResponseWriter, userId int) *users.UserRecord {
-	if u := users.GetByUserId(userId); u != nil {
+func loadUserRecord(w http.ResponseWriter, userId int) *accounts.Account {
+	if u := accounts.GetByUserId(userId); u != nil {
 		return u
 	}
-	u, err := users.LoadUserById(userId)
+	u, err := accounts.LoadUserById(userId)
 	if err != nil {
 		writeAPIError(w, http.StatusNotFound, "user not found")
 		return nil
@@ -46,7 +46,7 @@ func apiV1GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, APIResponse[*users.UserRecord]{
+	writeJSON(w, http.StatusOK, APIResponse[*accounts.Account]{
 		Success: true,
 		Data:    u,
 	})
@@ -65,7 +65,7 @@ func apiV1PatchUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Capture the plaintext password from the request before decoding into the
-	// UserRecord, because UserRecord.Password stores a bcrypt hash and we need
+	// Account, because Account.Password stores a bcrypt hash and we need
 	// to call SetPassword to hash a new plaintext value.
 	var raw struct {
 		Password string `json:"Password"`
@@ -118,14 +118,14 @@ func apiV1PatchUser(w http.ResponseWriter, r *http.Request) {
 
 	updated.Character.Validate()
 
-	if err := users.SaveUser(updated); err != nil {
+	if err := accounts.SaveUser(updated); err != nil {
 		writeAPIError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	users.UpdateOnlineUser(updated)
+	accounts.UpdateOnlineUser(updated)
 
-	writeJSON(w, http.StatusOK, APIResponse[*users.UserRecord]{
+	writeJSON(w, http.StatusOK, APIResponse[*accounts.Account]{
 		Success: true,
 		Data:    &updated,
 	})
@@ -155,12 +155,12 @@ func apiV1CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if users.Exists(body.Username) {
+	if accounts.Exists(body.Username) {
 		writeAPIError(w, http.StatusConflict, "username already exists")
 		return
 	}
 
-	u := users.NewUserRecord(0, 0)
+	u := accounts.NewAccount(0, 0)
 	if err := u.SetUsername(body.Username); err != nil {
 		writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
@@ -178,12 +178,12 @@ func apiV1CreateUser(w http.ResponseWriter, r *http.Request) {
 		u.EmailAddress = body.Email
 	}
 
-	if err := users.CreateUser(u); err != nil {
+	if err := accounts.CreateUser(u); err != nil {
 		writeAPIError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, APIResponse[*users.UserRecord]{
+	writeJSON(w, http.StatusCreated, APIResponse[*accounts.Account]{
 		Success: true,
 		Data:    u,
 	})
@@ -204,17 +204,17 @@ func apiV1SearchUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var results []users.UserSearchResult
+	var results []accounts.UserSearchResult
 	if name != "" {
-		results = users.SearchUsers(name)
+		results = accounts.SearchUsers(name)
 	} else {
-		results = users.SearchUsersByRole(role)
+		results = accounts.SearchUsersByRole(role)
 	}
 	if results == nil {
-		results = []users.UserSearchResult{}
+		results = []accounts.UserSearchResult{}
 	}
 
-	writeJSON(w, http.StatusOK, APIResponse[[]users.UserSearchResult]{
+	writeJSON(w, http.StatusOK, APIResponse[[]accounts.UserSearchResult]{
 		Success: true,
 		Data:    results,
 	})

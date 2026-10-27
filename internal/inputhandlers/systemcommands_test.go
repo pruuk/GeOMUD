@@ -3,9 +3,9 @@ package inputhandlers
 import (
 	"testing"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // TestMain initializes shared infrastructure (logging) required by the
@@ -17,8 +17,8 @@ func TestMain(m *testing.M) {
 
 // newTestUser creates a minimal UserRecord for use in auth tests.
 // The Character field is nil intentionally - auth checks only inspect Role.
-func newTestUser(userId int, connId connections.ConnectionId, role string) *users.UserRecord {
-	u := &users.UserRecord{
+func newTestUser(userId int, connId connections.ConnectionId, role string) *accounts.Account {
+	u := &accounts.Account{
 		UserId:   userId,
 		Role:     role,
 		Username: "testuser",
@@ -34,24 +34,24 @@ func TestTrySystemCommand_AuthorizationChecks(t *testing.T) {
 	)
 
 	setup := func() {
-		users.ResetActiveUsers()
+		accounts.ResetActiveUsers()
 
-		adminUser := &users.UserRecord{
+		adminUser := &accounts.Account{
 			UserId:   1,
-			Role:     users.RoleAdmin,
+			Role:     accounts.RoleAdmin,
 			Username: "admin",
 		}
-		nonAdminUser := &users.UserRecord{
+		nonAdminUser := &accounts.Account{
 			UserId:   2,
-			Role:     users.RoleUser,
+			Role:     accounts.RoleUser,
 			Username: "player",
 		}
 
-		users.SetTestUser(adminUser)
-		users.SetTestConnection(adminConnId, adminUser.UserId)
+		accounts.SetTestUser(adminUser)
+		accounts.SetTestConnection(adminConnId, adminUser.UserId)
 
-		users.SetTestUser(nonAdminUser)
-		users.SetTestConnection(nonAdminConnId, nonAdminUser.UserId)
+		accounts.SetTestUser(nonAdminUser)
+		accounts.SetTestConnection(nonAdminConnId, nonAdminUser.UserId)
 		// noUserConnId intentionally has no user registered
 	}
 

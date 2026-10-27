@@ -2,10 +2,10 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //
@@ -28,7 +28,7 @@ func CleanupLinkDead(e events.Event) events.ListenerReturn {
 
 	if expTurns < evt.TurnNumber {
 
-		expired := users.GetExpiredLinkDeadUsers(evt.TurnNumber - expTurns)
+		expired := accounts.GetExpiredLinkDeadUsers(evt.TurnNumber - expTurns)
 
 		if len(expired) > 0 {
 

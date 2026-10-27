@@ -5,13 +5,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // Prints message to screen
-func Print(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Print(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	events.AddToQueue(events.Message{
 		UserId: user.UserId,
@@ -22,7 +22,7 @@ func Print(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 }
 
 // PrintLine (command `printline`) is just a simple measuring tool/ruler for layout purposes
-func PrintLine(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func PrintLine(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	sectionSize := 20
 

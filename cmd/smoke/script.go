@@ -126,8 +126,20 @@ func (s *script) quit(step string) {
 //
 // It also returns the GMCP package names the bot received (both connections
 // together), and fails the bot unless they include Char, Room and Comm packages.
-func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) (map[string]int, error) {
-	c, err := dial(ctx, addr, timeout)
+// rec, when not nil, records the bot's transcript across both connections.
+// co, when not nil, is the copyover step: the bot waits online for it after
+// the death block, and calls co.arrived.Done exactly once on every path.
+func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, rec *recorder, co *copyoverCheck) (map[string]int, error) {
+	arrived := false
+	arrive := func() {
+		if co != nil && !arrived {
+			arrived = true
+			co.arrived.Done()
+		}
+	}
+	defer arrive() // a bot that fails early, even at connect, must not hold up the copyover
+
+	c, err := dial(ctx, addr, timeout, rec)
 	if err != nil {
 		return nil, &stepError{"connect", err.Error(), ""}
 	}
@@ -141,10 +153,11 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.do("account: repeat password", b.pass, "Email Address")
 	s.do("account: email", "", "screen reader")
 	s.do("account: screen reader", "n", "create a new user/login named "+b.user)
-	// One signup at a time: users.CreateUser reads the highest user ID and
-	// adds the new one without a lock, so two signups at once can get the
-	// same ID and then share each other's output. Known engine bug, not
-	// what this test is for.
+	// One signup at a time: upstream's accounts.CreateUser read the highest
+	// user ID and added the new one without a lock, so two signups at once
+	// could get the same ID and share each other's output. Phase 4b slice 1
+	// put CreateUser under lifecycleMu, which likely fixes it; this stays
+	// until a 50-bot run without it proves that (status.md).
 	signupMu.Lock()
 	s.do("account: create", "y", "Type start to begin playing")
 	signupMu.Unlock()
@@ -173,7 +186,7 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 		return s.gmcp, s.err
 	}
 
-	c, err = dial(ctx, addr, timeout)
+	c, err = dial(ctx, addr, timeout, rec)
 	if err != nil {
 		return s.gmcp, &stepError{"reconnect", err.Error(), ""}
 	}
@@ -197,6 +210,25 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 	s.field("death: still holds the item", "inventory", "Carrying:", smokeItem)
 	if s.err != nil {
 		return s.gmcp, s.err
+	}
+
+	// Copyover (Linux launch mode only): every bot waits here, online, while
+	// the admin restarts the server in place. The bot must keep its
+	// connection, its room and its item.
+	if co != nil {
+		arrive()
+		if co.wait(ctx) {
+			s.wait("copyover: complete", "Copyover complete.")
+			if s.err == nil {
+				// The resumed connection drops a line within Timing.TurnMs of its resume (main.go resumeRestoredConnection sets lastInput), as a new connection does.
+				s.c.lastSend = time.Now()
+			}
+			s.do("copyover: still in the start room", "look", startRoomTitle)
+			s.field("copyover: still holds the item", "inventory", "Carrying:", smokeItem)
+			if s.err != nil {
+				return s.gmcp, s.err
+			}
+		}
 	}
 
 	if hold > 0 {

@@ -9,7 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/util"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 /*
@@ -17,7 +17,7 @@ import (
 * modify 				(All)
 * modify.role			(Change user roles)
  */
-func Modify(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Modify(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(rest)
 
@@ -38,7 +38,7 @@ func Modify(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 		searchUser := args[1]
 		newRole := args[2]
 
-		if newRole != users.RoleAdmin && newRole != users.RoleUser && newRole != users.RoleMod {
+		if newRole != accounts.RoleAdmin && newRole != accounts.RoleUser && newRole != accounts.RoleMod {
 			user.SendText(`<ansi fg="alert-4">Invalid role. Valid roles: user, mod, admin</ansi>`)
 			return true, nil
 		}
@@ -46,10 +46,10 @@ func Modify(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 		foundUsername := ``
 		foundCharacterName := ``
 
-		for _, u := range users.GetAllActiveUsers() {
+		for _, u := range accounts.GetAllActiveUsers() {
 			if strings.EqualFold(searchUser, u.Username) {
 
-				if u.Role == users.RoleAdmin {
+				if u.Role == accounts.RoleAdmin {
 					user.SendText(`<ansi fg="alert-4">Admin role cannot be removed this way.</ansi>`)
 					return true, nil
 				}
@@ -64,7 +64,7 @@ func Modify(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 
 				u.Role = newRole
 
-				users.SaveUser(*u)
+				accounts.SaveUser(*u)
 
 				u.SendText(`<ansi fg="alert-3">Your role has been set to: ` + newRole + `</ansi>`)
 				break
@@ -72,11 +72,11 @@ func Modify(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 		}
 
 		if len(foundUsername) == 0 {
-			users.SearchOfflineUsers(func(u *users.UserRecord) bool {
+			accounts.SearchOfflineUsers(func(u *accounts.Account) bool {
 
 				if strings.EqualFold(searchUser, u.Username) {
 
-					if u.Role == users.RoleAdmin {
+					if u.Role == accounts.RoleAdmin {
 						user.SendText(`<ansi fg="alert-4">Admin role cannot be removed this way.</ansi>`)
 						return false
 					}
@@ -91,7 +91,7 @@ func Modify(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 
 					u.Role = newRole
 
-					users.SaveUser(*u)
+					accounts.SaveUser(*u)
 
 					return false
 				}

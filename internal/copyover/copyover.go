@@ -174,8 +174,14 @@ func Restore(fd int) error {
 		return fmt.Errorf("copyover: invalid fd %d", fd)
 	}
 	defer f.Close()
+	return RestoreFrom(f)
+}
 
-	dec, err := readSections(f)
+// RestoreFrom reads state from r and calls CopyoverRestore on all registered
+// contributors. Restore wraps it for the inherited pipe; tests call it
+// directly, which works on every platform.
+func RestoreFrom(r io.Reader) error {
+	dec, err := readSections(r)
 	if err != nil {
 		return fmt.Errorf("copyover: read sections: %w", err)
 	}
