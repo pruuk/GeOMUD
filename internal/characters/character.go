@@ -67,7 +67,7 @@ type Character struct {
 	Shop             Shop                           `yaml:"shop,omitempty"`           // Definition of shop services/items this character stocks (or just has at the moment)
 	SpellBook        map[string]int                 `yaml:"spellbook,omitempty"`      // The spells the character has learned
 	Charmed          *CharmInfo                     `yaml:"-"`                        // If they are charmed, this is the info
-	CharmedMobs      []ids.ID                       `yaml:"-"`                        // If they have charmed anyone, this is the list of their body IDs
+	CharmedMobs      []ids.ID                       `yaml:"charmedmobs,omitempty"`    // If they have charmed anyone, this is the list of their body IDs
 	Items            []items.Item                   `yaml:"items,omitempty"`          // The items the character is holding
 	Buffs            buffs.Buffs                    `yaml:"buffs,omitempty"`          // The buffs the character has active
 	Equipment        Worn                           `yaml:"equipment,omitempty"`      // The equipment the character is wearing

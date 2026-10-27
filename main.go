@@ -35,6 +35,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -221,6 +222,8 @@ func main() {
 	if err := rooms.LoadEndings(); err != nil {
 		mudlog.Error("LoadEndings", "error", err)
 	}
+	// A charmed companion that is resting is still the player's companion.
+	accounts.NPCExists = func(id ids.ID) bool { return mobs.MobInstanceExists(id) || rooms.IsResting(id) }
 
 	mudlog.Info(`========================`)
 

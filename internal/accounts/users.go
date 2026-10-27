@@ -243,15 +243,24 @@ func CopyoverReconnectUser(user *Account, connectionId connections.ConnectionId)
 	userManagerMu.Unlock()
 	activated(user)
 
-	for _, mobInstId := range user.Character.GetCharmIds() {
-		if !mobs.MobInstanceExists(mobInstId) {
-			user.Character.TrackCharmed(mobInstId, false)
-		}
-	}
+	pruneCharmed(user)
 
 	user.EventLog.Add(`conn`, `Reconnected`)
 
 	return user, "Reconnecting...", nil
+}
+
+// NPCExists says whether a charmed NPC's ID still names an NPC. The default sees live NPCs only;
+// startup widens it to resting ones (accounts cannot import rooms).
+var NPCExists = func(id ids.ID) bool { return mobs.MobInstanceExists(id) }
+
+// pruneCharmed drops charmed IDs that name no live or resting NPC.
+func pruneCharmed(user *Account) {
+	for _, mobInstId := range user.Character.GetCharmIds() {
+		if !NPCExists(mobInstId) {
+			user.Character.TrackCharmed(mobInstId, false)
+		}
+	}
 }
 
 // First time creating a user.
@@ -287,11 +296,7 @@ func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, 
 				userManagerMu.Unlock()
 				activated(user)
 
-				for _, mobInstId := range user.Character.GetCharmIds() {
-					if !mobs.MobInstanceExists(mobInstId) {
-						user.Character.TrackCharmed(mobInstId, false)
-					}
-				}
+				pruneCharmed(user)
 
 				// Set their input round to current to track idle time fresh
 				user.SetLastInputRound(util.GetRoundCount())
@@ -322,11 +327,7 @@ func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, 
 
 	user.EventLog.Add(`conn`, `Connected`)
 
-	for _, mobInstId := range user.Character.GetCharmIds() {
-		if !mobs.MobInstanceExists(mobInstId) {
-			user.Character.TrackCharmed(mobInstId, false)
-		}
-	}
+	pruneCharmed(user)
 
 	return user, "", nil
 }
