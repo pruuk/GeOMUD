@@ -130,24 +130,28 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 			// drop all items / gold
 			Drop("all", user, room, flags)
 
-			rooms.MoveToRoom(user.UserId, -1)
-
-			// The room lists the old body ID. Take it out while the account still
-			// drives it, then list the new body once the actor is re-keyed, so no
-			// room keeps the old ID.
-			bodyRoom := rooms.LoadRoom(user.Character.RoomId)
-			if bodyRoom != nil {
-				bodyRoom.RemovePlayer(user.UserId)
+			// Reroll first, then move: the events MoveToRoom queues carry the body ID
+			// current at that moment, and only the new ID has an actor driving it.
+			// The room must drop the old body while the account still drives it.
+			oldRoom := rooms.LoadRoom(user.Character.RoomId)
+			if oldRoom != nil {
+				oldRoom.RemovePlayer(user.UserId)
 			}
 
 			oldBodyId := user.Character.Id
+			oldRoomId := user.Character.RoomId
 			*user.Character = *characters.New()
 			user.Character.Id = ids.New(ids.NoCell) // a rerolled character is a new body
 			actors.BodyReplaced(user, oldBodyId)
 
-			if bodyRoom != nil {
-				bodyRoom.AddPlayer(user.UserId)
+			// The fresh character starts elsewhere; put it back in the old room so
+			// the move below leaves from there.
+			user.Character.RoomId = oldRoomId
+			if oldRoom != nil {
+				oldRoom.AddPlayer(user.UserId)
 			}
+
+			rooms.MoveToRoom(user.UserId, -1)
 
 			return true, nil
 		}

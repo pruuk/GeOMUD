@@ -1495,6 +1495,9 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	playerLookup := map[string]int{}
 	for _, uId := range r.GetPlayers(findTypes...) {
 		u := accounts.GetByUserId(uId)
+		if u == nil {
+			continue
+		}
 		playerLookup[u.Character.Name] = u.UserId
 		namesInRoom = append(namesInRoom, u.Character.Name)
 	}
@@ -1537,6 +1540,9 @@ func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, 
 	for _, mId := range r.GetMobs(findTypes...) {
 
 		m := mobs.GetInstance(mId)
+		if m == nil {
+			continue // body with no instance (disconnect race)
+		}
 
 		if m.Character.IsCharmed() {
 			friendlyMobs[mId] = m // Put friendly mobs at the end of the list.

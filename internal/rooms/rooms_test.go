@@ -65,6 +65,22 @@ func TestRoomHoldsOneBodyList(t *testing.T) {
 	assert.Empty(t, r.GetPlayers())
 }
 
+// TestFindByNameSkipsBodyWithNoActor covers a disconnect race: a body ID stays
+// in the room list with no actor and no mob instance. Name search must skip it.
+func TestFindByNameSkipsBodyWithNoActor(t *testing.T) {
+	actors.Reset()
+	t.Cleanup(actors.Reset)
+
+	r := NewEmptyRoom()
+	r.bodies = append(r.bodies, ids.New(ids.NoCell))
+
+	assert.NotPanics(t, func() {
+		uId, mId := r.FindByName("rat")
+		assert.Equal(t, 0, uId)
+		assert.True(t, mId.IsZero())
+	})
+}
+
 func TestRoom_AddCorpse(t *testing.T) {
 	r := &Room{}
 	assert.Empty(t, r.Corpses, "Expected no corpses initially")
