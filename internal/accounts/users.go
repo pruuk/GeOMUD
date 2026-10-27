@@ -50,7 +50,7 @@ func RemoveLinkDeadUser(userId int) {
 
 	if u := userManager.Users[userId]; u != nil {
 		u.Character.SetAdjective(`zombie`, false)
-		u.isLinkDead = false
+		u.sess().isLinkDead = false
 	}
 	if connId, ok := userManager.UserConnections[userId]; ok {
 		delete(userManager.LinkDeadConnections, connId)
@@ -103,7 +103,7 @@ func GetConnectionId(userId int) connections.ConnectionId {
 	defer userManagerMu.RUnlock()
 
 	if user, ok := userManager.Users[userId]; ok {
-		return user.connectionId
+		return user.sess().connectionId
 	}
 	return 0
 }
@@ -115,7 +115,7 @@ func GetConnectionIds(userIds []int) []connections.ConnectionId {
 	connectionIds := make([]connections.ConnectionId, 0, len(userIds))
 	for _, userId := range userIds {
 		if user, ok := userManager.Users[userId]; ok {
-			connectionIds = append(connectionIds, user.connectionId)
+			connectionIds = append(connectionIds, user.sess().connectionId)
 		}
 	}
 
@@ -128,7 +128,7 @@ func GetAllActiveUsers() []*Account {
 
 	ret := []*Account{}
 	for _, userPtr := range userManager.Users {
-		if !userPtr.isLinkDead {
+		if !userPtr.sess().isLinkDead {
 			ret = append(ret, userPtr)
 		}
 	}
@@ -213,15 +213,15 @@ func CopyoverReconnectUser(user *Account, connectionId connections.ConnectionId)
 		}
 	}
 
-	user.connectionId = connectionId
+	user.sess().connectionId = connectionId
 	user.Character.SetAdjective(`zombie`, false)
-	user.connectionTime = time.Now()
+	user.sess().connectionTime = time.Now()
 	user.SetLastInputRound(util.GetRoundCount())
 
 	userManager.Users[user.UserId] = user
 	userManager.Usernames[user.Username] = user.UserId
-	userManager.Connections[user.connectionId] = user.UserId
-	userManager.UserConnections[user.UserId] = user.connectionId
+	userManager.Connections[user.sess().connectionId] = user.UserId
+	userManager.UserConnections[user.UserId] = user.sess().connectionId
 	userManagerMu.Unlock()
 
 	for _, mobInstId := range user.Character.GetCharmIds() {
@@ -261,12 +261,12 @@ func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, 
 
 				removeLinkDeadConnectionLocked(otherConnId)
 
-				user.connectionId = connectionId
+				user.sess().connectionId = connectionId
 
 				userManager.Users[user.UserId] = user
 				userManager.Usernames[user.Username] = user.UserId
-				userManager.Connections[user.connectionId] = user.UserId
-				userManager.UserConnections[user.UserId] = user.connectionId
+				userManager.Connections[user.sess().connectionId] = user.UserId
+				userManager.UserConnections[user.UserId] = user.sess().connectionId
 
 				userManagerMu.Unlock()
 
@@ -296,12 +296,12 @@ func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, 
 	// Set their input round to current to track idle time fresh
 	user.SetLastInputRound(util.GetRoundCount())
 
-	user.connectionId = connectionId
+	user.sess().connectionId = connectionId
 
 	userManager.Users[user.UserId] = user
 	userManager.Usernames[user.Username] = user.UserId
-	userManager.Connections[user.connectionId] = user.UserId
-	userManager.UserConnections[user.UserId] = user.connectionId
+	userManager.Connections[user.sess().connectionId] = user.UserId
+	userManager.UserConnections[user.UserId] = user.sess().connectionId
 
 	userManagerMu.Unlock()
 
@@ -349,9 +349,9 @@ func SetLinkDeadUser(userId int) {
 	}
 
 	userManagerMu.Lock()
-	if _, ok := userManager.LinkDeadConnections[u.connectionId]; !ok {
-		u.isLinkDead = true
-		userManager.LinkDeadConnections[u.connectionId] = util.GetTurnCount()
+	if _, ok := userManager.LinkDeadConnections[u.sess().connectionId]; !ok {
+		u.sess().isLinkDead = true
+		userManager.LinkDeadConnections[u.sess().connectionId] = util.GetTurnCount()
 	}
 	userManagerMu.Unlock()
 }
@@ -388,7 +388,7 @@ func LogOutUserByConnectionId(connectionId connections.ConnectionId) error {
 
 			delete(userManager.Users, u.UserId)
 			delete(userManager.Usernames, u.Username)
-			delete(userManager.Connections, u.connectionId)
+			delete(userManager.Connections, u.sess().connectionId)
 			delete(userManager.UserConnections, u.UserId)
 		} else {
 			// Connection exists but user record is missing - clean up the connection entry
@@ -420,8 +420,8 @@ func CreateUser(u *Account) error {
 	userManagerMu.Lock()
 	userManager.Users[u.UserId] = u
 	userManager.Usernames[u.Username] = u.UserId
-	userManager.Connections[u.connectionId] = u.UserId
-	userManager.UserConnections[u.UserId] = u.connectionId
+	userManager.Connections[u.sess().connectionId] = u.UserId
+	userManager.UserConnections[u.UserId] = u.sess().connectionId
 	userManagerMu.Unlock()
 
 	return nil
@@ -470,7 +470,7 @@ func LoadUser(username string, skipValidation ...bool) (*Account, error) {
 	}
 
 	// Set their connection time to now
-	loadedUser.connectionTime = time.Now()
+	loadedUser.sess().connectionTime = time.Now()
 
 	return loadedUser, nil
 }
@@ -594,15 +594,17 @@ func UpdateOnlineUser(updated Account) {
 		return
 	}
 
-	updated.connectionId = u.connectionId
-	updated.unsentText = u.unsentText
-	updated.connectionTime = u.connectionTime
-	updated.lastInputRound = u.lastInputRound
+	// Runtime state is kept from the live record.
+	updated.session = u.session
 	updated.tempDataStore = u.tempDataStore
-	updated.activePrompt = u.activePrompt
-	updated.isLinkDead = u.isLinkDead
-	updated.inputBlocked = u.inputBlocked
 	updated.EventLog = u.EventLog
+
+	// The live character pointer is shared with the account's actor, so it
+	// must not change: copy the edited character into it.
+	if updated.Character != nil && u.Character != nil {
+		*u.Character = *updated.Character
+		updated.Character = u.Character
+	}
 
 	*u = updated
 }

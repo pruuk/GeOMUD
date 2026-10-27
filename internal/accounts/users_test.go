@@ -49,9 +49,9 @@ func TestLogOutUserByConnectionId_ValidUser_CleansUpMaps(t *testing.T) {
 	var connId connections.ConnectionId = 1
 	userId := 10
 	u := &Account{
-		UserId:       userId,
-		Username:     "testuser",
-		connectionId: connId,
+		UserId:   userId,
+		Username: "testuser",
+		session:  &Session{connectionId: connId},
 	}
 	userManager.Users[userId] = u
 	userManager.Usernames[u.Username] = userId
@@ -61,7 +61,7 @@ func TestLogOutUserByConnectionId_ValidUser_CleansUpMaps(t *testing.T) {
 	// Directly test the map cleanup logic (simulating what happens after save)
 	delete(userManager.Users, u.UserId)
 	delete(userManager.Usernames, u.Username)
-	delete(userManager.Connections, u.connectionId)
+	delete(userManager.Connections, u.sess().connectionId)
 	delete(userManager.UserConnections, u.UserId)
 
 	assert.Nil(t, userManager.Users[userId])

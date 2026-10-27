@@ -66,9 +66,9 @@ func (u *Account) GetCommandPrompt() string {
 
 	promptOut := ``
 
-	if u.activePrompt != nil {
+	if u.sess().activePrompt != nil {
 
-		if activeQuestion := u.activePrompt.GetNextQuestion(); activeQuestion != nil {
+		if activeQuestion := u.sess().activePrompt.GetNextQuestion(); activeQuestion != nil {
 			promptOut = activeQuestion.String()
 		}
 	}

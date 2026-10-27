@@ -29,30 +29,24 @@ var (
 )
 
 type Account struct {
-	UserId         int                   `yaml:"userid"`
-	Role           string                `yaml:"role"`                  // user, mod, or admin
-	Permissions    []string              `yaml:"permissions,omitempty"` // Discrete permissions for mod role
-	Username       string                `yaml:"username"`
-	Password       string                `yaml:"password"`
-	Joined         time.Time             `yaml:"joined"`
-	Macros         map[string]string     `yaml:"macros,omitempty"`  // Up to 10 macros, just string commands.
-	Aliases        map[string]string     `yaml:"aliases,omitempty"` // string=>string remapping of commands
-	Character      *characters.Character `yaml:"character,omitempty"`
-	ConfigOptions  map[string]any        `yaml:"configoptions,omitempty"`
-	Muted          bool                  `yaml:"muted,omitempty"`        // Cannot SEND custom communications to anyone but admin/mods
-	ScreenReader   bool                  `yaml:"screenreader,omitempty"` // Are they using a screen reader? (We should remove excess symbols)
-	IsAI           bool                  `yaml:"isai,omitempty"`         // Flagged as an AI/test account
-	EmailAddress   string                `yaml:"emailaddress,omitempty"` // Email address (if provided)
-	TipsComplete   map[string]bool       `yaml:"tipscomplete,omitempty"` // Tips the user has followed/completed so they can be quiet
-	EventLog       UserLog               `yaml:"-"`                      // Do not retain in user file (for now)
-	connectionId   uint64
-	unsentText     string
-	connectionTime time.Time
-	lastInputRound uint64
-	tempDataStore  map[string]any
-	activePrompt   *prompt.Prompt
-	isLinkDead     bool // are they a link-dead connection currently?
-	inputBlocked   bool // Whether input is currently intentionally turned off (for a certain category of commands)
+	UserId        int                   `yaml:"userid"`
+	Role          string                `yaml:"role"`                  // user, mod, or admin
+	Permissions   []string              `yaml:"permissions,omitempty"` // Discrete permissions for mod role
+	Username      string                `yaml:"username"`
+	Password      string                `yaml:"password"`
+	Joined        time.Time             `yaml:"joined"`
+	Macros        map[string]string     `yaml:"macros,omitempty"`  // Up to 10 macros, just string commands.
+	Aliases       map[string]string     `yaml:"aliases,omitempty"` // string=>string remapping of commands
+	Character     *characters.Character `yaml:"character,omitempty"`
+	ConfigOptions map[string]any        `yaml:"configoptions,omitempty"`
+	Muted         bool                  `yaml:"muted,omitempty"`        // Cannot SEND custom communications to anyone but admin/mods
+	ScreenReader  bool                  `yaml:"screenreader,omitempty"` // Are they using a screen reader? (We should remove excess symbols)
+	IsAI          bool                  `yaml:"isai,omitempty"`         // Flagged as an AI/test account
+	EmailAddress  string                `yaml:"emailaddress,omitempty"` // Email address (if provided)
+	TipsComplete  map[string]bool       `yaml:"tipscomplete,omitempty"` // Tips the user has followed/completed so they can be quiet
+	EventLog      UserLog               `yaml:"-"`                      // Do not retain in user file (for now)
+	session       *Session
+	tempDataStore map[string]any
 }
 
 func NewAccount(userId int, connectionId uint64) *Account {
@@ -60,18 +54,17 @@ func NewAccount(userId int, connectionId uint64) *Account {
 	c := configs.GetGamePlayConfig()
 
 	u := &Account{
-		connectionId:   connectionId,
-		UserId:         userId,
-		Role:           RoleUser,
-		Username:       "",
-		Password:       "",
-		Macros:         make(map[string]string),
-		Character:      characters.New(),
-		ConfigOptions:  map[string]any{},
-		Joined:         time.Now(),
-		connectionTime: time.Now(),
-		tempDataStore:  make(map[string]any),
-		EventLog:       UserLog{},
+		session:       &Session{connectionId: connectionId, connectionTime: time.Now()},
+		UserId:        userId,
+		Role:          RoleUser,
+		Username:      "",
+		Password:      "",
+		Macros:        make(map[string]string),
+		Character:     characters.New(),
+		ConfigOptions: map[string]any{},
+		Joined:        time.Now(),
+		tempDataStore: make(map[string]any),
+		EventLog:      UserLog{},
 	}
 
 	if c.Death.PermaDeath {
@@ -82,7 +75,7 @@ func NewAccount(userId int, connectionId uint64) *Account {
 }
 
 func (u *Account) ClientSettings() connections.ClientSettings {
-	return connections.GetClientSettings(u.connectionId)
+	return connections.GetClientSettings(u.sess().connectionId)
 }
 
 func (u *Account) HasPlaintextPassword() bool {
@@ -170,11 +163,11 @@ func (u *Account) ShorthandId() string {
 }
 
 func (u *Account) SetLastInputRound(rdNum uint64) {
-	u.lastInputRound = rdNum
+	u.sess().lastInputRound = rdNum
 }
 
 func (u *Account) GetLastInputRound() uint64 {
-	return u.lastInputRound
+	return u.sess().lastInputRound
 }
 
 func (u *Account) HasShop() bool {
@@ -301,15 +294,15 @@ func (u *Account) Command(inputTxt string, waitSeconds ...float64) {
 }
 
 func (u *Account) BlockInput() {
-	u.inputBlocked = true
+	u.sess().inputBlocked = true
 }
 
 func (u *Account) UnblockInput() {
-	u.inputBlocked = false
+	u.sess().inputBlocked = false
 }
 
 func (u *Account) InputBlocked() bool {
-	return u.inputBlocked
+	return u.sess().inputBlocked
 }
 
 func (u *Account) CommandFlagged(inputTxt string, flagData events.EventFlag, waitSeconds ...float64) {
@@ -354,7 +347,7 @@ func (u *Account) SendText(txt string) {
 func (u *Account) SendWebClientCommand(txt string) {
 
 	events.AddToQueue(events.WebClientCommand{
-		ConnectionId: u.connectionId,
+		ConnectionId: u.sess().connectionId,
 		Text:         txt,
 	})
 
@@ -467,7 +460,7 @@ func (u *Account) GetConfigOption(key string) any {
 }
 
 func (u *Account) GetConnectTime() time.Time {
-	return u.connectionTime
+	return u.sess().connectionTime
 }
 
 func (u *Account) RoundTick() {
@@ -482,12 +475,12 @@ func (u *Account) RoundTick() {
 // There is probably a better way.
 func (u *Account) SetUnsentText(t string) {
 
-	u.unsentText = t
+	u.sess().unsentText = t
 }
 
 func (u *Account) GetUnsentText() string {
 
-	return u.unsentText
+	return u.sess().unsentText
 }
 
 // Replace a characters information with another.
@@ -552,32 +545,32 @@ func (u *Account) SetPassword(pw string) error {
 }
 
 func (u *Account) ConnectionId() uint64 {
-	return u.connectionId
+	return u.sess().connectionId
 }
 
 // Prompt related functionality
 func (u *Account) StartPrompt(command string, rest string) (*prompt.Prompt, bool) {
 
-	if u.activePrompt != nil {
+	if u.sess().activePrompt != nil {
 		// If it's the same prompt, return the existing one
-		if u.activePrompt.Command == command && u.activePrompt.Rest == rest {
-			return u.activePrompt, false
+		if u.sess().activePrompt.Command == command && u.sess().activePrompt.Rest == rest {
+			return u.sess().activePrompt, false
 		}
 	}
 
 	// If no prompt found or it seems like a new prompt, create a new one and replace the old
-	u.activePrompt = prompt.New(command, rest)
+	u.sess().activePrompt = prompt.New(command, rest)
 
-	return u.activePrompt, true
+	return u.sess().activePrompt, true
 }
 
 func (u *Account) GetPrompt() *prompt.Prompt {
 
-	return u.activePrompt
+	return u.sess().activePrompt
 }
 
 func (u *Account) ClearPrompt() {
-	u.activePrompt = nil
+	u.sess().activePrompt = nil
 }
 
 func (u *Account) GetOnlineInfo() OnlineInfo {
@@ -608,7 +601,7 @@ func (u *Account) GetOnlineInfo() OnlineInfo {
 	}
 
 	connType := `telnet`
-	if cd := connections.Get(u.connectionId); cd != nil {
+	if cd := connections.Get(u.sess().connectionId); cd != nil {
 		if cd.IsWebSocket() {
 			connType = `websocket`
 		} else if cd.IsSSH() {

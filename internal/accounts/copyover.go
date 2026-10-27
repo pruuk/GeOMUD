@@ -66,17 +66,17 @@ func (u *usersCopyoverContributor) CopyoverRestore(dec *copyover.Decoder) error 
 			continue
 		}
 
-		user.connectionId = entry.ConnectionId
-		user.connectionTime = time.Now()
+		user.sess().connectionId = entry.ConnectionId
+		user.sess().connectionTime = time.Now()
 		user.SetLastInputRound(util.GetRoundCount())
 
 		userManager.Users[user.UserId] = user
 		userManager.Usernames[user.Username] = user.UserId
-		userManager.Connections[user.connectionId] = user.UserId
-		userManager.UserConnections[user.UserId] = user.connectionId
+		userManager.Connections[user.sess().connectionId] = user.UserId
+		userManager.UserConnections[user.UserId] = user.sess().connectionId
 
 		if entry.IsLinkDead {
-			userManager.LinkDeadConnections[user.connectionId] = entry.LinkDeadTurn
+			userManager.LinkDeadConnections[user.sess().connectionId] = entry.LinkDeadTurn
 		}
 	}
 
