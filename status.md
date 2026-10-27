@@ -2,8 +2,8 @@
 
 ## Now
 - Phase 4b (NPCs are players): design spec `2026-10-27-phase-4b-npcs-are-players-design.md` written,
-  in Calabe's review (branch `strip/phase-4b-npcs-are-players`). Seven slices, one plan each; slice
-  1 (actors) plan next.
+  approved 2026-10-27 (branch `strip/phase-4b-npcs-are-players`). Seven slices, one plan each.
+  Slice 1 plan `2026-10-27-phase-4b-1-actors-plan.md` in Calabe's review.
   Strip Phases 0-4 and GeOMUD player branding (PR #14) are merged (`gomud_strip_plan.md`)
 
 ## Next
@@ -19,7 +19,7 @@
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
-- Review of the Phase 4b design spec
+- Review of the Phase 4b slice 1 plan
 
 ## Watch
 - Login splash globe (`templates/login/connect-splash.template`): Calabe called it weak, fine for
