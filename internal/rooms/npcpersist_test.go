@@ -204,6 +204,35 @@ func TestWandererCrashRebuildsWithItResting(t *testing.T) {
 	assert.Equal(t, 4100, restingIndex[id])
 }
 
+func TestRestoreAfterACrashMadeDuplicateLeavesOneCopyAndNoIndexEntry(t *testing.T) {
+	dir := persistSetup(t)
+	id := liveTestNPC(t, 5, 3, 0)
+	mobs.GetInstance(id).SpawnSlot = 1
+	saved := mobs.Snapshot(mobs.GetInstance(id))
+	mobs.Rest(id)
+	// A crash between writing it to B and taking it out of A left it in both.
+	require.NoError(t, writeNPCFileAt(roomNPCPath(persistZone, 4100), roomNPCFile{Resting: []mobs.SavedNPC{saved}}))
+	require.NoError(t, writeNPCFileAt(roomNPCPath(persistZone, 4101), roomNPCFile{Resting: []mobs.SavedNPC{saved}}))
+	restartStore(t)
+	require.Equal(t, 4101, restingIndex[id], "the index names the copy it walked last")
+
+	a := memRoom(4100)
+	loadRoomNPCs(a)
+	a.Prepare(false)
+
+	require.NotNil(t, mobs.GetInstance(id), "restored from A")
+	assert.False(t, IsResting(id), "a restored NPC leaves the index whatever room it names")
+	assert.Equal(t, []ids.ID{id}, allRestingOnDisk(t, dir), "and the copy in B goes")
+	assert.Equal(t, []ids.ID{id}, restingIds(readRoomNPCFile(persistZone, 4100)))
+
+	// It dies: its slot refills after the rate instead of staying filled.
+	home := slotRoom(4102, id)
+	NPCEnded(mobs.GetInstance(id), false)
+	mobs.DestroyInstance(id)
+	home.Prepare(false)
+	assert.True(t, home.SpawnInfo[0].InstanceId.IsZero())
+}
+
 func TestEphemeralUnloadDestroysAndWritesNothing(t *testing.T) {
 	dir := persistSetup(t)
 	id := liveTestNPC(t, 5, 3, 0)

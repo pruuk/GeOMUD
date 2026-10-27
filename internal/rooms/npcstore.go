@@ -497,6 +497,13 @@ func unindexResting(id ids.ID, roomId int) {
 	}
 }
 
+// unindexNPC takes a live NPC out of the index, wherever it places it.
+func unindexNPC(id ids.ID) {
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	delete(restingIndex, id)
+}
+
 // roomNPCFileOf is the sidecar a room saves now: its resting NPCs, a snapshot
 // of each live NPC in it (one entry per ID, so an NPC both resting and live
 // is written once), and every spawn slot that owns an NPC.
@@ -603,12 +610,16 @@ func (r *Room) restoreResting() {
 	}
 	for _, s := range r.resting {
 		id := s.Template.Character.Id
-		unindexResting(id, r.RoomId)
 		m, err := mobs.Restore(s)
 		if err != nil {
+			unindexResting(id, r.RoomId)
 			mudlog.Error("npc store: restore failed", "room", r.RoomId, "npc", id.String(), "error", err)
 			continue
 		}
+		// Live now: out of the index whatever room it names (a crash can
+		// leave it in two sidecars). The sidecar write below takes it out of
+		// any other sidecar.
+		unindexNPC(id)
 		m.Character.RoomId = r.RoomId
 		m.Character.Zone = r.Zone
 		r.removeBody(id) // never listed twice
