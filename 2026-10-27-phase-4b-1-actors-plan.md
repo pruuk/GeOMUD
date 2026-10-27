@@ -39,6 +39,10 @@ Parent spec: `2026-10-27-phase-4b-npcs-are-players-design.md`, section 4, slice 
 | Source-scanning tests | None exist yet | `grep -rl 'go/parser' --include=*_test.go` |
 | `gopls rename` | On a plain export (not a git tree) `gopls rename -w` renames `UserRecord` and the package clause and rewrites every import path, but cannot move the directory on Windows ("The system cannot find the path specified"). After a manual `mv internal/users internal/accounts` the export builds. `-d` mode fails on the move | tried 2026-10-27 in the session scratchpad |
 | Doc references to `internal/users` | Only historical (`docs/completed/`, `engine_proposal.md` facts, the 4b spec facts) and upstream `AGENTS.md` notes. None are rewritten | `grep` |
+| Copyover | Linux only: `copyover.Execute` returns "copyover is not supported on this platform" on Windows (`internal/copyover/copyover.go:122-125`). It starts a new process with the state pipe as fd 3 and the parent exits (`:153-165`); the child inherits stdout/stderr. `Restore(fd)` (`:171-190`) wraps `readSections`; `Save(w io.Writer)` (`:102`) works anywhere. `copyover_test.go` is `//go:build !windows`. Admin command `copyover` (`usercommands/admin.copyover.go:14`); the new process broadcasts `Copyover complete.` (`main.go:354`). The `Starting server` log line (`main.go:200-203`) carries no PID today |
+| Link-dead after copyover | `CopyoverRestore` re-adds `LinkDeadConnections` but never sets `isLinkDead` (`copyover.go:56-84`); `GetAllActiveUsers` filters on that flag (`users.go:131`, 20 callers), so a link-dead player counts as active after copyover. Upstream bug |
+| Test data path | `configs.configData` is package-private, with no setter usable from another package's tests (`configs.go:24`; `configs_bench_test.go` sets it from inside `configs`) |
+| CI | Smoke Test job runs `make smoke` on `ubuntu-24.04` (`.github/workflows/ci.yml:223-239`) |
 | Smoke client | `client.read()` collects ANSI-stripped text (`cmd/smoke/client.go:70-99`); `send()` writes a line (`:130-139`); `newClient` starts the reader immediately (`:53-60`); `dial` callers: `admin.go:28`, `script.go:130,176`; `newClient` in `client_test.go:21`; `play()` at `script.go:129`; `runBots` at `main.go:89` | source |
 
 ## Rules for every task
@@ -48,7 +52,7 @@ Parent spec: `2026-10-27-phase-4b-npcs-are-players-design.md`, section 4, slice 
   `git mv` (Task 2 does this). `~/.claude/hooks/guard.py` enforces it.
 - `git add <named paths>` only. Commit messages through a quoted heredoc ending with the
   `Co-Authored-By` line.
-- Every task ends with `go build ./...` and the targeted tests named in it; Tasks 2 and 10 also run
+- Every task ends with `go build ./...` and the targeted tests named in it; Tasks 2 and 12 also run
   the full suite and smoke.
 - `<session scratchpad>` in a command means the scratchpad directory named in your system prompt,
   written as its full path. Never `C:/tmp`, `$TMP` or `/tmp`.
@@ -62,7 +66,11 @@ Parent spec: `2026-10-27-phase-4b-npcs-are-players-design.md`, section 4, slice 
 | File | Responsibility |
 |---|---|
 | `cmd/smoke/recorder.go` (new) | One bot's transcript across its connections |
-| `cmd/smoke/client.go`, `script.go`, `main.go`, `admin.go` | Pass the recorder; `-transcript` flag |
+| `cmd/smoke/client.go`, `script.go`, `main.go`, `admin.go` | Pass the recorder; `-transcript` flag; `-copyover` flag; shared admin login |
+| `cmd/smoke/copyover.go` (new) | The copyover step: barrier for the bots, the admin's `copyover` |
+| `cmd/smoke/server.go` | Adopts the process copyover starts, so stop still kills by PID |
+| `internal/copyover/copyover.go` | `RestoreFrom(io.Reader)`, so restore is testable on every platform |
+| `internal/accounts/copyover.go` | Loader seam for tests; restore keeps the link-dead flag |
 | `cmd/smoke/testdata/pre-4b/bot0.txt` (new) | Pre-4b transcript baseline for slices 5 and 7 |
 | `internal/accounts/` (renamed from `internal/users/`) | Accounts |
 | `internal/accounts/session.go` (new) | `Session`: connection state of an online account |
@@ -656,7 +664,191 @@ EOF
 
 ---
 
-### Task 5: An account's character pointer never changes
+### Task 5: Copyover keeps online accounts, on every platform
+
+Tasks 3 and 4 rewrite `CopyoverRestore` and `CopyoverReconnectUser`, and copyover only runs on Linux
+(`copyover.Execute` refuses on Windows). This task gives copyover's account round trip a test that
+runs everywhere, fixes the link-dead flag restore drops, and adds a guard so every future `Session`
+field gets a copyover rule. Task 11 adds the live check on Linux CI.
+
+**Files:**
+- Modify: `internal/copyover/copyover.go:169-190` (`Restore`), `internal/accounts/copyover.go` (`CopyoverRestore`)
+- Create: `internal/accounts/copyover_test.go`
+
+- [ ] **Step 1: Write the failing tests** (`internal/accounts/copyover_test.go`)
+
+```go
+package accounts
+
+import (
+	"bytes"
+	"fmt"
+	"reflect"
+	"testing"
+
+	"github.com/GoMudEngine/GoMud/internal/connections"
+	"github.com/GoMudEngine/GoMud/internal/copyover"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestCopyoverRoundTripKeepsOnlineAccounts(t *testing.T) {
+	resetUserManager()
+	onDisk := map[int]*Account{}
+	restoreLoad = func(userId int) (*Account, error) {
+		u, ok := onDisk[userId]
+		if !ok {
+			return nil, fmt.Errorf("no user %d", userId)
+		}
+		c := *u
+		c.session = nil // as decoded from the user file
+		return &c, nil
+	}
+	t.Cleanup(func() { restoreLoad = loadUserById })
+
+	active := NewAccount(61, 0)
+	active.Username = "active"
+	gone := NewAccount(62, 0)
+	gone.Username = "gone"
+	onDisk[61], onDisk[62] = active, gone
+	userManagerMu.Lock()
+	activateLocked(active, connections.ConnectionId(5))
+	activateLocked(gone, connections.ConnectionId(6))
+	gone.sess().isLinkDead = true
+	userManager.LinkDeadConnections[6] = 123
+	userManagerMu.Unlock()
+
+	copyover.ResetRegistry()
+	copyover.Register(CopyoverContributor())
+	var buf bytes.Buffer
+	require.NoError(t, copyover.Save(&buf))
+
+	resetUserManager()
+	var activatedIds []int
+	OnActivate.Register(func(u *Account) *Account { activatedIds = append(activatedIds, u.UserId); return u })
+	require.NoError(t, copyover.RestoreFrom(&buf))
+
+	require.NotNil(t, GetByUserId(61))
+	require.NotNil(t, GetByUserId(62))
+	assert.Equal(t, uint64(5), GetByUserId(61).ConnectionId())
+	assert.Equal(t, uint64(6), GetByUserId(62).ConnectionId())
+	assert.Same(t, GetByUserId(61), GetByConnectionId(5))
+	assert.True(t, IsLinkDeadConnection(6))
+	assert.Equal(t, uint64(123), userManager.LinkDeadConnections[6])
+
+	var activeIds []int
+	for _, u := range GetAllActiveUsers() {
+		activeIds = append(activeIds, u.UserId)
+	}
+	assert.Equal(t, []int{61}, activeIds, "a link-dead account stays out of the active list after copyover")
+	assert.Subset(t, activatedIds, []int{61, 62}, "restored accounts go online through OnActivate, so they get actors")
+}
+
+// TestEverySessionFieldHasACopyoverRule makes adding a Session field a
+// decision about copyover: name here what CopyoverRestore does with it, and
+// make CopyoverRestore do it.
+func TestEverySessionFieldHasACopyoverRule(t *testing.T) {
+	rules := map[string]string{
+		"connectionId":   "restored from the saved entry",
+		"isLinkDead":     "restored from the saved entry",
+		"connectionTime": "reset to now",
+		"lastInputRound": "reset to the current round",
+		"unsentText":     "dropped; the client redraws its input line",
+		"activePrompt":   "dropped; an open prompt does not survive copyover",
+		"inputBlocked":   "dropped; input starts unblocked",
+	}
+	typ := reflect.TypeOf(Session{})
+	for i := 0; i < typ.NumField(); i++ {
+		if _, ok := rules[typ.Field(i).Name]; !ok {
+			t.Errorf("Session.%s has no copyover rule; add one here and handle it in CopyoverRestore", typ.Field(i).Name)
+		}
+	}
+	assert.Len(t, rules, typ.NumField(), "a rule names a field Session no longer has")
+}
+```
+
+- [ ] **Step 2: Run them, expect a build failure**
+
+Run: `go test ./internal/accounts/ -run 'Copyover|SessionField' -count=1`
+Expected: FAIL, `undefined: restoreLoad` and `undefined: copyover.RestoreFrom`.
+
+- [ ] **Step 3: Split `copyover.Restore`**
+
+In `internal/copyover/copyover.go` replace `Restore` with:
+
+```go
+// Restore reads state from the given file descriptor and calls CopyoverRestore
+// on all registered contributors.
+func Restore(fd int) error {
+	f := os.NewFile(uintptr(fd), "copyover-pipe")
+	if f == nil {
+		return fmt.Errorf("copyover: invalid fd %d", fd)
+	}
+	defer f.Close()
+	return RestoreFrom(f)
+}
+
+// RestoreFrom reads state from r and calls CopyoverRestore on all registered
+// contributors. Restore wraps it for the inherited pipe; tests call it
+// directly, which works on every platform.
+func RestoreFrom(r io.Reader) error {
+	dec, err := readSections(r)
+	if err != nil {
+		return fmt.Errorf("copyover: read sections: %w", err)
+	}
+
+	for _, c := range registry {
+		if err := c.CopyoverRestore(dec); err != nil {
+			return fmt.Errorf("copyover: restore %q: %w", c.CopyoverName(), err)
+		}
+	}
+
+	return nil
+}
+```
+
+- [ ] **Step 4: Add the loader seam and restore the link-dead flag**
+
+In `internal/accounts/copyover.go` add above `loadUserById`:
+
+```go
+// restoreLoad loads an account for CopyoverRestore. Tests replace it to
+// restore from memory instead of the data folder.
+var restoreLoad = loadUserById
+```
+
+In `CopyoverRestore` change `user, err := loadUserById(entry.UserId)` to
+`user, err := restoreLoad(entry.UserId)`, and inside `if entry.IsLinkDead {` add
+`user.sess().isLinkDead = true` beside the `LinkDeadConnections` write. Until now restore dropped the
+flag, so a link-dead player counted as active after copyover in `GetAllActiveUsers`
+(`users.go:131`, 20 callers: the who list, round ticks and others). This is an upstream bug fixed on
+the path this slice rewrites.
+
+- [ ] **Step 5: Run the tests, expect PASS**
+
+Run: `go build ./... && go test ./internal/accounts/ ./internal/copyover/ -count=1`
+Expected: `ok` for both (`internal/copyover`'s own tests are `!windows` and report `no test files`
+here; CI runs them).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add internal/copyover/copyover.go internal/accounts/copyover.go internal/accounts/copyover_test.go
+git commit -F - <<'EOF'
+copyover: round-trip test for online accounts; keep link-dead flag
+
+copyover.RestoreFrom makes the restore path testable on every platform.
+Restore used to drop an account's link-dead flag, so a link-dead player
+counted as active after copyover. A guard test gives every Session
+field a copyover rule.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+EOF
+```
+
+---
+
+### Task 6: An account's character pointer never changes
 
 **Files:**
 - Modify: `internal/usercommands/suicide.go:133`, `internal/accounts/userrecord.go:493-496`
@@ -787,7 +979,7 @@ EOF
 
 ---
 
-### Task 6: Mob lifecycle hooks
+### Task 7: Mob lifecycle hooks
 
 **Files:**
 - Modify: `internal/mobs/mobs.go:22-26,138-221,248-251`
@@ -896,7 +1088,7 @@ EOF
 
 ---
 
-### Task 7: The `actors` package
+### Task 8: The `actors` package
 
 **Files:**
 - Create: `internal/actors/actor.go`, `controller.go`, `registry.go`, `registry_test.go`
@@ -1211,7 +1403,7 @@ EOF
 
 ---
 
-### Task 8: Wire actors to the lifecycles
+### Task 9: Wire actors to the lifecycles
 
 **Files:**
 - Create: `internal/actors/wire.go`, `internal/actors/wire_test.go`
@@ -1385,7 +1577,7 @@ EOF
 
 ---
 
-### Task 9: Guard: no type assertion on a controller outside `actors`
+### Task 10: Guards: no controller type assertion outside `actors`; one way online
 
 **Files:**
 - Modify: `internal/guards/guards_test.go`
@@ -1430,9 +1622,47 @@ func TestNoControllerTypeAssertions(t *testing.T) {
 		})
 	}
 }
+
+// TestAccountsGoOnlineOneWay enforces that an account is recorded as online
+// only by activateLocked, so OnActivate (and so its actor) can never be
+// skipped. testhelpers.go is the test-only exception.
+func TestAccountsGoOnlineOneWay(t *testing.T) {
+	allowed := map[string]bool{
+		"internal/accounts/lifecycle.go":   true,
+		"internal/accounts/testhelpers.go": true,
+	}
+	for path, f := range goFiles(t) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			as, ok := n.(*ast.AssignStmt)
+			if !ok {
+				return true
+			}
+			for _, lhs := range as.Lhs {
+				idx, ok := lhs.(*ast.IndexExpr)
+				if !ok {
+					continue
+				}
+				sel, ok := idx.X.(*ast.SelectorExpr)
+				if !ok || sel.Sel.Name != "Users" {
+					continue
+				}
+				if x, ok := sel.X.(*ast.Ident); ok && x.Name == "userManager" && !allowed[path] {
+					t.Errorf("%s: writes userManager.Users directly; use activateLocked", path)
+				}
+			}
+			return true
+		})
+	}
+}
 ```
 
-- [ ] **Step 2: Prove it can fail, then pass**
+- [ ] **Step 2: Prove both can fail, then pass**
+
+For the second guard: temporarily add `userManager.Users[0] = nil` as the first line of
+`DeleteUser`'s body in `internal/accounts/users.go`, run `go test ./internal/guards/ -count=1`
+(expected FAIL naming `internal/accounts/users.go`), remove it with Edit.
+
+For the first guard:
 
 Temporarily add to `main.go`, inside `main()` after `actors.Init()`:
 `if _, ok := actors.Get(0).Controller().(*actors.BehaviourController); ok { panic("guard probe") }`.
@@ -1444,7 +1674,7 @@ Run `go test ./internal/guards/ -count=1`: expected FAIL with
 ```bash
 git add internal/guards/guards_test.go
 git commit -F - <<'EOF'
-guards: no type assertion on an actor's controller outside actors
+guards: no controller type assertion outside actors; one way online
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -1452,7 +1682,354 @@ EOF
 
 ---
 
-### Task 10: Verify the slice, record it, open the PR
+### Task 11: Smoke runs a live copyover (Linux CI)
+
+The smoke test gets a copyover step: once every bot has finished its script and is online, the
+admin runs `copyover`, and each bot must keep its connection, its room and its item. Copyover only
+works on Linux (`copyover.Execute` refuses on Windows), and CI's Smoke Test job runs on
+`ubuntu-24.04` (`.github/workflows/ci.yml:223-239`), so CI is where this step runs. On Windows, and
+in `-addr` mode (never restart a server this run did not start), the step is skipped and the run
+says why.
+
+Copyover starts a new server process and the old one exits (`copyover.go:153-165`), so the PID the
+smoke test holds goes stale. The new process inherits the log file, so the server logs its PID at
+start and the smoke test adopts the new one, which keeps "kill only what you started, by PID".
+
+**Files:**
+- Modify: `main.go:200-203` (the `Starting server` log line)
+- Modify: `cmd/smoke/admin.go`, `cmd/smoke/server.go`, `cmd/smoke/script.go`, `cmd/smoke/main.go`
+- Create: `cmd/smoke/copyover.go`, `cmd/smoke/copyover_test.go`
+
+- [ ] **Step 1: Write the failing tests** (`cmd/smoke/copyover_test.go`)
+
+```go
+package main
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestLastStartPid(t *testing.T) {
+	log := "time=1 msg=\"Starting server         \" name=GeOMUD pid=100\n" +
+		"time=2 msg=other pid=5\n" +
+		"time=3 msg=\"Starting server         \" name=GeOMUD pid=200\n"
+	assert.Equal(t, 200, lastStartPid(log))
+	assert.Equal(t, 0, lastStartPid("time=1 msg=\"Starting server         \" name=GeOMUD\n"))
+}
+
+func TestCopyoverCheckWaitsForEveryBot(t *testing.T) {
+	co := newCopyoverCheck(2)
+	started := make(chan struct{})
+	go func() {
+		co.arrived.Wait()
+		close(started)
+		co.ran = true
+		close(co.done)
+	}()
+	co.arrived.Done()
+	select {
+	case <-started:
+		t.Fatal("copyover started before every bot arrived")
+	case <-time.After(50 * time.Millisecond):
+	}
+	co.arrived.Done()
+	assert.True(t, co.wait(context.Background()))
+}
+```
+
+- [ ] **Step 2: Run them, expect a build failure**
+
+Run: `go test ./cmd/smoke/ -run 'LastStartPid|CopyoverCheck' -count=1`
+Expected: FAIL, `undefined: lastStartPid`.
+
+- [ ] **Step 3: The server logs its PID**
+
+`main.go`, the `Starting server` log call becomes:
+
+```go
+	mudlog.Info(
+		"Starting server",
+		"name", string(c.Server.MudName),
+		"pid", os.Getpid(),
+	)
+```
+
+- [ ] **Step 4: Factor the admin login out of `prepareItems`** (`cmd/smoke/admin.go`)
+
+```go
+// loginAdmin logs in as the admin and answers a forced password change. The
+// caller closes s.c.
+func loginAdmin(ctx context.Context, addr, user, pass string, timeout time.Duration) (*script, error) {
+	c, err := dial(ctx, addr, timeout, nil)
+	if err != nil {
+		return nil, &stepError{"admin: connect", err.Error(), ""}
+	}
+	s := &script{ctx: ctx, c: c}
+
+	s.wait("admin: login prompt", `username (or "new")`)
+	s.do("admin: username", user, "password:")
+	// A forced-change account gets the "must change your password" notice
+	// instead of the message of the day.
+	if s.err == nil {
+		s.c.send(pass)
+		s.err = s.c.until(ctx, timeout, "admin: password", func(got string, _ bool) (bool, string) {
+			if strings.Contains(got, "Welcome to the Mud!") || strings.Contains(got, "You must change your password") {
+				return true, ""
+			}
+			return false, "neither the welcome nor the password-change notice"
+		})
+	}
+	changePasswordIfForced(s, pass)
+	if s.err != nil {
+		c.Close()
+		return nil, s.err
+	}
+	return s, nil
+}
+```
+
+`prepareItems` then starts with:
+
+```go
+	s, err := loginAdmin(ctx, addr, user, pass, timeout)
+	if err != nil {
+		return err
+	}
+	defer s.c.Close()
+```
+
+followed by its existing code from `// Stand in the start room` onwards. Its doc comment keeps the
+password-change paragraph.
+
+- [ ] **Step 5: Create `cmd/smoke/copyover.go`**
+
+```go
+package main
+
+import (
+	"context"
+	"sync"
+	"time"
+)
+
+// copyoverCheck runs one copyover while every bot is online. Each bot calls
+// arrived.Done when it finishes its script or fails; the admin waits for all
+// of them, runs copyover and closes done. ran and err are set before done
+// closes.
+type copyoverCheck struct {
+	arrived sync.WaitGroup
+	done    chan struct{}
+	ran     bool
+	err     error
+}
+
+func newCopyoverCheck(bots int) *copyoverCheck {
+	co := &copyoverCheck{done: make(chan struct{})}
+	co.arrived.Add(bots)
+	return co
+}
+
+// wait blocks until the step has ended and reports whether copyover ran.
+func (co *copyoverCheck) wait(ctx context.Context) bool {
+	select {
+	case <-co.done:
+		return co.ran
+	case <-ctx.Done():
+		return false
+	}
+}
+
+// run waits for every bot, then logs in as the admin and runs copyover. The
+// server process this program started exits; srv adopts the new one.
+func (co *copyoverCheck) run(ctx context.Context, addr string, adm adminLogin, timeout time.Duration, srv *server) {
+	defer close(co.done)
+	co.arrived.Wait()
+	s, err := loginAdmin(ctx, addr, adm.user, adm.pass, timeout)
+	if err != nil {
+		co.err = err
+		return
+	}
+	defer s.c.Close()
+	s.doFor("copyover: run", 2*time.Minute, "copyover", "Copyover complete.")
+	if s.err == nil {
+		s.err = srv.adoptCopyoverChild(time.Minute)
+	}
+	if s.err == nil {
+		co.ran = true
+	}
+	s.quit("copyover: admin quit")
+	co.err = s.err
+}
+```
+
+- [ ] **Step 6: The server adopts the copyover child** (`cmd/smoke/server.go`)
+
+Add to `server` after `done`: `children []int // server processes copyover started; stop kills them too`.
+Add `"strconv"` and `"strings"` to the imports if missing, and:
+
+```go
+// adoptCopyoverChild waits for the server copyover started to log its start
+// (it inherits the log file) and records its PID so stop kills it: the
+// process this program started exits during copyover.
+func (s *server) adoptCopyoverChild(timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		b, _ := os.ReadFile(s.logPath())
+		if pid := lastStartPid(string(b)); pid != 0 && pid != s.cmd.Process.Pid {
+			s.children = append(s.children, pid)
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("copyover: no new server start in the log after %s", timeout)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// lastStartPid returns the pid of the last "Starting server" log line, or 0.
+func lastStartPid(log string) int {
+	pid := 0
+	for _, line := range strings.Split(log, "\n") {
+		if !strings.Contains(line, `msg="Starting server`) {
+			continue
+		}
+		if i := strings.Index(line, " pid="); i >= 0 {
+			if f := strings.Fields(line[i+len(" pid="):]); len(f) > 0 {
+				if n, err := strconv.Atoi(f[0]); err == nil {
+					pid = n
+				}
+			}
+		}
+	}
+	return pid
+}
+```
+
+In `stop`, right after the `if s.cmd != nil && s.cmd.Process != nil { ... }` block:
+
+```go
+	for _, pid := range s.children {
+		if p, err := os.FindProcess(pid); err == nil {
+			p.Kill()
+		}
+	}
+```
+
+- [ ] **Step 7: Bots wait online for the copyover** (`cmd/smoke/script.go`)
+
+`play` gains a last parameter `co *copyoverCheck` (nil: no copyover step). At the top of `play`,
+after `defer c.Close()`:
+
+```go
+	arrived := false
+	arrive := func() {
+		if co != nil && !arrived {
+			arrived = true
+			co.arrived.Done()
+		}
+	}
+	defer arrive() // a bot that fails early must not hold up the copyover
+```
+
+After the death block's `if s.err != nil { return s.gmcp, s.err }` and before the hold:
+
+```go
+	// Copyover (Linux launch mode only): every bot waits here, online, while
+	// the admin restarts the server in place. The bot must keep its
+	// connection, its room and its item.
+	if co != nil {
+		arrive()
+		if co.wait(ctx) {
+			s.wait("copyover: complete", "Copyover complete.")
+			s.do("copyover: still in the start room", "look", startRoomTitle)
+			s.field("copyover: still holds the item", "inventory", "Carrying:", smokeItem)
+			if s.err != nil {
+				return s.gmcp, s.err
+			}
+		}
+	}
+```
+
+- [ ] **Step 8: Flag and summary** (`cmd/smoke/main.go`)
+
+Add the flag after `transcript`:
+
+```go
+	copyoverStep := flag.Bool("copyover", true, "launch mode, not Windows: run copyover once while every bot is online")
+```
+
+`runBots` gains two last parameters, `srv *server, copyoverStep bool`. The launch-mode call passes
+`srv, *copyoverStep`; the `-addr` call passes `nil, *copyoverStep`. In `runBots`, after the items
+are spawned and before the bot goroutines start:
+
+```go
+	var co *copyoverCheck
+	switch {
+	case !copyoverStep:
+		fmt.Println("smoke: copyover step off (-copyover=false)")
+	case srv == nil:
+		fmt.Println("smoke: copyover step skipped (-addr mode never restarts a server it did not start)")
+	case runtime.GOOS == "windows":
+		fmt.Println("smoke: copyover step skipped (copyover is not supported on Windows; Linux CI runs it)")
+	default:
+		co = newCopyoverCheck(n)
+		go co.run(ctx, addr, adm, timeout, srv)
+	}
+```
+
+Pass `co` as the last argument to `play`. After `wg.Wait()`:
+
+```go
+	copyoverFailed := false
+	if co != nil {
+		<-co.done
+		if co.err != nil {
+			copyoverFailed = true
+			fmt.Printf("smoke: FAIL copyover step: %v\n", co.err)
+		} else {
+			fmt.Println("smoke: copyover step ran: every bot kept its connection, room and item")
+		}
+	}
+```
+
+and make the verdict `FAIL` when `copyoverFailed` is true (change `if len(failed) > 0 {` to
+`if len(failed) > 0 || copyoverFailed {`, and return `len(failed) == 0 && !copyoverFailed`). Add
+`"runtime"` to the imports.
+
+- [ ] **Step 9: Run the tests and the smoke test here, expect PASS with the step skipped**
+
+```bash
+go build ./... && go test ./cmd/smoke/ -count=1
+go run ./cmd/smoke 2>&1 | tail -3
+```
+
+Expected: `ok`; the smoke output includes
+`smoke: copyover step skipped (copyover is not supported on Windows; Linux CI runs it)` and ends
+`PASS 1/1`. The copyover step itself is verified only by CI (Task 12 Step 5).
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add main.go cmd/smoke/admin.go cmd/smoke/server.go cmd/smoke/script.go cmd/smoke/main.go cmd/smoke/copyover.go cmd/smoke/copyover_test.go
+git commit -F - <<'EOF'
+smoke: live copyover step while every bot is online
+
+Runs in launch mode on Linux (CI); skipped with a stated reason on
+Windows and in -addr mode. The server logs its pid at start so the smoke
+test can adopt the process copyover starts and still kill only what it
+started.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+EOF
+```
+
+---
+
+### Task 12: Verify the slice, record it, open the PR
 
 - [ ] **Step 1: Full verification**
 
@@ -1510,19 +2087,34 @@ gh pr create --repo pruuk/GeOMUD --base master --title "Phase 4b slice 1: actors
 The PR body lists what landed, the verification output from Steps 1 and 2, and ends with the Claude
 Code attribution line.
 
+- [ ] **Step 5: CI evidence for copyover**
+
+```bash
+gh pr checks --repo pruuk/GeOMUD --watch
+RUN=$(gh run list --repo pruuk/GeOMUD --branch strip/phase-4b-1-actors --workflow ci.yml --limit 1 --json databaseId -q '.[0].databaseId')
+gh run view "$RUN" --repo pruuk/GeOMUD --log | grep -E 'smoke: (copyover step|PASS|FAIL)'
+```
+
+Expected: every check passes, and the Smoke Test log shows
+`smoke: copyover step ran: every bot kept its connection, room and item` and `smoke: PASS`. The
+slice is not done until this line is seen: it is the only live evidence for copyover, since Windows
+skips the step. Report it to Calabe with the run link.
+
 ---
 
 ## Self-review against the spec
 
 | Spec item (section 4, slice 1) | Task |
 |---|---|
-| `actors`: `Actor`, `ActorId`, `Controller` (both implementations), registry | 7 |
+| `actors`: `Actor`, `ActorId`, `Controller` (both implementations), registry | 8 |
 | `users` renamed `accounts` | 2 |
-| Connection state moves from the account to `ConnectionController` | 3 (Session), 7 (the controller holds the account and so its Session). Refinement: the state lives in `accounts.Session`, which the account points to, because `accounts` cannot import `actors`; moving a `ConnectionController` still moves the connection, as the spec requires |
-| Logged-in players and spawned mobs become actors | 4, 6, 8 |
-| Old IDs still route, through registry lookups | 7 (`ByUserId`, `ByMobInstanceId`) |
+| Connection state moves from the account to `ConnectionController` | 3 (Session), 8 (the controller holds the account and so its Session). Refinement: the state lives in `accounts.Session`, which the account points to, because `accounts` cannot import `actors`; moving a `ConnectionController` still moves the connection, as the spec requires |
+| Logged-in players and spawned mobs become actors | 4, 7, 9 |
+| Old IDs still route, through registry lookups | 8 (`ByUserId`, `ByMobInstanceId`) |
 | Smoke transcript recording; pre-4b transcript from `c4314b7f` | 1 |
 | Deletes: connection fields on the account | 3 |
-| Done when: registry tests; controller swap keeps the `ActorId` | 7 |
-| Done when: guard test, no `Controller` type switch outside `actors` | 9 |
-| Done when: smoke passes | 2, 10 |
+| Done when: registry tests; controller swap keeps the `ActorId` | 8 |
+| Done when: guard test, no `Controller` type switch outside `actors` | 10 |
+| Done when: smoke passes | 2, 11, 12 |
+| Added on review (2026-10-27): copyover, which this slice rewrites, is exercised | 5 (round trip on every platform; every `Session` field has a copyover rule), 11 (live copyover on Linux CI), 12 Step 5 (CI evidence) |
+| Added on review: accounts go online one way only | 4 (helper), 10 (guard) |
