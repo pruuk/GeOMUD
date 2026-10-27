@@ -483,11 +483,6 @@ func (u *Account) GetUnsentText() string {
 	return u.sess().unsentText
 }
 
-// Replace a characters information with another.
-func (u *Account) ReplaceCharacter(replacement *characters.Character) {
-	u.Character = replacement
-}
-
 func (u *Account) SetUsername(un string) error {
 
 	if err := ValidateName(un); err != nil {

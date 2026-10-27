@@ -130,7 +130,7 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 
 			rooms.MoveToRoom(user.UserId, -1)
 
-			user.Character = characters.New()
+			*user.Character = *characters.New()
 
 			return true, nil
 		}
