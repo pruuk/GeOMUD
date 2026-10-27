@@ -22,6 +22,8 @@ func useTempNPCStore(t *testing.T) string {
 	npcStoreMu.Lock()
 	restingIndex = map[ids.ID]int{}
 	endingsLedger = map[ids.ID]ending{}
+	npcSidecarOf = map[ids.ID]string{}
+	sidecarNPCs = map[string][]ids.ID{}
 	npcStoreMu.Unlock()
 	t.Cleanup(func() { npcStoreRoot = old })
 	return dir

@@ -59,6 +59,14 @@ var (
 	npcStoreMu    sync.Mutex
 	restingIndex  = map[ids.ID]int{}    // resting NPC ID to its room ID
 	endingsLedger = map[ids.ID]ending{} // ended NPC ID to its ending
+
+	// npcSidecarOf is the sidecar each NPC was last written to and
+	// sidecarNPCs the NPCs each sidecar holds (keyed by clean path). Writing
+	// an NPC to one sidecar takes it out of the one it was in before, so an
+	// NPC is in at most one sidecar: one that wandered from a saved room to
+	// another that then saved is not on disk twice.
+	npcSidecarOf = map[ids.ID]string{}
+	sidecarNPCs  = map[string][]ids.ID{}
 )
 
 // roomNPCPath is the sidecar path for the room with this zone and ID, built
@@ -94,9 +102,74 @@ func readNPCFileAt(path string) roomNPCFile {
 }
 
 // writeRoomNPCFile writes the sidecar of the room with this zone and ID. An
-// empty file (nothing resting, no slots) deletes the sidecar instead.
+// empty file (nothing resting, no slots) deletes the sidecar instead. Each NPC
+// written is taken out of any other sidecar it was last written to.
 func writeRoomNPCFile(zone string, roomId int, f roomNPCFile) error {
-	path := roomNPCPath(zone, roomId)
+	path := filepath.Clean(roomNPCPath(zone, roomId))
+	if err := writeNPCFileAt(path, f); err != nil {
+		return err
+	}
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	trackSidecarLocked(path, f)
+	return nil
+}
+
+// trackSidecarLocked records that the sidecar at path now holds f's NPCs and
+// takes each of them out of the sidecar it was in before. The caller holds
+// npcStoreMu.
+func trackSidecarLocked(path string, f roomNPCFile) {
+	for _, id := range sidecarNPCs[path] {
+		if npcSidecarOf[id] == path {
+			delete(npcSidecarOf, id)
+		}
+	}
+	held := make([]ids.ID, 0, len(f.Resting))
+	for _, s := range f.Resting {
+		id := s.Template.Character.Id
+		if prev, ok := npcSidecarOf[id]; ok && prev != path {
+			dropFromSidecarLocked(prev, id)
+		}
+		npcSidecarOf[id] = path
+		held = append(held, id)
+	}
+	if len(held) == 0 {
+		delete(sidecarNPCs, path)
+	} else {
+		sidecarNPCs[path] = held
+	}
+}
+
+// dropFromSidecarLocked removes one NPC from the sidecar at path. The caller
+// holds npcStoreMu.
+func dropFromSidecarLocked(path string, id ids.ID) {
+	f := readNPCFileAt(path)
+	kept := f.Resting[:0]
+	for _, s := range f.Resting {
+		if s.Template.Character.Id != id {
+			kept = append(kept, s)
+		}
+	}
+	if len(kept) != len(f.Resting) {
+		f.Resting = kept
+		if err := writeNPCFileAt(path, f); err != nil {
+			mudlog.Error("npc store: could not take NPC out of old sidecar", "path", path, "npc", id.String(), "error", err)
+		}
+	}
+	held := sidecarNPCs[path][:0]
+	for _, h := range sidecarNPCs[path] {
+		if h != id {
+			held = append(held, h)
+		}
+	}
+	if len(held) == 0 {
+		delete(sidecarNPCs, path)
+	} else {
+		sidecarNPCs[path] = held
+	}
+}
+
+func writeNPCFileAt(path string, f roomNPCFile) error {
 	if len(f.Resting) == 0 && len(f.Slots) == 0 {
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			return err
@@ -117,6 +190,8 @@ func writeRoomNPCFile(zone string, roomId int, f roomNPCFile) error {
 // the resting index. A file that does not parse is logged and skipped.
 func BuildRestingIndex() error {
 	index := map[ids.ID]int{}
+	sidecarOf := map[ids.ID]string{}
+	held := map[string][]ids.ID{}
 	root := npcStoreRoot()
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -145,8 +220,12 @@ func BuildRestingIndex() error {
 			mudlog.Error("BuildRestingIndex", "path", path, "error", yamlErr)
 			return nil
 		}
+		clean := filepath.Clean(path)
 		for _, s := range f.Resting {
-			index[s.Template.Character.Id] = roomId
+			id := s.Template.Character.Id
+			index[id] = roomId
+			sidecarOf[id] = clean
+			held[clean] = append(held[clean], id)
 		}
 		return nil
 	})
@@ -156,8 +235,130 @@ func BuildRestingIndex() error {
 
 	npcStoreMu.Lock()
 	restingIndex = index
+	npcSidecarOf = sidecarOf
+	sidecarNPCs = held
 	npcStoreMu.Unlock()
 	return nil
+}
+
+// indexResting records that the NPC rests in roomId, unless the index already
+// places it somewhere.
+func indexResting(id ids.ID, roomId int) {
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	if _, ok := restingIndex[id]; !ok {
+		restingIndex[id] = roomId
+	}
+}
+
+// unindexResting takes the NPC out of the index if the index places it in
+// roomId (it was restored there).
+func unindexResting(id ids.ID, roomId int) {
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	if r, ok := restingIndex[id]; ok && r == roomId {
+		delete(restingIndex, id)
+	}
+}
+
+// roomNPCFileOf is the sidecar a room saves now: its resting NPCs, a snapshot
+// of each live NPC in it (one entry per ID, so an NPC both resting and live
+// is written once), and every spawn slot that owns an NPC.
+func roomNPCFileOf(r *Room) roomNPCFile {
+	var f roomNPCFile
+	seen := map[ids.ID]bool{}
+	for _, s := range r.resting {
+		id := s.Template.Character.Id
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		f.Resting = append(f.Resting, s)
+	}
+	for _, id := range r.mobIds() {
+		if seen[id] {
+			continue
+		}
+		if m := mobs.GetInstance(id); m != nil {
+			seen[id] = true
+			f.Resting = append(f.Resting, mobs.Snapshot(m))
+		}
+	}
+	for idx, si := range r.SpawnInfo {
+		if !si.InstanceId.IsZero() {
+			f.Slots = append(f.Slots, slotState{Index: idx, MobId: si.MobId, NPC: si.InstanceId})
+		}
+	}
+	return f
+}
+
+// saveRoomNPCs writes a room's sidecar. Ephemeral rooms have none.
+func saveRoomNPCs(r *Room) error {
+	if r.IsEphemeral() {
+		return nil
+	}
+	return writeRoomNPCFile(r.Zone, r.RoomId, roomNPCFileOf(r))
+}
+
+// loadRoomNPCs reads a room's sidecar into it as it comes into memory: its
+// resting NPCs, and slot state merged onto the template's spawn slots by
+// index and MobId (a slot a builder changed starts fresh).
+func loadRoomNPCs(r *Room) {
+	if r.IsEphemeral() {
+		return
+	}
+	f := readRoomNPCFile(r.Zone, r.RoomId)
+	r.resting = f.Resting
+	for _, s := range f.Resting {
+		indexResting(s.Template.Character.Id, r.RoomId)
+	}
+	for _, s := range f.Slots {
+		if s.Index < len(r.SpawnInfo) && r.SpawnInfo[s.Index].MobId == s.MobId {
+			r.SpawnInfo[s.Index].InstanceId = s.NPC
+			continue
+		}
+		mudlog.Error("npc store: slot state dropped", "room", r.RoomId, "index", s.Index, "mobid", s.MobId, "npc", s.NPC.String())
+	}
+}
+
+// carryNPCState copies a room's resting NPCs and slot owners onto the room
+// replacing it in a template edit, matching slots by index and MobId.
+func carryNPCState(from, to *Room) {
+	to.resting = append([]mobs.SavedNPC(nil), from.resting...)
+	for idx := range to.SpawnInfo {
+		if idx < len(from.SpawnInfo) && to.SpawnInfo[idx].InstanceId.IsZero() && from.SpawnInfo[idx].MobId == to.SpawnInfo[idx].MobId {
+			to.SpawnInfo[idx].InstanceId = from.SpawnInfo[idx].InstanceId
+		}
+	}
+}
+
+// restoreResting brings a room's resting NPCs back into memory and into the
+// room, then rewrites its sidecar. An NPC that cannot be restored (it is
+// already live, or the save is bad) is logged and dropped.
+func (r *Room) restoreResting() {
+	if len(r.resting) == 0 {
+		return
+	}
+	for _, s := range r.resting {
+		id := s.Template.Character.Id
+		unindexResting(id, r.RoomId)
+		m, err := mobs.Restore(s)
+		if err != nil {
+			mudlog.Error("npc store: restore failed", "room", r.RoomId, "npc", id.String(), "error", err)
+			continue
+		}
+		m.Character.RoomId = r.RoomId
+		m.Character.Zone = r.Zone
+		r.removeBody(id) // never listed twice
+		r.bodies = append(r.bodies, id)
+	}
+	r.resting = nil
+	if r.MobCt() > 0 {
+		roomManager.roomsWithMobs[r.RoomId] = r.MobCt()
+	}
+	if err := saveRoomNPCs(r); err != nil {
+		mudlog.Error("npc store: sidecar not rewritten after restore", "room", r.RoomId, "error", err)
+	}
 }
 
 // IsResting reports whether the NPC is saved to disk and out of memory.

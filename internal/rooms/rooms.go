@@ -93,6 +93,7 @@ type Room struct {
 	mobVisitors   map[ids.ID]uint64 // body IDs of mobs that have visited this room, and the turn their trail goes cold
 	lastVisited   uint64            // last round a visitor was in the room
 	tempDataStore map[string]any    // Temporary data store for the room
+	resting       []mobs.SavedNPC   // NPCs saved to disk and out of memory that belong to this room (Phase 4b decision 12). Saved in the sidecar, not the instance diff.
 }
 
 type TrainingRange struct {
@@ -533,6 +534,9 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 			}
 		}
 	}
+
+	// NPCs resting here come back before any slot is considered
+	r.restoreResting()
 
 	// First ensure any mobs that should be here are spawned
 	for idx, spawnInfo := range r.SpawnInfo {

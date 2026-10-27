@@ -15,6 +15,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/exit"
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -498,23 +499,51 @@ func removeRoomFromMemory(r *Room) {
 		return
 	}
 
-	for _, mobId := range room.mobIds() {
-		mobs.DestroyInstance(mobId)
+	// Ephemeral rooms are not saved: their NPCs end with them, as before.
+	if room.IsEphemeral() {
+		for _, mobId := range room.mobIds() {
+			mobs.DestroyInstance(mobId)
+		}
+
+		for _, spawnDetails := range room.SpawnInfo {
+			if !spawnDetails.InstanceId.IsZero() {
+
+				if m := mobs.GetInstance(spawnDetails.InstanceId); m != nil {
+					if m.Character.RoomId == room.RoomId {
+						mobs.DestroyInstance(spawnDetails.InstanceId)
+					}
+				}
+
+			}
+		}
+
+		delete(roomManager.rooms, r.RoomId)
+		return
 	}
 
-	for _, spawnDetails := range room.SpawnInfo {
-		if !spawnDetails.InstanceId.IsZero() {
-
-			if m := mobs.GetInstance(spawnDetails.InstanceId); m != nil {
-				if m.Character.RoomId == room.RoomId {
-					mobs.DestroyInstance(spawnDetails.InstanceId)
-				}
-			}
-
+	// Leaving memory is never an ending (decision 15): every live NPC in the
+	// room rests here. Save first; only then take them out of memory.
+	restingBefore := len(room.resting)
+	resting := []ids.ID{}
+	for _, mobId := range room.mobIds() {
+		if m := mobs.GetInstance(mobId); m != nil {
+			room.resting = append(room.resting, mobs.Snapshot(m))
+			resting = append(resting, mobId)
 		}
 	}
 
-	SaveRoomInstance(*room)
+	if err := saveRoomNPCs(room); err != nil {
+		mudlog.Error("npc store: room kept in memory, its NPCs could not be saved", "room", room.RoomId, "error", err)
+		room.resting = room.resting[:restingBefore]
+		return
+	}
+
+	saveRoomInstanceData(*room)
+
+	for _, mobId := range resting {
+		mobs.Rest(mobId)
+		indexResting(mobId, room.RoomId)
+	}
 
 	delete(roomManager.rooms, r.RoomId)
 }
