@@ -2,13 +2,14 @@
 
 ## Now
 - Phase 4b (NPCs are players), spec `2026-10-27-phase-4b-npcs-are-players-design.md`. Slices 1
-  (actors, PR #16) and 2 (one ID space, PR #18) merged. Slice 2b (NPC and companion persistence,
-  decisions 12-15) plan `2026-10-27-phase-4b-2b-npc-persistence-plan.md` with its inventory, in
-  Calabe's review
+  (PR #16) and 2 (PR #18) merged. Slice 2b (NPC and companion persistence, decisions 12-17) is in
+  its PR, branch `strip/phase-4b-2b-npc-persistence`; plan and inventory in
+  `docs/completed/2026-10-27-phase-4b-2b-*`
 - Strip Phases 0-4 and GeOMUD player branding (PR #14) are merged (`gomud_strip_plan.md`)
 
 ## Next
-1. Phase 4b slice 2b: execute the plan once approved; then slice 2c (item IDs) or 3 (messaging)
+1. Phase 4b slice 2c (item IDs: items keep their ID for good, so a restored NPC's items keep
+   theirs) or slice 3 (messaging core); Calabe picks the order
 2. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
    `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
    `professions`/`skills`/`spells` world folders, `set shopstyle`, `help spell` and the loot goblin
@@ -20,9 +21,15 @@
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
-- Review of the Phase 4b slice 2b plan
+- Merge of the Phase 4b slice 2b PR
 
 ## Watch
+- Phase 4b slice 2b known gaps: a fresh spawn reaches disk only at its room's next save (a crash
+  before then loses it and its slot spawns anew); a crash between a slot settle's two writes leaves a
+  harmless unread ledger entry; NPCs live in a deleted room or zone are saved nowhere (upstream
+  behaviour kept); a room delete can lose an NPC in a crash if the deleted room held an old copy of
+  an NPC now in an ephemeral or unloaded room. The admin rooms page and mapper lost their spawn
+  "Permanent Buffs" picker (decision 17): passes JSHint, not checked in a browser
 - Phase 4b slice 2 permadeath reroll (`internal/usercommands/suicide.go`): body re-keying and event
   ordering are unverified live, because permadeath is off in the `empty` world. Check it with
   permadeath on (and `LivesStart: 0`) before relying on it. A reroll also orphans the old body's
