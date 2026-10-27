@@ -59,6 +59,20 @@ Counts are non-test Go files under `internal`, `modules` and the repo root unles
 9. **One spec, several slices.** The stages become explicit slices (section 4), each with its own
    plan, branch and PR.
 
+## Decisions (Calabe, 2026-10-27, slice 2 planning)
+
+10. **IDs are `<cell>:<random>` in hex, Google-feature-ID style**: the S2 cell (the grid's cell
+    key) of the room or region where the thing was created, then a random part. Format
+    `0x<16 hex>:0x<16 hex>`; things created in a room with no geography use cell `0x0`. People
+    never type IDs: they name things by name, and GMCP carries IDs as opaque tokens. `#N` and
+    `@N` go.
+11. **An ID is assigned once, at creation or instantiation, and kept for good.** It survives
+    copyover, restart and anything else. Today's instances: a player's body (assigned at character
+    creation, saved with the character), a player's companions, an existing NPC, an item, a room.
+    Only creating or instantiating something new makes a new ID; a new instantiation of an NPC
+    template is a new thing with a new ID. This replaces decision 3's "every live actor has a
+    runtime `ActorId`" and section 1's "`ActorId` is never saved".
+
 ## 1. Actor model
 
 ```
@@ -185,14 +199,17 @@ code it replaces, so no slice leaves two live paths behind.
 | # | Slice | Needs | Work | Deletes | Done when |
 |---|---|---|---|---|---|
 | 1 | Actors | none | `actors`: `Actor`, `ActorId`, `Controller` (both implementations), registry. `users` renamed `accounts`; connection state moves from the account to `ConnectionController`. Logged-in players and spawned mobs become actors. Old IDs still route, through registry lookups. Smoke gains a transcript recording, and the pre-4b transcript is recorded from master `c4314b7f` | connection fields on the account | Unit tests: registry; swapping a controller keeps the `ActorId`. Guard test: no `Controller` type switch outside `actors`. Smoke passes |
-| 2 | One ID space | 1 | Rooms, aggro, `events.Input`, charm and killer references hold `ActorId` | `players`/`mobs` room lists, `Aggro.MobInstanceId`/`UserId`, `Input.MobInstanceId`, `instanceCounter` | `MobInstanceId` absent from non-test code. Smoke passes |
+| 2 | One ID space | 1 | The `cell:random` ID type (decision 10) in a leaf package; a body's ID lives on its `Character`; a player's is assigned at character creation and saved, an NPC's at instantiation; every reference to a live body (rooms, aggro, events, charm, killer, GMCP, the room window) holds it. Names replace `#N`/`@N` for people | `players`/`mobs` room lists, `Aggro.MobInstanceId`/`UserId`, `Input.MobInstanceId`, `instanceCounter`, `#N`/`@N` | `MobInstanceId` absent from non-test code; a guard allows new IDs only at creation sites; a player keeps their ID across logout, restart and copyover. Smoke passes |
+| 2b | NPC and companion persistence | 2 | Live NPC instances and players' companions are saved and restored, with their IDs, on copyover and restart (decision 11). Its plan settles what state survives and how spawn tables count a restored NPC | respawn-on-copyover for existing NPCs; companion pruning at login | An NPC and a companion keep their IDs and state across copyover and restart |
+| 2c | Item IDs | 2 | Items move from upstream's UUID to the `cell:random` ID, keeping each saved item's identity | `internal/uuid` if nothing else uses it | Every item ID is `cell:random`; saved items load with their identity kept |
 | 3 | Messaging core | 1 | `messaging`: kinds, roles, senses, ranges, audiences, tokens, `CanPerceive`, delivery to both controllers. Guard test runs against an allowlist of today's offending files that may only shrink | none | Unit tests for each role, range and audience; a dark room blocks Sight; "Someone" when the actor is unseen; a behaviour receives the structured event |
 | 4 | One command set and input path | 2 | `Command(rest, actor, room, flags)`; mob commands folded in or turned into behaviour actions; `processInput` and `processMobInput` merged | `mobcommands` package, `processMobInput` | One registry. Smoke passes |
 | 5 | One combat path | 2, 3 | `combat.Attack` and one combat round, with every outcome difference from the handler diff kept; combat output goes through `messaging` | the four `Attack*` variants, `handlePlayerCombat`/`handleMobCombat` split, `AttackResult` room-message fields | Smoke fight: admin spawns a rat, a bot fights it to an end; with `-bots 2` the second bot receives the observer text and not the attacker's |
 | 6 | One tick and behaviour | 4 | One actor round tick calling `Controller.Tick`; `BehaviourController` runs idle and wander | `UserRoundTick`/`MobRoundTick` split, `IdleMobs`, `HandleIdleMobs`, `MobIdle` event | Seeded test: the rat idles and wanders within `maxwander` at its `activitylevel` odds. Smoke passes |
 | 7 | Output conversion | 3, 4 | Every remaining output site moves to `messaging`, split by command group across subagents | direct `SendText` and `connections.SendTo` outside `messaging` | Guard allowlist holds only the GMCP exception. Text parity holds. The Phase 4b Done-when line in `gomud_strip_plan.md` holds |
 
-Order: 1, 2, 3, 4, 5, 6, 7. Slice 3 needs only slice 1, so its plan can be written while slice 2 is
+Order: 1, 2, 2b, 3, 4, 5, 6, 7 (2c fits anywhere after 2; rooms take the ID format with the geo
+room key). Slice 3 needs only slice 1, so its plan can be written while slice 2 is
 in review.
 
 Plan files sit at the repo root as `<date>-phase-4b-<n>-<slug>-plan.md` (for example
