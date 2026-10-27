@@ -69,7 +69,7 @@ func Give(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			mob.Character.RemoveItem(giveItem)
 
 			events.AddToQueue(events.ItemOwnership{
-				MobInstanceId: mob.InstanceId,
+				MobInstanceId: mob.Character.Id,
 				Item:          giveItem,
 				Gained:        false,
 			})
@@ -102,7 +102,7 @@ func Give(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	//
 	// Look for an NPC
 	//
-	if mobId > 0 {
+	if !mobId.IsZero() {
 
 		mob.Character.CancelBuffsWithFlag("hidden")
 
@@ -116,13 +116,13 @@ func Give(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 				mob.Character.RemoveItem(giveItem)
 
 				events.AddToQueue(events.ItemOwnership{
-					MobInstanceId: mob.InstanceId,
+					MobInstanceId: mob.Character.Id,
 					Item:          giveItem,
 					Gained:        false,
 				})
 
 				events.AddToQueue(events.ItemOwnership{
-					MobInstanceId: m.InstanceId,
+					MobInstanceId: m.Character.Id,
 					Item:          giveItem,
 					Gained:        true,
 				})

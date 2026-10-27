@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -55,7 +56,7 @@ func GetAllMobCommands() []string {
 	return result
 }
 
-func TryCommand(cmd string, rest string, mobId int) (bool, error) {
+func TryCommand(cmd string, rest string, mobId ids.ID) (bool, error) {
 
 	cmd = strings.ToLower(cmd)
 	rest = strings.TrimSpace(rest)

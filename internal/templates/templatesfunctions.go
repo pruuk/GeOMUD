@@ -14,6 +14,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/language"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/skills"
@@ -100,7 +101,7 @@ var (
 			u := accounts.GetByUserId(userId)
 			return u.Character
 		},
-		"idToMobCharacter": func(mobId int) string {
+		"idToMobCharacter": func(mobId ids.ID) string {
 			if m := mobs.GetInstance(mobId); m != nil {
 				return m.Character.Name
 			}

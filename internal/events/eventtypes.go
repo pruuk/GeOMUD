@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/connections"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/stats"
 )
@@ -19,7 +20,7 @@ import (
 // Used to apply or remove buffs
 type Buff struct {
 	UserId        int
-	MobInstanceId int
+	MobInstanceId ids.ID
 	BuffId        int
 	Source        string // optional source such as spell,
 }
@@ -28,7 +29,7 @@ func (b Buff) Type() string { return `Buff` }
 
 type BuffsTriggered struct {
 	UserId        int
-	MobInstanceId int
+	MobInstanceId ids.ID
 	BuffIds       []int
 }
 
@@ -36,7 +37,7 @@ func (b BuffsTriggered) Type() string { return `BuffsTriggered` }
 
 type BuffsAdded struct {
 	UserId        int
-	MobInstanceId int
+	MobInstanceId ids.ID
 	BuffIds       []int
 }
 
@@ -44,7 +45,7 @@ func (b BuffsAdded) Type() string { return `BuffsAdded` }
 
 type BuffsRemoved struct {
 	UserId        int
-	MobInstanceId int
+	MobInstanceId ids.ID
 	BuffIds       []int
 }
 
@@ -65,7 +66,7 @@ func (r RoomAction) Type() string { return `RoomAction` }
 // Used for Input from players/mobs
 type Input struct {
 	UserId        int
-	MobInstanceId int
+	MobInstanceId ids.ID
 	InputText     string
 	ReadyTurn     uint64
 	Flags         EventFlag
@@ -106,7 +107,7 @@ func (m Message) Type() string { return `Message` }
 
 type Communication struct {
 	SourceUserId        int    // User that sent the message
-	SourceMobInstanceId int    // Mob that sent the message
+	SourceMobInstanceId ids.ID // Mob that sent the message
 	TargetUserId        int    // Sent to only 1 person
 	CommType            string // say, party, broadcast, whisper, shout
 	Name                string
@@ -135,7 +136,7 @@ func (s System) Type() string { return `System` }
 // Fired whenever a mob or player changes rooms
 type RoomChange struct {
 	UserId        int
-	MobInstanceId int
+	MobInstanceId ids.ID
 	FromRoomId    int
 	ToRoomId      int
 	Unseen        bool
@@ -161,7 +162,7 @@ func (n NewTurn) Type() string { return `NewTurn` }
 
 // Anytime a mob is idle
 type MobIdle struct {
-	MobInstanceId int
+	MobInstanceId ids.ID
 }
 
 func (i MobIdle) Type() string { return `MobIdle` }
@@ -169,7 +170,7 @@ func (i MobIdle) Type() string { return `MobIdle` }
 // Gained or lost an item
 type EquipmentChange struct {
 	UserId        int
-	MobInstanceId int
+	MobInstanceId ids.ID
 	GoldChange    int
 	BankChange    int
 	ItemsWorn     []items.Item
@@ -181,7 +182,7 @@ func (i EquipmentChange) Type() string { return `EquipmentChange` }
 // Gained or lost an item
 type ItemOwnership struct {
 	UserId        int
-	MobInstanceId int
+	MobInstanceId ids.ID
 	Item          items.Item
 	Gained        bool
 }
@@ -270,7 +271,7 @@ func (l PlayerDeath) Type() string { return `PlayerDeath` }
 
 type MobDeath struct {
 	MobId         int
-	InstanceId    int
+	InstanceId    ids.ID
 	RoomId        int
 	CharacterName string
 	Level         int
@@ -367,8 +368,8 @@ func (l RedrawPrompt) UniqueID() string { return `RedrawPrompt-` + strconv.Itoa(
 
 // Fired when a player or mob enters or leaves aggro state
 type AggroChanged struct {
-	UserId        int // non-zero if a player's aggro state changed
-	MobInstanceId int // non-zero if a mob's aggro state changed
+	UserId        int    // non-zero if a player's aggro state changed
+	MobInstanceId ids.ID // non-zero if a mob's aggro state changed
 	RoomId        int
 }
 

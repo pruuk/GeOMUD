@@ -53,7 +53,7 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 
 	if evt.SourceUserId > 0 {
 		payload.Source = `player`
-	} else if evt.SourceMobInstanceId > 0 {
+	} else if !evt.SourceMobInstanceId.IsZero() {
 		payload.Source = `mob`
 	}
 
@@ -72,7 +72,7 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 			}
 		}
 
-		if evt.SourceMobInstanceId > 0 {
+		if !evt.SourceMobInstanceId.IsZero() {
 			if mob := mobs.GetInstance(evt.SourceMobInstanceId); mob != nil {
 				roomId = mob.Character.RoomId
 			}

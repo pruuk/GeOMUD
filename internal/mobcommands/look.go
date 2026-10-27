@@ -89,7 +89,7 @@ func Look(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 	playerId, mobId := room.FindByName(lookAt)
 
-	if playerId > 0 || mobId > 0 {
+	if playerId > 0 || !mobId.IsZero() {
 
 		if playerId > 0 {
 
@@ -109,7 +109,7 @@ func Look(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 					u.UserId)
 			}
 
-		} else if mobId > 0 {
+		} else if !mobId.IsZero() {
 
 			m := mobs.GetInstance(mobId)
 			if m == nil {

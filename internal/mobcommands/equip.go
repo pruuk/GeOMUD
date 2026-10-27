@@ -91,7 +91,7 @@ func Equip(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 				mob.Character.Validate()
 
 				events.AddToQueue(events.EquipmentChange{
-					MobInstanceId: mob.InstanceId,
+					MobInstanceId: mob.Character.Id,
 					ItemsWorn:     []items.Item{matchItem},
 					ItemsRemoved:  oldItems,
 				})

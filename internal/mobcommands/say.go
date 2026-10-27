@@ -25,7 +25,7 @@ func Say(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	}
 
 	events.AddToQueue(events.Communication{
-		SourceMobInstanceId: mob.InstanceId,
+		SourceMobInstanceId: mob.Character.Id,
 		CommType:            `say`,
 		Name:                mob.Character.Name,
 		Message:             rest,

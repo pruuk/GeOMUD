@@ -165,7 +165,7 @@ func (g *GMCPRoomModule) roomChangeHandler(e events.Event) events.ListenerReturn
 	// Send updates to players in old/new rooms for
 	// players or npcs (whichever changed)
 	updateId := `Room.Info.Contents.Players`
-	if evt.MobInstanceId > 0 {
+	if !evt.MobInstanceId.IsZero() {
 		updateId = `Room.Info.Contents.Npcs`
 	}
 
@@ -373,7 +373,7 @@ func (g *GMCPRoomModule) GetRoomNode(user *accounts.Account, gmcpModule string) 
 			}
 
 			c := GMCPRoomModule_Payload_Contents_Character{
-				Id:         mob.ShorthandId(),
+				Id:         mob.Character.Id.String(),
 				Name:       mob.Character.Name,
 				Adjectives: mob.Character.GetAdjectives(),
 				Aggro:      mob.Character.Aggro != nil,

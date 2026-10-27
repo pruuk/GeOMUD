@@ -1,5 +1,7 @@
 package characters
 
+import "github.com/GoMudEngine/GoMud/internal/ids"
+
 type AggroType int
 
 const (
@@ -15,12 +17,12 @@ type SpellAggroInfo struct {
 	SpellId              string
 	SpellRest            string
 	TargetUserIds        []int
-	TargetMobInstanceIds []int
+	TargetMobInstanceIds []ids.ID
 }
 
 type Aggro struct {
 	Type          AggroType
-	MobInstanceId int
+	MobInstanceId ids.ID
 	UserId        int
 	SpellInfo     SpellAggroInfo // If Type is SpellCast, this is the spell info
 	ExitName      string         // For example, firing a weapon in a direction

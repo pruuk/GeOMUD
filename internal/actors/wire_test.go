@@ -45,16 +45,16 @@ func TestAccountOnlineAndOffline(t *testing.T) {
 
 func TestMobSpawnAndDestroy(t *testing.T) {
 	Reset()
-	m := &mobs.Mob{InstanceId: 41}
+	m := bodyMob()
 
 	mobs.OnInstanceCreated.Fire(m)
-	a := ByMobInstanceId(41)
+	a := ByMobInstanceId(m.Character.Id)
 	require.NotNil(t, a)
 	assert.Same(t, &m.Character, a.Character)
 	assert.Nil(t, a.Controller().Account())
 
-	mobs.OnInstanceDestroyed.Fire(41)
-	assert.Nil(t, ByMobInstanceId(41))
+	mobs.OnInstanceDestroyed.Fire(m.Character.Id)
+	assert.Nil(t, ByMobInstanceId(m.Character.Id))
 	assert.Empty(t, All())
 }
 
@@ -82,6 +82,6 @@ func TestInitIsIdempotent(t *testing.T) {
 	Reset()
 	Init()
 	Init()
-	mobs.OnInstanceCreated.Fire(&mobs.Mob{InstanceId: 51})
+	mobs.OnInstanceCreated.Fire(bodyMob())
 	assert.Len(t, All(), 1, "a second Init must not double-register")
 }

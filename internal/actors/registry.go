@@ -7,6 +7,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 )
 
 var (
@@ -14,7 +15,7 @@ var (
 	lastId          ActorId
 	byId            = map[ActorId]*Actor{}
 	byUserId        = map[int]ActorId{}
-	byMobInstanceId = map[int]ActorId{}
+	byMobInstanceId = map[ids.ID]ActorId{}
 )
 
 // Spawn makes a live actor for char, driven by ctrl.
@@ -48,7 +49,7 @@ func ByUserId(userId int) *Actor {
 
 // ByMobInstanceId returns the actor for a mob instance, or nil. It routes old
 // mob instance IDs until slice 2 removes them.
-func ByMobInstanceId(instanceId int) *Actor {
+func ByMobInstanceId(instanceId ids.ID) *Actor {
 	mu.RLock()
 	defer mu.RUnlock()
 	if id, ok := byMobInstanceId[instanceId]; ok {
@@ -137,7 +138,7 @@ func unbindAccount(u *accounts.Account) *Actor {
 }
 
 // unbindMob removes the actor for a mob instance and returns it, or nil.
-func unbindMob(instanceId int) *Actor {
+func unbindMob(instanceId ids.ID) *Actor {
 	mu.Lock()
 	defer mu.Unlock()
 	id, ok := byMobInstanceId[instanceId]
@@ -156,7 +157,7 @@ func index(a *Actor) {
 		byUserId[acc.UserId] = a.Id
 	}
 	if b, ok := a.controller.(*BehaviourController); ok && b.mob != nil {
-		byMobInstanceId[b.mob.InstanceId] = a.Id
+		byMobInstanceId[b.mob.Character.Id] = a.Id
 	}
 }
 
@@ -164,8 +165,8 @@ func unindex(a *Actor) {
 	if acc := a.controller.Account(); acc != nil && byUserId[acc.UserId] == a.Id {
 		delete(byUserId, acc.UserId)
 	}
-	if b, ok := a.controller.(*BehaviourController); ok && b.mob != nil && byMobInstanceId[b.mob.InstanceId] == a.Id {
-		delete(byMobInstanceId, b.mob.InstanceId)
+	if b, ok := a.controller.(*BehaviourController); ok && b.mob != nil && byMobInstanceId[b.mob.Character.Id] == a.Id {
+		delete(byMobInstanceId, b.mob.Character.Id)
 	}
 }
 
@@ -176,5 +177,5 @@ func Reset() {
 	lastId = 0
 	byId = map[ActorId]*Actor{}
 	byUserId = map[int]ActorId{}
-	byMobInstanceId = map[int]ActorId{}
+	byMobInstanceId = map[ids.ID]ActorId{}
 }

@@ -68,7 +68,7 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 	playerId, mobId := room.FindByName(lookAt)
 
-	if playerId > 0 || mobId > 0 {
+	if playerId > 0 || !mobId.IsZero() {
 
 		statusTxt := ""
 		invTxt := ""
@@ -100,7 +100,7 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 			user.SendText(buildInventoryLookPanel(&u.Character.Equipment, itemNames))
 
-		} else if mobId > 0 {
+		} else if !mobId.IsZero() {
 
 			m := mobs.GetInstance(mobId)
 			if m == nil {

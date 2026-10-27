@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 )
@@ -19,7 +20,7 @@ func Init() {
 		accounts.OnActivate.Register(func(u *accounts.Account) *accounts.Account { accountOnline(u); return u })
 		accounts.OnDeactivate.Register(func(u *accounts.Account) *accounts.Account { accountOffline(u); return u })
 		mobs.OnInstanceCreated.Register(func(m *mobs.Mob) *mobs.Mob { mobSpawned(m); return m })
-		mobs.OnInstanceDestroyed.Register(func(id int) int { mobDestroyed(id); return id })
+		mobs.OnInstanceDestroyed.Register(func(id ids.ID) ids.ID { mobDestroyed(id); return id })
 	})
 }
 
@@ -41,10 +42,10 @@ func accountOffline(u *accounts.Account) {
 
 func mobSpawned(m *mobs.Mob) {
 	a := Spawn(&m.Character, NewBehaviourController(m))
-	mudlog.Debug("actor", "event", "spawned", "kind", "npc", "actorId", a.Id, "mobInstanceId", m.InstanceId)
+	mudlog.Debug("actor", "event", "spawned", "kind", "npc", "actorId", a.Id, "mobInstanceId", m.Character.Id)
 }
 
-func mobDestroyed(instanceId int) {
+func mobDestroyed(instanceId ids.ID) {
 	if a := unbindMob(instanceId); a != nil {
 		mudlog.Debug("actor", "event", "removed", "kind", "npc", "actorId", a.Id, "mobInstanceId", instanceId)
 	}

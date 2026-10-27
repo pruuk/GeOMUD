@@ -139,7 +139,7 @@ func mob_Spawn(rest string, user *accounts.Account, room *rooms.Room, flags even
 
 	if mobId > 0 {
 		if mob := mobs.NewMobById(mobId, room.RoomId); mob != nil {
-			room.AddMob(mob.InstanceId)
+			room.AddMob(mob.Character.Id)
 
 			user.SendText(
 				fmt.Sprintf(`You wave your hands around and <ansi fg="mobname">%s</ansi> appears in the air and falls to the ground.`, mob.Character.Name),

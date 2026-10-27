@@ -26,7 +26,7 @@ func Consider(rest string, user *accounts.Account, room *rooms.Room, flags event
 		playerId = 0
 	}
 
-	if playerId == 0 && mobId == 0 {
+	if playerId == 0 && mobId.IsZero() {
 		if lookAt == `` {
 			user.SendText(`<ansi fg="command">consider</ansi> whom??`)
 		} else {

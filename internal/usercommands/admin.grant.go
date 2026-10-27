@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 
@@ -30,7 +31,7 @@ func Grant(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 	args := util.SplitButRespectQuotes(rest)
 
 	targetUserId := 0
-	targetMobInstanceId := 0
+	targetMobId := ids.ID{}
 
 	lastWord := args[len(args)-1]
 
@@ -40,7 +41,7 @@ func Grant(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 		if len(args) > 2 {
 
-			targetUserId, targetMobInstanceId = room.FindByName(args[0])
+			targetUserId, targetMobId = room.FindByName(args[0])
 			expAmt, _ = strconv.Atoi(args[1])
 
 		} else {
@@ -56,7 +57,7 @@ func Grant(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 				return true, nil
 			}
 
-		} else if targetMobInstanceId > 0 {
+		} else if !targetMobId.IsZero() {
 			user.SendText(`Cannot grant experience to mobs.`)
 			return true, nil
 		}

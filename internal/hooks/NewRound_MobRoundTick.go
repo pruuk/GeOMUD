@@ -18,9 +18,9 @@ func MobRoundTick(e events.Event) events.ListenerReturn {
 	//
 	// Do mob round maintenance
 	//
-	for _, mobInstanceId := range mobs.GetAllMobInstanceIds() {
+	for _, mobId := range mobs.GetAllMobInstanceIds() {
 
-		mob := mobs.GetInstance(mobInstanceId)
+		mob := mobs.GetInstance(mobId)
 
 		if mob == nil {
 			continue
@@ -40,7 +40,7 @@ func MobRoundTick(e events.Event) events.ListenerReturn {
 				triggeredBuffIds = append(triggeredBuffIds, buff.BuffId)
 			}
 
-			events.AddToQueue(events.BuffsTriggered{MobInstanceId: mobInstanceId, BuffIds: triggeredBuffIds})
+			events.AddToQueue(events.BuffsTriggered{MobInstanceId: mobId, BuffIds: triggeredBuffIds})
 		}
 
 		// Do charm cleanup
@@ -48,7 +48,7 @@ func MobRoundTick(e events.Event) events.ListenerReturn {
 			cmd := mob.Character.Charmed.ExpiredCommand
 			if charmedUserId := mob.Character.RemoveCharm(); charmedUserId > 0 {
 				if charmedUser := accounts.GetByUserId(charmedUserId); charmedUser != nil {
-					charmedUser.Character.TrackCharmed(mob.InstanceId, false)
+					charmedUser.Character.TrackCharmed(mob.Character.Id, false)
 				}
 			}
 			if cmd != `` {

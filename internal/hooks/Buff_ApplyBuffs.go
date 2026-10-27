@@ -30,7 +30,7 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 
 	var targetChar *characters.Character
 
-	if evt.MobInstanceId > 0 {
+	if !evt.MobInstanceId.IsZero() {
 
 		buffMob := mobs.GetInstance(evt.MobInstanceId)
 		if buffMob == nil {
@@ -62,7 +62,7 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 	//
 	if buffInfo.TriggerNow {
 
-		if evt.MobInstanceId > 0 && targetChar.Health <= 0 {
+		if !evt.MobInstanceId.IsZero() && targetChar.Health <= 0 {
 			// Mob died
 			events.AddToQueue(events.Input{
 				MobInstanceId: evt.MobInstanceId,

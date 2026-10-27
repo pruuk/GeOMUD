@@ -14,6 +14,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobcommands"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -46,7 +47,7 @@ type World struct {
 	//
 	eventRequeue          []events.Event
 	userInputEventTracker map[int]struct{}
-	mobInputEventTracker  map[int]struct{}
+	mobInputEventTracker  map[ids.ID]struct{}
 }
 
 func NewWorld(osSignalChan chan os.Signal) *World {
@@ -61,7 +62,7 @@ func NewWorld(osSignalChan chan os.Signal) *World {
 		//
 		eventRequeue:          []events.Event{},
 		userInputEventTracker: map[int]struct{}{},
-		mobInputEventTracker:  map[int]struct{}{},
+		mobInputEventTracker:  map[ids.ID]struct{}{},
 	}
 
 	// System commands
@@ -86,7 +87,7 @@ func (w *World) HandleInputEvents(e events.Event) events.ListenerReturn {
 	//mudlog.Debug(`Event`, `type`, input.Type(), `UserId`, input.UserId, `MobInstanceId`, input.MobInstanceId, `WaitTurns`, input.WaitTurns, `InputText`, input.InputText)
 
 	// If it's a mob
-	if input.MobInstanceId > 0 {
+	if !input.MobInstanceId.IsZero() {
 
 		// If an event was already processed for this user this turn, skip
 		// We put this first, so that any delayed command for a mob will block
@@ -595,13 +596,13 @@ func (w *World) processInput(userId int, inputText string, flags events.EventFla
 
 }
 
-func (w *World) processMobInput(mobInstanceId int, inputText string) {
+func (w *World) processMobInput(mobId ids.ID, inputText string) {
 	// No need to select the channel this way
 
-	mob := mobs.GetInstance(mobInstanceId)
+	mob := mobs.GetInstance(mobId)
 	if mob == nil { // Something went wrong. User not found.
-		if !mobs.RecentlyDied(mobInstanceId) {
-			mudlog.Error("Mob not found", "mobId", mobInstanceId, "where", "processMobInput()")
+		if !mobs.RecentlyDied(mobId) {
+			mudlog.Error("Mob not found", "mobId", mobId, "where", "processMobInput()")
 		}
 		return
 	}
@@ -622,7 +623,7 @@ func (w *World) processMobInput(mobInstanceId int, inputText string) {
 
 		//mudlog.Info("World received mob input", "InputText", (inputText))
 
-		handled, err = mobcommands.TryCommand(command, remains, mobInstanceId)
+		handled, err = mobcommands.TryCommand(command, remains, mobId)
 		if err != nil {
 			mudlog.Warn("mob-TryCommand", "command", command, "remains", remains, "error", err.Error())
 		}

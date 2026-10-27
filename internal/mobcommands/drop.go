@@ -83,7 +83,7 @@ func Drop(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		mob.Character.RemoveItem(matchItem)
 
 		events.AddToQueue(events.ItemOwnership{
-			MobInstanceId: mob.InstanceId,
+			MobInstanceId: mob.Character.Id,
 			Item:          matchItem,
 			Gained:        false,
 		})

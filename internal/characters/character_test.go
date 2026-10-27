@@ -9,6 +9,7 @@ import (
 
 	"maps"
 
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/stretchr/testify/assert"
 )
@@ -1086,62 +1087,73 @@ func TestCharacter_LearnSpell(t *testing.T) {
 		})
 	}
 }
+
+// testBodyIds makes n distinct body IDs for table tests.
+func testBodyIds(n int) []ids.ID {
+	out := make([]ids.ID, n)
+	for i := range out {
+		out[i] = ids.New(ids.NoCell)
+	}
+	return out
+}
+
 func TestCharacter_TrackCharmed(t *testing.T) {
+	m := testBodyIds(7)
 	tests := []struct {
 		name        string
-		initial     []int
-		mobId       int
+		initial     []ids.ID
+		mobId       ids.ID
 		add         bool
-		wantCharmed []int
+		wantCharmed []ids.ID
 	}{
 		{
 			name:        "Add mobId to empty list",
 			initial:     nil,
-			mobId:       101,
+			mobId:       m[0],
 			add:         true,
-			wantCharmed: []int{101},
+			wantCharmed: []ids.ID{m[0]},
 		},
 		{
 			name:        "Add mobId to existing list",
-			initial:     []int{201, 202},
-			mobId:       203,
+			initial:     []ids.ID{m[0], m[1]},
+			mobId:       m[2],
 			add:         true,
-			wantCharmed: []int{201, 202, 203},
+			wantCharmed: []ids.ID{m[0], m[1], m[2]},
 		},
 		{
 			name:        "Add duplicate mobId (should not duplicate)",
-			initial:     []int{301, 302},
-			mobId:       301,
+			initial:     []ids.ID{m[0], m[1]},
+			mobId:       m[0],
 			add:         true,
-			wantCharmed: []int{301, 302},
+			wantCharmed: []ids.ID{m[0], m[1]},
 		},
 		{
 			name:        "Remove mobId from list",
-			initial:     []int{401, 402, 403},
-			mobId:       402,
+			initial:     []ids.ID{m[0], m[1], m[2]},
+			mobId:       m[1],
 			add:         false,
-			wantCharmed: []int{401, 403},
+			wantCharmed: []ids.ID{m[0], m[2]},
 		},
 		{
 			name:        "Remove mobId not in list (should do nothing)",
-			initial:     []int{501, 502},
-			mobId:       999,
+			initial:     []ids.ID{m[0], m[1]},
+			mobId:       m[6],
 			add:         false,
-			wantCharmed: []int{501, 502, 999},
+			wantCharmed: []ids.ID{m[0], m[1], m[6]},
 		},
 		{
 			name:        "Remove mobId from single-element list",
-			initial:     []int{601},
-			mobId:       601,
+			initial:     []ids.ID{m[0]},
+			mobId:       m[0],
 			add:         false,
-			wantCharmed: []int{},
+			wantCharmed: []ids.ID{},
 		},
 		{
 			name:        "Add mobId already present (should append again)",
-			initial:     []int{701},
-			mobId:       701,
+			initial:     []ids.ID{m[0]},
+			mobId:       m[0],
 			add:         true,
-			wantCharmed: []int{701},
+			wantCharmed: []ids.ID{m[0]},
 		},
 	}
 
@@ -1149,7 +1161,7 @@ func TestCharacter_TrackCharmed(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := New()
 			if tt.initial != nil {
-				c.CharmedMobs = append([]int{}, tt.initial...)
+				c.CharmedMobs = append([]ids.ID{}, tt.initial...)
 			}
 			c.TrackCharmed(tt.mobId, tt.add)
 			assert.Equal(t, tt.wantCharmed, c.CharmedMobs)
@@ -1157,35 +1169,36 @@ func TestCharacter_TrackCharmed(t *testing.T) {
 	}
 }
 func TestCharacter_GetCharmIds(t *testing.T) {
+	m := testBodyIds(3)
 	tests := []struct {
 		name        string
-		charmedMobs []int
-		want        []int
+		charmedMobs []ids.ID
+		want        []ids.ID
 	}{
 		{
 			name:        "Nil CharmedMobs returns empty slice",
 			charmedMobs: nil,
-			want:        []int{},
+			want:        []ids.ID{},
 		},
 		{
 			name:        "Empty CharmedMobs returns empty slice",
-			charmedMobs: []int{},
-			want:        []int{},
+			charmedMobs: []ids.ID{},
+			want:        []ids.ID{},
 		},
 		{
 			name:        "Single mob in CharmedMobs",
-			charmedMobs: []int{101},
-			want:        []int{101},
+			charmedMobs: []ids.ID{m[0]},
+			want:        []ids.ID{m[0]},
 		},
 		{
 			name:        "Multiple mobs in CharmedMobs",
-			charmedMobs: []int{201, 202, 203},
-			want:        []int{201, 202, 203},
+			charmedMobs: []ids.ID{m[0], m[1], m[2]},
+			want:        []ids.ID{m[0], m[1], m[2]},
 		},
 		{
 			name:        "CharmedMobs with duplicate ids",
-			charmedMobs: []int{301, 302, 301},
-			want:        []int{301, 302, 301},
+			charmedMobs: []ids.ID{m[0], m[1], m[0]},
+			want:        []ids.ID{m[0], m[1], m[0]},
 		},
 	}
 
@@ -1193,7 +1206,7 @@ func TestCharacter_GetCharmIds(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := New()
 			if tt.charmedMobs != nil {
-				c.CharmedMobs = append([]int{}, tt.charmedMobs...)
+				c.CharmedMobs = append([]ids.ID{}, tt.charmedMobs...)
 			} else {
 				c.CharmedMobs = nil
 			}
@@ -1202,7 +1215,7 @@ func TestCharacter_GetCharmIds(t *testing.T) {
 			// Ensure returned slice is a copy, not the same reference
 			if c.CharmedMobs != nil {
 				if len(got) > 0 {
-					got[0] = -999
+					got[0] = ids.New(ids.NoCell)
 					assert.NotEqual(t, c.CharmedMobs[0], got[0], "GetCharmIds should return a copy, not the original slice")
 				}
 			}
@@ -2019,7 +2032,7 @@ func TestCharacter_EndAggro(t *testing.T) {
 			if tt.setupAggro {
 				c.Aggro = &Aggro{
 					UserId:        1,
-					MobInstanceId: 2,
+					MobInstanceId: ids.New(ids.NoCell),
 					Type:          DefaultAttack,
 					RoundsWaiting: 3,
 				}

@@ -10,6 +10,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/exit"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/term"
@@ -267,8 +268,8 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 	visibleFriendlyMobs := []string{}
 
-	for idx, mobInstanceId := range r.mobs {
-		if mob := mobs.GetInstance(mobInstanceId); mob != nil {
+	for idx, mobId := range r.mobs {
+		if mob := mobs.GetInstance(mobId); mob != nil {
 
 			if mob.Character.HasBuffFlag("hidden") { // Don't show them if they are sneaking
 				if !user.Character.HasBuffFlag("see-hidden") {
@@ -369,8 +370,8 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 				allNames := []string{}
 
-				for mobInstId, _ := range r.Visitors(VisitorMob) {
-					if mob := mobs.GetInstance(mobInstId); mob != nil {
+				for visitorMobId, _ := range r.MobVisitors() {
+					if mob := mobs.GetInstance(visitorMobId); mob != nil {
 						allNames = append(allNames, mob.Character.Name)
 					}
 				}
@@ -383,7 +384,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 				} else {
 
-					exitName := r.findMobExit(0, searchMobNameStr)
+					exitName := r.findMobExit(ids.ID{}, searchMobNameStr)
 					if exitName == `` {
 
 						details.TrackingString = `You lost the trail of <ansi fg="username">` + searchMobNameStr + `</ansi>`
@@ -412,7 +413,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 				allNames := []string{}
 
-				for userId, _ := range r.Visitors(VisitorUser) {
+				for userId, _ := range r.UserVisitors() {
 					if u := accounts.GetByUserId(userId); u != nil {
 						allNames = append(allNames, u.Character.Name)
 					}

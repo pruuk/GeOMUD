@@ -67,7 +67,7 @@ type Character struct {
 	Shop                Shop                           `yaml:"shop,omitempty"`           // Definition of shop services/items this character stocks (or just has at the moment)
 	SpellBook           map[string]int                 `yaml:"spellbook,omitempty"`      // The spells the character has learned
 	Charmed             *CharmInfo                     `yaml:"-"`                        // If they are charmed, this is the info
-	CharmedMobs         []int                          `yaml:"-"`                        // If they have charmed anyone, this is the list of mob instance ids
+	CharmedMobs         []ids.ID                       `yaml:"-"`                        // If they have charmed anyone, this is the list of their body IDs
 	Items               []items.Item                   `yaml:"items,omitempty"`          // The items the character is holding
 	Buffs               buffs.Buffs                    `yaml:"buffs,omitempty"`          // The buffs the character has active
 	Equipment           Worn                           `yaml:"equipment,omitempty"`      // The equipment the character is wearing
@@ -90,7 +90,7 @@ type Character struct {
 	roomHistory         []int                          // A stack FILO of the last X rooms the character has been in
 	PlayerDamage        map[int]int                    `yaml:"-"` // key = who, value = how much
 	LastPlayerDamage    uint64                         `yaml:"-"` // last round a player damaged this character
-	KillerMobInstanceId int                            `yaml:"-"` // transient: mob instance that delivered the killing blow
+	KillerMobInstanceId ids.ID                         `yaml:"-"` // transient: body ID of the mob that delivered the killing blow
 	KillerMobIsElite    bool                           `yaml:"-"` // transient: true if the killing mob was elite
 	KillerMobName       string                         `yaml:"-"` // transient: name of the mob that delivered the killing blow
 	permaBuffIds        []int                          // Buff Id's that are always present for this character
@@ -125,7 +125,7 @@ func New() *Character {
 		Gold:           25,
 		Bank:           100,
 		SpellBook:      make(map[string]int),
-		CharmedMobs:    []int{},
+		CharmedMobs:    []ids.ID{},
 		Items:          []items.Item{},
 		Buffs:          buffs.New(),
 		Equipment:      Worn{},
@@ -461,9 +461,9 @@ func (c *Character) GrantXP(xp int) (actualXP int, xpScale int) {
 	return actualXP, xpScale
 }
 
-func (c *Character) TrackCharmed(mobId int, add bool) {
-	for pos, mobInstanceId := range c.CharmedMobs {
-		if mobInstanceId == mobId {
+func (c *Character) TrackCharmed(mobId ids.ID, add bool) {
+	for pos, charmedId := range c.CharmedMobs {
+		if charmedId == mobId {
 			if !add {
 				c.CharmedMobs = slices.Delete(c.CharmedMobs, pos, pos+1)
 			}
@@ -473,8 +473,8 @@ func (c *Character) TrackCharmed(mobId int, add bool) {
 	c.CharmedMobs = append(c.CharmedMobs, mobId)
 }
 
-func (c *Character) GetCharmIds() []int {
-	return append([]int{}, c.CharmedMobs...)
+func (c *Character) GetCharmIds() []ids.ID {
+	return append([]ids.ID{}, c.CharmedMobs...)
 }
 
 func (c *Character) Charm(userId int, rounds int, expireCommand string) {
@@ -1067,12 +1067,12 @@ func (c *Character) ZoneVisitPercent(zone string, validRoomIds map[int]struct{})
 	return int(float64(visited) / float64(total) * 100)
 }
 
-func (c *Character) SetAggroRemote(exitName string, userId int, mobInstanceId int, aggroType AggroType, roundsWaitTime ...int) {
+func (c *Character) SetAggroRemote(exitName string, userId int, mobInstanceId ids.ID, aggroType AggroType, roundsWaitTime ...int) {
 	c.SetAggro(userId, mobInstanceId, aggroType, roundsWaitTime...)
 	c.Aggro.ExitName = exitName
 }
 
-func (c *Character) SetAggro(userId int, mobInstanceId int, aggroType AggroType, roundsWaitTime ...int) {
+func (c *Character) SetAggro(userId int, mobInstanceId ids.ID, aggroType AggroType, roundsWaitTime ...int) {
 
 	var combatAddlWaitRounds int = 0
 
@@ -1113,11 +1113,11 @@ func (c *Character) EndAggro() {
 	c.Aggro = nil
 }
 
-func (c *Character) IsAggro(targetUserId int, targetMobInstanceId int) bool {
+func (c *Character) IsAggro(targetUserId int, targetMobInstanceId ids.ID) bool {
 
 	if c.Aggro != nil {
 
-		if c.Aggro.MobInstanceId > 0 && c.Aggro.MobInstanceId == targetMobInstanceId {
+		if !c.Aggro.MobInstanceId.IsZero() && c.Aggro.MobInstanceId == targetMobInstanceId {
 			return true
 		}
 

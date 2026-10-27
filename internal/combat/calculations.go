@@ -6,6 +6,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/races"
@@ -370,7 +371,7 @@ func ChanceToTame(s *accounts.Account, t *mobs.Mob) int {
 		s.Character.Health,
 		s.Character.HealthMax.Value,
 		raceInfo.Size,
-		t.Character.IsAggro(s.UserId, 0),
+		t.Character.IsAggro(s.UserId, ids.ID{}),
 	)
 }
 

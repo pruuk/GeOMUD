@@ -11,6 +11,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -224,7 +225,7 @@ func SaveRoomTemplate(roomTpl Room) error {
 	copy(roomTpl.Signs, roomBeingReplaced.Signs)
 
 	// Copy mobs in room
-	roomTpl.mobs = make([]int, len(roomBeingReplaced.mobs))
+	roomTpl.mobs = make([]ids.ID, len(roomBeingReplaced.mobs))
 	copy(roomTpl.mobs, roomBeingReplaced.mobs)
 
 	// Copy players in room

@@ -315,13 +315,13 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 
 	fromRoomId := user.Character.RoomId
 	if currentRoom != nil {
-		currentRoom.MarkVisited(userId, VisitorUser, 1)
+		currentRoom.MarkUserVisited(userId, 1)
 		if len, _ := currentRoom.RemovePlayer(userId); len < 1 {
 			delete(roomManager.roomsWithUsers, currentRoom.RoomId)
 		}
 	}
 
-	newRoom.MarkVisited(userId, VisitorUser)
+	newRoom.MarkUserVisited(userId)
 
 	//
 	// Apply any mutators from the zone or room
@@ -498,12 +498,12 @@ func removeRoomFromMemory(r *Room) {
 		return
 	}
 
-	for _, mobInstanceId := range room.mobs {
-		mobs.DestroyInstance(mobInstanceId)
+	for _, mobId := range room.mobs {
+		mobs.DestroyInstance(mobId)
 	}
 
 	for _, spawnDetails := range room.SpawnInfo {
-		if spawnDetails.InstanceId > 0 {
+		if !spawnDetails.InstanceId.IsZero() {
 
 			if m := mobs.GetInstance(spawnDetails.InstanceId); m != nil {
 				if m.Character.RoomId == room.RoomId {

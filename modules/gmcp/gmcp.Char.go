@@ -10,6 +10,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -433,28 +434,28 @@ func (g *GMCPCharModule) GetCharNode(user *accounts.Account, gmcpModule string) 
 
 		payload.Enemies = []GMCPCharModule_Enemy{}
 
-		aggroMobInstanceId := 0
+		aggroMobId := ids.ID{}
 		if user.Character.Aggro != nil {
-			if user.Character.Aggro.MobInstanceId > 0 {
-				aggroMobInstanceId = user.Character.Aggro.MobInstanceId
+			if !user.Character.Aggro.MobInstanceId.IsZero() {
+				aggroMobId = user.Character.Aggro.MobInstanceId
 			}
 		}
 
 		if roomInfo := rooms.LoadRoom(user.Character.RoomId); roomInfo != nil {
 
-			for _, mobInstanceId := range roomInfo.GetMobs(rooms.FindFighting) {
-				mob := mobs.GetInstance(mobInstanceId)
+			for _, fightingMobId := range roomInfo.GetMobs(rooms.FindFighting) {
+				mob := mobs.GetInstance(fightingMobId)
 				if mob == nil {
 					continue
 				}
 
 				e := GMCPCharModule_Enemy{
-					Id:      mob.ShorthandId(),
+					Id:      mob.Character.Id.String(),
 					Name:    mob.Character.Name,
 					Level:   mob.Character.Level,
 					Hp:      mob.Character.Health,
 					MaxHp:   mob.Character.HealthMax.Value,
-					Engaged: mob.InstanceId == aggroMobInstanceId,
+					Engaged: mob.Character.Id == aggroMobId,
 				}
 
 				payload.Enemies = append(payload.Enemies, e)

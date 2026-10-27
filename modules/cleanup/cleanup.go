@@ -133,7 +133,7 @@ func (c *CleanupModule) mobTrashCommand(rest string, mob *mobs.Mob, room *rooms.
 		mob.Character.RemoveItem(matchItem)
 
 		events.AddToQueue(events.ItemOwnership{
-			MobInstanceId: mob.InstanceId,
+			MobInstanceId: mob.Character.Id,
 			Item:          matchItem,
 			Gained:        false,
 		})
