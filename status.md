@@ -2,7 +2,8 @@
 
 ## Now
 - Phase 4b (NPCs are players): design spec `2026-10-27-phase-4b-npcs-are-players-design.md` written,
-  in Calabe's review (branch `strip/phase-4b-npcs-are-players`). Then the implementation plan.
+  in Calabe's review (branch `strip/phase-4b-npcs-are-players`). Seven slices, one plan each; slice
+  1 (actors) plan next.
   Strip Phases 0-4 and GeOMUD player branding (PR #14) are merged (`gomud_strip_plan.md`)
 
 ## Next

@@ -56,6 +56,8 @@ Counts are non-test Go files under `internal`, `modules` and the repo root unles
    feeding into and fed by messaging.
 8. **Senses stay minimal in 4b.** Hearing, touch and fuller light and darkness rules come later
    (DOGMud's light and darkness concepts are a source then).
+9. **One spec, several slices.** The stages become explicit slices (section 4), each with its own
+   plan, branch and PR.
 
 ## 1. Actor model
 
@@ -170,29 +172,37 @@ Perception  what a controller receives: Role (Actor, Target, Observer), the Mess
   keep dying, dropping loot and respawning from their template. The branch is the question "does
   this actor return from a template", which carries over to Phase 5's death rule.
 
-## 4. Stages and testing
+## 4. Slices
 
-| Stage | Work | Checked by |
-|---|---|---|
-| 1 | `actors`: `Actor`, `ActorId`, `Controller`, registry. `users` renamed `accounts`; account split from connection state. Logged-in players and spawned mobs become actors | Unit tests: registry; swapping a controller keeps the `ActorId` |
-| 2 | `messaging` core: kinds, roles, senses, ranges, audiences, tokens, `CanPerceive`, delivery to both controllers | Unit tests for each role, range and audience; dark room blocks Sight; "Someone" when the actor is unseen; behaviour receives the structured event |
-| 3 | One input path and one command set; mob commands folded or turned into behaviour actions | Build, tests, smoke |
-| 4 | Convert all output sites, split by command group across subagents | Guard test; smoke transcript unchanged |
-| 5 | One attack path and combat round with every listed outcome kept | Tests, smoke fight |
-| 6 | One tick; `BehaviourController` runs idle and wander | Seeded test: rat idles and wanders within `maxwander` at its `activitylevel` odds |
-| 7 | Delete `mobcommands`, the four `Attack*` variants and `MobInstanceId` | Guard tests: no `Controller` type switch outside `actors`; old names absent |
+This spec is built in seven slices. **Each slice gets its own implementation plan, branch and PR.**
+A slice's plan is written when that slice starts, with its own facts table read from the code as the
+earlier slices left it, and goes to Calabe for review before work begins. Each slice deletes the old
+code it replaces, so no slice leaves two live paths behind.
 
-Every stage ends with `go build ./...`, `go test ./... -count=1` at the Windows baseline
+| # | Slice | Needs | Work | Deletes | Done when |
+|---|---|---|---|---|---|
+| 1 | Actors | none | `actors`: `Actor`, `ActorId`, `Controller` (both implementations), registry. `users` renamed `accounts`; connection state moves from the account to `ConnectionController`. Logged-in players and spawned mobs become actors. Old IDs still route, through registry lookups. Smoke gains a transcript recording, and the pre-4b transcript is recorded from master `c4314b7f` | connection fields on the account | Unit tests: registry; swapping a controller keeps the `ActorId`. Guard test: no `Controller` type switch outside `actors`. Smoke passes |
+| 2 | One ID space | 1 | Rooms, aggro, `events.Input`, charm and killer references hold `ActorId` | `players`/`mobs` room lists, `Aggro.MobInstanceId`/`UserId`, `Input.MobInstanceId`, `instanceCounter` | `MobInstanceId` absent from non-test code. Smoke passes |
+| 3 | Messaging core | 1 | `messaging`: kinds, roles, senses, ranges, audiences, tokens, `CanPerceive`, delivery to both controllers. Guard test runs against an allowlist of today's offending files that may only shrink | none | Unit tests for each role, range and audience; a dark room blocks Sight; "Someone" when the actor is unseen; a behaviour receives the structured event |
+| 4 | One command set and input path | 2 | `Command(rest, actor, room, flags)`; mob commands folded in or turned into behaviour actions; `processInput` and `processMobInput` merged | `mobcommands` package, `processMobInput` | One registry. Smoke passes |
+| 5 | One combat path | 2, 3 | `combat.Attack` and one combat round, with every outcome difference from the handler diff kept; combat output goes through `messaging` | the four `Attack*` variants, `handlePlayerCombat`/`handleMobCombat` split, `AttackResult` room-message fields | Smoke fight: admin spawns a rat, a bot fights it to an end; with `-bots 2` the second bot receives the observer text and not the attacker's |
+| 6 | One tick and behaviour | 4 | One actor round tick calling `Controller.Tick`; `BehaviourController` runs idle and wander | `UserRoundTick`/`MobRoundTick` split, `IdleMobs`, `HandleIdleMobs`, `MobIdle` event | Seeded test: the rat idles and wanders within `maxwander` at its `activitylevel` odds. Smoke passes |
+| 7 | Output conversion | 3, 4 | Every remaining output site moves to `messaging`, split by command group across subagents | direct `SendText` and `connections.SendTo` outside `messaging` | Guard allowlist holds only the GMCP exception. Text parity holds. The Phase 4b Done-when line in `gomud_strip_plan.md` holds |
+
+Order: 1, 2, 3, 4, 5, 6, 7. Slice 3 needs only slice 1, so its plan can be written while slice 2 is
+in review.
+
+Plan files sit at the repo root as `<date>-phase-4b-<n>-<slug>-plan.md` (for example
+`2026-10-27-phase-4b-1-actors-plan.md`) and move to `docs/completed/` when their slice merges.
+
+**Every slice** ends with `go build ./...`, `go test ./... -count=1` at the Windows baseline
 (`geomud-verifying`), and `go run ./cmd/smoke`.
 
-**Smoke additions (stage 5):** the admin spawns a rat in the start room; a bot attacks it and the
-fight runs to an end (the rat dies, or the bot dies and the death stand-in runs). With `-bots 2`, the
-second bot must receive the observer text and not the attacker's.
-
-**Text parity (stage 4):** record a smoke transcript before the conversion and compare after, with
-random rolls masked. Prove the comparison catches a difference with a deliberate change first.
-Intended changes: sight-only messages stop reaching receivers in a dark room (none exist in
-`empty`), and messages from an actor the receiver cannot see say "Someone".
+**Text parity.** Slices 5 and 7 change how output is produced, and each compares a smoke transcript
+against the pre-4b recording from slice 1, with random rolls masked. Before relying on it, prove the
+comparison catches a difference with a deliberate change. Intended differences: sight-only messages
+stop reaching receivers in a dark room (none exist in `empty`), and messages from an actor the
+receiver cannot see say "Someone".
 
 ## Out of scope
 
