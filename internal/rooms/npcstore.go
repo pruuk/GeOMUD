@@ -263,30 +263,40 @@ func deleteRoomNPCFile(zone string, roomId int) error {
 func moveRoomNPCFile(oldZone, newZone string, roomId int) error {
 	oldPath := filepath.Clean(roomNPCPath(oldZone, roomId))
 	newPath := filepath.Clean(roomNPCPath(newZone, roomId))
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
 	if err := os.MkdirAll(filepath.Dir(newPath), 0777); err != nil {
 		return err
 	}
 	if err := os.Rename(oldPath, newPath); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	npcStoreMu.Lock()
-	defer npcStoreMu.Unlock()
 	retrackPathLocked(oldPath, newPath)
 	return nil
 }
 
-// renameZoneNPCFiles keeps the record of which NPC is in which sidecar after
-// a zone's rooms.instances folder was renamed (the files moved with it).
-func renameZoneNPCFiles(oldZone, newZone string) {
-	oldDir := filepath.Clean(filepath.Join(npcStoreRoot(), filepath.FromSlash(ZoneToFolder(oldZone)))) + string(filepath.Separator)
-	newDir := filepath.Clean(filepath.Join(npcStoreRoot(), filepath.FromSlash(ZoneToFolder(newZone)))) + string(filepath.Separator)
+// renameZoneNPCFiles renames a zone's rooms.instances folder (instance saves
+// and sidecars move with it; a missing folder is not an error) and keeps the
+// record of which NPC is in which sidecar, all under the store lock.
+func renameZoneNPCFiles(oldZone, newZone string) error {
+	oldDir := filepath.Clean(filepath.Join(npcStoreRoot(), filepath.FromSlash(ZoneToFolder(oldZone))))
+	newDir := filepath.Clean(filepath.Join(npcStoreRoot(), filepath.FromSlash(ZoneToFolder(newZone))))
 	npcStoreMu.Lock()
 	defer npcStoreMu.Unlock()
+	if err := os.Rename(oldDir, newDir); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	oldDir += string(filepath.Separator)
+	newDir += string(filepath.Separator)
 	for path := range sidecarNPCs {
 		if strings.HasPrefix(path, oldDir) {
 			retrackPathLocked(path, newDir+strings.TrimPrefix(path, oldDir))
 		}
 	}
+	return nil
 }
 
 // retrackPathLocked records that the sidecar at oldPath is now at newPath.

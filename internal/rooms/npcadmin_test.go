@@ -2,7 +2,6 @@ package rooms
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -91,11 +90,11 @@ func TestMoveRoomNPCFileKeepsOneSidecarPerNPC(t *testing.T) {
 }
 
 func TestRenameZoneNPCFilesKeepsOneSidecarPerNPC(t *testing.T) {
-	dir := persistSetup(t)
+	persistSetup(t)
 	id := restIn(t, 4100)
 
-	require.NoError(t, os.Rename(filepath.Join(dir, ZoneNameSanitize(persistZone)), filepath.Join(dir, ZoneNameSanitize("New Name"))))
-	renameZoneNPCFiles(persistZone, "New Name")
+	require.NoError(t, renameZoneNPCFiles(persistZone, "New Name"))
+	assert.False(t, sidecarExists(4100), "the sidecar moved with the folder")
 
 	b := memRoom(4101)
 	b.resting = []mobs.SavedNPC{readRoomNPCFile("New Name", 4100).Resting[0]}
