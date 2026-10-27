@@ -239,6 +239,9 @@ func main() {
 			idx.Rebuild()
 			mudlog.Info("UserIndex", "info", "User index recreated.", "users", idx.GetMetaData().RecordCount, "time taken", time.Since(timeStart))
 		}
+		if err := accounts.DoBodyIdMigrationV1(); err != nil {
+			mudlog.Error("DoBodyIdMigrationV1", "error", err)
+		}
 	}
 
 	accounts.GetCharacterIndex().Rebuild()

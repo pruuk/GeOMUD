@@ -7,6 +7,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
@@ -22,7 +23,7 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 	}
 
 	attackPlayerId := 0
-	attackMobInstanceId := 0
+	attackMobId := ids.ID{}
 
 	// It's possible that they are shooting in a direction, so check whether multiple words were provided
 	// And whether the last word is a direction.
@@ -48,14 +49,14 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 		}
 
 		if adjacentRoom := rooms.LoadRoom(attackRoomId); adjacentRoom != nil {
-			attackPlayerId, attackMobInstanceId = adjacentRoom.FindByName(strings.Join(args, ` `))
+			attackPlayerId, attackMobId = adjacentRoom.FindByName(strings.Join(args, ` `))
 		}
 	} else {
 		user.SendText(`Could not find where you wanted to shoot`)
 		return true, nil
 	}
 
-	if attackPlayerId == 0 && attackMobInstanceId == 0 {
+	if attackPlayerId == 0 && attackMobId.IsZero() {
 		user.SendText(`Could not find your target.`)
 		return true, nil
 	}
@@ -70,18 +71,18 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 		}
 	*/
 
-	if attackMobInstanceId > 0 {
+	if !attackMobId.IsZero() {
 
-		m := mobs.GetInstance(attackMobInstanceId)
+		m := mobs.GetInstance(attackMobId)
 
 		if m != nil {
 
-			if m.Character.IsCharmed(user.UserId) {
+			if m.Character.IsCharmed(user.Character.Id) {
 				user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
 				return true, nil
 			}
 
-			user.Character.SetAggroRemote(exitName, 0, attackMobInstanceId, characters.Shooting)
+			user.Character.SetAggroRemote(exitName, attackMobId, characters.Shooting)
 
 			user.SendText(
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="mobname">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, m.Character.Name, exitName),
@@ -109,7 +110,7 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 				}
 			}
 
-			user.Character.SetAggroRemote(exitName, attackPlayerId, 0, characters.Shooting)
+			user.Character.SetAggroRemote(exitName, p.Character.Id, characters.Shooting)
 
 			user.SendText(
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="username">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, p.Character.Name, exitName),

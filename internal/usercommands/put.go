@@ -91,7 +91,7 @@ func Put(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		user.Character.Gold -= goldAmt
 
 		events.AddToQueue(events.EquipmentChange{
-			UserId:     user.UserId,
+			ActorId:    user.Character.Id,
 			GoldChange: goldAmt,
 		})
 
@@ -106,9 +106,9 @@ func Put(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		user.Character.RemoveItem(item)
 
 		events.AddToQueue(events.ItemOwnership{
-			UserId: user.UserId,
-			Item:   item,
-			Gained: false,
+			ActorId: user.Character.Id,
+			Item:    item,
+			Gained:  false,
 		})
 
 		user.SendText(fmt.Sprintf(`You place your <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, item.DisplayName(), containerName))

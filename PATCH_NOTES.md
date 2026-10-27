@@ -3,6 +3,7 @@
 Newest day first. One line per finished item.
 
 ## 2026-10-27
+- Phase 4b slice 2: one ID scheme, `0x<cell>:0x<random>` (`internal/ids`, decisions 10-11). Every body's ID lives on its `Character`; a player's is made at character creation and saved (startup migration for existing characters; `cmd/newid` for hand-made content); a mob instance's is its identity (instance counter gone). Rooms, aggro, charm, killer, events, actors and GMCP hold it; `#N`/`@N` are gone (clients send ID tokens, people type names). Fixed upstream bugs: follow treated a mob's template ID as its instance ID; player tracking read NPC visitors as user IDs; `#1` would have matched the first mob by position. Guards: no `MobInstanceId`, IDs made only at creation sites, no `#N`/`@N`
 - `help about` rewritten for GeOMUD: what it is, its status, credit to GoMud (Dylan Squires and contributors, MIT) and both repo links; GoMud's history, Discord advert and thanks list removed. `help geomud` added as an alias (`help gomud` kept); the `help` index points to `help about`
 - Login splash rewritten for GeOMUD (gridded globe and GeOMUD logo, one-line pitch, our repo link); `Server.MudName` is `GeOMUD` (web pages, GMCP `Game.Info`, Mudlet, server log)
 - Phase 4b design spec (`2026-10-27-phase-4b-npcs-are-players-design.md`): one actor model, unified messaging, seven slices with one plan each

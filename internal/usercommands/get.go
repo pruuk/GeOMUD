@@ -103,7 +103,7 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 				corpseRef.Gold = 0
 
 				events.AddToQueue(events.EquipmentChange{
-					UserId:     user.UserId,
+					ActorId:    user.Character.Id,
 					GoldChange: -goldAmt,
 				})
 
@@ -118,9 +118,9 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 				if user.Character.StoreItem(item) {
 					corpseRef.RemoveItem(item)
 					events.AddToQueue(events.ItemOwnership{
-						UserId: user.UserId,
-						Item:   item,
-						Gained: true,
+						ActorId: user.Character.Id,
+						Item:    item,
+						Gained:  true,
 					})
 					user.SendText(fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName))
 					room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, user.Character.Name, item.DisplayName(), corpseName), user.UserId)
@@ -136,9 +136,9 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 				if user.Character.StoreItem(item) {
 					corpseRef.Character.RemoveFromBody(item)
 					events.AddToQueue(events.ItemOwnership{
-						UserId: user.UserId,
-						Item:   item,
-						Gained: true,
+						ActorId: user.Character.Id,
+						Item:    item,
+						Gained:  true,
 					})
 					user.SendText(fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName))
 					room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, user.Character.Name, item.DisplayName(), corpseName), user.UserId)
@@ -168,7 +168,7 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 				corpseRef.Gold = 0
 
 				events.AddToQueue(events.EquipmentChange{
-					UserId:     user.UserId,
+					ActorId:    user.Character.Id,
 					GoldChange: -goldAmt,
 				})
 
@@ -206,9 +206,9 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		}
 
 		events.AddToQueue(events.ItemOwnership{
-			UserId: user.UserId,
-			Item:   matchItem,
-			Gained: true,
+			ActorId: user.Character.Id,
+			Item:    matchItem,
+			Gained:  true,
 		})
 
 		// Remove from whichever location it came from
@@ -239,7 +239,7 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 				room.Containers[containerName] = container
 
 				events.AddToQueue(events.EquipmentChange{
-					UserId:     user.UserId,
+					ActorId:    user.Character.Id,
 					GoldChange: -goldAmt,
 				})
 
@@ -267,9 +267,9 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 			if user.Character.StoreItem(matchItem) {
 
 				events.AddToQueue(events.ItemOwnership{
-					UserId: user.UserId,
-					Item:   matchItem,
-					Gained: true,
+					ActorId: user.Character.Id,
+					Item:    matchItem,
+					Gained:  true,
 				})
 
 				// Swap the item location
@@ -310,7 +310,7 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 				room.Gold -= goldAmt
 
 				events.AddToQueue(events.EquipmentChange{
-					UserId:     user.UserId,
+					ActorId:    user.Character.Id,
 					GoldChange: -goldAmt,
 				})
 
@@ -359,9 +359,9 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 				room.RemoveItem(matchItem, getFromStash)
 
 				events.AddToQueue(events.ItemOwnership{
-					UserId: user.UserId,
-					Item:   matchItem,
-					Gained: true,
+					ActorId: user.Character.Id,
+					Item:    matchItem,
+					Gained:  true,
 				})
 
 				if getFromStash {

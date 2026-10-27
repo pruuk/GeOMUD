@@ -6,6 +6,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -15,7 +16,7 @@ import (
 func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	attackPlayerId := 0
-	attackMobInstanceId := 0
+	attackMobId := ids.ID{}
 
 	if rest == `` {
 		partyInfo := parties.Get(user.UserId)
@@ -27,33 +28,33 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 				continue
 			}
 
-			if m.Character.Aggro.UserId == user.UserId {
-				attackMobInstanceId = m.InstanceId
+			if m.Character.Aggro.Target == user.Character.Id {
+				attackMobId = m.Character.Id
 				break
 			}
 
 			if partyInfo != nil {
-				if partyInfo.IsMember(m.Character.Aggro.UserId) {
-					attackMobInstanceId = m.InstanceId
+				if tu := accounts.GetByBodyId(m.Character.Aggro.Target); tu != nil && partyInfo.IsMember(tu.UserId) {
+					attackMobId = m.Character.Id
 					break
 				}
 			}
 		}
 
-		if attackMobInstanceId == 0 {
+		if attackMobId.IsZero() {
 			for _, uId := range room.GetPlayers(rooms.FindFightingPlayer) {
 				u := accounts.GetByUserId(uId)
 				if u == nil || u.Character.Aggro == nil {
 					continue
 				}
 
-				if u.Character.Aggro.UserId == user.UserId {
+				if u.Character.Aggro.Target == user.Character.Id {
 					attackPlayerId = u.UserId
 					break
 				}
 
 				if partyInfo != nil {
-					if partyInfo.IsMember(u.Character.Aggro.UserId) {
+					if tu := accounts.GetByBodyId(u.Character.Aggro.Target); tu != nil && partyInfo.IsMember(tu.UserId) {
 						attackPlayerId = u.UserId
 						break
 					}
@@ -62,7 +63,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		}
 
 		// Finally, if still no targets, check if any party members are aggroed and just glom onto that
-		if attackMobInstanceId == 0 && attackPlayerId == 0 {
+		if attackMobId.IsZero() && attackPlayerId == 0 {
 			if partyInfo != nil {
 				for uId := range partyInfo.GetMembers() {
 					if partyUser := accounts.GetByUserId(uId); partyUser != nil {
@@ -70,13 +71,15 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 							continue
 						}
 
-						if partyUser.Character.Aggro.MobInstanceId > 0 {
-							attackMobInstanceId = partyUser.Character.Aggro.MobInstanceId
+						target := partyUser.Character.Aggro.Target
+
+						if mobs.GetInstance(target) != nil {
+							attackMobId = target
 							break
 						}
 
-						if partyUser.Character.Aggro.UserId > 0 {
-							attackPlayerId = partyUser.Character.Aggro.UserId
+						if tu := accounts.GetByBodyId(target); tu != nil {
+							attackPlayerId = tu.UserId
 							break
 						}
 
@@ -106,7 +109,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 			randomSelection := util.Rand(totalTargets)
 
 			if randomSelection < len(allMobs) {
-				attackMobInstanceId = allMobs[randomSelection]
+				attackMobId = allMobs[randomSelection]
 			} else {
 				randomSelection -= len(allMobs)
 				attackPlayerId = allPlayers[randomSelection]
@@ -115,7 +118,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		} else if rest == `*mob` { // *mob ANY MOB
 
 			if allMobs := room.GetMobs(); len(allMobs) > 0 {
-				attackMobInstanceId = allMobs[util.Rand(len(allMobs))]
+				attackMobId = allMobs[util.Rand(len(allMobs))]
 			}
 
 		} else { // *user etc. ANY PLAYER
@@ -135,14 +138,14 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		}
 
 	} else {
-		attackPlayerId, attackMobInstanceId = room.FindByName(rest)
+		attackPlayerId, attackMobId = room.FindByName(rest)
 	}
 
 	if attackPlayerId == user.UserId { // Can't attack self!
 		attackPlayerId = 0
 	}
 
-	if attackMobInstanceId == 0 && attackPlayerId == 0 {
+	if attackMobId.IsZero() && attackPlayerId == 0 {
 		user.SendText("You attack the darkness!")
 		return true, nil
 	}
@@ -157,12 +160,12 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		}
 	*/
 
-	if attackMobInstanceId > 0 {
+	if !attackMobId.IsZero() {
 
-		m := mobs.GetInstance(attackMobInstanceId)
+		m := mobs.GetInstance(attackMobId)
 
 		if m != nil {
-			if m.Character.IsCharmed(user.UserId) {
+			if m.Character.IsCharmed(user.Character.Id) {
 				user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
 				return true, nil
 			}
@@ -176,7 +179,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 						if partyUser := accounts.GetByUserId(id); partyUser != nil {
 							if partyUser.Character.RoomId == user.Character.RoomId {
 
-								partyUser.Command(fmt.Sprintf(`attack #%d`, attackMobInstanceId)) // # denotes a specific mob instanceId
+								partyUser.Command(fmt.Sprintf(`attack %s`, attackMobId)) // a body ID token names this exact mob
 
 							}
 						}
@@ -185,9 +188,9 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 				}
 			}
 
-			user.Character.SetAggro(0, attackMobInstanceId, characters.DefaultAttack)
+			user.Character.SetAggro(attackMobId, characters.DefaultAttack)
 
-			events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 
 			user.SendText(fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, m.Character.Name))
 
@@ -224,16 +227,16 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 						}
 						if partyUser := accounts.GetByUserId(id); partyUser != nil {
 							if partyUser.Character.RoomId == user.Character.RoomId {
-								partyUser.Command(fmt.Sprintf(`attack @%d`, attackPlayerId)) // # denotes a specific mob instanceId
+								partyUser.Command(fmt.Sprintf(`attack %s`, p.Character.Id)) // a body ID token names this exact player
 							}
 						}
 					}
 				}
 			}
 
-			user.Character.SetAggro(attackPlayerId, 0, characters.DefaultAttack)
+			user.Character.SetAggro(p.Character.Id, characters.DefaultAttack)
 
-			events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 
 			user.SendText(fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, p.Character.Name))
 

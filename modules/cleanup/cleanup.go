@@ -92,9 +92,9 @@ func (c *CleanupModule) userTrashCommand(rest string, user *accounts.Account, ro
 		user.Character.RemoveItem(matchItem)
 
 		events.AddToQueue(events.ItemOwnership{
-			UserId: user.UserId,
-			Item:   matchItem,
-			Gained: false,
+			ActorId: user.Character.Id,
+			Item:    matchItem,
+			Gained:  false,
 		})
 
 		user.SendText(
@@ -133,9 +133,9 @@ func (c *CleanupModule) mobTrashCommand(rest string, mob *mobs.Mob, room *rooms.
 		mob.Character.RemoveItem(matchItem)
 
 		events.AddToQueue(events.ItemOwnership{
-			MobInstanceId: mob.InstanceId,
-			Item:          matchItem,
-			Gained:        false,
+			ActorId: mob.Character.Id,
+			Item:    matchItem,
+			Gained:  false,
 		})
 
 	}

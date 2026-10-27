@@ -10,6 +10,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"gopkg.in/yaml.v2"
 
@@ -20,30 +21,28 @@ import (
 )
 
 var (
-	instanceCounter int = 0
-	mobs                = map[int]*Mob{}
-	allMobNames         = []string{}
-	mobInstances        = map[int]*Mob{}
-	mobsHatePlayers     = map[string]map[int]int{}
-	mobNameCache        = map[MobId]string{}
+	mobs            = map[int]*Mob{}
+	allMobNames     = []string{}
+	mobInstances    = map[ids.ID]*Mob{}
+	mobsHatePlayers = map[string]map[int]int{}
+	mobNameCache    = map[MobId]string{}
 
-	recentlyDied = map[int]int{}
+	recentlyDied = map[ids.ID]int{}
 )
 
 var (
 	// OnInstanceCreated fires after a mob instance is stored, from NewMobById.
 	OnInstanceCreated util.Hook[*Mob]
-	// OnInstanceDestroyed fires with the instance id after DestroyInstance removes it.
-	OnInstanceDestroyed util.Hook[int]
+	// OnInstanceDestroyed fires with the body ID after DestroyInstance removes it.
+	OnInstanceDestroyed util.Hook[ids.ID]
 )
 
-// addInstance gives mob the next instance id, stores it and fires
+// addInstance gives mob a new body ID, stores it and fires
 // OnInstanceCreated. It is the only place instances are added.
 func addInstance(mob Mob) *Mob {
-	instanceCounter++
-	mob.InstanceId = instanceCounter
-	mobInstances[mob.InstanceId] = &mob
-	stored := mobInstances[mob.InstanceId]
+	mob.Character.Id = ids.New(ids.NoCell) // rooms carry no cell until the geo room key
+	mobInstances[mob.Character.Id] = &mob
+	stored := mobInstances[mob.Character.Id]
 	OnInstanceCreated.Fire(stored)
 	return stored
 }
@@ -53,14 +52,13 @@ type MobForHire struct {
 	Price    int
 	Quantity int
 }
-type MobId int // Creating a custom type to help prevent confusion over MobId and MobInstanceId
+type MobId int // The template ID; a custom type so it is not confused with a mob's body ID (Character.Id)
 
 type Mob struct {
 	MobId           MobId
 	Zone            string   `yaml:"zone,omitempty"`
 	ItemDropChance  int      `yaml:"itemdropchance,omitempty"` // chance in 100
 	ActivityLevel   int      `yaml:"activitylevel,omitempty"`  // 1-100%
-	InstanceId      int      `yaml:"-"`
 	HomeRoomId      int      `yaml:"-"`
 	Hostile         bool     `yaml:"hostile,omitempty"`        // whether they attack on sight
 	LastIdleCommand uint8    `yaml:"-"`                        // Track what hte last used idlecommand was
@@ -79,11 +77,10 @@ type Mob struct {
 	IsElite         bool      `yaml:"-"`                     // Runtime flag: true if this instance is elite
 	Path            PathQueue `yaml:"-"`                     // a pre-calculated path the mob is following.
 	tempDataStore   map[string]any
-	lastCommandTurn uint64           // The last turn a command was scheduled for
-	playersAttacked map[int]struct{} // all players this mob has attacked at some point
+	lastCommandTurn uint64 // The last turn a command was scheduled for
 }
 
-func MobInstanceExists(instanceId int) bool {
+func MobInstanceExists(instanceId ids.ID) bool {
 
 	_, ok := mobInstances[instanceId]
 	return ok
@@ -102,11 +99,11 @@ func GetAllMobNames() []string {
 	return append([]string{}, allMobNames...)
 }
 
-func TrackRecentDeath(instanceId int) {
+func TrackRecentDeath(instanceId ids.ID) {
 	recentlyDied[instanceId] = int(util.GetRoundCount())
 }
 
-func RecentlyDied(instanceId int) bool {
+func RecentlyDied(instanceId ids.ID) bool {
 
 	if len(recentlyDied) > 30 {
 		roundNow := int(util.GetRoundCount())
@@ -240,7 +237,7 @@ func GetMobSpec(mobId MobId) *Mob {
 	return nil
 }
 
-func GetInstance(instanceId int) *Mob {
+func GetInstance(instanceId ids.ID) *Mob {
 
 	if m, ok := mobInstances[instanceId]; ok {
 		return m
@@ -248,48 +245,29 @@ func GetInstance(instanceId int) *Mob {
 	return nil
 }
 
-func GetAllMobInstanceIds() []int {
+func GetAllMobIds() []ids.ID {
 
-	ids := make([]int, 0)
+	allIds := make([]ids.ID, 0)
 	for id := range mobInstances {
-		ids = append(ids, id)
+		allIds = append(allIds, id)
 	}
-	return ids
+	return allIds
 }
 
-func DestroyInstance(instanceId int) {
+func DestroyInstance(instanceId ids.ID) {
 
 	delete(mobInstances, instanceId)
 	OnInstanceDestroyed.Fire(instanceId)
 }
 
-func (m *Mob) ShorthandId() string {
-	return fmt.Sprintf(`#%d`, m.InstanceId)
-}
-
 func (m *Mob) AddBuff(buffId int, source string) {
 
 	events.AddToQueue(events.Buff{
-		MobInstanceId: m.InstanceId,
-		BuffId:        buffId,
-		Source:        source,
+		ActorId: m.Character.Id,
+		BuffId:  buffId,
+		Source:  source,
 	})
 
-}
-
-func (m *Mob) PlayerAttacked(userId int) {
-	if m.playersAttacked == nil {
-		m.playersAttacked = map[int]struct{}{}
-	}
-	m.playersAttacked[userId] = struct{}{}
-}
-
-func (m *Mob) HasAttackedPlayer(userId int) bool {
-	if m.playersAttacked == nil {
-		return false
-	}
-	_, ok := m.playersAttacked[userId]
-	return ok
 }
 
 // Cause the mob to basically wait and do nothing for x seconds
@@ -321,9 +299,9 @@ func (m *Mob) Command(inputTxt string, waitSeconds ...float64) {
 		m.lastCommandTurn = readyTurn + turnDelay + uint64(i)
 
 		events.AddToQueue(events.Input{
-			MobInstanceId: m.InstanceId,
-			InputText:     cmd,
-			ReadyTurn:     m.lastCommandTurn,
+			ActorId:   m.Character.Id,
+			InputText: cmd,
+			ReadyTurn: m.lastCommandTurn,
 		})
 
 	}

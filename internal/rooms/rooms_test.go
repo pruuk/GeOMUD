@@ -1,11 +1,85 @@
 package rooms
 
 import (
+	"os"
 	"testing"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	mudlog.SetupLogger(nil, "", "", false)
+	actors.Init()
+	os.Exit(m.Run())
+}
+
+// TestRoomHoldsOneBodyList checks that a room keeps players and mobs in one
+// body list and tells them apart by whether an account drives the body.
+func TestRoomHoldsOneBodyList(t *testing.T) {
+	actors.Reset()
+	t.Cleanup(actors.Reset)
+
+	playerId := ids.New(ids.NoCell)
+	acc := &accounts.Account{UserId: 4242, Character: &characters.Character{Id: playerId, Name: "Tester"}}
+	require.NotNil(t, actors.Spawn(acc.Character, actors.NewConnectionController(acc)))
+
+	mobId := ids.New(ids.NoCell)
+	mob := &mobs.Mob{Character: characters.Character{Id: mobId, Name: "rat"}}
+	require.NotNil(t, actors.Spawn(&mob.Character, actors.NewBehaviourController(mob)))
+
+	r := NewEmptyRoom()
+	assert.Equal(t, 1, r.AddPlayer(acc.UserId))
+	r.bodies = append(r.bodies, mobId) // as Prepare spawns a mob: AddMob needs a live mob instance
+
+	assert.Equal(t, []ids.ID{playerId, mobId}, r.GetBodies())
+	assert.Equal(t, []int{acc.UserId}, r.GetPlayers())
+	assert.Equal(t, []ids.ID{mobId}, r.GetMobs())
+	assert.Equal(t, 1, r.PlayerCt())
+	assert.Equal(t, 1, r.MobCt())
+
+	uId, mId := r.FindByName(playerId.String())
+	assert.Equal(t, acc.UserId, uId)
+	assert.True(t, mId.IsZero())
+
+	uId, mId = r.FindByName(mobId.String())
+	assert.Equal(t, 0, uId)
+	assert.Equal(t, mobId, mId)
+
+	for _, old := range []string{"#1", "@1", "@4242"} {
+		uId, mId = r.FindByName(old)
+		assert.Equal(t, 0, uId, old)
+		assert.True(t, mId.IsZero(), old)
+	}
+
+	n, ok := r.RemovePlayer(acc.UserId)
+	assert.True(t, ok)
+	assert.Equal(t, 0, n)
+	assert.Equal(t, []ids.ID{mobId}, r.GetBodies())
+	assert.Empty(t, r.GetPlayers())
+}
+
+// TestFindByNameSkipsBodyWithNoActor covers a disconnect race: a body ID stays
+// in the room list with no actor and no mob instance. Name search must skip it.
+func TestFindByNameSkipsBodyWithNoActor(t *testing.T) {
+	actors.Reset()
+	t.Cleanup(actors.Reset)
+
+	r := NewEmptyRoom()
+	r.bodies = append(r.bodies, ids.New(ids.NoCell))
+
+	assert.NotPanics(t, func() {
+		uId, mId := r.FindByName("rat")
+		assert.Equal(t, 0, uId)
+		assert.True(t, mId.IsZero())
+	})
+}
 
 func TestRoom_AddCorpse(t *testing.T) {
 	r := &Room{}

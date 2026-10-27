@@ -11,7 +11,7 @@ func Despawn(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	mudlog.Info("despawn", "mobname", mob.Character.Name, "reason", rest)
 
 	// Destroy any record of this mob.
-	mobs.DestroyInstance(mob.InstanceId)
+	mobs.DestroyInstance(mob.Character.Id)
 
 	// Clean up mob from room...
 	if r := rooms.LoadRoom(mob.HomeRoomId); r != nil {
@@ -19,7 +19,7 @@ func Despawn(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	}
 
 	// Remove from current room
-	room.RemoveMob(mob.InstanceId)
+	room.RemoveMob(mob.Character.Id)
 
 	return true, nil
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -173,6 +174,25 @@ func GetByUserId(userId int) *Account {
 
 	if user, ok := userManager.Users[userId]; ok {
 		return user
+	}
+
+	return nil
+}
+
+// GetByBodyId returns the online account whose character has this body ID, or nil.
+// A zero ID matches nobody.
+func GetByBodyId(id ids.ID) *Account {
+	if id.IsZero() {
+		return nil
+	}
+
+	userManagerMu.RLock()
+	defer userManagerMu.RUnlock()
+
+	for _, u := range userManager.Users {
+		if u.Character != nil && u.Character.Id == id {
+			return u
+		}
 	}
 
 	return nil
@@ -416,6 +436,8 @@ func CreateUser(u *Account) error {
 	idx := GetUserIndex()
 	idx.AddUser(u.UserId, u.Username)
 
+	giveBodyId(u)
+
 	if err := SaveUser(*u); err != nil {
 		return err
 	}
@@ -603,6 +625,7 @@ func UpdateOnlineUser(updated Account) {
 	// The live character pointer is shared with the account's actor, so it
 	// must not change: copy the edited character into it.
 	if updated.Character != nil && u.Character != nil {
+		updated.Character.Id = u.Character.Id // a body's ID never changes (decision 11)
 		*u.Character = *updated.Character
 		updated.Character = u.Character
 	}

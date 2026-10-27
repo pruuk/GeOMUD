@@ -6,10 +6,12 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -103,12 +105,13 @@ func (g *GMCPCharModule) buffTriggeredHandler(e events.Event) events.ListenerRet
 		return events.Continue // Return false to stop halt the event chain for this event
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
 	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
+		UserId:     user.UserId,
 		Identifier: `Char.Affects`,
 	})
 
@@ -141,12 +144,13 @@ func (g *GMCPCharModule) buffsAddedHandler(e events.Event) events.ListenerReturn
 		return events.Continue
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
 	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
+		UserId:     user.UserId,
 		Identifier: `Char`,
 	})
 
@@ -160,12 +164,13 @@ func (g *GMCPCharModule) buffsRemovedHandler(e events.Event) events.ListenerRetu
 		return events.Continue
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
 	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
+		UserId:     user.UserId,
 		Identifier: `Char`,
 	})
 
@@ -238,8 +243,14 @@ func (g *GMCPCharModule) ownershipChangeHandler(e events.Event) events.ListenerR
 		return events.Continue // Return false to stop halt the event chain for this event
 	}
 
+	// An NPC has no connection to update.
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
+		return events.Continue
+	}
+
 	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
+		UserId:     user.UserId,
 		Identifier: `Char.Inventory.Backpack`,
 	})
 
@@ -270,7 +281,8 @@ func (g *GMCPCharModule) equipmentChangeHandler(e events.Event) events.ListenerR
 		return events.Continue // Return false to stop halt the event chain for this event
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
@@ -291,7 +303,7 @@ func (g *GMCPCharModule) equipmentChangeHandler(e events.Event) events.ListenerR
 	if statsToChange != `` {
 		// Changing equipment might affect stats, inventory, maxhp/maxmp etc
 		events.AddToQueue(GMCPCharUpdate{
-			UserId:     evt.UserId,
+			UserId:     user.UserId,
 			Identifier: statsToChange,
 		})
 	}
@@ -433,28 +445,28 @@ func (g *GMCPCharModule) GetCharNode(user *accounts.Account, gmcpModule string) 
 
 		payload.Enemies = []GMCPCharModule_Enemy{}
 
-		aggroMobInstanceId := 0
+		aggroMobId := ids.ID{}
 		if user.Character.Aggro != nil {
-			if user.Character.Aggro.MobInstanceId > 0 {
-				aggroMobInstanceId = user.Character.Aggro.MobInstanceId
+			if mobs.GetInstance(user.Character.Aggro.Target) != nil {
+				aggroMobId = user.Character.Aggro.Target
 			}
 		}
 
 		if roomInfo := rooms.LoadRoom(user.Character.RoomId); roomInfo != nil {
 
-			for _, mobInstanceId := range roomInfo.GetMobs(rooms.FindFighting) {
-				mob := mobs.GetInstance(mobInstanceId)
+			for _, fightingMobId := range roomInfo.GetMobs(rooms.FindFighting) {
+				mob := mobs.GetInstance(fightingMobId)
 				if mob == nil {
 					continue
 				}
 
 				e := GMCPCharModule_Enemy{
-					Id:      mob.ShorthandId(),
+					Id:      mob.Character.Id.String(),
 					Name:    mob.Character.Name,
 					Level:   mob.Character.Level,
 					Hp:      mob.Character.Health,
 					MaxHp:   mob.Character.HealthMax.Value,
-					Engaged: mob.InstanceId == aggroMobInstanceId,
+					Engaged: mob.Character.Id == aggroMobId,
 				}
 
 				payload.Enemies = append(payload.Enemies, e)

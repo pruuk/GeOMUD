@@ -90,9 +90,9 @@ func Get(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		mob.Character.StoreItem(matchItem)
 
 		events.AddToQueue(events.ItemOwnership{
-			MobInstanceId: mob.InstanceId,
-			Item:          matchItem,
-			Gained:        true,
+			ActorId: mob.Character.Id,
+			Item:    matchItem,
+			Gained:  true,
 		})
 
 		room.SendText(

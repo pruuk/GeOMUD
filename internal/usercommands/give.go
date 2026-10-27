@@ -85,15 +85,15 @@ func Give(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 				targetUser.UserId)
 
 			events.AddToQueue(events.ItemOwnership{
-				UserId: user.UserId,
-				Item:   giveItem,
-				Gained: false,
+				ActorId: user.Character.Id,
+				Item:    giveItem,
+				Gained:  false,
 			})
 
 			events.AddToQueue(events.ItemOwnership{
-				UserId: targetUser.UserId,
-				Item:   giveItem,
-				Gained: true,
+				ActorId: targetUser.Character.Id,
+				Item:    giveItem,
+				Gained:  true,
 			})
 
 		} else if giveGoldAmount > 0 {
@@ -112,12 +112,12 @@ func Give(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 				user.Character.Gold -= giveGoldAmount
 
 				events.AddToQueue(events.EquipmentChange{
-					UserId:     targetUser.UserId,
+					ActorId:    targetUser.Character.Id,
 					GoldChange: giveGoldAmount,
 				})
 
 				events.AddToQueue(events.EquipmentChange{
-					UserId:     user.UserId,
+					ActorId:    user.Character.Id,
 					GoldChange: -giveGoldAmount,
 				})
 
@@ -143,7 +143,7 @@ func Give(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 	//
 	// Look for an NPC
 	//
-	if mobId > 0 {
+	if !mobId.IsZero() {
 
 		user.Character.CancelBuffsWithFlag("hidden")
 
@@ -159,7 +159,7 @@ func Give(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 					user.Character.Gold -= giveGoldAmount
 
 					events.AddToQueue(events.EquipmentChange{
-						UserId:     user.UserId,
+						ActorId:    user.Character.Id,
 						GoldChange: -giveGoldAmount,
 					})
 
@@ -184,15 +184,15 @@ func Give(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 					)
 
 					events.AddToQueue(events.ItemOwnership{
-						UserId: user.UserId,
-						Item:   giveItem,
-						Gained: false,
+						ActorId: user.Character.Id,
+						Item:    giveItem,
+						Gained:  false,
 					})
 
 					events.AddToQueue(events.ItemOwnership{
-						MobInstanceId: m.InstanceId,
-						Item:          giveItem,
-						Gained:        true,
+						ActorId: m.Character.Id,
+						Item:    giveItem,
+						Gained:  true,
 					})
 
 				}

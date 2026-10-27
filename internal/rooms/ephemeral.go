@@ -224,7 +224,7 @@ func TryEphemeralCleanup(ephemeralRoomId int) []int {
 			continue
 		}
 
-		if len(room.players) > 0 {
+		if room.PlayerCt() > 0 {
 			return []int{}
 		}
 	}

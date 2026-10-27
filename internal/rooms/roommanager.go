@@ -309,19 +309,19 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 	}
 
 	// r.prepare locks, so do it before the upcoming lock
-	if len(newRoom.players) == 0 {
+	if newRoom.PlayerCt() == 0 {
 		newRoom.Prepare(true)
 	}
 
 	fromRoomId := user.Character.RoomId
 	if currentRoom != nil {
-		currentRoom.MarkVisited(userId, VisitorUser, 1)
+		currentRoom.MarkUserVisited(userId, 1)
 		if len, _ := currentRoom.RemovePlayer(userId); len < 1 {
 			delete(roomManager.roomsWithUsers, currentRoom.RoomId)
 		}
 	}
 
-	newRoom.MarkVisited(userId, VisitorUser)
+	newRoom.MarkUserVisited(userId)
 
 	//
 	// Apply any mutators from the zone or room
@@ -382,7 +382,7 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 	roomManager.roomsWithUsers[newRoom.RoomId] = playerCt
 
 	events.AddToQueue(events.RoomChange{
-		UserId:     userId,
+		ActorId:    user.Character.Id,
 		FromRoomId: fromRoomId,
 		ToRoomId:   newRoom.RoomId,
 		Unseen:     user.Character.HasBuffFlag("hidden"),
@@ -454,7 +454,7 @@ func GetRoomsWithPlayers() []int {
 	for i := len(roomsWithPlayers) - 1; i >= 0; i-- {
 		roomId := roomsWithPlayers[i]
 		if r := LoadRoom(roomId); r != nil {
-			if len(r.players) < 1 {
+			if r.PlayerCt() < 1 {
 				roomsWithPlayers = append(roomsWithPlayers[:i], roomsWithPlayers[i+1:]...)
 				deleteKeys = append(deleteKeys, roomId)
 				continue
@@ -494,16 +494,16 @@ func removeRoomFromMemory(r *Room) {
 		return
 	}
 
-	if len(room.players) > 0 {
+	if room.PlayerCt() > 0 {
 		return
 	}
 
-	for _, mobInstanceId := range room.mobs {
-		mobs.DestroyInstance(mobInstanceId)
+	for _, mobId := range room.mobIds() {
+		mobs.DestroyInstance(mobId)
 	}
 
 	for _, spawnDetails := range room.SpawnInfo {
-		if spawnDetails.InstanceId > 0 {
+		if !spawnDetails.InstanceId.IsZero() {
 
 			if m := mobs.GetInstance(spawnDetails.InstanceId); m != nil {
 				if m.Character.RoomId == room.RoomId {

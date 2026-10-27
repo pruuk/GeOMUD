@@ -7,11 +7,13 @@ import (
 	"strconv"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -81,14 +83,14 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 	allowPenalties := user.Character.Level > int(config.Death.ProtectionLevels)
 
 	killerMobId := 0
-	if user.Character.KillerMobInstanceId > 0 {
-		if killerMob := mobs.GetInstance(user.Character.KillerMobInstanceId); killerMob != nil {
+	if !user.Character.KilledBy.IsZero() {
+		if killerMob := mobs.GetInstance(user.Character.KilledBy); killerMob != nil {
 			killerMobId = int(killerMob.MobId)
 		}
 		if user.Character.KillerMobIsElite {
 			user.Character.KD.AddEliteDeath(killerMobId, user.Character.KillerMobName)
 		}
-		user.Character.KillerMobInstanceId = 0
+		user.Character.KilledBy = ids.ID{}
 		user.Character.KillerMobIsElite = false
 		user.Character.KillerMobName = ``
 	}
@@ -128,9 +130,28 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 			// drop all items / gold
 			Drop("all", user, room, flags)
 
-			rooms.MoveToRoom(user.UserId, -1)
+			// Reroll first, then move: the events MoveToRoom queues carry the body ID
+			// current at that moment, and only the new ID has an actor driving it.
+			// The room must drop the old body while the account still drives it.
+			oldRoom := rooms.LoadRoom(user.Character.RoomId)
+			if oldRoom != nil {
+				oldRoom.RemovePlayer(user.UserId)
+			}
 
+			oldBodyId := user.Character.Id
+			oldRoomId := user.Character.RoomId
 			*user.Character = *characters.New()
+			user.Character.Id = ids.New(ids.NoCell) // a rerolled character is a new body
+			actors.BodyReplaced(user, oldBodyId)
+
+			// The fresh character starts elsewhere; put it back in the old room so
+			// the move below leaves from there.
+			user.Character.RoomId = oldRoomId
+			if oldRoom != nil {
+				oldRoom.AddPlayer(user.UserId)
+			}
+
+			rooms.MoveToRoom(user.UserId, -1)
 
 			return true, nil
 		}

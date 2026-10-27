@@ -8,6 +8,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
@@ -68,7 +69,7 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 	playerId, mobId := room.FindByName(lookAt)
 
-	if playerId > 0 || mobId > 0 {
+	if playerId > 0 || !mobId.IsZero() {
 
 		statusTxt := ""
 		invTxt := ""
@@ -100,7 +101,7 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 			user.SendText(buildInventoryLookPanel(&u.Character.Equipment, itemNames))
 
-		} else if mobId > 0 {
+		} else if !mobId.IsZero() {
 
 			m := mobs.GetInstance(mobId)
 			if m == nil {
@@ -108,7 +109,7 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 			}
 
 			if !isSneaking {
-				targetName := m.Character.GetMobName(0).String()
+				targetName := m.Character.GetMobName(ids.ID{}).String()
 				room.SendText(
 					fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at %s.`, user.Character.Name, targetName),
 					user.UserId,

@@ -14,7 +14,7 @@ func HandleIdleMobs(e events.Event) events.ListenerReturn {
 
 	evt := e.(events.MobIdle)
 
-	mob := mobs.GetInstance(evt.MobInstanceId)
+	mob := mobs.GetInstance(evt.ActorId)
 	if mob == nil {
 		return events.Cancel
 	}

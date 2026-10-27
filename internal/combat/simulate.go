@@ -111,8 +111,8 @@ func SimulateCombat(mobIdA, mobIdB mobs.MobId, levelA, levelB int, maxRounds int
 	charA := &mobA.Character
 	charB := &mobB.Character
 
-	charA.SetAggro(0, mobB.InstanceId, characters.DefaultAttack)
-	charB.SetAggro(0, mobA.InstanceId, characters.DefaultAttack)
+	charA.SetAggro(mobB.Character.Id, characters.DefaultAttack)
+	charB.SetAggro(mobA.Character.Id, characters.DefaultAttack)
 
 	charA.CancelBuffsWithFlag("cancel-on-combat")
 	charB.CancelBuffsWithFlag("cancel-on-combat")

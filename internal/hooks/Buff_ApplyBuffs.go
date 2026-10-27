@@ -1,7 +1,7 @@
 package hooks
 
 import (
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
@@ -21,7 +21,7 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 		return events.Cancel
 	}
 
-	//mudlog.Debug(`Event`, `type`, evt.Type(), `UserId`, evt.UserId, `MobInstanceId`, evt.MobInstanceId, `BuffId`, evt.BuffId)
+	//mudlog.Debug(`Event`, `type`, evt.Type(), `ActorId`, evt.ActorId, `BuffId`, evt.BuffId)
 
 	buffInfo := buffs.GetBuffSpec(evt.BuffId)
 	if buffInfo == nil {
@@ -30,9 +30,13 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 
 	var targetChar *characters.Character
 
-	if evt.MobInstanceId > 0 {
+	// An account means a player's body; otherwise the body is a mob.
+	buffUser := actors.AccountOf(evt.ActorId)
+	isMob := buffUser == nil
 
-		buffMob := mobs.GetInstance(evt.MobInstanceId)
+	if isMob {
+
+		buffMob := mobs.GetInstance(evt.ActorId)
 		if buffMob == nil {
 			return events.Cancel
 		}
@@ -40,11 +44,6 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 		targetChar = &buffMob.Character
 
 	} else {
-
-		buffUser := accounts.GetByUserId(evt.UserId)
-		if buffUser == nil {
-			return events.Cancel
-		}
 
 		targetChar = buffUser.Character
 	}
@@ -62,20 +61,20 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 	//
 	if buffInfo.TriggerNow {
 
-		if evt.MobInstanceId > 0 && targetChar.Health <= 0 {
+		if isMob && targetChar.Health <= 0 {
 			// Mob died
 			events.AddToQueue(events.Input{
-				MobInstanceId: evt.MobInstanceId,
-				InputText:     `suicide`,
+				ActorId:   evt.ActorId,
+				InputText: `suicide`,
 			})
 
 		}
 	}
 
-	events.AddToQueue(events.BuffsTriggered{UserId: evt.UserId, MobInstanceId: evt.MobInstanceId, BuffIds: []int{evt.BuffId}})
+	events.AddToQueue(events.BuffsTriggered{ActorId: evt.ActorId, BuffIds: []int{evt.BuffId}})
 
-	if evt.UserId != 0 {
-		events.AddToQueue(events.BuffsAdded{UserId: evt.UserId, BuffIds: []int{evt.BuffId}})
+	if !isMob {
+		events.AddToQueue(events.BuffsAdded{ActorId: evt.ActorId, BuffIds: []int{evt.BuffId}})
 	}
 
 	return events.Continue

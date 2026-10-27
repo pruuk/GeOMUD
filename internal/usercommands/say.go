@@ -36,10 +36,10 @@ func Say(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 	room.SendTextToExits(`You hear someone talking.`, true)
 
 	events.AddToQueue(events.Communication{
-		SourceUserId: user.UserId,
-		CommType:     `say`,
-		Name:         user.Character.Name,
-		Message:      rest,
+		SourceActorId: user.Character.Id,
+		CommType:      `say`,
+		Name:          user.Character.Name,
+		Message:       rest,
 	})
 
 	return true, nil

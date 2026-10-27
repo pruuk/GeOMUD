@@ -33,14 +33,14 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	}
 
 	// Useful to know sometimes
-	mobs.TrackRecentDeath(mob.InstanceId)
+	mobs.TrackRecentDeath(mob.Character.Id)
 
 	mudlog.Debug(`Mob Death`, `name`, mob.Character.Name, `rest`, rest)
 
 	// Make sure to clean up any charm stuff if it's being removed
-	if charmedUserId := mob.Character.RemoveCharm(); charmedUserId > 0 {
-		if charmedUser := accounts.GetByUserId(charmedUserId); charmedUser != nil {
-			charmedUser.Character.TrackCharmed(mob.InstanceId, false)
+	if charmedBy := mob.Character.RemoveCharm(); !charmedBy.IsZero() {
+		if charmedUser := accounts.GetByBodyId(charmedBy); charmedUser != nil {
+			charmedUser.Character.TrackCharmed(mob.Character.Id, false)
 		}
 	}
 
@@ -48,7 +48,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	if rest == `vanish` {
 
 		// Destroy any record of this mob.
-		mobs.DestroyInstance(mob.InstanceId)
+		mobs.DestroyInstance(mob.Character.Id)
 
 		// Clean up mob from room...
 		if r := rooms.LoadRoom(mob.HomeRoomId); r != nil {
@@ -56,7 +56,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		}
 
 		// Remove from current room
-		room.RemoveMob(mob.InstanceId)
+		room.RemoveMob(mob.Character.Id)
 
 		return true, nil
 	}
@@ -70,7 +70,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	// Mark this moment to prevent an immediate respawn
 	if mob.MobId == 38 {
 		if mob.Character.Charmed != nil {
-			if tmpU := accounts.GetByUserId(mob.Character.Charmed.UserId); tmpU != nil {
+			if tmpU := accounts.GetByBodyId(mob.Character.Charmed.By); tmpU != nil {
 				tmpU.SetTempData(`lastGuideRound`, currentRound)
 			}
 		}
@@ -85,7 +85,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 	events.AddToQueue(events.MobDeath{
 		MobId:         int(mob.MobId),
-		InstanceId:    mob.InstanceId,
+		ActorId:       mob.Character.Id,
 		RoomId:        room.RoomId,
 		CharacterName: mob.Character.Name,
 		Level:         mob.Character.Level,
@@ -118,9 +118,9 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			if user := accounts.GetByUserId(uId); user != nil {
 
 				if user.Character.Aggro != nil {
-					if user.Character.Aggro.MobInstanceId == mob.InstanceId {
+					if user.Character.Aggro.Target == mob.Character.Id {
 						user.Character.Aggro = nil
-						events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+						events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 					}
 				}
 
@@ -385,7 +385,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		}
 
 		// Destroy any record of this mob.
-		mobs.DestroyInstance(mob.InstanceId)
+		mobs.DestroyInstance(mob.Character.Id)
 
 		// Clean up mob from room...
 		if r := rooms.LoadRoom(mob.HomeRoomId); r != nil {
@@ -393,7 +393,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		}
 
 		// Remove from current room
-		room.RemoveMob(mob.InstanceId)
+		room.RemoveMob(mob.Character.Id)
 
 		if config.Death.CorpsesEnabled {
 			c := rooms.Corpse{
@@ -412,7 +412,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	}
 
 	// Destroy any record of this mob.
-	mobs.DestroyInstance(mob.InstanceId)
+	mobs.DestroyInstance(mob.Character.Id)
 
 	// Clean up mob from room...
 	if r := rooms.LoadRoom(mob.HomeRoomId); r != nil {
@@ -420,7 +420,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	}
 
 	// Remove from current room
-	room.RemoveMob(mob.InstanceId)
+	room.RemoveMob(mob.Character.Id)
 
 	if config.Death.CorpsesEnabled {
 		room.AddCorpse(rooms.Corpse{

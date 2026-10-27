@@ -24,4 +24,4 @@
 <ansi fg="yellow-bold">IdleMessages:</ansi>   {{ range $i, $a := $room.IdleMessages }}{{ $a }}
                 {{ end -}}{{- end }}
 <ansi fg="yellow-bold">Players here:</ansi>   {{ range $i, $a := $room.GetPlayers -}}<ansi fg="username">{{- $char := uidToCharacter $a -}}@{{ $a }}-{{ $char.Name }}</ansi>, {{- end }}
-<ansi fg="yellow-bold">Mobs here:</ansi>      {{ range $i, $a := $room.GetMobs -}}<ansi fg="mobname">{{- $mobName := idToMobCharacter $a -}}#{{ $a }}-{{ $mobName }}</ansi>, {{- end }}
+<ansi fg="yellow-bold">Mobs here:</ansi>      {{ range $i, $a := $room.GetMobs -}}<ansi fg="mobname">{{- $mobName := idToMobCharacter $a -}}{{ $mobName }} {{ $a }}</ansi>, {{- end }}

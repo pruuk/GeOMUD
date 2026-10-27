@@ -5,7 +5,9 @@ import (
 	"strconv"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
@@ -58,11 +60,12 @@ func (g *GMCPPartyModule) aggroChangedHandler(e events.Event) events.ListenerRet
 		return events.Cancel
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
-	party := parties.Get(evt.UserId)
+	party := parties.Get(user.UserId)
 	if party == nil {
 		return events.Continue
 	}
@@ -82,11 +85,12 @@ func (g *GMCPPartyModule) roomChangeHandler(e events.Event) events.ListenerRetur
 		return events.Cancel
 	}
 
-	if evt.MobInstanceId > 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
-	party := parties.Get(evt.UserId)
+	party := parties.Get(user.UserId)
 	if party == nil {
 		return events.Continue
 	}
@@ -200,7 +204,7 @@ func (g *GMCPPartyModule) GetPartyNode(party *parties.Party, gmcpModule string) 
 	roomTitles := map[int]string{}
 	roomCoords := map[int]*rooms.Room{}
 
-	charmedMobInstanceIds := []int{}
+	charmedMobIds := []ids.ID{}
 
 	for _, uId := range party.GetMembers() {
 
@@ -234,7 +238,7 @@ func (g *GMCPPartyModule) GetPartyNode(party *parties.Party, gmcpModule string) 
 			userVitals.Location = roomTitle
 			partyPayload.Vitals[user.Character.Name] = userVitals
 
-			charmedMobInstanceIds = append(charmedMobInstanceIds, user.Character.GetCharmIds()...)
+			charmedMobIds = append(charmedMobIds, user.Character.GetCharmIds()...)
 
 			if gmcpModule == `Party.Vitals` {
 				continue
@@ -256,8 +260,8 @@ func (g *GMCPPartyModule) GetPartyNode(party *parties.Party, gmcpModule string) 
 
 	}
 
-	for _, mobInstanceId := range charmedMobInstanceIds {
-		m := mobs.GetInstance(mobInstanceId)
+	for _, charmedMobId := range charmedMobIds {
+		m := mobs.GetInstance(charmedMobId)
 		if m == nil {
 			continue
 		}

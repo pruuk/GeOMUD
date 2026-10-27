@@ -370,7 +370,7 @@ func ChanceToTame(s *accounts.Account, t *mobs.Mob) int {
 		s.Character.Health,
 		s.Character.HealthMax.Value,
 		raceInfo.Size,
-		t.Character.IsAggro(s.UserId, 0),
+		t.Character.IsAggro(s.Character.Id),
 	)
 }
 

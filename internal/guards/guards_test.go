@@ -143,3 +143,68 @@ func TestAccountsGoOnlineOneWay(t *testing.T) {
 		})
 	}
 }
+
+// TestNoMobInstanceIds: one ID space means the old mob instance ID is gone,
+// in names and fields alike.
+func TestNoMobInstanceIds(t *testing.T) {
+	for path, f := range goFiles(t) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			if id, ok := n.(*ast.Ident); ok && strings.Contains(id.Name, "MobInstanceId") {
+				t.Errorf("%s: %s; a body is named by its ids.ID", path, id.Name)
+			}
+			return true
+		})
+	}
+}
+
+// TestIdsAreMadeOnlyAtCreation enforces decision 11: an ID is made once, when
+// a thing is created or instantiated. Each allowed file names its creation site.
+func TestIdsAreMadeOnlyAtCreation(t *testing.T) {
+	allowed := map[string]string{
+		"internal/accounts/migration.go":   "giveBodyId: a new character, or one saved before body IDs existed",
+		"internal/mobs/mobs.go":            "addInstance: a new NPC instantiation",
+		"internal/usercommands/suicide.go": "permadeath reroll: a new character",
+		"cmd/newid/main.go":                "a builder creating a thing by hand",
+	}
+	for path, f := range goFiles(t) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || sel.Sel.Name != "New" {
+				return true
+			}
+			if x, ok := sel.X.(*ast.Ident); ok && x.Name == "ids" {
+				if _, ok := allowed[path]; !ok {
+					t.Errorf("%s: makes an ids.ID outside a creation site", path)
+				}
+			}
+			return true
+		})
+	}
+}
+
+// TestNoNumericShorthandIds forbids actor shorthand IDs (#N and @N): people
+// name things by name; clients send ID tokens. The allowlist holds the
+// documented exceptions, keyed by file and the literal's Go source text, so a
+// new #%d elsewhere in the same file still fails.
+func TestNoNumericShorthandIds(t *testing.T) {
+	allowed := map[string]string{
+		"internal/rooms/rooms.go|`%s#%d`":           "the positional name form name#2, kept by ruling (decision 10 note: name forms unchanged)",
+		"internal/usercommands/keyring.go|`#%d %s`": "a room ID label; rooms keep integer IDs until the geo room key",
+	}
+	for path, f := range goFiles(t) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING &&
+				(strings.Contains(lit.Value, "#%d") || strings.Contains(lit.Value, "@%d")) {
+				if allowed[path+"|"+lit.Value] != "" {
+					return true
+				}
+				t.Errorf("%s: formats a #N or @N id (%s)", path, lit.Value)
+			}
+			return true
+		})
+	}
+}

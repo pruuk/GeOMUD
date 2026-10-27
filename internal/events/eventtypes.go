@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/connections"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/stats"
 )
@@ -18,69 +19,43 @@ import (
 //
 // Used to apply or remove buffs
 type Buff struct {
-	UserId        int
-	MobInstanceId int
-	BuffId        int
-	Source        string // optional source such as spell,
+	ActorId ids.ID // the body the buff applies to
+	BuffId  int
+	Source  string // optional source such as spell,
 }
 
 func (b Buff) Type() string { return `Buff` }
 
 type BuffsTriggered struct {
-	UserId        int
-	MobInstanceId int
-	BuffIds       []int
+	ActorId ids.ID
+	BuffIds []int
 }
 
 func (b BuffsTriggered) Type() string { return `BuffsTriggered` }
 
 type BuffsAdded struct {
-	UserId        int
-	MobInstanceId int
-	BuffIds       []int
+	ActorId ids.ID
+	BuffIds []int
 }
 
 func (b BuffsAdded) Type() string { return `BuffsAdded` }
 
 type BuffsRemoved struct {
-	UserId        int
-	MobInstanceId int
-	BuffIds       []int
+	ActorId ids.ID
+	BuffIds []int
 }
 
 func (b BuffsRemoved) Type() string { return `BuffsRemoved` }
 
-// For special room-targetting actions
-type RoomAction struct {
-	RoomId       int
-	SourceUserId int
-	SourceMobId  int
-	Action       string
-	Details      any
-	ReadyTurn    uint64
-}
-
-func (r RoomAction) Type() string { return `RoomAction` }
-
 // Used for Input from players/mobs
 type Input struct {
-	UserId        int
-	MobInstanceId int
-	InputText     string
-	ReadyTurn     uint64
-	Flags         EventFlag
+	ActorId   ids.ID // the body the input is for
+	InputText string
+	ReadyTurn uint64
+	Flags     EventFlag
 }
 
 func (i Input) Type() string { return `Input` }
-
-// When a skill is used by a player
-type SkillUsed struct {
-	UserId  int
-	Skill   string
-	Details string // usually the specific sub-command of the skill
-}
-
-func (i SkillUsed) Type() string { return `SkillUsed` }
 
 // Messages that are intended to reach all users on the system
 type Broadcast struct {
@@ -105,12 +80,11 @@ type Message struct {
 func (m Message) Type() string { return `Message` }
 
 type Communication struct {
-	SourceUserId        int    // User that sent the message
-	SourceMobInstanceId int    // Mob that sent the message
-	TargetUserId        int    // Sent to only 1 person
-	CommType            string // say, party, broadcast, whisper, shout
-	Name                string
-	Message             string
+	SourceActorId ids.ID // Body that sent the message
+	TargetUserId  int    // Sent to only 1 person
+	CommType      string // say, party, broadcast, whisper, shout
+	Name          string
+	Message       string
 }
 
 func (m Communication) Type() string { return `Communication` }
@@ -134,11 +108,10 @@ func (s System) Type() string { return `System` }
 
 // Fired whenever a mob or player changes rooms
 type RoomChange struct {
-	UserId        int
-	MobInstanceId int
-	FromRoomId    int
-	ToRoomId      int
-	Unseen        bool
+	ActorId    ids.ID // the body that moved
+	FromRoomId int
+	ToRoomId   int
+	Unseen     bool
 }
 
 func (r RoomChange) Type() string { return `RoomChange` }
@@ -161,29 +134,27 @@ func (n NewTurn) Type() string { return `NewTurn` }
 
 // Anytime a mob is idle
 type MobIdle struct {
-	MobInstanceId int
+	ActorId ids.ID
 }
 
 func (i MobIdle) Type() string { return `MobIdle` }
 
 // Gained or lost an item
 type EquipmentChange struct {
-	UserId        int
-	MobInstanceId int
-	GoldChange    int
-	BankChange    int
-	ItemsWorn     []items.Item
-	ItemsRemoved  []items.Item
+	ActorId      ids.ID
+	GoldChange   int
+	BankChange   int
+	ItemsWorn    []items.Item
+	ItemsRemoved []items.Item
 }
 
 func (i EquipmentChange) Type() string { return `EquipmentChange` }
 
 // Gained or lost an item
 type ItemOwnership struct {
-	UserId        int
-	MobInstanceId int
-	Item          items.Item
-	Gained        bool
+	ActorId ids.ID
+	Item    items.Item
+	Gained  bool
 }
 
 func (i ItemOwnership) Type() string { return `ItemOwnership` }
@@ -269,8 +240,8 @@ type PlayerDeath struct {
 func (l PlayerDeath) Type() string { return `PlayerDeath` }
 
 type MobDeath struct {
-	MobId         int
-	InstanceId    int
+	MobId         int    // template ID
+	ActorId       ids.ID // the body that died
 	RoomId        int
 	CharacterName string
 	Level         int
@@ -335,16 +306,6 @@ type PartyUpdated struct {
 
 func (p PartyUpdated) Type() string { return `PartyUpdated` }
 
-type Party struct {
-	LeaderUserId  int
-	UserIds       []int
-	InviteUserIds []int
-	AutoAttackers []int
-	Position      map[int]string
-}
-
-func (p Party) Type() string { return `Party` }
-
 // Rebuilds mapper for a given RoomId
 // NOTE: RoomId should USUALLY be the Room's Zone.RootRoomId
 type RebuildMap struct {
@@ -367,21 +328,11 @@ func (l RedrawPrompt) UniqueID() string { return `RedrawPrompt-` + strconv.Itoa(
 
 // Fired when a player or mob enters or leaves aggro state
 type AggroChanged struct {
-	UserId        int // non-zero if a player's aggro state changed
-	MobInstanceId int // non-zero if a mob's aggro state changed
-	RoomId        int
+	ActorId ids.ID // the body whose aggro state changed
+	RoomId  int
 }
 
 func (a AggroChanged) Type() string { return `AggroChanged` }
-
-type CLIRequest struct {
-	UserId       int
-	ConnectionId uint64
-	Command      string
-	Args         []string
-}
-
-func (c CLIRequest) Type() string { return `CLIRequest` }
 
 // Fired when a player's alignment name changes (e.g. from decay or combat)
 type AlignmentChanged struct {
@@ -391,20 +342,6 @@ type AlignmentChanged struct {
 }
 
 func (a AlignmentChanged) Type() string { return `AlignmentChanged` }
-
-// Fired when a player successfully purchases something from a shop.
-type Purchase struct {
-	UserId       int
-	RoomId       int
-	Cost         int
-	SellerMobId  int // mob spec ID of the seller; 0 if seller is a player or unknown
-	SellerUserId int // user ID of the seller; 0 if seller is a mob or unknown
-	ItemId       int // item spec ID when an item was purchased; 0 otherwise
-	MobId        int // mob spec ID when a mercenary was purchased; 0 otherwise
-	BuffId       int // buff ID when a buff/enchantment was purchased; 0 otherwise
-}
-
-func (p Purchase) Type() string { return `Purchase` }
 
 // Fired for each item that actually drops from a mob on death.
 type MobItemDrop struct {

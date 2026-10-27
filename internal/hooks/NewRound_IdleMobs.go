@@ -24,7 +24,7 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 
 	maxBoredom := uint8(mc.MaxMobBoredom)
 
-	allMobInstances := mobs.GetAllMobInstanceIds()
+	allMobInstances := mobs.GetAllMobIds()
 
 	allowedUnloadCt := len(allMobInstances) - int(mc.MobUnloadThreshold)
 	if allowedUnloadCt < 0 {
@@ -63,12 +63,13 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 		// If they are doing some sort of combat thing,
 		// Don't do idle actions
 		if mob.Character.Aggro != nil {
-			if mob.Character.Aggro.UserId > 0 {
-				user := accounts.GetByUserId(mob.Character.Aggro.UserId)
-				if user == nil || user.Character.RoomId != mob.Character.RoomId {
+			// A player target who is offline or in another room is lost.
+			// A vanished NPC target is treated the same (accepted trade-off).
+			if t := mob.Character.Aggro.Target; !t.IsZero() && mobs.GetInstance(t) == nil {
+				if user := accounts.GetByBodyId(t); user == nil || user.Character.RoomId != mob.Character.RoomId {
 					mob.Command(`emote mumbles about losing their quarry.`)
 					mob.Character.Aggro = nil
-					events.AddToQueue(events.AggroChanged{MobInstanceId: mob.InstanceId, RoomId: mob.Character.RoomId})
+					events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 				}
 			}
 			continue
@@ -122,7 +123,7 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 
 		}
 
-		events.AddToQueue(events.MobIdle{MobInstanceId: mobId})
+		events.AddToQueue(events.MobIdle{ActorId: mobId})
 
 	}
 

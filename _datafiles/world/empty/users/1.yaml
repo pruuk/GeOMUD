@@ -5,6 +5,7 @@ username: admin
 password: password
 joined: 2024-10-31T13:28:45.395873-07:00
 character:
+  id: 0x0000000000000000:0x757daaf460c9ca8d
   name: AdminAnt
   description: The administrator of this world.
   roomid: 1

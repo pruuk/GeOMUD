@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/exit"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -30,7 +32,6 @@ var (
 )
 
 type FindFlag uint16
-type VisitorType string
 
 const (
 	AffectsNone   = ""
@@ -53,9 +54,6 @@ const (
 	FindFighting          = FindFightingPlayer | FindFightingMob // Currently in combat (aggro)
 	FindIdle              = FindCharmed | FindNeutral            // Not aggro or hostile
 	FindAll      FindFlag = 0b111111111
-	// Visitor types
-	VisitorUser = "user"
-	VisitorMob  = "mob"
 )
 
 type Room struct {
@@ -90,11 +88,11 @@ type Room struct {
 	MapZ              int                               `yaml:"mapz"`
 	HasCoordinates    bool                              `yaml:"hascoordinates,omitempty"`
 	// Unexported/private
-	players       []int                          // list of user IDs currently in the room
-	mobs          []int                          // list of mob instance IDs currently in the room. Does not get saved.
-	visitors      map[VisitorType]map[int]uint64 // list of user IDs that have visited this room, and the last round they did
-	lastVisited   uint64                         // last round a visitor was in the room
-	tempDataStore map[string]any                 // Temporary data store for the room
+	bodies        []ids.ID          // body IDs of the players and mobs in the room, in arrival order. Does not get saved.
+	userVisitors  map[int]uint64    // user IDs that have visited this room, and the turn their trail goes cold
+	mobVisitors   map[ids.ID]uint64 // body IDs of mobs that have visited this room, and the turn their trail goes cold
+	lastVisited   uint64            // last round a visitor was in the room
+	tempDataStore map[string]any    // Temporary data store for the room
 }
 
 type TrainingRange struct {
@@ -110,8 +108,9 @@ func NewRoom(zone string) *Room {
 		Description:   "This is an empty room that was never given a description.",
 		MapSymbol:     ``,
 		Exits:         make(map[string]exit.RoomExit),
-		players:       []int{},
-		visitors:      make(map[VisitorType]map[int]uint64),
+		bodies:        []ids.ID{},
+		userVisitors:  make(map[int]uint64),
+		mobVisitors:   make(map[ids.ID]uint64),
 		tempDataStore: make(map[string]any),
 	}
 
@@ -126,8 +125,9 @@ func NewEmptyRoom() *Room {
 		Description:   "This is an empty room that was never given a description.",
 		MapSymbol:     ``,
 		Exits:         make(map[string]exit.RoomExit),
-		players:       []int{},
-		visitors:      make(map[VisitorType]map[int]uint64),
+		bodies:        []ids.ID{},
+		userVisitors:  make(map[int]uint64),
+		mobVisitors:   make(map[ids.ID]uint64),
 		tempDataStore: make(map[string]any),
 	}
 	return r
@@ -538,10 +538,10 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 	for idx, spawnInfo := range r.SpawnInfo {
 
 		// Make sure to clean up any instances that may be dead
-		if spawnInfo.InstanceId > 0 {
+		if !spawnInfo.InstanceId.IsZero() {
 			// Mob gone missing. Reset the spawn info.
 			if mob := mobs.GetInstance(spawnInfo.InstanceId); mob == nil {
-				spawnInfo.InstanceId = 0
+				spawnInfo.InstanceId = ids.ID{}
 				spawnInfo.DespawnedRound = roundNow
 				r.SpawnInfo[idx] = spawnInfo
 				continue
@@ -619,15 +619,15 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 				mob.Character.Zone = r.Zone
 				mob.Validate()
 
-				r.mobs = append(r.mobs, mob.InstanceId)
+				r.bodies = append(r.bodies, mob.Character.Id)
 
-				spawnInfo.InstanceId = mob.InstanceId
+				spawnInfo.InstanceId = mob.Character.Id
 				spawnInfo.DespawnedRound = 0
 
 				r.SpawnInfo[idx] = spawnInfo
 			}
 
-			roomManager.roomsWithMobs[r.RoomId] = len(r.mobs)
+			roomManager.roomsWithMobs[r.RoomId] = r.MobCt()
 
 			// Since mob spanws cannot be combined with item/gold spawns, go next loop
 			continue
@@ -716,11 +716,11 @@ func (r *Room) CleanupMobSpawns(noCooldown bool) {
 	for idx, spawnInfo := range r.SpawnInfo {
 
 		// Make sure to clean up any instances that may be dead
-		if spawnInfo.InstanceId > 0 {
+		if !spawnInfo.InstanceId.IsZero() {
 
 			if mob := mobs.GetInstance(spawnInfo.InstanceId); mob == nil {
 
-				spawnInfo.InstanceId = 0
+				spawnInfo.InstanceId = ids.ID{}
 				if noCooldown {
 					spawnInfo.DespawnedRound = 0
 				} else {
@@ -734,45 +734,85 @@ func (r *Room) CleanupMobSpawns(noCooldown bool) {
 	}
 }
 
-func (r *Room) AddMob(mobInstanceId int) {
+func (r *Room) AddMob(mobId ids.ID) {
 
-	mob := mobs.GetInstance(mobInstanceId)
+	mob := mobs.GetInstance(mobId)
 	if mob == nil {
 		return
 	}
 
-	r.MarkVisited(mobInstanceId, VisitorMob)
+	r.MarkMobVisited(mobId)
 
 	events.AddToQueue(events.RoomChange{
-		MobInstanceId: mobInstanceId,
-		FromRoomId:    mob.Character.RoomId,
-		ToRoomId:      r.RoomId,
-		Unseen:        mob.Character.HasBuffFlag("hidden"),
+		ActorId:    mobId,
+		FromRoomId: mob.Character.RoomId,
+		ToRoomId:   r.RoomId,
+		Unseen:     mob.Character.HasBuffFlag("hidden"),
 	})
 
 	mob.Character.RoomId = r.RoomId
 	mob.Character.Zone = r.Zone
 
-	r.mobs = append(r.mobs, mobInstanceId)
+	r.bodies = append(r.bodies, mobId)
 
-	roomManager.roomsWithMobs[r.RoomId] = len(r.mobs)
+	roomManager.roomsWithMobs[r.RoomId] = r.MobCt()
 }
 
-func (r *Room) RemoveMob(mobInstanceId int) {
+func (r *Room) RemoveMob(mobId ids.ID) {
 
-	r.MarkVisited(mobInstanceId, VisitorMob, 1)
+	r.MarkMobVisited(mobId, 1)
 
-	mobLen := len(r.mobs)
-	for i := 0; i < mobLen; i++ {
-		if r.mobs[i] == mobInstanceId {
-			r.mobs = append(r.mobs[:i], r.mobs[i+1:]...)
-			break
-		}
-	}
+	r.removeBody(mobId)
 
-	if len(r.mobs) < 1 {
+	if r.MobCt() < 1 {
 		delete(roomManager.roomsWithMobs, r.RoomId)
 	}
+}
+
+// removeBody drops id from the room's body list and reports whether it was there.
+func (r *Room) removeBody(id ids.ID) bool {
+	for i, v := range r.bodies {
+		if v == id {
+			r.bodies = append(r.bodies[:i], r.bodies[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+// isPlayerBody reports whether an account drives the body with id. Every other
+// body in a room, including a stale ID with no actor, is a mob.
+func isPlayerBody(id ids.ID) bool {
+	return actors.AccountOf(id) != nil
+}
+
+// playerIds returns the user ID of each body in the room an account drives, in
+// arrival order.
+func (r *Room) playerIds() []int {
+	ret := []int{}
+	for _, id := range r.bodies {
+		if acc := actors.AccountOf(id); acc != nil {
+			ret = append(ret, acc.UserId)
+		}
+	}
+	return ret
+}
+
+// mobIds returns each body in the room no account drives, in arrival order.
+func (r *Room) mobIds() []ids.ID {
+	ret := []ids.ID{}
+	for _, id := range r.bodies {
+		if !isPlayerBody(id) {
+			ret = append(ret, id)
+		}
+	}
+	return ret
+}
+
+// GetBodies returns the body ID of every player and mob in the room, in
+// arrival order.
+func (r *Room) GetBodies() []ids.ID {
+	return append([]ids.ID{}, r.bodies...)
 }
 
 func (r *Room) AddItem(item items.Item, stash bool) {
@@ -1042,15 +1082,8 @@ func (r *Room) FindOnFloor(itemName string, stash bool) (items.Item, bool) {
 	return items.Item{}, false
 }
 
-func (r *Room) MarkVisited(id int, vType VisitorType, subtrackTurns ...int) {
-
-	if r.visitors == nil {
-		r.visitors = make(map[VisitorType]map[int]uint64)
-	}
-
-	if _, ok := r.visitors[vType]; !ok {
-		r.visitors[vType] = make(map[int]uint64)
-	}
+// visitorTrailEnd is the turn a visit marked now goes cold, less subtrackTurns.
+func visitorTrailEnd(subtrackTurns ...int) uint64 {
 
 	lastSeen := util.GetTurnCount() + uint64(visitorTrackingTimeout*configs.GetTimingConfig().TurnsPerSecond())
 
@@ -1061,25 +1094,56 @@ func (r *Room) MarkVisited(id int, vType VisitorType, subtrackTurns ...int) {
 			lastSeen -= uint64(subtrackTurns[0])
 		}
 	}
+	return lastSeen
+}
 
-	r.visitors[vType][id] = lastSeen
+func (r *Room) MarkUserVisited(userId int, subtrackTurns ...int) {
+
+	if r.userVisitors == nil {
+		r.userVisitors = make(map[int]uint64)
+	}
+
+	r.userVisitors[userId] = visitorTrailEnd(subtrackTurns...)
+	r.lastVisited = util.GetRoundCount()
+}
+
+func (r *Room) MarkMobVisited(mobId ids.ID, subtrackTurns ...int) {
+
+	if r.mobVisitors == nil {
+		r.mobVisitors = make(map[ids.ID]uint64)
+	}
+
+	r.mobVisitors[mobId] = visitorTrailEnd(subtrackTurns...)
 	r.lastVisited = util.GetRoundCount()
 }
 
 func (r *Room) MobCt() int {
 
-	return len(r.mobs)
+	ct := 0
+	for _, id := range r.bodies {
+		if !isPlayerBody(id) {
+			ct++
+		}
+	}
+	return ct
 }
 
 func (r *Room) PlayerCt() int {
 
-	return len(r.players)
+	ct := 0
+	for _, id := range r.bodies {
+		if isPlayerBody(id) {
+			ct++
+		}
+	}
+	return ct
 }
 
-func (r *Room) GetMobs(findTypes ...FindFlag) []int {
+func (r *Room) GetMobs(findTypes ...FindFlag) []ids.ID {
 
-	mobMatches := []int{}
-	if len(r.mobs) == 0 {
+	mobMatches := []ids.ID{}
+	roomMobs := r.mobIds()
+	if len(roomMobs) == 0 {
 		return mobMatches
 	}
 
@@ -1094,12 +1158,12 @@ func (r *Room) GetMobs(findTypes ...FindFlag) []int {
 
 	// If no filtering, just copy all mobs in the room and return it
 	if typeFlag == FindAll {
-		return append([]int{}, r.mobs...)
+		return roomMobs
 	}
 
 	var isCharmed bool = false
 
-	for _, mobId := range r.mobs {
+	for _, mobId := range roomMobs {
 
 		mob := mobs.GetInstance(mobId)
 		if mob == nil {
@@ -1112,11 +1176,11 @@ func (r *Room) GetMobs(findTypes ...FindFlag) []int {
 		}
 
 		if mob.Character.Aggro != nil {
-			if typeFlag&FindFightingPlayer == FindFightingPlayer && mob.Character.Aggro.UserId != 0 {
+			if typeFlag&FindFightingPlayer == FindFightingPlayer && accounts.GetByBodyId(mob.Character.Aggro.Target) != nil {
 				mobMatches = append(mobMatches, mobId)
 				continue
 			}
-			if typeFlag&FindFightingMob == FindFightingMob && mob.Character.Aggro.MobInstanceId != 0 {
+			if typeFlag&FindFightingMob == FindFightingMob && mobs.GetInstance(mob.Character.Aggro.Target) != nil {
 				mobMatches = append(mobMatches, mobId)
 				continue
 			}
@@ -1181,7 +1245,8 @@ func (r *Room) GetMobs(findTypes ...FindFlag) []int {
 func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 
 	playerMatches := []int{}
-	if len(r.players) == 0 {
+	roomPlayers := r.playerIds()
+	if len(roomPlayers) == 0 {
 		return playerMatches
 	}
 
@@ -1196,12 +1261,12 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 
 	// If no filtering, just copy all mobs in the room and return it
 	if typeFlag == FindAll {
-		return append([]int{}, r.players...)
+		return roomPlayers
 	}
 
 	var isCharmed bool = false
 
-	for _, userId := range r.players {
+	for _, userId := range roomPlayers {
 
 		user := accounts.GetByUserId(userId)
 		if user == nil {
@@ -1214,11 +1279,11 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 		}
 
 		if user.Character.Aggro != nil {
-			if typeFlag&FindFightingPlayer == FindFightingPlayer && user.Character.Aggro.UserId != 0 {
+			if typeFlag&FindFightingPlayer == FindFightingPlayer && accounts.GetByBodyId(user.Character.Aggro.Target) != nil {
 				playerMatches = append(playerMatches, userId)
 				continue
 			}
-			if typeFlag&FindFightingMob == FindFightingMob && user.Character.Aggro.MobInstanceId != 0 {
+			if typeFlag&FindFightingMob == FindFightingMob && mobs.GetInstance(user.Character.Aggro.Target) != nil {
 				playerMatches = append(playerMatches, userId)
 				continue
 			}
@@ -1264,17 +1329,19 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 }
 
 func (r *Room) IsCalm() bool {
-	return !r.ArePlayersAttacking(0) && !r.AreMobsAttacking(0)
+	return !r.ArePlayersAttacking(ids.ID{}) && !r.AreMobsAttacking(ids.ID{})
 }
 
-func (r *Room) ArePlayersAttacking(userId int) bool {
+// ArePlayersAttacking reports whether any player here is attacking target
+// (any target at all when target is the zero ID).
+func (r *Room) ArePlayersAttacking(target ids.ID) bool {
 
-	for _, playerId := range r.players {
-		if playerId == userId {
-			continue
-		}
+	for _, playerId := range r.playerIds() {
 		if u := accounts.GetByUserId(playerId); u != nil {
-			if u.Character.Aggro != nil && (userId == 0 || u.Character.Aggro.UserId == userId) {
+			if !target.IsZero() && u.Character.Id == target {
+				continue
+			}
+			if u.Character.Aggro != nil && (target.IsZero() || u.Character.Aggro.Target == target) {
 				return true
 			}
 		}
@@ -1283,46 +1350,46 @@ func (r *Room) ArePlayersAttacking(userId int) bool {
 	return false
 }
 
-func (r *Room) AreMobsAttacking(userId int) bool {
+// AreMobsAttacking reports whether any mob here is attacking target
+// (any target at all when target is the zero ID).
+func (r *Room) AreMobsAttacking(target ids.ID) bool {
 
-	for _, mobId := range r.mobs {
+	for _, mobId := range r.mobIds() {
 		mob := mobs.GetInstance(mobId)
 		if mob == nil {
 			continue
 		}
-		if mob.Character.Aggro != nil && (userId == 0 || mob.Character.Aggro.UserId == userId) {
+		if mob.Character.Aggro != nil && (target.IsZero() || mob.Character.Aggro.Target == target) {
 			return true
 		}
 	}
 	return false
 }
 
-// Returns a list of recent visitors and how cold the trail is getting
-func (r *Room) Visitors(vType VisitorType) map[int]float64 {
+// Returns the recent user visitors and how cold each trail is getting
+func (r *Room) UserVisitors() map[int]float64 {
 
 	ret := make(map[int]float64)
 
 	tps := configs.GetTimingConfig().TurnsPerSecond()
-	if _, ok := r.visitors[vType]; ok {
-		for userId, expires := range r.visitors[vType] {
-			ret[userId] = float64(expires-util.GetTurnCount()) / float64(visitorTrackingTimeout*tps)
-		}
-
+	for userId, expires := range r.userVisitors {
+		ret[userId] = float64(expires-util.GetTurnCount()) / float64(visitorTrackingTimeout*tps)
 	}
 
 	return ret
 }
 
-func (r *Room) HasVisited(id int, vType VisitorType) bool {
-	//	r.PruneVisitors()
+// Returns the recent mob visitors and how cold each trail is getting
+func (r *Room) MobVisitors() map[ids.ID]float64 {
 
-	if _, ok := r.visitors[vType]; !ok {
-		return false
+	ret := make(map[ids.ID]float64)
+
+	tps := configs.GetTimingConfig().TurnsPerSecond()
+	for mobId, expires := range r.mobVisitors {
+		ret[mobId] = float64(expires-util.GetTurnCount()) / float64(visitorTrackingTimeout*tps)
 	}
 
-	_, ok := r.visitors[vType][id]
-
-	return ok
+	return ret
 }
 
 func (r *Room) GetDescriptionFormatted(lineSplit int, highlightNouns bool) string {
@@ -1344,7 +1411,7 @@ func (r *Room) GetDescription() string {
 
 func (r *Room) HasRecentVisitors() bool {
 
-	return r.visitors != nil && len(r.visitors) > 0
+	return len(r.userVisitors) > 0 || len(r.mobVisitors) > 0
 }
 
 func (r *Room) GetPublicSigns() []Sign {
@@ -1393,35 +1460,34 @@ func (r *Room) AddSign(displayText string, visibleUserId int, daysBeforeDecay in
 	return false
 }
 
-func (r *Room) FindByName(searchName string, findTypes ...FindFlag) (playerId int, mobInstanceId int) {
+func (r *Room) FindByName(searchName string, findTypes ...FindFlag) (playerId int, mobId ids.ID) {
 	if len(findTypes) < 1 {
 		findTypes = []FindFlag{FindAll}
 	}
-	mobInstanceId, _ = r.findMobByName(searchName, findTypes...)
+	mobId, _ = r.findMobByName(searchName, findTypes...)
 	playerId, _ = r.findPlayerByName(searchName, findTypes...)
-	return playerId, mobInstanceId
+	return playerId, mobId
 }
 
 func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, error) {
 
 	if len(searchName) > 1 {
-		if searchName[0] == '#' {
+		// #N and @N are not name forms; refuse them so they cannot fall through to
+		// name matching.
+		if searchName[0] == '@' || searchName[0] == '#' {
 			return 0, errors.New("user not found")
 		}
-		if searchName[0] == '@' {
-			userIdMatch, _ := strconv.Atoi(searchName[1:])
+	}
 
+	if idMatch, err := ids.Parse(searchName); err == nil {
+		if acc := actors.AccountOf(idMatch); acc != nil {
 			for _, uId := range r.GetPlayers(findTypes...) {
-
-				if userIdMatch > 0 {
-					if uId != userIdMatch {
-						continue
-					}
+				if uId == acc.UserId {
 					return uId, nil
 				}
 			}
-			return 0, errors.New("user not found")
 		}
+		return 0, errors.New("user not found")
 	}
 
 	namesInRoom := []string{}
@@ -1429,6 +1495,9 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	playerLookup := map[string]int{}
 	for _, uId := range r.GetPlayers(findTypes...) {
 		u := accounts.GetByUserId(uId)
+		if u == nil {
+			continue
+		}
 		playerLookup[u.Character.Name] = u.UserId
 		namesInRoom = append(namesInRoom, u.Character.Name)
 	}
@@ -1446,34 +1515,34 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	return playerLookup[fullMatch], nil
 }
 
-func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (int, error) {
+func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, error) {
 
 	if len(searchName) > 1 {
-		if searchName[0] == '@' {
-			return 0, errors.New("mob not found")
-		}
-		if searchName[0] == '#' {
-			mobIdMatch, _ := strconv.Atoi(searchName[1:])
-
-			for _, mId := range r.GetMobs(findTypes...) {
-
-				if mobIdMatch > 0 {
-					if mId != mobIdMatch {
-						continue
-					}
-					return mId, nil
-				}
-			}
-			return 0, errors.New("mob not found")
+		// #N and @N are not name forms; refuse them so they cannot fall through to
+		// positional name matching (util.GetMatchNumber("#1") is the first mob).
+		if searchName[0] == '@' || searchName[0] == '#' {
+			return ids.ID{}, errors.New("mob not found")
 		}
 	}
 
+	if idMatch, err := ids.Parse(searchName); err == nil {
+		for _, mId := range r.GetMobs(findTypes...) {
+			if mId == idMatch {
+				return mId, nil
+			}
+		}
+		return ids.ID{}, errors.New("mob not found")
+	}
+
 	namesInRoom := []string{}
-	friendlyMobs := map[int]*mobs.Mob{}
-	mobLookup := map[string]int{}
+	friendlyMobs := map[ids.ID]*mobs.Mob{}
+	mobLookup := map[string]ids.ID{}
 	for _, mId := range r.GetMobs(findTypes...) {
 
 		m := mobs.GetInstance(mId)
+		if m == nil {
+			continue // body with no instance (disconnect race)
+		}
 
 		if m.Character.IsCharmed() {
 			friendlyMobs[mId] = m // Put friendly mobs at the end of the list.
@@ -1501,7 +1570,7 @@ func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (int, err
 	}
 
 	if len(fullMatch) == 0 {
-		return 0, errors.New("mob not found")
+		return ids.ID{}, errors.New("mob not found")
 	}
 
 	return mobLookup[fullMatch], nil
@@ -1810,50 +1879,52 @@ func (r *Room) PruneSigns() []Sign {
 
 func (r *Room) PruneVisitors() int {
 
-	if r.visitors == nil {
-		r.visitors = make(map[VisitorType]map[int]uint64)
+	if r.userVisitors == nil && r.mobVisitors == nil {
+		r.userVisitors = make(map[int]uint64)
+		r.mobVisitors = make(map[ids.ID]uint64)
 		return 0
 	}
 
 	c := configs.GetTimingConfig()
 
 	// Make sure whoever is here has the freshest mark.
-	for _, userId := range r.players {
-		if _, ok := r.visitors[VisitorUser]; ok {
-			r.visitors[VisitorUser][userId] = util.GetTurnCount() + uint64(visitorTrackingTimeout*c.TurnsPerSecond())
+	if len(r.userVisitors) > 0 {
+		for _, userId := range r.playerIds() {
+			r.userVisitors[userId] = util.GetTurnCount() + uint64(visitorTrackingTimeout*c.TurnsPerSecond())
 		}
 	}
 
-	for _, mobId := range r.mobs {
-		if _, ok := r.visitors[VisitorMob]; ok {
-			r.visitors[VisitorMob][mobId] = util.GetTurnCount() + uint64(visitorTrackingTimeout*c.TurnsPerSecond())
+	if len(r.mobVisitors) > 0 {
+		for _, mobId := range r.mobIds() {
+			r.mobVisitors[mobId] = util.GetTurnCount() + uint64(visitorTrackingTimeout*c.TurnsPerSecond())
 		}
 	}
 
 	pruneCt := 0
 
-	for vType, _ := range r.visitors {
-
-		for id, expires := range r.visitors[vType] {
-			// Check whether expires is older than now
-			if expires < util.GetTurnCount() {
-				delete(r.visitors[vType], id)
-				pruneCt++
-
-				if len(r.visitors[vType]) < 1 {
-					delete(r.visitors, vType)
-				}
-			}
+	for id, expires := range r.userVisitors {
+		// Check whether expires is older than now
+		if expires < util.GetTurnCount() {
+			delete(r.userVisitors, id)
+			pruneCt++
 		}
-
 	}
+
+	for id, expires := range r.mobVisitors {
+		// Check whether expires is older than now
+		if expires < util.GetTurnCount() {
+			delete(r.mobVisitors, id)
+			pruneCt++
+		}
+	}
+
 	return pruneCt
 }
 
 func (r *Room) isInRoom(mobName string, userName string) bool {
 
 	if mobName != `` {
-		for _, mobInstId := range r.mobs {
+		for _, mobInstId := range r.mobIds() {
 			if mob := mobs.GetInstance(mobInstId); mob != nil {
 				if strings.HasPrefix(mob.Character.Name, mobName) {
 					return true
@@ -1863,7 +1934,7 @@ func (r *Room) isInRoom(mobName string, userName string) bool {
 	}
 
 	if userName != `` {
-		for _, userId := range r.players {
+		for _, userId := range r.playerIds() {
 			if user := accounts.GetByUserId(userId); user != nil {
 				if strings.HasPrefix(user.Character.Name, userName) {
 					return true
@@ -1876,7 +1947,7 @@ func (r *Room) isInRoom(mobName string, userName string) bool {
 
 }
 
-func (r *Room) findMobExit(mobId int, mobName string) string {
+func (r *Room) findMobExit(mobId ids.ID, mobName string) string {
 
 	freshestTime := float64(0)
 	freshestExitName := ``
@@ -1893,9 +1964,9 @@ func (r *Room) findMobExit(mobId int, mobName string) string {
 			continue
 		}
 
-		for mId, timeLeft := range exitRoom.Visitors(VisitorMob) {
+		for mId, timeLeft := range exitRoom.MobVisitors() {
 
-			if mobId > 0 && mobId != mId {
+			if !mobId.IsZero() && mobId != mId {
 				continue
 			}
 
@@ -1937,7 +2008,7 @@ func (r *Room) findUserExit(userId int, userName string) string {
 			continue
 		}
 
-		for uId, timeLeft := range exitRoom.Visitors(VisitorMob) {
+		for uId, timeLeft := range exitRoom.UserVisitors() {
 
 			if userId > 0 && userId != uId {
 				continue
@@ -1988,9 +2059,9 @@ func (r *Room) RoundTick() {
 	for idx, spawnInfo := range r.SpawnInfo {
 
 		// Make sure to clean up any instances that may be dead
-		if spawnInfo.InstanceId > 0 {
+		if !spawnInfo.InstanceId.IsZero() {
 			if mob := mobs.GetInstance(spawnInfo.InstanceId); mob == nil {
-				spawnInfo.InstanceId = 0
+				spawnInfo.InstanceId = ids.ID{}
 				spawnInfo.DespawnedRound = roundNow
 				r.SpawnInfo[idx] = spawnInfo
 			}
@@ -2000,9 +2071,9 @@ func (r *Room) RoundTick() {
 
 	// If any players are in the room
 	// Update all mobs in the room that they've seen a player
-	if len(r.players) > 0 {
-		for _, mobInstanceId := range r.mobs {
-			if mob := mobs.GetInstance(mobInstanceId); mob != nil {
+	if r.PlayerCt() > 0 {
+		for _, mobId := range r.mobIds() {
+			if mob := mobs.GetInstance(mobId); mob != nil {
 				mob.BoredomCounter = 0
 			}
 		}
@@ -2014,29 +2085,50 @@ func (r *Room) RoundTick() {
 	r.UpdateCorpses(roundNow)
 }
 
-func (r *Room) AddPlayer(userId int) int {
-
-	for _, v := range r.players {
-		if v == userId {
-			return len(r.players)
-		}
+// userBodyIds returns the body IDs an account may be listed under: the body on
+// its account record, then the body of the actor it drives when that differs.
+func userBodyIds(userId int) []ids.ID {
+	ret := []ids.ID{}
+	if u := accounts.GetByUserId(userId); u != nil && u.Character != nil && !u.Character.Id.IsZero() {
+		ret = append(ret, u.Character.Id)
 	}
-
-	r.players = append(r.players, userId)
-
-	return len(r.players)
+	if a := actors.ByUserId(userId); a != nil && (len(ret) == 0 || ret[0] != a.Id) {
+		ret = append(ret, a.Id)
+	}
+	return ret
 }
 
-// true if found
-func (r *Room) RemovePlayer(userId int) (int, bool) {
+// AddPlayer lists the account's body in the room and returns the room's player count.
+func (r *Room) AddPlayer(userId int) int {
 
-	for i, v := range r.players {
-		if v == userId {
-			r.players = append(r.players[:i], r.players[i+1:]...)
-			return len(r.players), true
+	bodyIds := userBodyIds(userId)
+	if len(bodyIds) == 0 {
+		return r.PlayerCt()
+	}
+
+	for _, v := range r.bodies {
+		for _, id := range bodyIds {
+			if v == id {
+				return r.PlayerCt()
+			}
 		}
 	}
-	return len(r.players), false
+
+	r.bodies = append(r.bodies, bodyIds[0])
+
+	return r.PlayerCt()
+}
+
+// RemovePlayer drops the account's body from the room. It returns the room's
+// player count, and true if the body was found.
+func (r *Room) RemovePlayer(userId int) (int, bool) {
+
+	for _, id := range userBodyIds(userId) {
+		if r.removeBody(id) {
+			return r.PlayerCt(), true
+		}
+	}
+	return r.PlayerCt(), false
 }
 
 // Spawns an item in the room unless:

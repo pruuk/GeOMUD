@@ -8,6 +8,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -217,7 +218,7 @@ func Party(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 			isInvited := currentParty.Invited(user.UserId)
 			leaderId := currentParty.LeaderUserId
 
-			charmedMobInstanceIds := []int{}
+			charmedMobIds := []ids.ID{}
 
 			for _, uid := range currentParty.UserIds {
 				uStatus := "In Party"
@@ -269,11 +270,11 @@ func Party(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 				formatting = append(formatting, rowFormat)
 
-				charmedMobInstanceIds = append(charmedMobInstanceIds, u.Character.GetCharmIds()...)
+				charmedMobIds = append(charmedMobIds, u.Character.GetCharmIds()...)
 			}
 
-			for _, mobInstanceId := range charmedMobInstanceIds {
-				m := mobs.GetInstance(mobInstanceId)
+			for _, charmedMobId := range charmedMobIds {
+				m := mobs.GetInstance(charmedMobId)
 				if m == nil {
 					continue
 				}
@@ -638,10 +639,10 @@ func Party(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 		user.SendText(fmt.Sprintf(`<ansi fg="magenta">(party)</ansi> You say, "<ansi fg="yellow">%s</ansi>"`, rest))
 
 		events.AddToQueue(events.Communication{
-			SourceUserId: user.UserId,
-			CommType:     `party`,
-			Name:         user.Character.Name,
-			Message:      rest,
+			SourceActorId: user.Character.Id,
+			CommType:      `party`,
+			Name:          user.Character.Name,
+			Message:       rest,
 		})
 	}
 

@@ -23,7 +23,7 @@ func SayTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		return true, nil
 	}
 
-	playerId, mobInstanceId := room.FindByName(args[0])
+	playerId, toMobId := room.FindByName(args[0])
 	if playerId > 0 {
 
 		toUser := accounts.GetByUserId(playerId)
@@ -38,11 +38,11 @@ func SayTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			toUser.SendText(fmt.Sprintf(`someone says to you, "<ansi fg="saytext-mob">%s</ansi>"`, rest))
 
 			events.AddToQueue(events.Communication{
-				SourceMobInstanceId: mob.InstanceId,
-				TargetUserId:        toUser.UserId,
-				CommType:            `say`,
-				Name:                mob.Character.Name,
-				Message:             rest,
+				SourceActorId: mob.Character.Id,
+				TargetUserId:  toUser.UserId,
+				CommType:      `say`,
+				Name:          mob.Character.Name,
+				Message:       rest,
 			})
 
 		} else {
@@ -50,15 +50,15 @@ func SayTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			room.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> says to <ansi fg="username">%s</ansi>, "<ansi fg="saytext-mob">%s</ansi>"`, mob.Character.Name, toUser.Character.Name, rest), toUser.UserId)
 
 			events.AddToQueue(events.Communication{
-				SourceMobInstanceId: mob.InstanceId,
-				CommType:            `say`,
-				Name:                mob.Character.Name,
-				Message:             rest,
+				SourceActorId: mob.Character.Id,
+				CommType:      `say`,
+				Name:          mob.Character.Name,
+				Message:       rest,
 			})
 		}
-	} else if mobInstanceId > 0 {
+	} else if !toMobId.IsZero() {
 
-		toMob := mobs.GetInstance(mobInstanceId)
+		toMob := mobs.GetInstance(toMobId)
 		if toMob == nil {
 			return true, nil
 		}
@@ -70,10 +70,10 @@ func SayTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			room.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> says to <ansi fg="mobname">%s</ansi>, "<ansi fg="saytext-mob">%s</ansi>"`, mob.Character.Name, toMob.Character.Name, rest))
 
 			events.AddToQueue(events.Communication{
-				SourceMobInstanceId: mob.InstanceId,
-				CommType:            `say`,
-				Name:                mob.Character.Name,
-				Message:             rest,
+				SourceActorId: mob.Character.Id,
+				CommType:      `say`,
+				Name:          mob.Character.Name,
+				Message:       rest,
 			})
 
 		}
@@ -112,11 +112,11 @@ func SayToOnly(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		}
 
 		events.AddToQueue(events.Communication{
-			SourceMobInstanceId: mob.InstanceId,
-			TargetUserId:        toUser.UserId,
-			CommType:            `say`,
-			Name:                mob.Character.Name,
-			Message:             rest,
+			SourceActorId: mob.Character.Id,
+			TargetUserId:  toUser.UserId,
+			CommType:      `say`,
+			Name:          mob.Character.Name,
+			Message:       rest,
 		})
 	}
 
@@ -135,7 +135,7 @@ func ReplyTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		return true, nil
 	}
 
-	playerId, mobInstanceId := room.FindByName(args[0])
+	playerId, toMobId := room.FindByName(args[0])
 	if playerId > 0 {
 
 		toUser := accounts.GetByUserId(playerId)
@@ -152,9 +152,9 @@ func ReplyTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			toUser.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> replies to you, "<ansi fg="saytext-mob">%s</ansi>"`, mob.Character.Name, rest))
 			room.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> replies to <ansi fg="username">%s</ansi>, "<ansi fg="saytext-mob">%s</ansi>"`, mob.Character.Name, toUser.Character.Name, rest), toUser.UserId)
 		}
-	} else if mobInstanceId > 0 {
+	} else if !toMobId.IsZero() {
 
-		toMob := mobs.GetInstance(mobInstanceId)
+		toMob := mobs.GetInstance(toMobId)
 		if toMob == nil {
 			return true, nil
 		}

@@ -39,8 +39,8 @@ func Go(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 				return true, nil
 			}
 
-			room.RemoveMob(mob.InstanceId)
-			destRoom.AddMob(mob.InstanceId)
+			room.RemoveMob(mob.Character.Id)
+			destRoom.AddMob(mob.Character.Id)
 
 			// Tell the old room they are leaving
 			room.SendText(
@@ -107,8 +107,8 @@ func Go(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			enterFromExit = fmt.Sprintf(`the <ansi fg="exit">%s</ansi>`, enterFromExit)
 		}
 
-		room.RemoveMob(mob.InstanceId)
-		destRoom.AddMob(mob.InstanceId)
+		room.RemoveMob(mob.Character.Id)
+		destRoom.AddMob(mob.Character.Id)
 
 		c := configs.GetTextFormatsConfig()
 

@@ -11,6 +11,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -223,13 +224,9 @@ func SaveRoomTemplate(roomTpl Room) error {
 	roomTpl.Signs = make([]Sign, len(roomBeingReplaced.Signs))
 	copy(roomTpl.Signs, roomBeingReplaced.Signs)
 
-	// Copy mobs in room
-	roomTpl.mobs = make([]int, len(roomBeingReplaced.mobs))
-	copy(roomTpl.mobs, roomBeingReplaced.mobs)
-
-	// Copy players in room
-	roomTpl.players = make([]int, len(roomBeingReplaced.players))
-	copy(roomTpl.players, roomBeingReplaced.players)
+	// Copy players and mobs in room
+	roomTpl.bodies = make([]ids.ID, len(roomBeingReplaced.bodies))
+	copy(roomTpl.bodies, roomBeingReplaced.bodies)
 
 	// Add to memory with the force flag true
 	// This will clear out the old data and force write the new data.

@@ -10,6 +10,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/exit"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/term"
@@ -245,7 +246,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 		nameFlags = append(nameFlags, characters.RenderShortAdjectives)
 	}
 
-	for _, playerId := range r.players {
+	for _, playerId := range r.playerIds() {
 		if playerId != user.UserId {
 
 			renderFlags := append([]characters.NameRenderFlag{}, nameFlags...)
@@ -259,7 +260,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 					}
 				}
 
-				pName := player.Character.GetPlayerName(user.UserId, renderFlags...)
+				pName := player.Character.GetPlayerName(user.Character.Id, renderFlags...)
 				details.VisiblePlayers = append(details.VisiblePlayers, pName.String())
 			}
 		}
@@ -267,8 +268,9 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 	visibleFriendlyMobs := []string{}
 
-	for idx, mobInstanceId := range r.mobs {
-		if mob := mobs.GetInstance(mobInstanceId); mob != nil {
+	staleMobIds := []ids.ID{}
+	for _, mobId := range r.mobIds() {
+		if mob := mobs.GetInstance(mobId); mob != nil {
 
 			if mob.Character.HasBuffFlag("hidden") { // Don't show them if they are sneaking
 				if !user.Character.HasBuffFlag("see-hidden") {
@@ -278,7 +280,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 			tmpNameFlags := nameFlags
 
-			mobName := mob.Character.GetMobName(user.UserId, tmpNameFlags...)
+			mobName := mob.Character.GetMobName(user.Character.Id, tmpNameFlags...)
 
 			if mob.Character.IsCharmed() {
 				visibleFriendlyMobs = append(visibleFriendlyMobs, mobName.String())
@@ -286,8 +288,13 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 				details.VisibleMobs = append(details.VisibleMobs, mobName.String())
 			}
 		} else {
-			r.mobs = append(r.mobs[:idx], r.mobs[idx+1:]...)
+			staleMobIds = append(staleMobIds, mobId)
 		}
+	}
+
+	// Drop mobs that no longer exist, after the loop so no live mob is skipped.
+	for _, mobId := range staleMobIds {
+		r.removeBody(mobId)
 	}
 
 	// Add the friendly mobs to the end
@@ -369,8 +376,8 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 				allNames := []string{}
 
-				for mobInstId, _ := range r.Visitors(VisitorMob) {
-					if mob := mobs.GetInstance(mobInstId); mob != nil {
+				for visitorMobId, _ := range r.MobVisitors() {
+					if mob := mobs.GetInstance(visitorMobId); mob != nil {
 						allNames = append(allNames, mob.Character.Name)
 					}
 				}
@@ -383,7 +390,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 				} else {
 
-					exitName := r.findMobExit(0, searchMobNameStr)
+					exitName := r.findMobExit(ids.ID{}, searchMobNameStr)
 					if exitName == `` {
 
 						details.TrackingString = `You lost the trail of <ansi fg="username">` + searchMobNameStr + `</ansi>`
@@ -412,7 +419,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 				allNames := []string{}
 
-				for userId, _ := range r.Visitors(VisitorUser) {
+				for userId, _ := range r.UserVisitors() {
 					if u := accounts.GetByUserId(userId); u != nil {
 						allNames = append(allNames, u.Character.Name)
 					}

@@ -6,8 +6,10 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
@@ -73,8 +75,8 @@ func init() {
 //////////////////////////////////////////////////////////////////////
 
 type followId struct {
-	userId        int
-	mobInstanceId int
+	userId int
+	mobId  ids.ID
 }
 
 // Using a struct gives a way to store longer term data.
@@ -170,8 +172,8 @@ func (f followId) getFollowIdInstance() (user *accounts.Account, mob *mobs.Mob) 
 	if f.userId > 0 {
 		return accounts.GetByUserId(f.userId), nil
 	}
-	if f.mobInstanceId > 0 {
-		return nil, mobs.GetInstance(f.mobInstanceId)
+	if !f.mobId.IsZero() {
+		return nil, mobs.GetInstance(f.mobId)
 	}
 	return nil, nil
 }
@@ -244,7 +246,7 @@ func (f *FollowModule) onPartyChange(e events.Event) events.ListenerReturn {
 func (f *FollowModule) idleMobHandler(e events.Event) events.ListenerReturn {
 	evt := e.(events.MobIdle)
 
-	if f.isFollowing(followId{mobInstanceId: evt.MobInstanceId}) {
+	if f.isFollowing(followId{mobId: evt.ActorId}) {
 		return events.Cancel
 	}
 
@@ -254,7 +256,12 @@ func (f *FollowModule) idleMobHandler(e events.Event) events.ListenerReturn {
 func (f *FollowModule) roomChangeHandler(e events.Event) events.ListenerReturn {
 	evt := e.(events.RoomChange)
 
-	moverId := followId{userId: evt.UserId, mobInstanceId: evt.MobInstanceId}
+	// A player's follow key is the account's UserId; a mob's is its ID.
+	moverUser := actors.AccountOf(evt.ActorId)
+	moverId := followId{mobId: evt.ActorId}
+	if moverUser != nil {
+		moverId = followId{userId: moverUser.UserId}
+	}
 
 	allFollowers := f.getFollowers(moverId)
 	if len(allFollowers) == 0 {
@@ -286,18 +293,16 @@ func (f *FollowModule) roomChangeHandler(e events.Event) events.ListenerReturn {
 	// The exit they went through is gone/missing? (Teleported?)
 	// End the follow
 	if followExitName == `` {
-		if evt.UserId > 0 {
-			if user := accounts.GetByUserId(evt.UserId); user != nil {
-				user.Command(`follow lose`)
-			}
+		if moverUser != nil {
+			moverUser.Command(`follow lose`)
 		}
 	} else {
 
 		for _, fId := range allFollowers {
 
-			if fId.mobInstanceId > 0 {
+			if !fId.mobId.IsZero() {
 
-				if mob := mobs.GetInstance(fId.mobInstanceId); mob != nil {
+				if mob := mobs.GetInstance(fId.mobId); mob != nil {
 					if fromRoom.RoomId == mob.Character.RoomId {
 						mob.Command(followExitName, .25)
 						// Count follows as wandering
@@ -349,7 +354,7 @@ func (f *FollowModule) onMobDeath(e events.Event) events.ListenerReturn {
 		return events.Cancel
 	}
 
-	f.loseFollowers(followId{mobInstanceId: evt.MobId})
+	f.loseFollowers(followId{mobId: evt.ActorId})
 
 	return events.Continue
 }
@@ -405,12 +410,12 @@ func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, ro
 		followEndRound = gd.AddPeriod(`5 real minutes`)
 	}
 
-	userId, mobInstId := 0, 0
+	userId, targetMobId := 0, ids.ID{}
 	if len(followTargetName) > 0 {
-		userId, mobInstId = room.FindByName(followTargetName)
+		userId, targetMobId = room.FindByName(followTargetName)
 	}
 
-	followCommandTarget := followId{userId: userId, mobInstanceId: mobInstId}
+	followCommandTarget := followId{userId: userId, mobId: targetMobId}
 	followCommandSource := followId{userId: user.UserId}
 
 	if followCommandTarget.userId == followCommandSource.userId {
@@ -456,9 +461,9 @@ func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, ro
 
 		}
 
-		if wasFollowing.mobInstanceId > 0 {
+		if !wasFollowing.mobId.IsZero() {
 
-			if followMob := mobs.GetInstance(wasFollowing.mobInstanceId); followMob != nil {
+			if followMob := mobs.GetInstance(wasFollowing.mobId); followMob != nil {
 				user.SendText(fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followMob.Character.Name))
 				return true, nil
 			}
@@ -484,9 +489,9 @@ func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, ro
 		return true, nil
 	}
 
-	if followCommandTarget.mobInstanceId > 0 {
+	if !followCommandTarget.mobId.IsZero() {
 
-		targetMob := mobs.GetInstance(followCommandTarget.mobInstanceId)
+		targetMob := mobs.GetInstance(followCommandTarget.mobId)
 
 		if targetMob.HatesAlignment(user.Character.Alignment) {
 			user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> won't let you follow them.`, targetMob.Character.Name))
@@ -534,15 +539,15 @@ func (f *FollowModule) followMobCommand(rest string, mob *mobs.Mob, room *rooms.
 		followEndRound = gd.AddPeriod(`5 real minutes`)
 	}
 
-	userId, mobInstId := 0, 0
+	userId, targetMobId := 0, ids.ID{}
 	if len(followTargetName) > 0 {
-		userId, mobInstId = room.FindByName(followTargetName)
+		userId, targetMobId = room.FindByName(followTargetName)
 	}
 
-	followCommandTarget := followId{userId: userId, mobInstanceId: mobInstId}
-	followCommandSource := followId{mobInstanceId: mob.InstanceId}
+	followCommandTarget := followId{userId: userId, mobId: targetMobId}
+	followCommandSource := followId{mobId: mob.Character.Id}
 
-	if followCommandTarget.mobInstanceId == followCommandSource.mobInstanceId {
+	if followCommandTarget.mobId == followCommandSource.mobId {
 		return true, nil
 	}
 
@@ -601,7 +606,7 @@ func (f *FollowModule) followMobCommand(rest string, mob *mobs.Mob, room *rooms.
 		return true, nil
 	}
 
-	if followCommandTarget.mobInstanceId > 0 {
+	if !followCommandTarget.mobId.IsZero() {
 
 		f.startFollow(followCommandTarget, followCommandSource, followEndRound)
 

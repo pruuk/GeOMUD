@@ -119,9 +119,9 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 					user.Character.RemoveItem(backpackKeyItm)
 
 					events.AddToQueue(events.ItemOwnership{
-						UserId: user.UserId,
-						Item:   backpackKeyItm,
-						Gained: false,
+						ActorId: user.Character.Id,
+						Item:    backpackKeyItm,
+						Gained:  false,
 					})
 
 					exitInfo.Lock.SetUnlocked()
@@ -233,7 +233,7 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 				if mob.Character.RoomId != originRoomId {
 					continue
 				}
-				if mob.Character.IsCharmed(user.UserId) { // Charmed mobs follow
+				if mob.Character.IsCharmed(user.Character.Id) { // Charmed mobs follow
 					mob.Command(rest)
 				}
 			}
@@ -242,14 +242,14 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 				//
 				// When leaving a room, mobs who were attacking may follow
 				//
-				mobInstanceIds := room.GetMobs(rooms.FindFightingPlayer)
-				for _, mobInstanceId := range mobInstanceIds {
-					mob := mobs.GetInstance(mobInstanceId)
+				mobIds := room.GetMobs(rooms.FindFightingPlayer)
+				for _, mobId := range mobIds {
+					mob := mobs.GetInstance(mobId)
 					if mob == nil {
 						continue
 					}
 
-					if mob.Character.Aggro == nil || mob.Character.Aggro.UserId != user.UserId {
+					if mob.Character.Aggro == nil || mob.Character.Aggro.Target != user.Character.Id {
 						continue
 					}
 
@@ -276,9 +276,9 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 				//
 				// When entering a room, mobs might be waiting to attack
 				//
-				mobInstanceIds = destRoom.GetMobs(rooms.FindAll)
-				for _, mobInstanceId := range mobInstanceIds {
-					mob := mobs.GetInstance(mobInstanceId)
+				mobIds = destRoom.GetMobs(rooms.FindAll)
+				for _, mobId := range mobIds {
+					mob := mobs.GetInstance(mobId)
 					if mob == nil {
 						continue
 					}

@@ -74,7 +74,7 @@ func HandleJoin(e events.Event) events.ListenerReturn {
 			for _, cmd := range loginCmds {
 
 				events.AddToQueue(events.Input{
-					UserId:    evt.UserId,
+					ActorId:   user.Character.Id,
 					InputText: cmd,
 					ReadyTurn: 0, // No delay between execution of commands
 				})

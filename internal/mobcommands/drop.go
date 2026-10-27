@@ -83,9 +83,9 @@ func Drop(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		mob.Character.RemoveItem(matchItem)
 
 		events.AddToQueue(events.ItemOwnership{
-			MobInstanceId: mob.InstanceId,
-			Item:          matchItem,
-			Gained:        false,
+			ActorId: mob.Character.Id,
+			Item:    matchItem,
+			Gained:  false,
 		})
 
 		room.SendText(

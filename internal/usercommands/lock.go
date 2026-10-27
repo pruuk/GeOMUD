@@ -60,9 +60,9 @@ func Lock(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 			user.Character.RemoveItem(backpackKeyItm)
 
 			events.AddToQueue(events.ItemOwnership{
-				UserId: user.UserId,
-				Item:   backpackKeyItm,
-				Gained: false,
+				ActorId: user.Character.Id,
+				Item:    backpackKeyItm,
+				Gained:  false,
 			})
 
 			user.SendText(fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="container">%s</ansi>, and add it to your key ring for the future.`, itmSpec.Name, containerName))
@@ -112,9 +112,9 @@ func Lock(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 			user.Character.RemoveItem(backpackKeyItm)
 
 			events.AddToQueue(events.ItemOwnership{
-				UserId: user.UserId,
-				Item:   backpackKeyItm,
-				Gained: false,
+				ActorId: user.Character.Id,
+				Item:    backpackKeyItm,
+				Gained:  false,
 			})
 
 			user.SendText(fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))

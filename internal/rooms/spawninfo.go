@@ -1,8 +1,10 @@
 package rooms
 
+import "github.com/GoMudEngine/GoMud/internal/ids"
+
 type SpawnInfo struct {
 	MobId        int      `yaml:"mobid,omitempty"`        // Mob template Id to spawn
-	InstanceId   int      `yaml:"-"`                      // Mob instance Id that was spawned (tracks whether exists currently)
+	InstanceId   ids.ID   `yaml:"-"`                      // Body ID of the mob that was spawned (tracks whether exists currently)
 	Container    string   `yaml:"container,omitempty"`    // If set, any item or gold spawned will go into the container.
 	ItemId       int      `yaml:"itemid,omitempty"`       // Item template Id to spawn on the floor
 	Gold         int      `yaml:"gold,omitempty"`         // How much gold to spawn on the floor

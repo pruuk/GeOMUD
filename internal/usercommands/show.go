@@ -80,7 +80,7 @@ func Show(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 	//
 	// Look for an NPC
 	//
-	if mobId > 0 {
+	if !mobId.IsZero() {
 
 		user.Character.CancelBuffsWithFlag("hidden")
 

@@ -22,6 +22,10 @@ func TestCopyoverRoundTripKeepsOnlineAccounts(t *testing.T) {
 		}
 		c := *u
 		c.session = nil // as decoded from the user file
+		if u.Character != nil {
+			ch := *u.Character // a copy, so the test does not pass by sharing a pointer
+			c.Character = &ch
+		}
 		return &c, nil
 	}
 	t.Cleanup(func() { restoreLoad = loadUserById })
@@ -30,6 +34,9 @@ func TestCopyoverRoundTripKeepsOnlineAccounts(t *testing.T) {
 	active.Username = "active"
 	gone := NewAccount(62, 0)
 	gone.Username = "gone"
+	require.True(t, giveBodyId(active))
+	require.True(t, giveBodyId(gone))
+	activeBodyId, goneBodyId := active.Character.Id, gone.Character.Id
 	onDisk[61], onDisk[62] = active, gone
 	userManagerMu.Lock()
 	activateLocked(active, connections.ConnectionId(5))
@@ -50,6 +57,8 @@ func TestCopyoverRoundTripKeepsOnlineAccounts(t *testing.T) {
 
 	require.NotNil(t, GetByUserId(61))
 	require.NotNil(t, GetByUserId(62))
+	assert.Equal(t, activeBodyId, GetByUserId(61).Character.Id, "the body ID survives copyover")
+	assert.Equal(t, goneBodyId, GetByUserId(62).Character.Id, "the body ID survives copyover")
 	assert.Equal(t, uint64(5), GetByUserId(61).ConnectionId())
 	assert.Equal(t, uint64(6), GetByUserId(62).ConnectionId())
 	assert.Same(t, GetByUserId(61), GetByConnectionId(5))

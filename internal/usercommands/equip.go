@@ -82,7 +82,7 @@ func Equip(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 			}
 
 			events.AddToQueue(events.EquipmentChange{
-				UserId:       user.UserId,
+				ActorId:      user.Character.Id,
 				ItemsWorn:    []items.Item{matchItem},
 				ItemsRemoved: oldItems,
 			})

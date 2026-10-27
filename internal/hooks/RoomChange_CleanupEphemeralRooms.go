@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
@@ -14,7 +15,7 @@ func CleanupEphemeralRooms(e events.Event) events.ListenerReturn {
 	evt := e.(events.RoomChange)
 
 	// If this isn't a user changing rooms, just pass it along.
-	if evt.UserId == 0 {
+	if actors.AccountOf(evt.ActorId) == nil {
 		return events.Continue
 	}
 
