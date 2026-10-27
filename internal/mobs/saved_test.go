@@ -53,6 +53,30 @@ func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
 	assert.Zero(t, got.LastIdleCommand)
 }
 
+func TestMobResetsWhatItWasDoingAsADiskRoundTripWould(t *testing.T) {
+	m := Mob{MobId: 7, PreventIdle: true, lastCommandTurn: 99}
+	m.Character = *characters.New()
+	m.Character.Id = ids.New(ids.NoCell)
+	m.SetTempData("chasing", "someone")
+	m.Character.PlayerDamage = map[int]int{3: 40}
+	m.Character.LastPlayerDamage = 12
+	m.Character.KilledBy = ids.New(ids.NoCell)
+	m.Character.KillerMobIsElite = true
+	m.Character.KillerMobName = "wolf"
+
+	got := Snapshot(&m).Mob() // an in-memory rest, no disk
+	assert.Nil(t, got.GetTempData("chasing"))
+	assert.False(t, got.PreventIdle)
+	assert.Zero(t, got.lastCommandTurn)
+	assert.Empty(t, got.Character.PlayerDamage)
+	assert.Zero(t, got.Character.LastPlayerDamage)
+	assert.True(t, got.Character.KilledBy.IsZero())
+	assert.False(t, got.Character.KillerMobIsElite)
+	assert.Empty(t, got.Character.KillerMobName)
+	assert.Equal(t, "someone", m.GetTempData("chasing"), "the live NPC it was taken from is untouched")
+	assert.Equal(t, 40, m.Character.PlayerDamage[3])
+}
+
 func TestSpawnSlotIsSavedButNotInTemplateYAML(t *testing.T) {
 	m := Mob{MobId: 7, SpawnSlot: 3}
 	m.Character = *characters.New()

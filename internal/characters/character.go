@@ -991,6 +991,19 @@ func (c *Character) GetMapSprawlCapacity() int {
 	return sprawlCap
 }
 
+// ForgetTransient clears what the character was doing that is never saved
+// (yaml:"-" or unexported and not recalculated): who damaged it and by how
+// much, who killed it, and its room history. A rested NPC comes back without
+// them, whether it went through disk or not.
+func (c *Character) ForgetTransient() {
+	c.PlayerDamage = nil
+	c.LastPlayerDamage = 0
+	c.KilledBy = ids.ID{}
+	c.KillerMobIsElite = false
+	c.KillerMobName = ""
+	c.roomHistory = nil
+}
+
 // Remember visiting a room. This may cause to forget an older room if the memory is full.
 func (c *Character) RememberRoom(roomId int) {
 	mapHistory := c.GetMemoryCapacity()

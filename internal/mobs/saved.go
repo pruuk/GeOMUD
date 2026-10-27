@@ -45,6 +45,10 @@ func (s SavedNPC) Mob() Mob {
 	m.Character.Charmed = s.Charmed
 	m.WanderCount, m.BoredomCounter, m.LastIdleCommand = 0, 0, 0
 	m.Path = PathQueue{}
+	m.PreventIdle = false
+	m.lastCommandTurn = 0
+	m.tempDataStore = nil
+	m.Character.ForgetTransient()
 	return m
 }
 
