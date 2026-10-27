@@ -3,6 +3,7 @@ package rooms
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
@@ -41,14 +42,6 @@ func memRoom(roomId int) *Room {
 	r.Zone = persistZone
 	roomManager.rooms[roomId] = r
 	return r
-}
-
-func restingIds(f roomNPCFile) []ids.ID {
-	out := []ids.ID{}
-	for _, s := range f.Resting {
-		out = append(out, s.Template.Character.Id)
-	}
-	return out
 }
 
 func persistSetup(t *testing.T) string {
@@ -147,6 +140,68 @@ func TestNPCIsInOneSidecarAtATime(t *testing.T) {
 	// A restart rebuilds the index from disk: one room has it.
 	require.NoError(t, BuildRestingIndex())
 	assert.Equal(t, 4101, restingIndex[id])
+}
+
+// allRestingOnDisk lists every NPC in every sidecar under the store, once per
+// copy, as a restart would find them.
+func allRestingOnDisk(t *testing.T, dir string) []ids.ID {
+	t.Helper()
+	out := []ids.ID{}
+	require.NoError(t, filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, npcSidecarSuffix) {
+			return err
+		}
+		out = append(out, restingIds(readNPCFileAt(path))...)
+		return nil
+	}))
+	return out
+}
+
+func TestWandererStaysOnDiskUntilAnotherSidecarHoldsIt(t *testing.T) {
+	dir := persistSetup(t)
+	id := liveTestNPC(t, 5, 3, 0)
+
+	a := memRoom(4100)
+	b := memRoom(4101)
+	a.bodies = append(a.bodies, id)
+	require.NoError(t, saveRoomNPCs(a)) // an autosave while it is in A
+
+	// It wanders to B, which has not saved since; A unloads and rewrites.
+	a.removeBody(id)
+	b.bodies = append(b.bodies, id)
+	removeRoomFromMemory(a)
+
+	// A crash now: B never wrote. The NPC is still on disk, once.
+	assert.Equal(t, []ids.ID{id}, allRestingOnDisk(t, dir), "the old copy stays until another sidecar holds it")
+
+	// A loading again does not call the live NPC resting.
+	a2 := memRoom(4100)
+	loadRoomNPCs(a2)
+	assert.Empty(t, a2.resting)
+	assert.False(t, IsResting(id))
+
+	// Without a crash, B's next save takes it out of A.
+	require.NoError(t, saveRoomNPCs(b))
+	assert.Empty(t, restingIds(readRoomNPCFile(persistZone, 4100)))
+	assert.Equal(t, []ids.ID{id}, restingIds(readRoomNPCFile(persistZone, 4101)))
+	assert.Equal(t, []ids.ID{id}, allRestingOnDisk(t, dir))
+}
+
+func TestWandererCrashRebuildsWithItResting(t *testing.T) {
+	persistSetup(t)
+	id := liveTestNPC(t, 5, 3, 0)
+	a := memRoom(4100)
+	b := memRoom(4101)
+	a.bodies = append(a.bodies, id)
+	require.NoError(t, saveRoomNPCs(a))
+	a.removeBody(id)
+	b.bodies = append(b.bodies, id)
+	removeRoomFromMemory(a)
+
+	mobs.Rest(id) // the crash takes it out of memory
+	restartStore(t)
+	assert.True(t, IsResting(id), "a restart finds it resting in A")
+	assert.Equal(t, 4100, restingIndex[id])
 }
 
 func TestEphemeralUnloadDestroysAndWritesNothing(t *testing.T) {
