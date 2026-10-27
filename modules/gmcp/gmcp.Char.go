@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
@@ -104,12 +105,13 @@ func (g *GMCPCharModule) buffTriggeredHandler(e events.Event) events.ListenerRet
 		return events.Continue // Return false to stop halt the event chain for this event
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
 	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
+		UserId:     user.UserId,
 		Identifier: `Char.Affects`,
 	})
 
@@ -142,12 +144,13 @@ func (g *GMCPCharModule) buffsAddedHandler(e events.Event) events.ListenerReturn
 		return events.Continue
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
 	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
+		UserId:     user.UserId,
 		Identifier: `Char`,
 	})
 
@@ -161,12 +164,13 @@ func (g *GMCPCharModule) buffsRemovedHandler(e events.Event) events.ListenerRetu
 		return events.Continue
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
 	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
+		UserId:     user.UserId,
 		Identifier: `Char`,
 	})
 
@@ -239,8 +243,14 @@ func (g *GMCPCharModule) ownershipChangeHandler(e events.Event) events.ListenerR
 		return events.Continue // Return false to stop halt the event chain for this event
 	}
 
+	// An NPC has no connection to update.
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
+		return events.Continue
+	}
+
 	events.AddToQueue(GMCPCharUpdate{
-		UserId:     evt.UserId,
+		UserId:     user.UserId,
 		Identifier: `Char.Inventory.Backpack`,
 	})
 
@@ -271,7 +281,8 @@ func (g *GMCPCharModule) equipmentChangeHandler(e events.Event) events.ListenerR
 		return events.Continue // Return false to stop halt the event chain for this event
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
@@ -292,7 +303,7 @@ func (g *GMCPCharModule) equipmentChangeHandler(e events.Event) events.ListenerR
 	if statsToChange != `` {
 		// Changing equipment might affect stats, inventory, maxhp/maxmp etc
 		events.AddToQueue(GMCPCharUpdate{
-			UserId:     evt.UserId,
+			UserId:     user.UserId,
 			Identifier: statsToChange,
 		})
 	}

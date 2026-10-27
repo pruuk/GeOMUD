@@ -111,7 +111,7 @@ func UserRoundTick(e events.Event) events.ListenerReturn {
 						triggeredBuffIds = append(triggeredBuffIds, buff.BuffId)
 					}
 
-					events.AddToQueue(events.BuffsTriggered{UserId: user.UserId, BuffIds: triggeredBuffIds})
+					events.AddToQueue(events.BuffsTriggered{ActorId: user.Character.Id, BuffIds: triggeredBuffIds})
 				}
 
 				// Recalculate all stats at the end of the round tick

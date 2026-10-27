@@ -46,18 +46,20 @@ func Command(rest string, user *accounts.Account, room *rooms.Room, flags events
 		if !mobId.IsZero() {
 
 			events.AddToQueue(events.Input{
-				MobInstanceId: mobId,
-				InputText:     oneCmd,
-				ReadyTurn:     readyTurn,
+				ActorId:   mobId,
+				InputText: oneCmd,
+				ReadyTurn: readyTurn,
 			})
 
 		} else if playerId > 0 {
 
-			events.AddToQueue(events.Input{
-				UserId:    playerId,
-				InputText: oneCmd,
-				ReadyTurn: readyTurn,
-			})
+			if targetUser := accounts.GetByUserId(playerId); targetUser != nil {
+				events.AddToQueue(events.Input{
+					ActorId:   targetUser.Character.Id,
+					InputText: oneCmd,
+					ReadyTurn: readyTurn,
+				})
+			}
 
 		}
 		readyTurn++

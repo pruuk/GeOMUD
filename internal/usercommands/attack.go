@@ -190,7 +190,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 
 			user.Character.SetAggro(attackMobId, characters.DefaultAttack)
 
-			events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 
 			user.SendText(fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, m.Character.Name))
 
@@ -236,7 +236,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 
 			user.Character.SetAggro(p.Character.Id, characters.DefaultAttack)
 
-			events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 
 			user.SendText(fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, p.Character.Name))
 

@@ -52,7 +52,7 @@ type MobForHire struct {
 	Price    int
 	Quantity int
 }
-type MobId int // Creating a custom type to help prevent confusion over MobId and MobInstanceId
+type MobId int // The template ID; a custom type so it is not confused with a mob's body ID (Character.Id)
 
 type Mob struct {
 	MobId           MobId
@@ -245,7 +245,7 @@ func GetInstance(instanceId ids.ID) *Mob {
 	return nil
 }
 
-func GetAllMobInstanceIds() []ids.ID {
+func GetAllMobIds() []ids.ID {
 
 	allIds := make([]ids.ID, 0)
 	for id := range mobInstances {
@@ -263,9 +263,9 @@ func DestroyInstance(instanceId ids.ID) {
 func (m *Mob) AddBuff(buffId int, source string) {
 
 	events.AddToQueue(events.Buff{
-		MobInstanceId: m.Character.Id,
-		BuffId:        buffId,
-		Source:        source,
+		ActorId: m.Character.Id,
+		BuffId:  buffId,
+		Source:  source,
 	})
 
 }
@@ -299,9 +299,9 @@ func (m *Mob) Command(inputTxt string, waitSeconds ...float64) {
 		m.lastCommandTurn = readyTurn + turnDelay + uint64(i)
 
 		events.AddToQueue(events.Input{
-			MobInstanceId: m.Character.Id,
-			InputText:     cmd,
-			ReadyTurn:     m.lastCommandTurn,
+			ActorId:   m.Character.Id,
+			InputText: cmd,
+			ReadyTurn: m.lastCommandTurn,
 		})
 
 	}

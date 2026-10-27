@@ -24,8 +24,8 @@ func Remove(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		}
 
 		events.AddToQueue(events.EquipmentChange{
-			MobInstanceId: mob.Character.Id,
-			ItemsRemoved:  removedItems,
+			ActorId:      mob.Character.Id,
+			ItemsRemoved: removedItems,
 		})
 
 		return true, nil
@@ -50,8 +50,8 @@ func Remove(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		mob.Character.Validate()
 
 		events.AddToQueue(events.EquipmentChange{
-			MobInstanceId: mob.Character.Id,
-			ItemsRemoved:  []items.Item{matchItem},
+			ActorId:      mob.Character.Id,
+			ItemsRemoved: []items.Item{matchItem},
 		})
 
 	}

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -61,11 +62,7 @@ func (g *GMCPRoomModule) itemOwnershipHandler(e events.Event) events.ListenerRet
 	}
 
 	// Only care about player ownership changes - look up their room
-	if evt.UserId == 0 {
-		return events.Continue
-	}
-
-	user := accounts.GetByUserId(evt.UserId)
+	user := actors.AccountOf(evt.ActorId)
 	if user == nil {
 		return events.Continue
 	}
@@ -98,7 +95,7 @@ func (g *GMCPRoomModule) aggroChangedHandler(e events.Event) events.ListenerRetu
 	}
 
 	identifier := `Room.Info.Contents.Npcs`
-	if evt.UserId > 0 {
+	if actors.AccountOf(evt.ActorId) != nil {
 		identifier = `Room.Info.Contents.Players`
 	}
 
@@ -164,15 +161,21 @@ func (g *GMCPRoomModule) roomChangeHandler(e events.Event) events.ListenerReturn
 
 	// Send updates to players in old/new rooms for
 	// players or npcs (whichever changed)
+	// The mover's UserId when the mover is a player, otherwise 0 (a mob).
+	moverUserId := 0
+	if mover := actors.AccountOf(evt.ActorId); mover != nil {
+		moverUserId = mover.UserId
+	}
+
 	updateId := `Room.Info.Contents.Players`
-	if !evt.MobInstanceId.IsZero() {
+	if moverUserId == 0 {
 		updateId = `Room.Info.Contents.Npcs`
 	}
 
 	if evt.FromRoomId != 0 {
 		if oldRoom := rooms.LoadRoom(evt.FromRoomId); oldRoom != nil {
 			for _, uId := range oldRoom.GetPlayers() {
-				if uId == evt.UserId {
+				if uId == moverUserId {
 					continue
 				}
 				events.AddToQueue(GMCPRoomUpdate{
@@ -186,7 +189,7 @@ func (g *GMCPRoomModule) roomChangeHandler(e events.Event) events.ListenerReturn
 	if evt.ToRoomId != 0 {
 		if newRoom := rooms.LoadRoom(evt.ToRoomId); newRoom != nil {
 			for _, uId := range newRoom.GetPlayers() {
-				if uId == evt.UserId {
+				if uId == moverUserId {
 					continue
 				}
 				events.AddToQueue(GMCPRoomUpdate{
@@ -198,13 +201,13 @@ func (g *GMCPRoomModule) roomChangeHandler(e events.Event) events.ListenerReturn
 	}
 
 	// If it's a mob changing rooms, don't need to send it its own room info
-	if evt.UserId == 0 {
+	if moverUserId == 0 {
 		return events.Continue
 	}
 
 	// Send update to the moved player about their new room.
 	events.AddToQueue(GMCPRoomUpdate{
-		UserId:     evt.UserId,
+		UserId:     moverUserId,
 		Identifier: `Room.Info`,
 	})
 

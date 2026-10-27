@@ -119,9 +119,9 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 					user.Character.RemoveItem(backpackKeyItm)
 
 					events.AddToQueue(events.ItemOwnership{
-						UserId: user.UserId,
-						Item:   backpackKeyItm,
-						Gained: false,
+						ActorId: user.Character.Id,
+						Item:    backpackKeyItm,
+						Gained:  false,
 					})
 
 					exitInfo.Lock.SetUnlocked()

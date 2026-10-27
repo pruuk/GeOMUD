@@ -45,7 +45,7 @@ func Build(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 				} else {
 					user.SendText(fmt.Sprintf("Moved to room %d.", roomId))
 					events.AddToQueue(events.Input{
-						UserId:    user.UserId,
+						ActorId:   user.Character.Id,
 						InputText: `look`,
 					}, -1)
 				}
@@ -149,7 +149,7 @@ func Build(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 				user.SendText(fmt.Sprintf("Moved to room %d.", destinationRoom.RoomId))
 
 				events.AddToQueue(events.Input{
-					UserId:    user.UserId,
+					ActorId:   user.Character.Id,
 					InputText: `look`,
 				}, -1)
 			}

@@ -1113,6 +1113,7 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
 ══════════════════════════════════════════════════════════════════ -->
 <section class="doc-section" id="events-reference">
     <h2>Event System: Event Reference</h2>
+    <p>Fields named <code>ActorId</code> (and <code>SourceActorId</code>) name a live body, player or mob, by its <code>ids.ID</code>, written <code>0x&lt;cell&gt;:0x&lt;random&gt;</code>. To reach the player's account, use <code>actors.AccountOf(evt.ActorId)</code>; it returns nil for a mob. Fields named <code>UserId</code> name an account.</p>
 
     <div class="api-group">
         <div class="api-group-title">Game Loop</div>
@@ -1121,7 +1122,7 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
             <tbody>
                 <tr><td><span class="ev-badge">NewRound</span></td><td><code>RoundNumber uint64</code>, <code>TimeNow time.Time</code></td><td>Fires every game round. Primary hook for periodic module logic.</td></tr>
                 <tr><td><span class="ev-badge">NewTurn</span></td><td><code>TurnNumber uint64</code>, <code>TimeNow time.Time</code></td><td>Fires every turn (faster than a round, configured by <code>TurnMs</code>).</td></tr>
-                <tr><td><span class="ev-badge">MobIdle</span></td><td><code>MobInstanceId int</code></td><td>Fires when a mob has nothing to do. Use <code>events.First</code> to intercept before built-in AI.</td></tr>
+                <tr><td><span class="ev-badge">MobIdle</span></td><td><code>ActorId ids.ID</code></td><td>Fires when a mob has nothing to do. Use <code>events.First</code> to intercept before built-in AI.</td></tr>
             </tbody>
         </table>
     </div>
@@ -1152,7 +1153,6 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
                 <tr><td><span class="ev-badge">CharacterStatsChanged</span></td><td><code>UserId</code></td><td>Core stats or stat maxima changed.</td></tr>
                 <tr><td><span class="ev-badge">CharacterTrained</span></td><td><code>UserId</code></td><td>Player spent training points.</td></tr>
                 <tr><td><span class="ev-badge">AlignmentChanged</span></td><td><code>UserId</code>, <code>AlignmentOld string</code>, <code>AlignmentNew string</code></td><td>Alignment name crossed a threshold.</td></tr>
-                <tr><td><span class="ev-badge">SkillUsed</span></td><td><code>UserId</code>, <code>Skill skills.SkillTag</code>, <code>Details string</code></td><td>Player used a skill.</td></tr>
             </tbody>
         </table>
     </div>
@@ -1162,8 +1162,7 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
         <table class="ref-table">
             <thead><tr><th>Event Type</th><th>Key Fields</th><th>Notes</th></tr></thead>
             <tbody>
-                <tr><td><span class="ev-badge">RoomChange</span></td><td><code>UserId</code>, <code>MobInstanceId</code>, <code>FromRoomId</code>, <code>ToRoomId</code>, <code>Unseen bool</code></td><td>Player or mob moved between rooms. One of UserId or MobInstanceId is non-zero.</td></tr>
-                <tr><td><span class="ev-badge">RoomAction</span></td><td><code>RoomId</code>, <code>SourceUserId</code>, <code>SourceMobId</code>, <code>Action string</code>, <code>Details any</code>, <code>ReadyTurn uint64</code></td><td>Delayed room action queued for a future turn.</td></tr>
+                <tr><td><span class="ev-badge">RoomChange</span></td><td><code>ActorId ids.ID</code>, <code>FromRoomId</code>, <code>ToRoomId</code>, <code>Unseen bool</code></td><td>Player or mob moved between rooms. <code>ActorId</code> is the body that moved.</td></tr>
                 <tr><td><span class="ev-badge">DayNightCycle</span></td><td><code>IsSunrise bool</code>, <code>Day int</code>, <code>Month int</code>, <code>Year int</code>, <code>Time string</code></td><td>In-game sunrise or sunset occurred.</td></tr>
                 <tr><td><span class="ev-badge">FireBlaze</span></td><td><code>RoomId</code></td><td>A fire-starting event occurred in this room.</td></tr>
             </tbody>
@@ -1175,9 +1174,9 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
         <table class="ref-table">
             <thead><tr><th>Event Type</th><th>Key Fields</th><th>Notes</th></tr></thead>
             <tbody>
-                <tr><td><span class="ev-badge">MobDeath</span></td><td><code>MobId</code>, <code>InstanceId</code>, <code>RoomId</code>, <code>CharacterName</code>, <code>Level int</code>, <code>PlayerDamage map[int]int</code>, <code>KilledByUsers []int</code></td><td>A mob was killed. <code>PlayerDamage</code> maps UserId to damage dealt.</td></tr>
+                <tr><td><span class="ev-badge">MobDeath</span></td><td><code>MobId</code> (the template), <code>ActorId ids.ID</code>, <code>RoomId</code>, <code>CharacterName</code>, <code>Level int</code>, <code>PlayerDamage map[int]int</code>, <code>KilledByUsers []int</code></td><td>A mob was killed. <code>PlayerDamage</code> maps UserId to damage dealt.</td></tr>
                 <tr><td><span class="ev-badge">MobItemDrop</span></td><td><code>MobId</code>, <code>RoomId</code>, <code>Zone string</code>, <code>ItemId int</code></td><td>An item dropped from a mob on death.</td></tr>
-                <tr><td><span class="ev-badge">AggroChanged</span></td><td><code>UserId</code>, <code>MobInstanceId</code>, <code>RoomId</code></td><td>A player or mob entered or left aggro state.</td></tr>
+                <tr><td><span class="ev-badge">AggroChanged</span></td><td><code>ActorId ids.ID</code>, <code>RoomId</code></td><td>A player or mob entered or left aggro state.</td></tr>
             </tbody>
         </table>
     </div>
@@ -1187,9 +1186,8 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
         <table class="ref-table">
             <thead><tr><th>Event Type</th><th>Key Fields</th><th>Notes</th></tr></thead>
             <tbody>
-                <tr><td><span class="ev-badge">EquipmentChange</span></td><td><code>UserId</code>, <code>GoldChange int</code>, <code>BankChange int</code>, <code>ItemsWorn []items.Item</code>, <code>ItemsRemoved []items.Item</code></td><td>Player's gold, bank, or worn items changed.</td></tr>
-                <tr><td><span class="ev-badge">ItemOwnership</span></td><td><code>UserId</code>, <code>Item items.Item</code>, <code>Gained bool</code></td><td>Player gained or lost a specific item.</td></tr>
-                <tr><td><span class="ev-badge">Purchase</span></td><td><code>UserId</code>, <code>RoomId</code>, <code>Cost int</code>, <code>SellerMobId int</code>, <code>ItemId int</code>, <code>MobId int</code>, <code>BuffId int</code></td><td>Player bought something from a shop.</td></tr>
+                <tr><td><span class="ev-badge">EquipmentChange</span></td><td><code>ActorId ids.ID</code>, <code>GoldChange int</code>, <code>BankChange int</code>, <code>ItemsWorn []items.Item</code>, <code>ItemsRemoved []items.Item</code></td><td>A player's or mob's gold, bank, or worn items changed.</td></tr>
+                <tr><td><span class="ev-badge">ItemOwnership</span></td><td><code>ActorId ids.ID</code>, <code>Item items.Item</code>, <code>Gained bool</code></td><td>A player or mob gained or lost a specific item.</td></tr>
             </tbody>
         </table>
     </div>
@@ -1199,10 +1197,10 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
         <table class="ref-table">
             <thead><tr><th>Event Type</th><th>Key Fields</th><th>Notes</th></tr></thead>
             <tbody>
-                <tr><td><span class="ev-badge">Buff</span></td><td><code>UserId</code>, <code>MobInstanceId</code>, <code>BuffId int</code>, <code>Source string</code></td><td>Apply or remove a buff.</td></tr>
-                <tr><td><span class="ev-badge">BuffsAdded</span></td><td><code>UserId</code>, <code>MobInstanceId</code>, <code>BuffIds []int</code></td><td>One or more buffs were applied.</td></tr>
-                <tr><td><span class="ev-badge">BuffsRemoved</span></td><td><code>UserId</code>, <code>MobInstanceId</code>, <code>BuffIds []int</code></td><td>One or more buffs expired or were removed.</td></tr>
-                <tr><td><span class="ev-badge">BuffsTriggered</span></td><td><code>UserId</code>, <code>MobInstanceId</code>, <code>BuffIds []int</code></td><td>Buffs fired their per-round trigger.</td></tr>
+                <tr><td><span class="ev-badge">Buff</span></td><td><code>ActorId ids.ID</code>, <code>BuffId int</code>, <code>Source string</code></td><td>Apply or remove a buff.</td></tr>
+                <tr><td><span class="ev-badge">BuffsAdded</span></td><td><code>ActorId ids.ID</code>, <code>BuffIds []int</code></td><td>One or more buffs were applied.</td></tr>
+                <tr><td><span class="ev-badge">BuffsRemoved</span></td><td><code>ActorId ids.ID</code>, <code>BuffIds []int</code></td><td>One or more buffs expired or were removed.</td></tr>
+                <tr><td><span class="ev-badge">BuffsTriggered</span></td><td><code>ActorId ids.ID</code>, <code>BuffIds []int</code></td><td>Buffs fired their per-round trigger.</td></tr>
             </tbody>
         </table>
     </div>
@@ -1214,7 +1212,7 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
             <tbody>
                 <tr><td><span class="ev-badge">Broadcast</span></td><td><code>Text string</code>, <code>TextScreenReader string</code>, <code>IsCommunication bool</code>, <code>SourceIsMod bool</code></td><td>Message sent to all connected players.</td></tr>
                 <tr><td><span class="ev-badge">Message</span></td><td><code>UserId</code>, <code>RoomId</code>, <code>Text string</code>, <code>IsCommunication bool</code></td><td>Message sent to a room or specific user.</td></tr>
-                <tr><td><span class="ev-badge">Communication</span></td><td><code>SourceUserId</code>, <code>CommType string</code>, <code>Name string</code>, <code>Message string</code></td><td>A say/party/whisper/shout communication.</td></tr>
+                <tr><td><span class="ev-badge">Communication</span></td><td><code>SourceActorId ids.ID</code>, <code>TargetUserId</code>, <code>CommType string</code>, <code>Name string</code>, <code>Message string</code></td><td>A say/party/whisper/shout communication.</td></tr>
                 <tr><td><span class="ev-badge">PartyUpdated</span></td><td><code>Action string</code>, <code>UserIds []int</code></td><td>Party was created, disbanded, or membership changed.</td></tr>
             </tbody>
         </table>
@@ -1225,12 +1223,11 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
         <table class="ref-table">
             <thead><tr><th>Event Type</th><th>Key Fields</th><th>Notes</th></tr></thead>
             <tbody>
-                <tr><td><span class="ev-badge">Input</span></td><td><code>UserId</code>, <code>MobInstanceId</code>, <code>InputText string</code>, <code>ReadyTurn uint64</code>, <code>Flags EventFlag</code></td><td>Raw player or mob input before command dispatch. Register with <code>events.First</code> to intercept commands.</td></tr>
+                <tr><td><span class="ev-badge">Input</span></td><td><code>ActorId ids.ID</code>, <code>InputText string</code>, <code>ReadyTurn uint64</code>, <code>Flags EventFlag</code></td><td>Raw player or mob input before command dispatch. Register with <code>events.First</code> to intercept commands.</td></tr>
                 <tr><td><span class="ev-badge">System</span></td><td><code>Command string</code>, <code>Data any</code>, <code>Description string</code></td><td>Internal server system command.</td></tr>
                 <tr><td><span class="ev-badge">UserSettingChanged</span></td><td><code>UserId</code>, <code>Name string</code></td><td>A player's personal setting changed.</td></tr>
                 <tr><td><span class="ev-badge">RedrawPrompt</span></td><td><code>UserId</code>, <code>OnlyIfChanged bool</code></td><td>Unique event: only one per user in the queue at a time.</td></tr>
                 <tr><td><span class="ev-badge">RebuildMap</span></td><td><code>MapRootRoomId int</code>, <code>SkipIfExists bool</code></td><td>Unique event: only one per root room ID in the queue.</td></tr>
-                <tr><td><span class="ev-badge">CLIRequest</span></td><td><code>UserId</code>, <code>ConnectionId</code>, <code>Command string</code>, <code>Args []string</code></td><td>CLI bridge command from an external process.</td></tr>
             </tbody>
         </table>
     </div>
@@ -1514,18 +1511,19 @@ func (mod *AuctionsModule) auctionCommand(rest string, user *users.UserRecord, r
 import (
     "embed"
 
+    "github.com/GoMudEngine/GoMud/internal/accounts"
     "github.com/GoMudEngine/GoMud/internal/events"
+    "github.com/GoMudEngine/GoMud/internal/ids"
     "github.com/GoMudEngine/GoMud/internal/plugins"
     "github.com/GoMudEngine/GoMud/internal/rooms"
-    "github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //go:embed files/*
 var files embed.FS
 
 type followId struct {
-    userId        int
-    mobInstanceId int
+    userId int
+    mobId  ids.ID
 }
 
 type FollowModule struct {
@@ -1566,7 +1564,7 @@ func init() {
     events.RegisterListener(events.NewRound{}, f.onNewRound)
 }
 
-func (f *FollowModule) followUserCommand(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
     // ... follow logic for players ...
     return true, nil
 }

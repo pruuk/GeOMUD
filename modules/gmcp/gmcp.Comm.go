@@ -2,6 +2,7 @@ package gmcp
 
 import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -51,9 +52,12 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 		Text:    ansitags.Parse(evt.Message, ansitags.StripTags),
 	}
 
-	if evt.SourceUserId > 0 {
+	// An account means the source is a player; otherwise a mob.
+	sourceUser := actors.AccountOf(evt.SourceActorId)
+
+	if sourceUser != nil {
 		payload.Source = `player`
-	} else if !evt.SourceMobInstanceId.IsZero() {
+	} else if !evt.SourceActorId.IsZero() {
 		payload.Source = `mob`
 	}
 
@@ -66,14 +70,10 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 
 		roomId := 0
 
-		if evt.SourceUserId > 0 {
-			if user := accounts.GetByUserId(evt.SourceUserId); user != nil {
-				roomId = user.Character.RoomId
-			}
-		}
-
-		if !evt.SourceMobInstanceId.IsZero() {
-			if mob := mobs.GetInstance(evt.SourceMobInstanceId); mob != nil {
+		if sourceUser != nil {
+			roomId = sourceUser.Character.RoomId
+		} else if !evt.SourceActorId.IsZero() {
+			if mob := mobs.GetInstance(evt.SourceActorId); mob != nil {
 				roomId = mob.Character.RoomId
 			}
 		}
@@ -86,8 +86,8 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 
 	} else if evt.CommType == `party` {
 
-		if evt.SourceUserId > 0 {
-			if party := parties.Get(evt.SourceUserId); party != nil {
+		if sourceUser != nil {
+			if party := parties.Get(sourceUser.UserId); party != nil {
 				sendToUserIds = append([]int{}, party.UserIds...)
 			}
 		}
@@ -107,7 +107,7 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 	for _, userId := range sendToUserIds {
 
 		// Exclude user from receiving their own messages?
-		//if userId == evt.SourceUserId && evt.CommType != `broadcast` {
+		//if sourceUser != nil && userId == sourceUser.UserId && evt.CommType != `broadcast` {
 		//continue
 		//}
 

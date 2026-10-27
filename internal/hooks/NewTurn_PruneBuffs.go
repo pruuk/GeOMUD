@@ -49,8 +49,8 @@ func PruneBuffs(e events.Event) events.ListenerReturn {
 					user.Character.Validate()
 
 					events.AddToQueue(events.CharacterVitalsChanged{UserId: uId})
-					events.AddToQueue(events.BuffsTriggered{UserId: uId, BuffIds: prunedIds})
-					events.AddToQueue(events.BuffsRemoved{UserId: uId, BuffIds: prunedIds})
+					events.AddToQueue(events.BuffsTriggered{ActorId: user.Character.Id, BuffIds: prunedIds})
+					events.AddToQueue(events.BuffsRemoved{ActorId: user.Character.Id, BuffIds: prunedIds})
 
 					if logOff {
 						mudlog.Info("MEDITATION LOGOFF")
@@ -63,7 +63,7 @@ func PruneBuffs(e events.Event) events.ListenerReturn {
 	}
 
 	// Handle outstanding mob buffs
-	for _, mobId := range mobs.GetAllMobInstanceIds() {
+	for _, mobId := range mobs.GetAllMobIds() {
 
 		mob := mobs.GetInstance(mobId)
 

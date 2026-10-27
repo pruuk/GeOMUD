@@ -18,7 +18,7 @@ func MobRoundTick(e events.Event) events.ListenerReturn {
 	//
 	// Do mob round maintenance
 	//
-	for _, mobId := range mobs.GetAllMobInstanceIds() {
+	for _, mobId := range mobs.GetAllMobIds() {
 
 		mob := mobs.GetInstance(mobId)
 
@@ -40,7 +40,7 @@ func MobRoundTick(e events.Event) events.ListenerReturn {
 				triggeredBuffIds = append(triggeredBuffIds, buff.BuffId)
 			}
 
-			events.AddToQueue(events.BuffsTriggered{MobInstanceId: mobId, BuffIds: triggeredBuffIds})
+			events.AddToQueue(events.BuffsTriggered{ActorId: mobId, BuffIds: triggeredBuffIds})
 		}
 
 		// Do charm cleanup

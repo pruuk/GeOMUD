@@ -744,10 +744,10 @@ func (r *Room) AddMob(mobId ids.ID) {
 	r.MarkMobVisited(mobId)
 
 	events.AddToQueue(events.RoomChange{
-		MobInstanceId: mobId,
-		FromRoomId:    mob.Character.RoomId,
-		ToRoomId:      r.RoomId,
-		Unseen:        mob.Character.HasBuffFlag("hidden"),
+		ActorId:    mobId,
+		FromRoomId: mob.Character.RoomId,
+		ToRoomId:   r.RoomId,
+		Unseen:     mob.Character.HasBuffFlag("hidden"),
 	})
 
 	mob.Character.RoomId = r.RoomId

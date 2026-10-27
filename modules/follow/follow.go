@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -245,7 +246,7 @@ func (f *FollowModule) onPartyChange(e events.Event) events.ListenerReturn {
 func (f *FollowModule) idleMobHandler(e events.Event) events.ListenerReturn {
 	evt := e.(events.MobIdle)
 
-	if f.isFollowing(followId{mobId: evt.MobInstanceId}) {
+	if f.isFollowing(followId{mobId: evt.ActorId}) {
 		return events.Cancel
 	}
 
@@ -255,7 +256,12 @@ func (f *FollowModule) idleMobHandler(e events.Event) events.ListenerReturn {
 func (f *FollowModule) roomChangeHandler(e events.Event) events.ListenerReturn {
 	evt := e.(events.RoomChange)
 
-	moverId := followId{userId: evt.UserId, mobId: evt.MobInstanceId}
+	// A player's follow key is the account's UserId; a mob's is its ID.
+	moverUser := actors.AccountOf(evt.ActorId)
+	moverId := followId{mobId: evt.ActorId}
+	if moverUser != nil {
+		moverId = followId{userId: moverUser.UserId}
+	}
 
 	allFollowers := f.getFollowers(moverId)
 	if len(allFollowers) == 0 {
@@ -287,10 +293,8 @@ func (f *FollowModule) roomChangeHandler(e events.Event) events.ListenerReturn {
 	// The exit they went through is gone/missing? (Teleported?)
 	// End the follow
 	if followExitName == `` {
-		if evt.UserId > 0 {
-			if user := accounts.GetByUserId(evt.UserId); user != nil {
-				user.Command(`follow lose`)
-			}
+		if moverUser != nil {
+			moverUser.Command(`follow lose`)
 		}
 	} else {
 
@@ -350,7 +354,7 @@ func (f *FollowModule) onMobDeath(e events.Event) events.ListenerReturn {
 		return events.Cancel
 	}
 
-	f.loseFollowers(followId{mobId: evt.InstanceId})
+	f.loseFollowers(followId{mobId: evt.ActorId})
 
 	return events.Continue
 }

@@ -24,7 +24,7 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 
 	maxBoredom := uint8(mc.MaxMobBoredom)
 
-	allMobInstances := mobs.GetAllMobInstanceIds()
+	allMobInstances := mobs.GetAllMobIds()
 
 	allowedUnloadCt := len(allMobInstances) - int(mc.MobUnloadThreshold)
 	if allowedUnloadCt < 0 {
@@ -67,7 +67,7 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 				if user.Character.RoomId != mob.Character.RoomId {
 					mob.Command(`emote mumbles about losing their quarry.`)
 					mob.Character.Aggro = nil
-					events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+					events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 				}
 			}
 			continue
@@ -121,7 +121,7 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 
 		}
 
-		events.AddToQueue(events.MobIdle{MobInstanceId: mobId})
+		events.AddToQueue(events.MobIdle{ActorId: mobId})
 
 	}
 

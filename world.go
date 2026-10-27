@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/badinputtracker"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
@@ -84,37 +85,44 @@ func (w *World) HandleInputEvents(e events.Event) events.ListenerReturn {
 
 	var turnCt uint64 = util.GetTurnCount()
 
-	//mudlog.Debug(`Event`, `type`, input.Type(), `UserId`, input.UserId, `MobInstanceId`, input.MobInstanceId, `WaitTurns`, input.WaitTurns, `InputText`, input.InputText)
+	//mudlog.Debug(`Event`, `type`, input.Type(), `ActorId`, input.ActorId, `WaitTurns`, input.WaitTurns, `InputText`, input.InputText)
+
+	// An account drives the body: the player path, keyed by the account's
+	// UserId. Otherwise the mob path, keyed by the body's ID. A body with no
+	// live actor (a mob that just died) takes the mob path, which drops it.
+	inputUser := actors.AccountOf(input.ActorId)
 
 	// If it's a mob
-	if !input.MobInstanceId.IsZero() {
+	if inputUser == nil {
 
 		// If an event was already processed for this user this turn, skip
 		// We put this first, so that any delayed command for a mob will block
 		// the command pipeline for the mob until executed.
-		if _, ok := w.mobInputEventTracker[input.MobInstanceId]; ok {
+		if _, ok := w.mobInputEventTracker[input.ActorId]; ok {
 			return events.CancelAndRequeue
 		}
 
 		// 0 and below, process immediately and don't count towards limit
 		if input.ReadyTurn <= 0 {
-			w.processMobInput(input.MobInstanceId, input.InputText)
+			w.processMobInput(input.ActorId, input.InputText)
 			return events.Continue
 		}
 
 		// This will cause any pending command to block all further pending commands
 		// This is important, otherwise we issue a command with a delay, but other commands
 		// Get executed while we wait.
-		w.mobInputEventTracker[input.MobInstanceId] = struct{}{}
+		w.mobInputEventTracker[input.ActorId] = struct{}{}
 
 		if input.ReadyTurn > turnCt {
 			return events.CancelAndRequeue
 		}
 
-		w.processMobInput(input.MobInstanceId, input.InputText)
+		w.processMobInput(input.ActorId, input.InputText)
 
 		return events.Continue
 	}
+
+	userId := inputUser.UserId
 
 	// 0 and below, process immediately and don't count towards limit
 	if input.ReadyTurn <= 0 {
@@ -122,22 +130,22 @@ func (w *World) HandleInputEvents(e events.Event) events.ListenerReturn {
 		// If this command was potentially blocking input, unblock it now.
 		if input.Flags.Has(events.CmdUnBlockInput) {
 
-			if _, ok := w.ignoreInput[input.UserId]; ok {
-				delete(w.ignoreInput, input.UserId)
-				if user := accounts.GetByUserId(input.UserId); user != nil {
+			if _, ok := w.ignoreInput[userId]; ok {
+				delete(w.ignoreInput, userId)
+				if user := accounts.GetByUserId(userId); user != nil {
 					user.UnblockInput()
 				}
 			}
 
 		}
 
-		w.processInput(input.UserId, input.InputText, input.Flags)
+		w.processInput(userId, input.InputText, input.Flags)
 
 		return events.Continue
 	}
 
 	// If an event was already processed for this user this turn, skip
-	if _, ok := w.userInputEventTracker[input.UserId]; ok {
+	if _, ok := w.userInputEventTracker[userId]; ok {
 		return events.CancelAndRequeue
 	}
 
@@ -148,8 +156,8 @@ func (w *World) HandleInputEvents(e events.Event) events.ListenerReturn {
 		// If this is a multi-turn wait, block further input if flagged to do so
 		if input.Flags.Has(events.CmdBlockInput) {
 
-			if _, ok := w.ignoreInput[input.UserId]; !ok {
-				w.ignoreInput[input.UserId] = turnCt
+			if _, ok := w.ignoreInput[userId]; !ok {
+				w.ignoreInput[userId] = turnCt
 			}
 
 			input.Flags.Remove(events.CmdBlockInput)
@@ -165,18 +173,18 @@ func (w *World) HandleInputEvents(e events.Event) events.ListenerReturn {
 	// If this command was potentially blocking input, unblock it now.
 	if input.Flags.Has(events.CmdUnBlockInput) {
 
-		if _, ok := w.ignoreInput[input.UserId]; ok {
-			delete(w.ignoreInput, input.UserId)
-			if user := accounts.GetByUserId(input.UserId); user != nil {
+		if _, ok := w.ignoreInput[userId]; ok {
+			delete(w.ignoreInput, userId)
+			if user := accounts.GetByUserId(userId); user != nil {
 				user.UnblockInput()
 			}
 		}
 
 	}
 
-	w.processInput(input.UserId, input.InputText, events.EventFlag(input.Flags))
+	w.processInput(userId, input.InputText, events.EventFlag(input.Flags))
 
-	w.userInputEventTracker[input.UserId] = struct{}{}
+	w.userInputEventTracker[userId] = struct{}{}
 
 	return events.Continue
 }
@@ -475,8 +483,14 @@ loop:
 			break loop
 		case wi := <-w.worldInput:
 
+			actor := actors.ByUserId(wi.FromId)
+			if actor == nil {
+				mudlog.Error("InputWorker", "error", "no actor for user, input dropped", "userId", wi.FromId)
+				continue
+			}
+
 			events.AddToQueue(events.Input{
-				UserId:    wi.FromId,
+				ActorId:   actor.Id,
 				InputText: wi.InputText,
 				ReadyTurn: util.GetTurnCount(),
 			})
@@ -538,7 +552,7 @@ func (w *World) processInput(userId int, inputText string, flags events.EventFla
 					}
 
 					events.AddToQueue(events.Input{
-						UserId:    userId,
+						ActorId:   user.Character.Id,
 						InputText: newCmd,
 						ReadyTurn: readyTurn,
 					})

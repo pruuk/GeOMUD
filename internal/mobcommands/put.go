@@ -80,9 +80,9 @@ func Put(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		mob.Character.RemoveItem(item)
 
 		events.AddToQueue(events.ItemOwnership{
-			MobInstanceId: mob.Character.Id,
-			Item:          item,
-			Gained:        false,
+			ActorId: mob.Character.Id,
+			Item:    item,
+			Gained:  false,
 		})
 
 		room.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> places their <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, mob.Character.Name, item.DisplayName(), containerName))

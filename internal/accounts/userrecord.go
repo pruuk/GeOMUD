@@ -286,7 +286,7 @@ func (u *Account) Command(inputTxt string, waitSeconds ...float64) {
 	}
 
 	events.AddToQueue(events.Input{
-		UserId:    u.UserId,
+		ActorId:   u.Character.Id,
 		InputText: inputTxt,
 		ReadyTurn: readyTurn,
 	})
@@ -317,7 +317,7 @@ func (u *Account) CommandFlagged(inputTxt string, flagData events.EventFlag, wai
 	}
 
 	events.AddToQueue(events.Input{
-		UserId:    u.UserId,
+		ActorId:   u.Character.Id,
 		InputText: inputTxt,
 		ReadyTurn: readyTurn,
 		Flags:     flagData,
@@ -328,9 +328,9 @@ func (u *Account) CommandFlagged(inputTxt string, flagData events.EventFlag, wai
 func (u *Account) AddBuff(buffId int, source string) {
 
 	events.AddToQueue(events.Buff{
-		UserId: u.UserId,
-		BuffId: buffId,
-		Source: source,
+		ActorId: u.Character.Id,
+		BuffId:  buffId,
+		Source:  source,
 	})
 
 }

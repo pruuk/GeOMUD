@@ -60,7 +60,7 @@ func Drop(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 		user.Character.Gold -= dropAmt
 
 		events.AddToQueue(events.EquipmentChange{
-			UserId:     user.UserId,
+			ActorId:    user.Character.Id,
 			GoldChange: -dropAmt,
 		})
 
@@ -103,9 +103,9 @@ func Drop(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 		user.Character.RemoveItem(matchItem)
 
 		events.AddToQueue(events.ItemOwnership{
-			UserId: user.UserId,
-			Item:   matchItem,
-			Gained: false,
+			ActorId: user.Character.Id,
+			Item:    matchItem,
+			Gained:  false,
 		})
 
 		user.SendText(

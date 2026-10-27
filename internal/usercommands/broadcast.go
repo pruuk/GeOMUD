@@ -26,10 +26,10 @@ func Broadcast(rest string, user *accounts.Account, room *rooms.Room, flags even
 	})
 
 	events.AddToQueue(events.Communication{
-		SourceUserId: user.UserId,
-		CommType:     `broadcast`,
-		Name:         user.Character.Name,
-		Message:      rest,
+		SourceActorId: user.Character.Id,
+		CommType:      `broadcast`,
+		Name:          user.Character.Name,
+		Message:       rest,
 	})
 
 	return true, nil

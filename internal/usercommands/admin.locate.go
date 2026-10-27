@@ -75,7 +75,7 @@ func Locate(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		contains = true
 	}
 
-	for _, mobId := range mobs.GetAllMobInstanceIds() {
+	for _, mobId := range mobs.GetAllMobIds() {
 
 		mob := mobs.GetInstance(mobId)
 		if mob == nil {

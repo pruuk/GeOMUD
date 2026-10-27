@@ -382,7 +382,7 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 	roomManager.roomsWithUsers[newRoom.RoomId] = playerCt
 
 	events.AddToQueue(events.RoomChange{
-		UserId:     userId,
+		ActorId:    user.Character.Id,
 		FromRoomId: fromRoomId,
 		ToRoomId:   newRoom.RoomId,
 		Unseen:     user.Character.HasBuffFlag("hidden"),

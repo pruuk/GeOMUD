@@ -53,6 +53,19 @@ func TestOneIdSpaceForPlayersAndNPCs(t *testing.T) {
 	assert.Same(t, &m.Character, n.Character)
 }
 
+func TestAccountOfNamesTheDriver(t *testing.T) {
+	Reset()
+	acc := &accounts.Account{UserId: 3}
+	p := Spawn(bodyChar(), NewConnectionController(acc))
+	m := bodyMob()
+	Spawn(&m.Character, NewBehaviourController(m))
+
+	assert.Same(t, acc, AccountOf(p.Id))
+	assert.Nil(t, AccountOf(m.Character.Id), "an NPC has no account")
+	assert.Nil(t, AccountOf(ids.New(ids.NoCell)), "no actor")
+	assert.Nil(t, AccountOf(ids.ID{}), "zero ID")
+}
+
 func TestSetControllerKeepsTheId(t *testing.T) {
 	Reset()
 	m := bodyMob()

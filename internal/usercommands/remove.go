@@ -23,7 +23,7 @@ func Remove(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		}
 
 		events.AddToQueue(events.EquipmentChange{
-			UserId:       user.UserId,
+			ActorId:      user.Character.Id,
 			ItemsRemoved: removedItems,
 		})
 
@@ -79,7 +79,7 @@ func Remove(rest string, user *accounts.Account, room *rooms.Room, flags events.
 			user.Character.StoreItem(matchItem)
 
 			events.AddToQueue(events.EquipmentChange{
-				UserId:       user.UserId,
+				ActorId:      user.Character.Id,
 				ItemsRemoved: []items.Item{matchItem},
 			})
 

@@ -639,10 +639,10 @@ func Party(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 		user.SendText(fmt.Sprintf(`<ansi fg="magenta">(party)</ansi> You say, "<ansi fg="yellow">%s</ansi>"`, rest))
 
 		events.AddToQueue(events.Communication{
-			SourceUserId: user.UserId,
-			CommType:     `party`,
-			Name:         user.Character.Name,
-			Message:      rest,
+			SourceActorId: user.Character.Id,
+			CommType:      `party`,
+			Name:          user.Character.Name,
+			Message:       rest,
 		})
 	}
 

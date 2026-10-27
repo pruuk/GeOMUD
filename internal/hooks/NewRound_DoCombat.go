@@ -141,7 +141,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 			uRoom.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> flees to the <ansi fg="exit">%s</ansi> exit!`, user.Character.Name, exitName), user.UserId)
 
 			user.Character.Aggro = nil
-			events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 
 			if err := rooms.MoveToRoom(user.UserId, exitRoomId); err == nil {
 
@@ -200,14 +200,14 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 			if !targetFound {
 				user.SendText(`Your target can't be found.`)
 				user.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 				continue
 			}
 
 			defRoom := rooms.LoadRoom(defUser.Character.RoomId)
 			if defRoom == nil {
 				user.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 				continue
 			}
 
@@ -216,7 +216,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 			if defUser.Character.Health < 1 {
 				user.SendText(`Your rage subsides.`)
 				user.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 				continue
 			}
 
@@ -309,9 +309,9 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 						defRoom.SendText(fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">%s</ansi> <ansi fg="username">%s</ansi> was carrying breaks! <ansi fg="202">***</ansi></ansi>`, defUser.Character.Equipment.Offhand.NameSimple(), defUser.Character.Name), defUser.UserId)
 
 						events.AddToQueue(events.ItemOwnership{
-							UserId: defUser.UserId,
-							Item:   defUser.Character.Equipment.Offhand,
-							Gained: false,
+							ActorId: defUser.Character.Id,
+							Item:    defUser.Character.Equipment.Offhand,
+							Gained:  false,
 						})
 
 						defUser.Character.RemoveFromBody(defUser.Character.Equipment.Offhand)
@@ -321,9 +321,9 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 							room.AddItem(itm, false)
 
 							events.AddToQueue(events.ItemOwnership{
-								UserId: defUser.UserId,
-								Item:   itm,
-								Gained: true,
+								ActorId: defUser.Character.Id,
+								Item:    itm,
+								Gained:  true,
 							})
 						}
 					}
@@ -386,7 +386,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				// path queued this event. Its kind is gone with it, so it fires for any
 				// vanished target.
 				if defMob == nil {
-					events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+					events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 				}
 				continue
 			}
@@ -398,7 +398,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 			if defMob.Character.Health < 1 {
 				user.SendText("Your rage subsides.")
 				user.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 				continue
 			}
 
@@ -492,12 +492,12 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 			if user.Character.Health <= 0 || defMob.Character.Health <= 0 {
 				defMob.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{MobInstanceId: defMob.Character.Id, RoomId: defMob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: defMob.Character.Id, RoomId: defMob.Character.RoomId})
 				user.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 			} else {
 				user.Character.SetAggro(defMob.Character.Id, characters.DefaultAttack)
-				events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 			}
 
 		}
@@ -520,7 +520,7 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 	tStart := time.Now()
 
 	// Handle mob round of combat
-	for _, mobId := range mobs.GetAllMobInstanceIds() {
+	for _, mobId := range mobs.GetAllMobIds() {
 
 		mob := mobs.GetInstance(mobId)
 
@@ -538,7 +538,7 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 		if mobRoom == nil {
 			mob.Character.Aggro = nil
-			events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+			events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 			continue
 		}
 
@@ -593,14 +593,14 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 			defUser := accounts.GetByBodyId(mob.Character.Aggro.Target)
 			if defUser == nil || mob.Character.RoomId != defUser.Character.RoomId {
 				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 				continue
 			}
 
 			defRoom := rooms.LoadRoom(defUser.Character.RoomId)
 			if defRoom == nil {
 				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 				continue
 			}
 
@@ -608,7 +608,7 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			if defUser.Character.Health < 1 {
 				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 				continue
 			}
 			if defUser.Character.HasBuffFlag("hidden") {
@@ -710,9 +710,9 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 						defRoom.SendText(fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">%s</ansi> <ansi fg="username">%s</ansi> was carrying breaks! <ansi fg="202">***</ansi></ansi>`, defUser.Character.Equipment.Offhand.NameSimple(), defUser.Character.Name), defUser.UserId)
 
 						events.AddToQueue(events.ItemOwnership{
-							UserId: defUser.UserId,
-							Item:   defUser.Character.Equipment.Offhand,
-							Gained: false,
+							ActorId: defUser.Character.Id,
+							Item:    defUser.Character.Equipment.Offhand,
+							Gained:  false,
 						})
 
 						defUser.Character.RemoveFromBody(defUser.Character.Equipment.Offhand)
@@ -722,9 +722,9 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 							room.AddItem(itm, false)
 
 							events.AddToQueue(events.ItemOwnership{
-								UserId: defUser.UserId,
-								Item:   itm,
-								Gained: true,
+								ActorId: defUser.Character.Id,
+								Item:    itm,
+								Gained:  true,
 							})
 
 						}
@@ -738,12 +738,12 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			if mob.Character.Health <= 0 || defUser.Character.Health <= 0 {
 				mob.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 				defUser.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{UserId: defUser.UserId, RoomId: defUser.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: defUser.Character.Id, RoomId: defUser.Character.RoomId})
 			} else {
 				mob.Character.SetAggro(defUser.Character.Id, characters.DefaultAttack)
-				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 			}
 		}
 
@@ -757,7 +757,7 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			if defMob == nil || mob.Character.RoomId != defMob.Character.RoomId {
 				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 				continue
 			}
 
@@ -767,7 +767,7 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			if defMob.Character.Health < 1 {
 				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 				continue
 			}
 
@@ -837,9 +837,9 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 							defRoom.SendText(fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">%s</ansi> <ansi fg="mobname">%s</ansi> was carrying breaks! <ansi fg="202">***</ansi></ansi>`, defMob.Character.Equipment.Offhand.NameSimple(), defMob.Character.Name))
 
 							events.AddToQueue(events.ItemOwnership{
-								MobInstanceId: defMob.Character.Id,
-								Item:          defMob.Character.Equipment.Offhand,
-								Gained:        false,
+								ActorId: defMob.Character.Id,
+								Item:    defMob.Character.Equipment.Offhand,
+								Gained:  false,
 							})
 
 							defMob.Character.RemoveFromBody(defMob.Character.Equipment.Offhand)
@@ -848,9 +848,9 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 								defRoom.AddItem(itm, false)
 
 								events.AddToQueue(events.ItemOwnership{
-									MobInstanceId: defMob.Character.Id,
-									Item:          itm,
-									Gained:        true,
+									ActorId: defMob.Character.Id,
+									Item:    itm,
+									Gained:  true,
 								})
 							}
 						}
@@ -860,12 +860,12 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			if mob.Character.Health <= 0 || defMob.Character.Health <= 0 {
 				mob.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 				defMob.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{MobInstanceId: defMob.Character.Id, RoomId: defMob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: defMob.Character.Id, RoomId: defMob.Character.RoomId})
 			} else {
 				mob.Character.SetAggro(defMob.Character.Id, characters.DefaultAttack)
-				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
+				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 			}
 
 		}

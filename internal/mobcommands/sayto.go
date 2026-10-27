@@ -38,11 +38,11 @@ func SayTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			toUser.SendText(fmt.Sprintf(`someone says to you, "<ansi fg="saytext-mob">%s</ansi>"`, rest))
 
 			events.AddToQueue(events.Communication{
-				SourceMobInstanceId: mob.Character.Id,
-				TargetUserId:        toUser.UserId,
-				CommType:            `say`,
-				Name:                mob.Character.Name,
-				Message:             rest,
+				SourceActorId: mob.Character.Id,
+				TargetUserId:  toUser.UserId,
+				CommType:      `say`,
+				Name:          mob.Character.Name,
+				Message:       rest,
 			})
 
 		} else {
@@ -50,10 +50,10 @@ func SayTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			room.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> says to <ansi fg="username">%s</ansi>, "<ansi fg="saytext-mob">%s</ansi>"`, mob.Character.Name, toUser.Character.Name, rest), toUser.UserId)
 
 			events.AddToQueue(events.Communication{
-				SourceMobInstanceId: mob.Character.Id,
-				CommType:            `say`,
-				Name:                mob.Character.Name,
-				Message:             rest,
+				SourceActorId: mob.Character.Id,
+				CommType:      `say`,
+				Name:          mob.Character.Name,
+				Message:       rest,
 			})
 		}
 	} else if !toMobId.IsZero() {
@@ -70,10 +70,10 @@ func SayTo(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			room.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> says to <ansi fg="mobname">%s</ansi>, "<ansi fg="saytext-mob">%s</ansi>"`, mob.Character.Name, toMob.Character.Name, rest))
 
 			events.AddToQueue(events.Communication{
-				SourceMobInstanceId: mob.Character.Id,
-				CommType:            `say`,
-				Name:                mob.Character.Name,
-				Message:             rest,
+				SourceActorId: mob.Character.Id,
+				CommType:      `say`,
+				Name:          mob.Character.Name,
+				Message:       rest,
 			})
 
 		}
@@ -112,11 +112,11 @@ func SayToOnly(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		}
 
 		events.AddToQueue(events.Communication{
-			SourceMobInstanceId: mob.Character.Id,
-			TargetUserId:        toUser.UserId,
-			CommType:            `say`,
-			Name:                mob.Character.Name,
-			Message:             rest,
+			SourceActorId: mob.Character.Id,
+			TargetUserId:  toUser.UserId,
+			CommType:      `say`,
+			Name:          mob.Character.Name,
+			Message:       rest,
 		})
 	}
 

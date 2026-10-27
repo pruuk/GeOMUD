@@ -69,15 +69,15 @@ func Give(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			mob.Character.RemoveItem(giveItem)
 
 			events.AddToQueue(events.ItemOwnership{
-				MobInstanceId: mob.Character.Id,
-				Item:          giveItem,
-				Gained:        false,
+				ActorId: mob.Character.Id,
+				Item:    giveItem,
+				Gained:  false,
 			})
 
 			events.AddToQueue(events.ItemOwnership{
-				UserId: targetUser.UserId,
-				Item:   giveItem,
-				Gained: true,
+				ActorId: targetUser.Character.Id,
+				Item:    giveItem,
+				Gained:  true,
 			})
 
 			targetUser.SendText(
@@ -116,15 +116,15 @@ func Give(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 				mob.Character.RemoveItem(giveItem)
 
 				events.AddToQueue(events.ItemOwnership{
-					MobInstanceId: mob.Character.Id,
-					Item:          giveItem,
-					Gained:        false,
+					ActorId: mob.Character.Id,
+					Item:    giveItem,
+					Gained:  false,
 				})
 
 				events.AddToQueue(events.ItemOwnership{
-					MobInstanceId: m.Character.Id,
-					Item:          giveItem,
-					Gained:        true,
+					ActorId: m.Character.Id,
+					Item:    giveItem,
+					Gained:  true,
 				})
 
 				room.SendText(

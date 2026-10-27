@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -59,11 +60,12 @@ func (g *GMCPPartyModule) aggroChangedHandler(e events.Event) events.ListenerRet
 		return events.Cancel
 	}
 
-	if evt.UserId == 0 {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
-	party := parties.Get(evt.UserId)
+	party := parties.Get(user.UserId)
 	if party == nil {
 		return events.Continue
 	}
@@ -83,11 +85,12 @@ func (g *GMCPPartyModule) roomChangeHandler(e events.Event) events.ListenerRetur
 		return events.Cancel
 	}
 
-	if !evt.MobInstanceId.IsZero() {
+	user := actors.AccountOf(evt.ActorId)
+	if user == nil {
 		return events.Continue
 	}
 
-	party := parties.Get(evt.UserId)
+	party := parties.Get(user.UserId)
 	if party == nil {
 		return events.Continue
 	}

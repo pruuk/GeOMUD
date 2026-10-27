@@ -47,6 +47,20 @@ func Get(id ActorId) *Actor {
 	return byId[id]
 }
 
+// AccountOf returns the account driving the body with id, or nil when there
+// is no such actor or no account drives it (an NPC).
+func AccountOf(id ActorId) *accounts.Account {
+	a := Get(id)
+	if a == nil {
+		return nil
+	}
+	ctrl := a.Controller()
+	if ctrl == nil {
+		return nil
+	}
+	return ctrl.Account()
+}
+
 // ByUserId returns the actor an account drives, or nil. It routes old user
 // IDs until slice 2 moves callers to ActorId.
 func ByUserId(userId int) *Actor {

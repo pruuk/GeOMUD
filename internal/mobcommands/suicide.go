@@ -85,7 +85,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 	events.AddToQueue(events.MobDeath{
 		MobId:         int(mob.MobId),
-		InstanceId:    mob.Character.Id,
+		ActorId:       mob.Character.Id,
 		RoomId:        room.RoomId,
 		CharacterName: mob.Character.Name,
 		Level:         mob.Character.Level,
@@ -120,7 +120,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 				if user.Character.Aggro != nil {
 					if user.Character.Aggro.Target == mob.Character.Id {
 						user.Character.Aggro = nil
-						events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+						events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 					}
 				}
 
