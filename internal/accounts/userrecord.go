@@ -158,10 +158,6 @@ func (u *Account) TryCommandAlias(input string) string {
 	return input
 }
 
-func (u *Account) ShorthandId() string {
-	return fmt.Sprintf(`@%d`, u.UserId)
-}
-
 func (u *Account) SetLastInputRound(rdNum uint64) {
 	u.sess().lastInputRound = rdNum
 }

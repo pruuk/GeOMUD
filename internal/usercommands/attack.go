@@ -227,7 +227,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 						}
 						if partyUser := accounts.GetByUserId(id); partyUser != nil {
 							if partyUser.Character.RoomId == user.Character.RoomId {
-								partyUser.Command(fmt.Sprintf(`attack @%d`, attackPlayerId)) // # denotes a specific mob instanceId
+								partyUser.Command(fmt.Sprintf(`attack %s`, p.Character.Id)) // a body ID token names this exact player
 							}
 						}
 					}

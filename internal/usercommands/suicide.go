@@ -132,10 +132,22 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 
 			rooms.MoveToRoom(user.UserId, -1)
 
+			// The room lists the old body ID. Take it out while the account still
+			// drives it, then list the new body once the actor is re-keyed, so no
+			// room keeps the old ID.
+			bodyRoom := rooms.LoadRoom(user.Character.RoomId)
+			if bodyRoom != nil {
+				bodyRoom.RemovePlayer(user.UserId)
+			}
+
 			oldBodyId := user.Character.Id
 			*user.Character = *characters.New()
 			user.Character.Id = ids.New(ids.NoCell) // a rerolled character is a new body
 			actors.BodyReplaced(user, oldBodyId)
+
+			if bodyRoom != nil {
+				bodyRoom.AddPlayer(user.UserId)
+			}
 
 			return true, nil
 		}

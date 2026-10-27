@@ -246,7 +246,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 		nameFlags = append(nameFlags, characters.RenderShortAdjectives)
 	}
 
-	for _, playerId := range r.players {
+	for _, playerId := range r.playerIds() {
 		if playerId != user.UserId {
 
 			renderFlags := append([]characters.NameRenderFlag{}, nameFlags...)
@@ -268,7 +268,8 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 	visibleFriendlyMobs := []string{}
 
-	for idx, mobId := range r.mobs {
+	staleMobIds := []ids.ID{}
+	for _, mobId := range r.mobIds() {
 		if mob := mobs.GetInstance(mobId); mob != nil {
 
 			if mob.Character.HasBuffFlag("hidden") { // Don't show them if they are sneaking
@@ -287,8 +288,13 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 				details.VisibleMobs = append(details.VisibleMobs, mobName.String())
 			}
 		} else {
-			r.mobs = append(r.mobs[:idx], r.mobs[idx+1:]...)
+			staleMobIds = append(staleMobIds, mobId)
 		}
+	}
+
+	// Drop mobs that no longer exist, after the loop so no live mob is skipped.
+	for _, mobId := range staleMobIds {
+		r.removeBody(mobId)
 	}
 
 	// Add the friendly mobs to the end

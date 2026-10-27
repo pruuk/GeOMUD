@@ -348,7 +348,7 @@ func (g *GMCPRoomModule) GetRoomNode(user *accounts.Account, gmcpModule string) 
 			}
 
 			payload.Contents.Players = append(payload.Contents.Players, GMCPRoomModule_Payload_Contents_Character{
-				Id:         u.ShorthandId(),
+				Id:         u.Character.Id.String(),
 				Name:       u.Character.Name,
 				Adjectives: u.Character.GetAdjectives(),
 				Aggro:      u.Character.Aggro != nil,

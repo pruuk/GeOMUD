@@ -243,7 +243,7 @@ func DeleteRoomForAdmin(roomId int) error {
 	}
 
 	if r, ok := roomManager.rooms[roomId]; ok {
-		if len(r.players) > 0 {
+		if r.PlayerCt() > 0 {
 			return fmt.Errorf("cannot delete room %d: players are present", roomId)
 		}
 	}
@@ -643,7 +643,7 @@ func DeleteZoneForAdmin(zoneName string) error {
 
 	for roomId := range zoneInfo.RoomIds {
 		if r, ok := roomManager.rooms[roomId]; ok {
-			if len(r.players) > 0 {
+			if r.PlayerCt() > 0 {
 				return fmt.Errorf("cannot delete zone %q: room %d has players", zoneName, roomId)
 			}
 		}

@@ -309,7 +309,7 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 	}
 
 	// r.prepare locks, so do it before the upcoming lock
-	if len(newRoom.players) == 0 {
+	if newRoom.PlayerCt() == 0 {
 		newRoom.Prepare(true)
 	}
 
@@ -454,7 +454,7 @@ func GetRoomsWithPlayers() []int {
 	for i := len(roomsWithPlayers) - 1; i >= 0; i-- {
 		roomId := roomsWithPlayers[i]
 		if r := LoadRoom(roomId); r != nil {
-			if len(r.players) < 1 {
+			if r.PlayerCt() < 1 {
 				roomsWithPlayers = append(roomsWithPlayers[:i], roomsWithPlayers[i+1:]...)
 				deleteKeys = append(deleteKeys, roomId)
 				continue
@@ -494,11 +494,11 @@ func removeRoomFromMemory(r *Room) {
 		return
 	}
 
-	if len(room.players) > 0 {
+	if room.PlayerCt() > 0 {
 		return
 	}
 
-	for _, mobId := range room.mobs {
+	for _, mobId := range room.mobIds() {
 		mobs.DestroyInstance(mobId)
 	}
 
