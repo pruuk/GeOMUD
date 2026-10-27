@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
@@ -99,6 +100,9 @@ func main() {
 	)
 
 	flags.HandleFlags(VERSION)
+
+	// Actors track every player and mob from here on (Phase 4b slice 1).
+	actors.Init()
 
 	// Register copyover contributors (must happen before Restore is called).
 	copyover.Register(connections.CopyoverContributor())
