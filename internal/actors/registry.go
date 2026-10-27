@@ -5,6 +5,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 )
 
@@ -92,17 +93,61 @@ func SetController(id ActorId, ctrl Controller) error {
 	return nil
 }
 
-// rebind points an existing actor at a new character and controller, for an
-// account that comes back online as a different record.
-func rebind(id ActorId, char *characters.Character, ctrl Controller) {
+// bindAccount gives u an actor, or points the account's existing actor at u
+// when u is a different record for the same account. The lookup and the
+// change happen under one lock. It reports what it did, for logging.
+func bindAccount(u *accounts.Account) (a *Actor, spawned, rebound bool) {
 	mu.Lock()
 	defer mu.Unlock()
-	if a, ok := byId[id]; ok {
-		unindex(a)
-		a.Character = char
-		a.controller = ctrl
-		index(a)
+	if id, ok := byUserId[u.UserId]; ok {
+		a = byId[id]
+		if a.controller.Account() != u {
+			unindex(a)
+			a.Character = u.Character
+			a.controller = NewConnectionController(u)
+			index(a)
+			rebound = true
+		}
+		return a, false, rebound
 	}
+	lastId++
+	a = &Actor{Id: lastId, Character: u.Character, controller: NewConnectionController(u)}
+	byId[a.Id] = a
+	index(a)
+	return a, true, false
+}
+
+// unbindAccount removes the actor u drives, but only while u is still the
+// record driving it: a late logout of an older record leaves a newer login's
+// actor alone. It returns the removed actor, or nil.
+func unbindAccount(u *accounts.Account) *Actor {
+	mu.Lock()
+	defer mu.Unlock()
+	id, ok := byUserId[u.UserId]
+	if !ok {
+		return nil
+	}
+	a := byId[id]
+	if a.controller.Account() != u {
+		return nil
+	}
+	unindex(a)
+	delete(byId, id)
+	return a
+}
+
+// unbindMob removes the actor for a mob instance and returns it, or nil.
+func unbindMob(instanceId int) *Actor {
+	mu.Lock()
+	defer mu.Unlock()
+	id, ok := byMobInstanceId[instanceId]
+	if !ok {
+		return nil
+	}
+	a := byId[id]
+	unindex(a)
+	delete(byId, id)
+	return a
 }
 
 // index and unindex keep the old-ID lookups current. The caller holds mu.

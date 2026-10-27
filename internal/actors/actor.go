@@ -18,4 +18,8 @@ type Actor struct {
 }
 
 // Controller returns what drives the actor. Swap it with SetController.
-func (a *Actor) Controller() Controller { return a.controller }
+func (a *Actor) Controller() Controller {
+	mu.RLock()
+	defer mu.RUnlock()
+	return a.controller
+}

@@ -24,20 +24,17 @@ func Init() {
 }
 
 func accountOnline(u *accounts.Account) {
-	if a := ByUserId(u.UserId); a != nil {
-		if a.Controller().Account() != u {
-			rebind(a.Id, u.Character, NewConnectionController(u))
-			mudlog.Debug("actor", "event", "rebound", "kind", "player", "actorId", a.Id, "userId", u.UserId)
-		}
-		return
+	a, spawned, rebound := bindAccount(u)
+	switch {
+	case spawned:
+		mudlog.Debug("actor", "event", "spawned", "kind", "player", "actorId", a.Id, "userId", u.UserId)
+	case rebound:
+		mudlog.Debug("actor", "event", "rebound", "kind", "player", "actorId", a.Id, "userId", u.UserId)
 	}
-	a := Spawn(u.Character, NewConnectionController(u))
-	mudlog.Debug("actor", "event", "spawned", "kind", "player", "actorId", a.Id, "userId", u.UserId)
 }
 
 func accountOffline(u *accounts.Account) {
-	if a := ByUserId(u.UserId); a != nil {
-		Remove(a.Id)
+	if a := unbindAccount(u); a != nil {
 		mudlog.Debug("actor", "event", "removed", "kind", "player", "actorId", a.Id, "userId", u.UserId)
 	}
 }
@@ -48,8 +45,7 @@ func mobSpawned(m *mobs.Mob) {
 }
 
 func mobDestroyed(instanceId int) {
-	if a := ByMobInstanceId(instanceId); a != nil {
-		Remove(a.Id)
+	if a := unbindMob(instanceId); a != nil {
 		mudlog.Debug("actor", "event", "removed", "kind", "npc", "actorId", a.Id, "mobInstanceId", instanceId)
 	}
 }

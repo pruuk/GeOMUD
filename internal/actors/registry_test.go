@@ -62,3 +62,31 @@ func TestRemove(t *testing.T) {
 	assert.Nil(t, ByUserId(4))
 	Remove(a.Id) // removing twice is harmless
 }
+
+func TestRemovingAnOlderActorKeepsTheNewerIndex(t *testing.T) {
+	Reset()
+	a := Spawn(characters.New(), NewConnectionController(&accounts.Account{UserId: 5}))
+	b := Spawn(characters.New(), NewConnectionController(&accounts.Account{UserId: 5}))
+	Remove(a.Id)
+	assert.Same(t, b, ByUserId(5))
+
+	m := &mobs.Mob{InstanceId: 6}
+	x := Spawn(&m.Character, NewBehaviourController(m))
+	y := Spawn(&m.Character, NewBehaviourController(m))
+	Remove(x.Id)
+	assert.Same(t, y, ByMobInstanceId(6))
+}
+
+func TestControllerSwapRoundTrip(t *testing.T) {
+	Reset()
+	m := &mobs.Mob{InstanceId: 8}
+	a := Spawn(&m.Character, NewBehaviourController(m))
+	acc := &accounts.Account{UserId: 12}
+
+	require.NoError(t, SetController(a.Id, NewConnectionController(acc)))
+	require.NoError(t, SetController(a.Id, NewBehaviourController(m)))
+
+	assert.Same(t, a, ByMobInstanceId(8))
+	assert.Nil(t, ByUserId(12))
+	assert.Nil(t, a.Controller().Account())
+}

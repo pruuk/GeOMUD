@@ -55,6 +55,27 @@ func TestMobSpawnAndDestroy(t *testing.T) {
 
 	mobs.OnInstanceDestroyed.Fire(41)
 	assert.Nil(t, ByMobInstanceId(41))
+	assert.Empty(t, All())
+}
+
+func TestStaleLogoutDoesNotRemoveTheLiveActor(t *testing.T) {
+	Reset()
+	old := &accounts.Account{UserId: 71, Character: characters.New()}
+	accounts.OnActivate.Fire(old)
+	id := ByUserId(71).Id
+
+	fresh := &accounts.Account{UserId: 71, Character: characters.New()} // a new login of the same account
+	accounts.OnActivate.Fire(fresh)
+	accounts.OnDeactivate.Fire(old) // the old record's logout lands late
+
+	a := ByUserId(71)
+	require.NotNil(t, a, "the live login keeps its actor")
+	assert.Equal(t, id, a.Id)
+	assert.Same(t, fresh, a.Controller().Account())
+
+	accounts.OnDeactivate.Fire(fresh)
+	assert.Nil(t, ByUserId(71))
+	assert.Empty(t, All())
 }
 
 func TestInitIsIdempotent(t *testing.T) {

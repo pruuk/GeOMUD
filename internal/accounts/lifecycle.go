@@ -1,6 +1,8 @@
 package accounts
 
 import (
+	"sync"
+
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -12,6 +14,12 @@ var (
 	OnActivate util.Hook[*Account]
 	// OnDeactivate fires after an online account is logged out.
 	OnDeactivate util.Hook[*Account]
+
+	// lifecycleMu makes each online or offline change and its hook one step,
+	// so OnActivate and OnDeactivate fire in the order the online map
+	// changes. Lock order: lifecycleMu before userManagerMu. Hook handlers
+	// must not call a function that takes lifecycleMu.
+	lifecycleMu sync.Mutex
 )
 
 // activateLocked records u as online on connectionId. The caller holds

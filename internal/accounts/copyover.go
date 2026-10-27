@@ -54,6 +54,9 @@ func (u *usersCopyoverContributor) CopyoverSave(enc *copyover.Encoder) error {
 }
 
 func (u *usersCopyoverContributor) CopyoverRestore(dec *copyover.Decoder) error {
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
+
 	var state usersState
 	if err := dec.ReadSection(u.CopyoverName(), &state); err != nil {
 		return err

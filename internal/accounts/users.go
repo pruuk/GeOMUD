@@ -196,6 +196,8 @@ func GetByConnectionId(connectionId connections.ConnectionId) *Account {
 // (zombie or not), because the old connection is a stale copyover socket that
 // is no longer connected.
 func CopyoverReconnectUser(user *Account, connectionId connections.ConnectionId) (*Account, string, error) {
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
 
 	mudlog.Info("CopyoverReconnectUser()", "username", user.Username, "connectionId", connectionId)
 
@@ -234,6 +236,8 @@ func CopyoverReconnectUser(user *Account, connectionId connections.ConnectionId)
 
 // First time creating a user.
 func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, string, error) {
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
 
 	mudlog.Info("LoginUser()", "username", user.Username, "connectionId", connectionId)
 
@@ -362,6 +366,8 @@ func SaveAllUsers(isAutoSave ...bool) {
 }
 
 func LogOutUserByConnectionId(connectionId connections.ConnectionId) error {
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
 
 	u := GetByConnectionId(connectionId)
 
@@ -397,6 +403,8 @@ func LogOutUserByConnectionId(connectionId connections.ConnectionId) error {
 
 // First time creating a user.
 func CreateUser(u *Account) error {
+	lifecycleMu.Lock()
+	defer lifecycleMu.Unlock()
 
 	if err := ValidateName(u.Username); err != nil {
 		return errors.New("that username is not allowed: " + err.Error())
