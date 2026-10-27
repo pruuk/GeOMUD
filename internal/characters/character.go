@@ -2021,6 +2021,9 @@ func (c *Character) SetPermaBuffs(buffIds []int) {
 	c.permaBuffIds = buffIds
 }
 
+// PermaBuffIds is the spawn or template permabuff list SetPermaBuffs set.
+func (c *Character) PermaBuffIds() []int { return append([]int{}, c.permaBuffIds...) }
+
 func (c *Character) reapplyPermabuffs(removedItems ...items.Item) {
 
 	buffIdCount := map[int]int{}
