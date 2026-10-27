@@ -30,6 +30,24 @@ var (
 	recentlyDied = map[int]int{}
 )
 
+var (
+	// OnInstanceCreated fires after a mob instance is stored, from NewMobById.
+	OnInstanceCreated util.Hook[*Mob]
+	// OnInstanceDestroyed fires with the instance id after DestroyInstance removes it.
+	OnInstanceDestroyed util.Hook[int]
+)
+
+// addInstance gives mob the next instance id, stores it and fires
+// OnInstanceCreated. It is the only place instances are added.
+func addInstance(mob Mob) *Mob {
+	instanceCounter++
+	mob.InstanceId = instanceCounter
+	mobInstances[mob.InstanceId] = &mob
+	stored := mobInstances[mob.InstanceId]
+	OnInstanceCreated.Fire(stored)
+	return stored
+}
+
 type MobForHire struct {
 	MobId    MobId
 	Price    int
@@ -139,13 +157,10 @@ func NewMobById(mobId MobId, homeRoomId int, forceLevel ...int) *Mob {
 
 	if m, ok := mobs[int(mobId)]; ok {
 
-		instanceCounter++
-
 		mob := *m // Make a copy of the mob
 
 		mob.HomeRoomId = homeRoomId
 		mob.Character.RoomId = homeRoomId
-		mob.InstanceId = instanceCounter
 		mob.Character.PlayerDamage = make(map[int]int)
 
 		// Level related stuff
@@ -212,10 +227,7 @@ func NewMobById(mobId MobId, homeRoomId int, forceLevel ...int) *Mob {
 		mob.Validate()
 		mob.Character.Validate(true)
 
-		// Save the mob instance
-		mobInstances[mob.InstanceId] = &mob
-
-		return mobInstances[mob.InstanceId]
+		return addInstance(mob)
 	}
 	return nil
 }
@@ -248,6 +260,7 @@ func GetAllMobInstanceIds() []int {
 func DestroyInstance(instanceId int) {
 
 	delete(mobInstances, instanceId)
+	OnInstanceDestroyed.Fire(instanceId)
 }
 
 func (m *Mob) ShorthandId() string {
