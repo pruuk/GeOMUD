@@ -170,13 +170,14 @@ func TestTemplateEditCarriesRestingAndSlots(t *testing.T) {
 	id := ids.New(ids.NoCell)
 	old := memRoom(4100)
 	old.resting = []mobs.SavedNPC{savedWithID(id, 5)}
-	old.SpawnInfo = []SpawnInfo{{MobId: 5, InstanceId: id}, {MobId: 6, InstanceId: ids.New(ids.NoCell)}}
+	old.SpawnInfo = []SpawnInfo{{MobId: 5, InstanceId: id}, {MobId: 6, InstanceId: ids.New(ids.NoCell)}, {MobId: 8, DespawnedRound: 42}}
 
-	tpl := Room{RoomId: 4100, Zone: persistZone, SpawnInfo: []SpawnInfo{{MobId: 5}, {MobId: 7}}}
+	tpl := Room{RoomId: 4100, Zone: persistZone, SpawnInfo: []SpawnInfo{{MobId: 5}, {MobId: 7}, {MobId: 8}}}
 	carryNPCState(old, &tpl)
 
 	require.Len(t, tpl.resting, 1)
 	assert.Equal(t, id, tpl.resting[0].Template.Character.Id)
 	assert.Equal(t, id, tpl.SpawnInfo[0].InstanceId)
 	assert.True(t, tpl.SpawnInfo[1].InstanceId.IsZero(), "a changed slot starts fresh")
+	assert.Equal(t, uint64(42), tpl.SpawnInfo[2].DespawnedRound, "a slot waiting after a death keeps its wait")
 }

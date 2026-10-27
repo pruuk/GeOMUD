@@ -86,12 +86,31 @@ func TestSlotWhoseNPCIsLostLogsAndRespawnsAfterTheRate(t *testing.T) {
 func TestSlotThatEndedIsSavedSoARestartDoesNotCallItLost(t *testing.T) {
 	persistSetup(t)
 	id := ids.New(ids.NoCell)
-	RecordEnding(id, 777, false)
+	round := util.GetRoundCount()
+	RecordEnding(id, round, false)
 	home := slotRoom(4100, id)
 	require.NoError(t, saveRoomNPCs(home))
 	require.Len(t, readRoomNPCFile(persistZone, 4100).Slots, 1)
 
 	home.Prepare(false)
-	assert.Empty(t, readRoomNPCFile(persistZone, 4100).Slots,
-		"the ending was consumed and saved, so the slot's state is saved with it")
+	assert.Equal(t, []slotState{{Index: 0, MobId: 987654, Despawned: round}}, readRoomNPCFile(persistZone, 4100).Slots,
+		"the ending was consumed and saved: the slot is saved free, with its wait")
+}
+
+func TestDeathWaitSurvivesARestart(t *testing.T) {
+	persistSetup(t)
+	id := ids.New(ids.NoCell)
+	round := util.GetRoundCount()
+	RecordEnding(id, round, false) // a death this round
+	home := slotRoom(4100, id)
+	home.Prepare(false)
+	require.Equal(t, round, home.SpawnInfo[0].DespawnedRound)
+
+	restartStore(t)
+
+	back := memRoom(4100)
+	back.SpawnInfo = []SpawnInfo{{MobId: 987654, RespawnRate: "15 real minutes"}}
+	loadRoomNPCs(back)
+	assert.True(t, back.SpawnInfo[0].InstanceId.IsZero())
+	assert.Equal(t, round, back.SpawnInfo[0].DespawnedRound, "the slot still waits its respawn rate")
 }

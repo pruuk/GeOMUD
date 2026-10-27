@@ -29,6 +29,21 @@ func useTempNPCStore(t *testing.T) string {
 	return dir
 }
 
+// restartStore is what a restart or copyover leaves: the store's memory is
+// gone and rebuilt from disk the way main.go rebuilds it.
+func restartStore(t *testing.T) {
+	t.Helper()
+	npcStoreMu.Lock()
+	restingIndex = map[ids.ID]int{}
+	endingsLedger = map[ids.ID]ending{}
+	npcSidecarOf = map[ids.ID]string{}
+	sidecarNPCs = map[string][]ids.ID{}
+	npcStoreMu.Unlock()
+	resetRoomManager()
+	require.NoError(t, BuildRestingIndex())
+	require.NoError(t, LoadEndings())
+}
+
 func savedWithID(id ids.ID, mobId int) mobs.SavedNPC {
 	s := mobs.SavedNPC{HomeRoomId: 1}
 	s.Template.MobId = mobs.MobId(mobId)

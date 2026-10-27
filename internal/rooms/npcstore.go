@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -34,12 +35,14 @@ type roomNPCFile struct {
 	Slots   []slotState     `yaml:"slots,omitempty"`
 }
 
-// slotState is one spawn slot's memory: which NPC it owns. Matched to the
+// slotState is one spawn slot's memory: which NPC it owns, or, for a slot
+// freed by a death, the round its respawn wait counts from. Matched to the
 // template's SpawnInfo by Index and MobId.
 type slotState struct {
-	Index int    `yaml:"index"`
-	MobId int    `yaml:"mobid"`
-	NPC   ids.ID `yaml:"npc"`
+	Index     int    `yaml:"index"`
+	MobId     int    `yaml:"mobid"`
+	NPC       ids.ID `yaml:"npc,omitempty"`
+	Despawned uint64 `yaml:"despawned,omitempty"`
 }
 
 // ending is an NPC that ended (decision 15): its round, and whether its slot
@@ -447,12 +450,26 @@ func roomNPCFileOf(r *Room) roomNPCFile {
 			f.Resting = append(f.Resting, mobs.Snapshot(m))
 		}
 	}
+	roundNow := util.GetRoundCount()
 	for idx, si := range r.SpawnInfo {
 		if !si.InstanceId.IsZero() {
 			f.Slots = append(f.Slots, slotState{Index: idx, MobId: si.MobId, NPC: si.InstanceId})
+			continue
+		}
+		if slotWaiting(si, roundNow) {
+			f.Slots = append(f.Slots, slotState{Index: idx, MobId: si.MobId, Despawned: si.DespawnedRound})
 		}
 	}
 	return f
+}
+
+// slotWaiting reports whether a free NPC slot is still waiting out its
+// respawn rate after a death, so its wait must be saved.
+func slotWaiting(si SpawnInfo, roundNow uint64) bool {
+	if si.MobId == 0 || si.DespawnedRound == 0 {
+		return false
+	}
+	return roundNow < gametime.GetDate(si.DespawnedRound).AddPeriod(si.RespawnRate)
 }
 
 // saveRoomNPCs writes a room's sidecar. Ephemeral rooms have none.
@@ -478,19 +495,24 @@ func loadRoomNPCs(r *Room) {
 	for _, s := range f.Slots {
 		if s.Index < len(r.SpawnInfo) && r.SpawnInfo[s.Index].MobId == s.MobId {
 			r.SpawnInfo[s.Index].InstanceId = s.NPC
+			r.SpawnInfo[s.Index].DespawnedRound = s.Despawned
 			continue
 		}
 		mudlog.Error("npc store: slot state dropped", "room", r.RoomId, "index", s.Index, "mobid", s.MobId, "npc", s.NPC.String())
 	}
 }
 
-// carryNPCState copies a room's resting NPCs and slot owners onto the room
-// replacing it in a template edit, matching slots by index and MobId.
+// carryNPCState copies a room's resting NPCs, slot owners and slot respawn
+// waits onto the room replacing it in a template edit, matching slots by
+// index and MobId.
 func carryNPCState(from, to *Room) {
 	to.resting = append([]mobs.SavedNPC(nil), from.resting...)
 	for idx := range to.SpawnInfo {
 		if idx < len(from.SpawnInfo) && to.SpawnInfo[idx].InstanceId.IsZero() && from.SpawnInfo[idx].MobId == to.SpawnInfo[idx].MobId {
 			to.SpawnInfo[idx].InstanceId = from.SpawnInfo[idx].InstanceId
+			if from.SpawnInfo[idx].InstanceId.IsZero() {
+				to.SpawnInfo[idx].DespawnedRound = from.SpawnInfo[idx].DespawnedRound
+			}
 		}
 	}
 }
