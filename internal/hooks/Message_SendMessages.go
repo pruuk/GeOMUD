@@ -1,13 +1,13 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -22,7 +22,7 @@ func Message_SendMessage(e events.Event) events.ListenerReturn {
 
 	if message.UserId > 0 {
 
-		if user := users.GetByUserId(message.UserId); user != nil {
+		if user := accounts.GetByUserId(message.UserId); user != nil {
 
 			textOut := templates.AnsiParse(message.Text)
 			if user.ScreenReader {
@@ -63,7 +63,7 @@ func Message_SendMessage(e events.Event) events.ListenerReturn {
 				continue
 			}
 
-			if user := users.GetByUserId(userId); user != nil {
+			if user := accounts.GetByUserId(userId); user != nil {
 
 				// If this is a quiet message, make sure the player can hear it
 				if message.IsQuiet {

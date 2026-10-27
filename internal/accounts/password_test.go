@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"strings"
@@ -11,8 +11,8 @@ import (
 // newTestUser returns a minimal UserRecord suitable for password testing.
 // It bypasses SetPassword (which calls configs.GetValidationConfig) so tests
 // remain self-contained without needing a fully-initialised config.
-func newTestUser() *UserRecord {
-	return &UserRecord{}
+func newTestUser() *Account {
+	return &Account{}
 }
 
 // bcryptHash generates a bcrypt hash directly, so tests for PasswordMatches

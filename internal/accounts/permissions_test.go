@@ -1,11 +1,11 @@
-package users
+package accounts
 
 import (
 	"testing"
 )
 
-func newModUser(permissions ...string) *UserRecord {
-	u := &UserRecord{
+func newModUser(permissions ...string) *Account {
+	u := &Account{
 		Role:        RoleMod,
 		Permissions: permissions,
 	}
@@ -13,7 +13,7 @@ func newModUser(permissions ...string) *UserRecord {
 }
 
 func TestHasRolePermission_Admin(t *testing.T) {
-	u := &UserRecord{Role: RoleAdmin}
+	u := &Account{Role: RoleAdmin}
 	if !u.HasRolePermission("anything") {
 		t.Error("admin should always have permission")
 	}
@@ -23,14 +23,14 @@ func TestHasRolePermission_Admin(t *testing.T) {
 }
 
 func TestHasRolePermission_User(t *testing.T) {
-	u := &UserRecord{Role: RoleUser}
+	u := &Account{Role: RoleUser}
 	if u.HasRolePermission("mobs.read") {
 		t.Error("regular user should have no permissions")
 	}
 }
 
 func TestHasRolePermission_Guest(t *testing.T) {
-	u := &UserRecord{Role: RoleGuest}
+	u := &Account{Role: RoleGuest}
 	if u.HasRolePermission("mobs.read") {
 		t.Error("guest should have no permissions")
 	}
@@ -96,7 +96,7 @@ func TestHasRolePermission_ModEmptyPermissions(t *testing.T) {
 }
 
 func TestHasPermission_AdminAlwaysTrue(t *testing.T) {
-	u := &UserRecord{Role: RoleAdmin}
+	u := &Account{Role: RoleAdmin}
 	if !u.HasPermission("config.write") {
 		t.Error("HasPermission: admin should always return true")
 	}

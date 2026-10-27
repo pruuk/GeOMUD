@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"bytes"
@@ -236,7 +236,7 @@ func (idx *UserIndex) Rebuild() error {
 	}
 
 	var firstErr error
-	SearchOfflineUsers(func(u *UserRecord) bool {
+	SearchOfflineUsers(func(u *Account) bool {
 		if err := idx.AddUser(u.UserId, u.Username); err != nil {
 			mudlog.Error("UserIndex.Rebuild", "error", err.Error(), "userId", u.UserId, "username", u.Username)
 			if firstErr == nil {

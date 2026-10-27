@@ -8,6 +8,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
@@ -16,7 +17,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/language"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/skills"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/mattn/go-runewidth"
 )
@@ -97,7 +97,7 @@ var (
 			return keys
 		},
 		"uidToCharacter": func(userId int) *characters.Character {
-			u := users.GetByUserId(userId)
+			u := accounts.GetByUserId(userId)
 			return u.Character
 		},
 		"idToMobCharacter": func(mobId int) string {
@@ -355,7 +355,7 @@ func idsOtherThan(allIds []uint64, excludeId uint64) []uint64 {
 }
 
 func TNL(userId int) string {
-	user := users.GetByUserId(userId)
+	user := accounts.GetByUserId(userId)
 	realXPNow, realXPTNL := user.Character.XPTNLActual()
 	return fmt.Sprintf(`%d/%d (%d%%)`, realXPNow, realXPTNL, pct(realXPNow, realXPTNL))
 }

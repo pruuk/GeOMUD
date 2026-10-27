@@ -5,15 +5,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Give(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Give(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	rest = util.StripPrepositions(rest)
 
@@ -66,7 +66,7 @@ func Give(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 
 		user.Character.CancelBuffsWithFlag("hidden")
 
-		targetUser := users.GetByUserId(playerId)
+		targetUser := accounts.GetByUserId(playerId)
 
 		// Swap the item location
 		if giveItem.ItemId > 0 {

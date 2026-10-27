@@ -1,4 +1,4 @@
-package users
+package accounts
 
 var functionExporters []FunctionExporter
 

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 // RequirePermission wraps a handler so that only users with the given
@@ -80,7 +80,7 @@ func RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		u := GetAuthedUser(r)
-		if u == nil || u.Role != users.RoleAdmin {
+		if u == nil || u.Role != accounts.RoleAdmin {
 			writeForbidden(w, r, "admin role required")
 			return
 		}
@@ -93,5 +93,5 @@ func RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 // Used by page handlers to decide whether to show admin-only UI elements.
 func authedUserIsAdmin(r *http.Request) bool {
 	u := GetAuthedUser(r)
-	return u != nil && u.Role == users.RoleAdmin
+	return u != nil && u.Role == accounts.RoleAdmin
 }

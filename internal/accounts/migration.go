@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"errors"
@@ -31,7 +31,7 @@ func DoFilenameMigrationV1() error {
 
 	var errorResult error = nil
 
-	SearchOfflineUsers(func(u *UserRecord) bool {
+	SearchOfflineUsers(func(u *Account) bool {
 
 		oldUserPath := util.FilePath(string(configs.GetFilePathsConfig().DataFiles), `/`, `users`, `/`, strings.ToLower(u.Username)+`.yaml`)
 		newUserPath := util.FilePath(string(configs.GetFilePathsConfig().DataFiles), `/`, `users`, `/`, strconv.Itoa(u.UserId)+`.yaml`)

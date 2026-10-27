@@ -2,9 +2,9 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //
@@ -30,10 +30,10 @@ func InactivePlayers(e events.Event) events.ListenerReturn {
 
 	cutoffRound := evt.RoundNumber - uint64(maxIdleRounds)
 
-	for _, user := range users.GetAllActiveUsers() {
+	for _, user := range accounts.GetAllActiveUsers() {
 
 		// If don't kick mods and they aren't a regular user, skip
-		if !kickMods && user.Role != users.RoleUser {
+		if !kickMods && user.Role != accounts.RoleUser {
 			continue
 		}
 

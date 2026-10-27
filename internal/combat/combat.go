@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -13,7 +14,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/statmods"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -25,7 +25,7 @@ const (
 )
 
 // Performs a combat round from a player to a mob
-func AttackPlayerVsMob(user *users.UserRecord, mob *mobs.Mob) AttackResult {
+func AttackPlayerVsMob(user *accounts.Account, mob *mobs.Mob) AttackResult {
 
 	attackResult := calculateCombat(*user.Character, mob.Character, User, Mob)
 
@@ -43,7 +43,7 @@ func AttackPlayerVsMob(user *users.UserRecord, mob *mobs.Mob) AttackResult {
 }
 
 // Performs a combat round from a player to a player
-func AttackPlayerVsPlayer(userAtk *users.UserRecord, userDef *users.UserRecord) AttackResult {
+func AttackPlayerVsPlayer(userAtk *accounts.Account, userDef *accounts.Account) AttackResult {
 
 	attackResult := calculateCombat(*userAtk.Character, *userDef.Character, User, User)
 
@@ -61,7 +61,7 @@ func AttackPlayerVsPlayer(userAtk *users.UserRecord, userDef *users.UserRecord) 
 }
 
 // Performs a combat round from a mob to a player
-func AttackMobVsPlayer(mob *mobs.Mob, user *users.UserRecord) AttackResult {
+func AttackMobVsPlayer(mob *mobs.Mob, user *accounts.Account) AttackResult {
 
 	attackResult := calculateCombat(mob.Character, *user.Character, Mob, User)
 

@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"strings"
@@ -76,7 +76,7 @@ func (ci *CharacterIndex) Find(name string) (userId int, found bool) {
 func (ci *CharacterIndex) Rebuild() {
 	newMap := make(map[string]int)
 
-	SearchOfflineUsers(func(u *UserRecord) bool {
+	SearchOfflineUsers(func(u *Account) bool {
 		if u.Character != nil && u.Character.Name != "" {
 			newMap[strings.ToLower(u.Character.Name)] = u.UserId
 		}

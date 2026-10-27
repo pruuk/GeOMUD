@@ -1,12 +1,12 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //
@@ -41,7 +41,7 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 
 	} else {
 
-		buffUser := users.GetByUserId(evt.UserId)
+		buffUser := accounts.GetByUserId(evt.UserId)
 		if buffUser == nil {
 			return events.Cancel
 		}

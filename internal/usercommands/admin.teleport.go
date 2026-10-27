@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -12,7 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -23,7 +23,7 @@ import (
 * teleport.playername	(Teleport to a player name)
 * teleport.roomid		(Teleport to a roomId)
  */
-func Teleport(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Teleport(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if len(rest) == 0 {
 		// send some sort of help info?
@@ -38,7 +38,7 @@ func Teleport(rest string, user *users.UserRecord, room *rooms.Room, flags event
 	args := util.SplitButRespectQuotes(rest)
 	if len(args) > 1 {
 
-		if searchUser := users.GetByCharacterName(args[0]); searchUser != nil {
+		if searchUser := accounts.GetByCharacterName(args[0]); searchUser != nil {
 			rest = strings.Join(args[1:], ` `)
 			targetUser = searchUser
 		}
@@ -68,7 +68,7 @@ func Teleport(rest string, user *users.UserRecord, room *rooms.Room, flags event
 		} else {
 
 			// Finally, try a player name
-			if locateUser := users.GetByCharacterName(rest); locateUser != nil {
+			if locateUser := accounts.GetByCharacterName(rest); locateUser != nil {
 
 				if !user.HasRolePermission(`teleport.playername`) {
 					user.SendText(`you do not have <ansi fg="command">teleport.direction</ansi> permission`)
@@ -114,7 +114,7 @@ func Teleport(rest string, user *users.UserRecord, room *rooms.Room, flags event
 					for _, uid := range room.GetPlayers() {
 						if party.IsMember(uid) {
 
-							partyUser := users.GetByUserId(uid)
+							partyUser := accounts.GetByUserId(uid)
 							if partyUser == nil {
 								continue
 							}

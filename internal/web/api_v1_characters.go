@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // GET /admin/api/v1/characters/search?name=<query>
@@ -20,12 +20,12 @@ func apiV1SearchCharacters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results := users.SearchCharacters(name)
+	results := accounts.SearchCharacters(name)
 	if results == nil {
-		results = []users.CharacterSearchResult{}
+		results = []accounts.CharacterSearchResult{}
 	}
 
-	writeJSON(w, http.StatusOK, APIResponse[[]users.CharacterSearchResult]{
+	writeJSON(w, http.StatusOK, APIResponse[[]accounts.CharacterSearchResult]{
 		Success: true,
 		Data:    results,
 	})
@@ -51,7 +51,7 @@ func apiV1GetCharacter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId, found := users.GetCharacterIndex().Find(characterName)
+	userId, found := accounts.GetCharacterIndex().Find(characterName)
 	if !found {
 		writeAPIError(w, http.StatusNotFound, "character not found")
 		return

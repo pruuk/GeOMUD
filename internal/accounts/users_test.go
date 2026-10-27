@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"testing"
@@ -48,7 +48,7 @@ func TestLogOutUserByConnectionId_ValidUser_CleansUpMaps(t *testing.T) {
 	// then calling the delete logic that our fix moves inside the u != nil guard.
 	var connId connections.ConnectionId = 1
 	userId := 10
-	u := &UserRecord{
+	u := &Account{
 		UserId:       userId,
 		Username:     "testuser",
 		connectionId: connId,

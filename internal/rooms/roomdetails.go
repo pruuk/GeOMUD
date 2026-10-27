@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
 	"github.com/GoMudEngine/GoMud/internal/configs"
@@ -12,7 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -61,7 +61,7 @@ func (d *RoomTemplateDetails) Alert(lines ...string) {
 	d.RoomAlerts = append(d.RoomAlerts, group)
 }
 
-func GetDetails(r *Room, user *users.UserRecord, tinymap ...[]string) RoomTemplateDetails {
+func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTemplateDetails {
 
 	c := configs.GetPVPConfig()
 
@@ -250,7 +250,7 @@ func GetDetails(r *Room, user *users.UserRecord, tinymap ...[]string) RoomTempla
 
 			renderFlags := append([]characters.NameRenderFlag{}, nameFlags...)
 
-			player := users.GetByUserId(playerId)
+			player := accounts.GetByUserId(playerId)
 			if player != nil {
 
 				if player.Character.HasBuffFlag("hidden") { // Don't show them if they are sneaking
@@ -413,7 +413,7 @@ func GetDetails(r *Room, user *users.UserRecord, tinymap ...[]string) RoomTempla
 				allNames := []string{}
 
 				for userId, _ := range r.Visitors(VisitorUser) {
-					if u := users.GetByUserId(userId); u != nil {
+					if u := accounts.GetByUserId(userId); u != nil {
 						allNames = append(allNames, u.Character.Name)
 					}
 				}

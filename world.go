@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/badinputtracker"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
@@ -21,7 +22,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/GoMudEngine/GoMud/internal/web"
 )
@@ -123,7 +123,7 @@ func (w *World) HandleInputEvents(e events.Event) events.ListenerReturn {
 
 			if _, ok := w.ignoreInput[input.UserId]; ok {
 				delete(w.ignoreInput, input.UserId)
-				if user := users.GetByUserId(input.UserId); user != nil {
+				if user := accounts.GetByUserId(input.UserId); user != nil {
 					user.UnblockInput()
 				}
 			}
@@ -166,7 +166,7 @@ func (w *World) HandleInputEvents(e events.Event) events.ListenerReturn {
 
 		if _, ok := w.ignoreInput[input.UserId]; ok {
 			delete(w.ignoreInput, input.UserId)
-			if user := users.GetByUserId(input.UserId); user != nil {
+			if user := accounts.GetByUserId(input.UserId); user != nil {
 				user.UnblockInput()
 			}
 		}
@@ -206,7 +206,7 @@ func (w *World) HandleSystemEvents(e events.Event) events.ListenerReturn {
 		w.Kick(sys.Data.(int), sys.Description)
 	} else if sys.Command == `leaveworld` {
 
-		if userInfo := users.GetByUserId(sys.Data.(int)); userInfo != nil {
+		if userInfo := accounts.GetByUserId(sys.Data.(int)); userInfo != nil {
 			events.AddToQueue(events.PlayerDespawn{
 				UserId:        userInfo.UserId,
 				RoomId:        userInfo.Character.RoomId,
@@ -218,7 +218,7 @@ func (w *World) HandleSystemEvents(e events.Event) events.ListenerReturn {
 
 	} else if sys.Command == `logoff` {
 
-		if user := users.GetByUserId(sys.Data.(int)); user != nil {
+		if user := accounts.GetByUserId(sys.Data.(int)); user != nil {
 
 			user.EventLog.Add(`conn`, `Logged off`)
 
@@ -274,14 +274,14 @@ func (w *World) SendSetLinkDead(userId int, on bool) {
 
 func (w *World) logOutUserByConnectionId(connectionId connections.ConnectionId) {
 
-	if err := users.LogOutUserByConnectionId(connectionId); err != nil {
+	if err := accounts.LogOutUserByConnectionId(connectionId); err != nil {
 		mudlog.Error("Log Out Error", "connectionId", connectionId, "error", err)
 	}
 }
 
 func (w *World) enterWorld(userId int, roomId int) {
 
-	if userInfo := users.GetByUserId(userId); userInfo != nil {
+	if userInfo := accounts.GetByUserId(userId); userInfo != nil {
 		events.AddToQueue(events.PlayerSpawn{
 			UserId:        userInfo.UserId,
 			ConnectionId:  userInfo.ConnectionId(),
@@ -349,7 +349,7 @@ loop:
 			if err := rooms.SaveAllRooms(); err != nil {
 				mudlog.Error("rooms.SaveAllRooms()", "error", err.Error())
 			}
-			users.SaveAllUsers() // Save all user data too.
+			accounts.SaveAllUsers() // Save all user data too.
 			util.UnlockMud()
 
 			break loop
@@ -421,7 +421,7 @@ loop:
 		case leaveWorldUserId := <-w.leaveWorldUserId: // int
 
 			util.LockMud()
-			if userInfo := users.GetByUserId(leaveWorldUserId); userInfo != nil {
+			if userInfo := accounts.GetByUserId(leaveWorldUserId); userInfo != nil {
 				events.AddToQueue(events.PlayerDespawn{
 					UserId:        userInfo.UserId,
 					RoomId:        userInfo.Character.RoomId,
@@ -442,7 +442,7 @@ loop:
 			if linkDeadFlag[1] == 1 {
 
 				util.LockMud()
-				users.SetLinkDeadUser(linkDeadFlag[0])
+				accounts.SetLinkDeadUser(linkDeadFlag[0])
 				events.AddToQueue(events.PlayerChanged{
 					UserId: linkDeadFlag[0],
 				})
@@ -486,7 +486,7 @@ loop:
 
 func (w *World) processInput(userId int, inputText string, flags events.EventFlag) {
 
-	user := users.GetByUserId(userId)
+	user := accounts.GetByUserId(userId)
 	if user == nil { // Something went wrong. User not found.
 		mudlog.Error("User not found", "userId", userId)
 		return
@@ -643,7 +643,7 @@ func (w *World) UpdateStats() {
 
 	c := configs.GetNetworkConfig()
 
-	for _, u := range users.GetAllActiveUsers() {
+	for _, u := range accounts.GetAllActiveUsers() {
 		info := u.GetOnlineInfo()
 		s.OnlineUsers = append(s.OnlineUsers, info)
 		switch info.ConnType {
@@ -657,10 +657,10 @@ func (w *World) UpdateStats() {
 	}
 
 	sort.Slice(s.OnlineUsers, func(i, j int) bool {
-		if s.OnlineUsers[i].Role == users.RoleAdmin {
+		if s.OnlineUsers[i].Role == accounts.RoleAdmin {
 			return true
 		}
-		if s.OnlineUsers[j].Role == users.RoleAdmin {
+		if s.OnlineUsers[j].Role == accounts.RoleAdmin {
 			return false
 		}
 		return s.OnlineUsers[i].OnlineTime > s.OnlineUsers[j].OnlineTime
@@ -682,12 +682,12 @@ func (w *World) UpdateStats() {
 // Force disconnect a user (Makes them linkdead)
 func (w *World) Kick(userId int, reason string) {
 
-	user := users.GetByUserId(userId)
+	user := accounts.GetByUserId(userId)
 	if user == nil {
 		return
 	}
 
-	users.SetLinkDeadUser(userId)
+	accounts.SetLinkDeadUser(userId)
 	user.EventLog.Add(`conn`, fmt.Sprintf(`Kicked (%s)`, reason))
 
 	connections.Kick(user.ConnectionId(), reason)

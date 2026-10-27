@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
@@ -12,7 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //
@@ -27,7 +27,7 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 		return events.Cancel
 	}
 
-	user := users.GetByUserId(evt.UserId)
+	user := accounts.GetByUserId(evt.UserId)
 	if user == nil {
 		mudlog.Error("HandleLeave", "error", fmt.Sprintf(`user %d not found`, evt.UserId))
 		return events.Cancel
@@ -36,8 +36,8 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 	connId := user.ConnectionId()
 
 	// Remove any link-dead tracking for the user since they've been despawned from the world.
-	if users.IsLinkDeadConnection(connId) {
-		users.RemoveLinkDeadUser(evt.UserId)
+	if accounts.IsLinkDeadConnection(connId) {
+		accounts.RemoveLinkDeadUser(evt.UserId)
 	}
 
 	room := rooms.LoadRoom(user.Character.RoomId)
@@ -62,7 +62,7 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 	tplTxt, _ := templates.Process("goodbye", nil, evt.UserId)
 	connections.SendTo([]byte(templates.AnsiParse(tplTxt)), connId)
 
-	if err := users.LogOutUserByConnectionId(connId); err != nil {
+	if err := accounts.LogOutUserByConnectionId(connId); err != nil {
 		mudlog.Error("Log Out Error", "connectionId", connId, "error", err)
 	}
 	connections.Remove(connId)
@@ -77,7 +77,7 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 		}
 	}
 
-	users.SaveUser(*user)
+	accounts.SaveUser(*user)
 
 	return events.Continue
 }

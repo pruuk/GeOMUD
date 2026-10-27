@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v2"
 )
@@ -20,9 +20,9 @@ func TestDoBasicAuthRequiresAdminRole(t *testing.T) {
 	const password = "correct-password"
 
 	setupAuthTestUsers(t, password, map[string]string{
-		"adminuser":  users.RoleAdmin,
-		"moduser":    users.RoleMod,
-		"normaluser": users.RoleUser,
+		"adminuser":  accounts.RoleAdmin,
+		"moduser":    accounts.RoleMod,
+		"normaluser": accounts.RoleUser,
 	})
 
 	tests := []struct {
@@ -97,7 +97,7 @@ func setupAuthTestUsers(t *testing.T, password string, roles map[string]string) 
 
 	t.Cleanup(func() {
 		_ = configs.ReloadConfig()
-		users.InitUserIndex()
+		accounts.InitUserIndex()
 		resetAuthStateForTest()
 	})
 
@@ -119,7 +119,7 @@ func setupAuthTestUsers(t *testing.T, password string, roles map[string]string) 
 		t.Fatalf("ReloadConfig: %v", err)
 	}
 
-	idx := users.InitUserIndex()
+	idx := accounts.InitUserIndex()
 	if err := idx.Create(); err != nil {
 		t.Fatalf("Create user index: %v", err)
 	}
@@ -135,7 +135,7 @@ func setupAuthTestUsers(t *testing.T, password string, roles map[string]string) 
 			t.Fatalf("GenerateFromPassword: %v", err)
 		}
 
-		u := users.NewUserRecord(userID, 0)
+		u := accounts.NewAccount(userID, 0)
 		u.Username = username
 		u.Role = role
 		u.Password = string(hash)
@@ -156,6 +156,6 @@ func setupAuthTestUsers(t *testing.T, password string, roles map[string]string) 
 func resetAuthStateForTest() {
 	authCacheMu.Lock()
 	authCache = map[string]time.Time{}
-	authUserCache = map[string]*users.UserRecord{}
+	authUserCache = map[string]*accounts.Account{}
 	authCacheMu.Unlock()
 }

@@ -5,13 +5,13 @@ import (
 
 	"fmt"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/language"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // FinalizeLoginOrCreate is called after all prompts are successfully answered.
@@ -21,7 +21,7 @@ func FinalizeLoginOrCreate(results map[string]string, sharedState map[string]any
 	password := results["password"]
 
 	if username != `new` {
-		userExists := users.Exists(username)
+		userExists := accounts.Exists(username)
 
 		if userExists {
 
@@ -30,8 +30,8 @@ func FinalizeLoginOrCreate(results map[string]string, sharedState map[string]any
 				connDetails := connections.Get(clientInput.ConnectionId)
 
 				// Disconnect/kick the user currently connected
-				userid := users.FindUserId(results["username"])
-				user := users.GetByUserId(userid)
+				userid := accounts.FindUserId(results["username"])
+				user := accounts.GetByUserId(userid)
 
 				// The session may have disappeared since the kick prompt (e.g. link-dead
 				// cleanup), in which case there's nothing to kick. This also covers
@@ -44,7 +44,7 @@ func FinalizeLoginOrCreate(results map[string]string, sharedState map[string]any
 					tplTxt, _ := templates.Process("goodbye", nil)
 					connections.SendTo([]byte(templates.AnsiParse(tplTxt)), existingConnectionId)
 
-					users.SetLinkDeadUser(userid)
+					accounts.SetLinkDeadUser(userid)
 					connections.Kick(existingConnectionId, fmt.Sprintf(`Duplicate login (ip: %s)`, connDetails.RemoteAddr()))
 
 				}
@@ -52,7 +52,7 @@ func FinalizeLoginOrCreate(results map[string]string, sharedState map[string]any
 			}
 
 			// Existing User Login Logic (No changes needed)
-			tmpUser, err := users.LoadUser(username)
+			tmpUser, err := accounts.LoadUser(username)
 			if err != nil {
 				mudlog.Error("Failed to load existing user during login", "username", username, "error", err)
 				connections.SendTo([]byte(language.T("Error.LoginFailedGeneric")), clientInput.ConnectionId)
@@ -68,7 +68,7 @@ func FinalizeLoginOrCreate(results map[string]string, sharedState map[string]any
 				return false // Indicate failure, connection removed
 			}
 
-			loggedInUser, msg, err := users.LoginUser(tmpUser, clientInput.ConnectionId)
+			loggedInUser, msg, err := accounts.LoginUser(tmpUser, clientInput.ConnectionId)
 			if err != nil {
 				connections.SendTo([]byte(msg), clientInput.ConnectionId)
 				connections.SendTo(term.CRLF, clientInput.ConnectionId)
@@ -112,14 +112,14 @@ func FinalizeLoginOrCreate(results map[string]string, sharedState map[string]any
 		username := results["username-new"]
 		password := results["password-new"]
 
-		if users.Exists(results["username-new"]) {
+		if accounts.Exists(results["username-new"]) {
 			connections.SendTo([]byte(`I'm sorry, that user already exists!`), clientInput.ConnectionId) // Use language key
 			connections.SendTo(term.CRLF, clientInput.ConnectionId)
 			connections.Remove(clientInput.ConnectionId)
 			return false
 		}
 
-		newUser := users.NewUserRecord(0, clientInput.ConnectionId)
+		newUser := accounts.NewAccount(0, clientInput.ConnectionId)
 		newUser.EmailAddress = results["email-new"]
 		newUser.ScreenReader = results["screen-reader-new"] == `y`
 
@@ -139,7 +139,7 @@ func FinalizeLoginOrCreate(results map[string]string, sharedState map[string]any
 			return false
 		}
 
-		if err := users.CreateUser(newUser); err != nil {
+		if err := accounts.CreateUser(newUser); err != nil {
 			mudlog.Error("Could not create user", "username", username, "error", err)
 			// Try to give specific feedback if possible, otherwise generic
 			connections.SendTo([]byte(err.Error()), clientInput.ConnectionId)
@@ -195,9 +195,9 @@ func GetLoginPromptHandler() connections.InputHandler {
 					return false
 				}
 
-				userid := users.FindUserId(results["username"])
+				userid := accounts.FindUserId(results["username"])
 
-				user := users.GetByUserId(userid)
+				user := accounts.GetByUserId(userid)
 
 				return user != nil && user.PasswordMatches(results["password"])
 			}, // Only run if username was not "new", password matches, and user is currently online.

@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"testing"
@@ -9,19 +9,19 @@ import (
 )
 
 func TestUserRecordIsAISerializes(t *testing.T) {
-	u := UserRecord{Username: "tester", IsAI: true}
+	u := Account{Username: "tester", IsAI: true}
 
 	out, err := yaml.Marshal(u)
 	require.NoError(t, err)
 	assert.Contains(t, string(out), "isai: true")
 
-	var back UserRecord
+	var back Account
 	require.NoError(t, yaml.Unmarshal(out, &back))
 	assert.True(t, back.IsAI, "IsAI should round-trip true")
 }
 
 func TestUserRecordIsAIOmittedWhenFalse(t *testing.T) {
-	u := UserRecord{Username: "human"}
+	u := Account{Username: "human"}
 
 	out, err := yaml.Marshal(u)
 	require.NoError(t, err)

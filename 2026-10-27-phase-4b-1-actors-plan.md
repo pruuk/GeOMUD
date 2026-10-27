@@ -307,6 +307,7 @@ gopls rename -w internal/users/userrecord.go:31:6 Account
 gopls rename -w internal/users/userrecord.go:58:6 NewAccount
 gopls rename -w internal/users/userrecord.go:1:9 accounts   # prints an AGENTS.md path error: expected, it cannot move the folder
 mv internal/users internal/accounts
+gofmt -l . | xargs -r gofmt -w   # added in execution: gopls leaves import order and comment alignment unformatted (118 files)
 go build ./... && go vet ./internal/accounts/
 grep -rl 'internal/users"' --include=*.go . | wc -l        # expect 0
 grep -rn '\bUserRecord\b' --include=*.go .

@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"fmt"
@@ -42,7 +42,7 @@ type PromptToken struct {
 // Tokens is the fully-resolved token slice. Handlers may modify Value on any
 // token (or append/remove tokens) before the final string is assembled.
 type PromptData struct {
-	User   *UserRecord
+	User   *Account
 	Tokens []PromptToken
 }
 
@@ -62,7 +62,7 @@ type PromptData struct {
 //	})
 var OnBuildPrompt util.Hook[PromptData]
 
-func (u *UserRecord) GetCommandPrompt() string {
+func (u *Account) GetCommandPrompt() string {
 
 	promptOut := ``
 
@@ -113,7 +113,7 @@ func (u *UserRecord) GetCommandPrompt() string {
 
 }
 
-func (u *UserRecord) ProcessPromptString(promptStr string) string {
+func (u *Account) ProcessPromptString(promptStr string) string {
 
 	var currentXP, tnlXP int = -1, -1
 	var hpPct, mpPct int = -1, -1

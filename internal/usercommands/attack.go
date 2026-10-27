@@ -3,16 +3,16 @@ package usercommands
 import (
 	"fmt"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Attack(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	attackPlayerId := 0
 	attackMobInstanceId := 0
@@ -42,7 +42,7 @@ func Attack(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 
 		if attackMobInstanceId == 0 {
 			for _, uId := range room.GetPlayers(rooms.FindFightingPlayer) {
-				u := users.GetByUserId(uId)
+				u := accounts.GetByUserId(uId)
 				if u == nil || u.Character.Aggro == nil {
 					continue
 				}
@@ -65,7 +65,7 @@ func Attack(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 		if attackMobInstanceId == 0 && attackPlayerId == 0 {
 			if partyInfo != nil {
 				for uId := range partyInfo.GetMembers() {
-					if partyUser := users.GetByUserId(uId); partyUser != nil {
+					if partyUser := accounts.GetByUserId(uId); partyUser != nil {
 						if partyUser.Character.Aggro == nil {
 							continue
 						}
@@ -173,7 +173,7 @@ func Attack(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 						if id == user.UserId {
 							continue
 						}
-						if partyUser := users.GetByUserId(id); partyUser != nil {
+						if partyUser := accounts.GetByUserId(id); partyUser != nil {
 							if partyUser.Character.RoomId == user.Character.RoomId {
 
 								partyUser.Command(fmt.Sprintf(`attack #%d`, attackMobInstanceId)) // # denotes a specific mob instanceId
@@ -202,7 +202,7 @@ func Attack(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 
 	} else if attackPlayerId > 0 {
 
-		if p := users.GetByUserId(attackPlayerId); p != nil {
+		if p := accounts.GetByUserId(attackPlayerId); p != nil {
 
 			if pvpErr := room.CanPvp(user, p); pvpErr != nil {
 				user.SendText(pvpErr.Error())
@@ -222,7 +222,7 @@ func Attack(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 						if id == user.UserId {
 							continue
 						}
-						if partyUser := users.GetByUserId(id); partyUser != nil {
+						if partyUser := accounts.GetByUserId(id); partyUser != nil {
 							if partyUser.Character.RoomId == user.Character.RoomId {
 								partyUser.Command(fmt.Sprintf(`attack @%d`, attackPlayerId)) // # denotes a specific mob instanceId
 							}

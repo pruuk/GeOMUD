@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
@@ -16,7 +17,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -32,7 +32,7 @@ import (
 * room.info				(See a room summary)
 * room.set				(Set properties of the room)
  */
-func Room(rest string, user *users.UserRecord, liveRoom *rooms.Room, flags events.EventFlag) (bool, error) {
+func Room(rest string, user *accounts.Account, liveRoom *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	handled := true
 
@@ -558,7 +558,7 @@ func Room(rest string, user *users.UserRecord, liveRoom *rooms.Room, flags event
 	return handled, nil
 }
 
-func room_Edit_Containers(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	// This basic struct will be used to keep track of what we're editing
 	type ContainerEdit struct {
@@ -1140,7 +1140,7 @@ func room_Edit_Containers(rest string, user *users.UserRecord, room *rooms.Room,
 	return true, nil
 }
 
-func room_Edit_Containers_SendRecipes(user *users.UserRecord, recipeResultItemId int, recipeItems map[int]int) {
+func room_Edit_Containers_SendRecipes(user *accounts.Account, recipeResultItemId int, recipeItems map[int]int) {
 
 	itm := items.New(recipeResultItemId)
 
@@ -1165,7 +1165,7 @@ func room_Edit_Containers_SendRecipes(user *users.UserRecord, recipeResultItemId
 	user.SendText(``)
 }
 
-func room_Edit_Exits(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	// This basic struct will be used to keep track of what we're editing
 	type ExitEdit struct {
@@ -1579,7 +1579,7 @@ func room_Edit_Exits(rest string, user *users.UserRecord, room *rooms.Room, flag
 	return true, nil
 }
 
-func room_Edit_Mutators(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func room_Edit_Mutators(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	allRoomMutators := []string{}
 	for _, roomMut := range room.Mutators {

@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Whisper(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Whisper(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(rest)
 
@@ -27,13 +27,13 @@ func Whisper(rest string, user *users.UserRecord, room *rooms.Room, flags events
 
 	rest = strings.TrimSpace(rest[len(whisperName)+1:])
 
-	toUser := users.GetByCharacterName(whisperName)
+	toUser := accounts.GetByCharacterName(whisperName)
 	if toUser == nil {
 		user.SendText("You can't find anyone by that name.")
 		return true, nil
 	}
 
-	targetIsMod := toUser.Role != users.RoleUser
+	targetIsMod := toUser.Role != accounts.RoleUser
 
 	if user.Muted && !targetIsMod {
 		user.SendText(`You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)

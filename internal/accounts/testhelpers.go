@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import "github.com/GoMudEngine/GoMud/internal/connections"
 
@@ -9,7 +9,7 @@ import "github.com/GoMudEngine/GoMud/internal/connections"
 
 // SetTestUser adds a user directly to the active users map.
 // For testing only.
-func SetTestUser(u *UserRecord) {
+func SetTestUser(u *Account) {
 	userManager.Users[u.UserId] = u
 }
 

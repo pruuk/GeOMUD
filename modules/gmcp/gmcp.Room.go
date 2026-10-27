@@ -5,13 +5,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // ////////////////////////////////////////////////////////////////////
@@ -65,7 +65,7 @@ func (g *GMCPRoomModule) itemOwnershipHandler(e events.Event) events.ListenerRet
 		return events.Continue
 	}
 
-	user := users.GetByUserId(evt.UserId)
+	user := accounts.GetByUserId(evt.UserId)
 	if user == nil {
 		return events.Continue
 	}
@@ -139,7 +139,7 @@ func (g *GMCPRoomModule) despawnHandler(e events.Event) events.ListenerReturn {
 			continue
 		}
 
-		u := users.GetByUserId(uid)
+		u := accounts.GetByUserId(uid)
 		if u == nil {
 			continue
 		}
@@ -224,7 +224,7 @@ func (g *GMCPRoomModule) buildAndSendGMCPPayload(e events.Event) events.Listener
 	}
 
 	// Make sure they have this gmcp module enabled.
-	user := users.GetByUserId(evt.UserId)
+	user := accounts.GetByUserId(evt.UserId)
 	if user == nil {
 		return events.Continue
 	}
@@ -261,7 +261,7 @@ func (g *GMCPRoomModule) buildAndSendGMCPPayload(e events.Event) events.Listener
 	return events.Continue
 }
 
-func (g *GMCPRoomModule) GetRoomNode(user *users.UserRecord, gmcpModule string) (data any, moduleName string) {
+func (g *GMCPRoomModule) GetRoomNode(user *accounts.Account, gmcpModule string) (data any, moduleName string) {
 
 	all := gmcpModule == `Room.Info`
 
@@ -335,7 +335,7 @@ func (g *GMCPRoomModule) GetRoomNode(user *users.UserRecord, gmcpModule string) 
 				continue
 			}
 
-			u := users.GetByUserId(uId)
+			u := accounts.GetByUserId(uId)
 			if u == nil {
 				continue
 			}

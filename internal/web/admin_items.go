@@ -5,9 +5,9 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // pageWritePermissions maps admin page URL paths to the write permission key
@@ -42,7 +42,7 @@ var pageWritePermissions = map[string]string{
 // write permission for the current admin page. Admins always have full access.
 func pageReadOnly(r *http.Request) bool {
 	u := GetAuthedUser(r)
-	if u == nil || u.Role == users.RoleAdmin {
+	if u == nil || u.Role == accounts.RoleAdmin {
 		return false
 	}
 	writeKey, ok := pageWritePermissions[strings.TrimRight(r.URL.Path, "/")]

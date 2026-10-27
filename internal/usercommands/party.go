@@ -5,17 +5,17 @@ import (
 	"math"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Party(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(rest)
 
@@ -96,7 +96,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 		if bool(partyCfg.SameRoomOnly) {
 			invitePlayerId, _ = room.FindByName(rest)
 		} else {
-			if u := users.GetByCharacterName(rest); u != nil {
+			if u := accounts.GetByCharacterName(rest); u != nil {
 				invitePlayerId = u.UserId
 			}
 		}
@@ -111,7 +111,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 			return true, nil
 		}
 
-		invitedUser := users.GetByUserId(invitePlayerId)
+		invitedUser := accounts.GetByUserId(invitePlayerId)
 
 		if invitedUser != nil && currentParty.InvitePlayer(invitePlayerId) {
 			user.SendText(fmt.Sprintf(`You invited <ansi fg="username">%s</ansi> to your party.`, invitedUser.Character.Name))
@@ -148,7 +148,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 		}
 
 		if bool(configs.GetGamePlayConfig().Party.SameRoomOnly) {
-			leader := users.GetByUserId(currentParty.LeaderUserId)
+			leader := accounts.GetByUserId(currentParty.LeaderUserId)
 			if leader == nil || leader.Character.RoomId != user.Character.RoomId {
 				user.SendText(`You must be in the same room as the party leader to join.`)
 				return true, nil
@@ -163,7 +163,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 				if uid == user.UserId {
 					continue
 				}
-				if u := users.GetByUserId(uid); u != nil {
+				if u := accounts.GetByUserId(uid); u != nil {
 					u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> joined the party!`, user.Character.Name))
 				}
 			}
@@ -194,7 +194,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 
 		if currentParty.DeclineInvite(user.UserId) {
 
-			if u := users.GetByUserId(currentParty.LeaderUserId); u != nil {
+			if u := accounts.GetByUserId(currentParty.LeaderUserId); u != nil {
 				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> declined the invitation.`, user.Character.Name))
 			}
 			user.SendText(`You decline the invitation.`)
@@ -225,7 +225,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 					uStatus = "Leader"
 				}
 
-				u := users.GetByUserId(uid)
+				u := accounts.GetByUserId(uid)
 				if u == nil {
 					continue
 				}
@@ -305,7 +305,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 			}
 
 			for _, uid := range currentParty.InviteUserIds {
-				u := users.GetByUserId(uid)
+				u := accounts.GetByUserId(uid)
 				if u == nil {
 					continue
 				}
@@ -414,7 +414,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 					continue
 				}
 
-				newLeaderUser := users.GetByUserId(uid)
+				newLeaderUser := accounts.GetByUserId(uid)
 
 				if newLeaderUser == nil {
 					continue
@@ -426,9 +426,9 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 			}
 
 			if currentParty.LeaderUserId > 0 {
-				newLeaderUser := users.GetByUserId(currentParty.LeaderUserId)
+				newLeaderUser := accounts.GetByUserId(currentParty.LeaderUserId)
 				for _, uid := range currentParty.UserIds {
-					if u := users.GetByUserId(uid); u != nil {
+					if u := accounts.GetByUserId(uid); u != nil {
 						if currentParty.LeaderUserId == uid {
 							u.EventLog.Add(`party`, `Promoted to party leader`)
 							u.SendText(`You are now the leader of the party.`)
@@ -470,7 +470,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 			if uid == user.UserId {
 				continue
 			}
-			if u := users.GetByUserId(uid); u != nil {
+			if u := accounts.GetByUserId(uid); u != nil {
 				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> left the party.`, user.Character.Name))
 			}
 		}
@@ -488,12 +488,12 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 			if uid == user.UserId {
 				continue
 			}
-			if u := users.GetByUserId(uid); u != nil {
+			if u := accounts.GetByUserId(uid); u != nil {
 				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> disbanded the party.`, user.Character.Name))
 			}
 		}
 		for _, uid := range currentParty.InviteUserIds {
-			if u := users.GetByUserId(uid); u != nil {
+			if u := accounts.GetByUserId(uid); u != nil {
 				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> disbanded the party.`, user.Character.Name))
 			}
 		}
@@ -523,7 +523,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 		allMembers := []string{}
 		memberIds := map[string]int{}
 		for _, uid := range currentParty.GetMembers() {
-			u := users.GetByUserId(uid)
+			u := accounts.GetByUserId(uid)
 			if u == nil {
 				continue
 			}
@@ -553,12 +553,12 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 
 		currentParty.Leave(kickUserId)
 
-		if u := users.GetByUserId(kickUserId); u != nil {
+		if u := accounts.GetByUserId(kickUserId); u != nil {
 			u.SendText(`You were kicked from the party.`)
 		}
 
 		for _, uid := range currentParty.UserIds {
-			if u := users.GetByUserId(uid); u != nil {
+			if u := accounts.GetByUserId(uid); u != nil {
 				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> was kicked from the party.`, matchUser))
 			}
 		}
@@ -574,7 +574,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 		allMembers := []string{}
 		memberIds := map[string]int{}
 		for _, uid := range currentParty.GetMembers() {
-			u := users.GetByUserId(uid)
+			u := accounts.GetByUserId(uid)
 			if u == nil {
 				continue
 			}
@@ -604,14 +604,14 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 
 		currentParty.LeaderUserId = promoteUserId
 
-		if u := users.GetByUserId(promoteUserId); u != nil {
+		if u := accounts.GetByUserId(promoteUserId); u != nil {
 			u.EventLog.Add(`party`, `Promoted to party leader`)
 			u.SendText(`You have been promoted to party leader.`)
 		}
 
 		for _, uid := range currentParty.UserIds {
 			if uid != promoteUserId {
-				if u := users.GetByUserId(uid); u != nil {
+				if u := accounts.GetByUserId(uid); u != nil {
 					u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is now the party leader.`, matchUser))
 				}
 			}
@@ -630,7 +630,7 @@ func Party(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 			if uId == user.UserId {
 				continue
 			}
-			if u := users.GetByUserId(uId); u != nil {
+			if u := accounts.GetByUserId(uId); u != nil {
 				u.SendText(fmt.Sprintf(`<ansi fg="magenta">(party)</ansi> <ansi fg="username">%s</ansi> says, "<ansi fg="yellow">%s</ansi>`, user.Character.Name, rest))
 			}
 		}

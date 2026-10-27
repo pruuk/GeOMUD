@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 func TestFindAdminUser(t *testing.T) {
@@ -31,8 +31,8 @@ func TestFindAdminUser(t *testing.T) {
 	if adminUser.Username != "admin" {
 		t.Fatalf("findAdminUser() username = %q, want %q", adminUser.Username, "admin")
 	}
-	if adminUser.Role != users.RoleAdmin {
-		t.Fatalf("findAdminUser() role = %q, want %q", adminUser.Role, users.RoleAdmin)
+	if adminUser.Role != accounts.RoleAdmin {
+		t.Fatalf("findAdminUser() role = %q, want %q", adminUser.Role, accounts.RoleAdmin)
 	}
 }
 
@@ -67,11 +67,11 @@ func TestResetAdminPasswordPersistsHash(t *testing.T) {
 	if err := adminUser.SetPassword(newPassword); err != nil {
 		t.Fatalf("SetPassword() error = %v", err)
 	}
-	if err := users.SaveUser(*adminUser); err != nil {
+	if err := accounts.SaveUser(*adminUser); err != nil {
 		t.Fatalf("SaveUser() error = %v", err)
 	}
 
-	reloadedUser, err := users.LoadUser(adminUser.Username, true)
+	reloadedUser, err := accounts.LoadUser(adminUser.Username, true)
 	if err != nil {
 		t.Fatalf("LoadUser() error = %v", err)
 	}
@@ -118,7 +118,7 @@ character:
 func createUserIndex(t *testing.T) {
 	t.Helper()
 
-	index := users.InitUserIndex()
+	index := accounts.InitUserIndex()
 	if err := index.Create(); err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}

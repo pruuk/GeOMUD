@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"crypto/md5"
@@ -28,7 +28,7 @@ var (
 	RoleAdmin string = "admin"
 )
 
-type UserRecord struct {
+type Account struct {
 	UserId         int                   `yaml:"userid"`
 	Role           string                `yaml:"role"`                  // user, mod, or admin
 	Permissions    []string              `yaml:"permissions,omitempty"` // Discrete permissions for mod role
@@ -55,11 +55,11 @@ type UserRecord struct {
 	inputBlocked   bool // Whether input is currently intentionally turned off (for a certain category of commands)
 }
 
-func NewUserRecord(userId int, connectionId uint64) *UserRecord {
+func NewAccount(userId int, connectionId uint64) *Account {
 
 	c := configs.GetGamePlayConfig()
 
-	u := &UserRecord{
+	u := &Account{
 		connectionId:   connectionId,
 		UserId:         userId,
 		Role:           RoleUser,
@@ -81,11 +81,11 @@ func NewUserRecord(userId int, connectionId uint64) *UserRecord {
 	return u
 }
 
-func (u *UserRecord) ClientSettings() connections.ClientSettings {
+func (u *Account) ClientSettings() connections.ClientSettings {
 	return connections.GetClientSettings(u.connectionId)
 }
 
-func (u *UserRecord) HasPlaintextPassword() bool {
+func (u *Account) HasPlaintextPassword() bool {
 	// bcrypt check
 	if strings.HasPrefix(u.Password, "$2a$") || strings.HasPrefix(u.Password, "$2b$") {
 		return false
@@ -97,7 +97,7 @@ func (u *UserRecord) HasPlaintextPassword() bool {
 	return true
 }
 
-func (u *UserRecord) PasswordMatches(input string) bool {
+func (u *Account) PasswordMatches(input string) bool {
 
 	// Try bcrypt first (new format).
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(input)); err == nil {
@@ -122,7 +122,7 @@ func (u *UserRecord) PasswordMatches(input string) bool {
 	return false
 }
 
-func (u *UserRecord) AddCommandAlias(input string, output string) (addedAlias string, deletedAlias string) {
+func (u *Account) AddCommandAlias(input string, output string) (addedAlias string, deletedAlias string) {
 
 	if u.Aliases == nil {
 		u.Aliases = map[string]string{}
@@ -151,7 +151,7 @@ func (u *UserRecord) AddCommandAlias(input string, output string) (addedAlias st
 	return input, ``
 }
 
-func (u *UserRecord) TryCommandAlias(input string) string {
+func (u *Account) TryCommandAlias(input string) string {
 
 	if u.Aliases == nil {
 		u.Aliases = map[string]string{}
@@ -165,26 +165,26 @@ func (u *UserRecord) TryCommandAlias(input string) string {
 	return input
 }
 
-func (u *UserRecord) ShorthandId() string {
+func (u *Account) ShorthandId() string {
 	return fmt.Sprintf(`@%d`, u.UserId)
 }
 
-func (u *UserRecord) SetLastInputRound(rdNum uint64) {
+func (u *Account) SetLastInputRound(rdNum uint64) {
 	u.lastInputRound = rdNum
 }
 
-func (u *UserRecord) GetLastInputRound() uint64 {
+func (u *Account) GetLastInputRound() uint64 {
 	return u.lastInputRound
 }
 
-func (u *UserRecord) HasShop() bool {
+func (u *Account) HasShop() bool {
 	return len(u.Character.Shop) > 0
 }
 
 // Grants experience to the user and notifies them
 // Additionally accepts `source` as a short identifier of the XP source
 // Example source: "combat", "trash cleanup", "exploration"
-func (u *UserRecord) GrantXP(amt int, source string) {
+func (u *Account) GrantXP(amt int, source string) {
 
 	grantXP, xpScale := u.Character.GrantXP(amt)
 
@@ -267,7 +267,7 @@ func (u *UserRecord) GrantXP(amt int, source string) {
 	}
 }
 
-func (u *UserRecord) DidTip(tipName string, completed ...bool) bool {
+func (u *Account) DidTip(tipName string, completed ...bool) bool {
 
 	if u.TipsComplete == nil {
 		u.TipsComplete = map[string]bool{}
@@ -285,7 +285,7 @@ func (u *UserRecord) DidTip(tipName string, completed ...bool) bool {
 	return u.TipsComplete[tipName]
 }
 
-func (u *UserRecord) Command(inputTxt string, waitSeconds ...float64) {
+func (u *Account) Command(inputTxt string, waitSeconds ...float64) {
 
 	readyTurn := util.GetTurnCount()
 	if len(waitSeconds) > 0 {
@@ -300,19 +300,19 @@ func (u *UserRecord) Command(inputTxt string, waitSeconds ...float64) {
 
 }
 
-func (u *UserRecord) BlockInput() {
+func (u *Account) BlockInput() {
 	u.inputBlocked = true
 }
 
-func (u *UserRecord) UnblockInput() {
+func (u *Account) UnblockInput() {
 	u.inputBlocked = false
 }
 
-func (u *UserRecord) InputBlocked() bool {
+func (u *Account) InputBlocked() bool {
 	return u.inputBlocked
 }
 
-func (u *UserRecord) CommandFlagged(inputTxt string, flagData events.EventFlag, waitSeconds ...float64) {
+func (u *Account) CommandFlagged(inputTxt string, flagData events.EventFlag, waitSeconds ...float64) {
 
 	readyTurn := util.GetTurnCount()
 	if len(waitSeconds) > 0 {
@@ -332,7 +332,7 @@ func (u *UserRecord) CommandFlagged(inputTxt string, flagData events.EventFlag, 
 
 }
 
-func (u *UserRecord) AddBuff(buffId int, source string) {
+func (u *Account) AddBuff(buffId int, source string) {
 
 	events.AddToQueue(events.Buff{
 		UserId: u.UserId,
@@ -342,7 +342,7 @@ func (u *UserRecord) AddBuff(buffId int, source string) {
 
 }
 
-func (u *UserRecord) SendText(txt string) {
+func (u *Account) SendText(txt string) {
 
 	events.AddToQueue(events.Message{
 		UserId: u.UserId,
@@ -351,7 +351,7 @@ func (u *UserRecord) SendText(txt string) {
 
 }
 
-func (u *UserRecord) SendWebClientCommand(txt string) {
+func (u *Account) SendWebClientCommand(txt string) {
 
 	events.AddToQueue(events.WebClientCommand{
 		ConnectionId: u.connectionId,
@@ -360,7 +360,7 @@ func (u *UserRecord) SendWebClientCommand(txt string) {
 
 }
 
-func (u *UserRecord) SetTempData(key string, value any) {
+func (u *Account) SetTempData(key string, value any) {
 
 	if u.tempDataStore == nil {
 		u.tempDataStore = make(map[string]any)
@@ -373,7 +373,7 @@ func (u *UserRecord) SetTempData(key string, value any) {
 	u.tempDataStore[key] = value
 }
 
-func (u *UserRecord) GetTempData(key string) any {
+func (u *Account) GetTempData(key string) any {
 
 	if u.tempDataStore == nil {
 		u.tempDataStore = make(map[string]any)
@@ -390,7 +390,7 @@ func (u *UserRecord) GetTempData(key string) any {
 // prefix-match semantics: a granted key of "room" also satisfies "room.edit",
 // "room.edit.exits", etc. The optional simpleMatch parameter additionally
 // allows the inverse direction (requested "room" matches granted "room.edit").
-func (u *UserRecord) HasRolePermission(permissionId string, simpleMatch ...bool) bool {
+func (u *Account) HasRolePermission(permissionId string, simpleMatch ...bool) bool {
 	if u.Role == RoleAdmin {
 		return true
 	}
@@ -405,7 +405,7 @@ func (u *UserRecord) HasRolePermission(permissionId string, simpleMatch ...bool)
 // HasPermission is a convenience wrapper around HasRolePermission without the
 // simpleMatch parameter — used by web middleware where prefix-only matching is
 // always desired.
-func (u *UserRecord) HasPermission(permissionId string) bool {
+func (u *Account) HasPermission(permissionId string) bool {
 	return u.HasRolePermission(permissionId)
 }
 
@@ -417,7 +417,7 @@ func (u *UserRecord) HasPermission(permissionId string) bool {
 //   - When simpleMatch is true, the inverse also passes: a granted key that
 //     starts with the requested key (e.g. requested "room" matches granted
 //     "room.edit").
-func (u *UserRecord) hasPermission(permissionId string, simpleMatch bool) bool {
+func (u *Account) hasPermission(permissionId string, simpleMatch bool) bool {
 	permissionIdLen := len(permissionId)
 	for _, granted := range u.Permissions {
 		if permissionId == granted {
@@ -445,7 +445,7 @@ func (u *UserRecord) hasPermission(permissionId string, simpleMatch bool) bool {
 	return false
 }
 
-func (u *UserRecord) SetConfigOption(key string, value any) {
+func (u *Account) SetConfigOption(key string, value any) {
 	if u.ConfigOptions == nil {
 		u.ConfigOptions = make(map[string]any)
 	}
@@ -456,7 +456,7 @@ func (u *UserRecord) SetConfigOption(key string, value any) {
 	u.ConfigOptions[key] = value
 }
 
-func (u *UserRecord) GetConfigOption(key string) any {
+func (u *Account) GetConfigOption(key string) any {
 	if u.ConfigOptions == nil {
 		u.ConfigOptions = make(map[string]any)
 	}
@@ -466,11 +466,11 @@ func (u *UserRecord) GetConfigOption(key string) any {
 	return nil
 }
 
-func (u *UserRecord) GetConnectTime() time.Time {
+func (u *Account) GetConnectTime() time.Time {
 	return u.connectionTime
 }
 
-func (u *UserRecord) RoundTick() {
+func (u *Account) RoundTick() {
 
 }
 
@@ -480,22 +480,22 @@ func (u *UserRecord) RoundTick() {
 // of typing.
 // I don't like the idea of capturing it every time they hit a key though
 // There is probably a better way.
-func (u *UserRecord) SetUnsentText(t string) {
+func (u *Account) SetUnsentText(t string) {
 
 	u.unsentText = t
 }
 
-func (u *UserRecord) GetUnsentText() string {
+func (u *Account) GetUnsentText() string {
 
 	return u.unsentText
 }
 
 // Replace a characters information with another.
-func (u *UserRecord) ReplaceCharacter(replacement *characters.Character) {
+func (u *Account) ReplaceCharacter(replacement *characters.Character) {
 	u.Character = replacement
 }
 
-func (u *UserRecord) SetUsername(un string) error {
+func (u *Account) SetUsername(un string) error {
 
 	if err := ValidateName(un); err != nil {
 		return err
@@ -511,7 +511,7 @@ func (u *UserRecord) SetUsername(un string) error {
 	return nil
 }
 
-func (u *UserRecord) TempName() string {
+func (u *Account) TempName() string {
 	hasher := md5.New()
 	hasher.Write([]byte([]byte(u.Username)))
 	hashInBytes := hasher.Sum(nil)
@@ -523,7 +523,7 @@ func (u *UserRecord) TempName() string {
 	return fmt.Sprintf("nameless-%d", number.Mod(number, mod).Int64())
 }
 
-func (u *UserRecord) SetCharacterName(cn string) error {
+func (u *Account) SetCharacterName(cn string) error {
 
 	if err := ValidateName(cn); err != nil {
 		return err
@@ -535,7 +535,7 @@ func (u *UserRecord) SetCharacterName(cn string) error {
 	return nil
 }
 
-func (u *UserRecord) SetPassword(pw string) error {
+func (u *Account) SetPassword(pw string) error {
 
 	validation := configs.GetValidationConfig()
 
@@ -551,12 +551,12 @@ func (u *UserRecord) SetPassword(pw string) error {
 	return nil
 }
 
-func (u *UserRecord) ConnectionId() uint64 {
+func (u *Account) ConnectionId() uint64 {
 	return u.connectionId
 }
 
 // Prompt related functionality
-func (u *UserRecord) StartPrompt(command string, rest string) (*prompt.Prompt, bool) {
+func (u *Account) StartPrompt(command string, rest string) (*prompt.Prompt, bool) {
 
 	if u.activePrompt != nil {
 		// If it's the same prompt, return the existing one
@@ -571,16 +571,16 @@ func (u *UserRecord) StartPrompt(command string, rest string) (*prompt.Prompt, b
 	return u.activePrompt, true
 }
 
-func (u *UserRecord) GetPrompt() *prompt.Prompt {
+func (u *Account) GetPrompt() *prompt.Prompt {
 
 	return u.activePrompt
 }
 
-func (u *UserRecord) ClearPrompt() {
+func (u *Account) ClearPrompt() {
 	u.activePrompt = nil
 }
 
-func (u *UserRecord) GetOnlineInfo() OnlineInfo {
+func (u *Account) GetOnlineInfo() OnlineInfo {
 	c := configs.GetTimingConfig()
 	afkRounds := uint64(c.SecondsToRounds(int(configs.GetNetworkConfig().AfkSeconds)))
 	roundNow := util.GetRoundCount()
@@ -630,7 +630,7 @@ func (u *UserRecord) GetOnlineInfo() OnlineInfo {
 	}
 }
 
-func (u *UserRecord) WimpyCheck() {
+func (u *Account) WimpyCheck() {
 	if currentWimpy := u.GetConfigOption(`wimpy`); currentWimpy != nil {
 		healthPct := int(math.Floor(float64(u.Character.Health) / float64(u.Character.HealthMax.Value) * 100))
 		if healthPct < currentWimpy.(int) {

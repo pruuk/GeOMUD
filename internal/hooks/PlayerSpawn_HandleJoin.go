@@ -3,11 +3,11 @@ package hooks
 import (
 	"fmt"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //
@@ -22,7 +22,7 @@ func HandleJoin(e events.Event) events.ListenerReturn {
 		return events.Cancel
 	}
 
-	user := users.GetByUserId(evt.UserId)
+	user := accounts.GetByUserId(evt.UserId)
 	if user == nil {
 		mudlog.Error("HandleJoin", "error", fmt.Sprintf(`user %d not found`, evt.UserId))
 		return events.Cancel
@@ -30,7 +30,7 @@ func HandleJoin(e events.Event) events.ListenerReturn {
 
 	user.EventLog.Add(`conn`, fmt.Sprintf(`<ansi fg="username">%s</ansi> entered the world`, user.Character.Name))
 
-	users.RemoveLinkDeadUser(evt.UserId)
+	accounts.RemoveLinkDeadUser(evt.UserId)
 
 	room := rooms.LoadRoom(user.Character.RoomId)
 	sendResetMessage := false

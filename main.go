@@ -33,6 +33,7 @@ import (
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/ssh"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -44,7 +45,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/GoMudEngine/GoMud/internal/web"
 	_ "github.com/GoMudEngine/GoMud/modules"
@@ -102,7 +102,7 @@ func main() {
 
 	// Register copyover contributors (must happen before Restore is called).
 	copyover.Register(connections.CopyoverContributor())
-	copyover.Register(users.CopyoverContributor())
+	copyover.Register(accounts.CopyoverContributor())
 	copyover.Register(util.CopyoverContributor())
 	copyover.Register(gametime.CopyoverContributor())
 	copyover.Register(copyover.TokenContributor())
@@ -110,7 +110,7 @@ func main() {
 	// Wire up the reconnect-token issuer so that connections can issue tokens
 	// for WebSocket clients without creating an import cycle.
 	connections.IssueWebSocketReconnectToken = func(connectionId connections.ConnectionId) (string, error) {
-		u := users.GetByConnectionId(connectionId)
+		u := accounts.GetByConnectionId(connectionId)
 		if u == nil {
 			return "", fmt.Errorf("no user for connection %d", connectionId)
 		}
@@ -174,7 +174,7 @@ func main() {
 	buffs.RegisterFlagFS(plugins.GetPluginRegistry())
 	mobs.RegisterFS(plugins.GetPluginRegistry())
 	usercommands.AddFunctionExporter(plugins.GetPluginRegistry())
-	users.AddFunctionExporter(plugins.GetPluginRegistry())
+	accounts.AddFunctionExporter(plugins.GetPluginRegistry())
 	usercommands.SetRoomTagProvider(plugins.GetRegisteredRoomTags)
 	web.SetRoomTagProvider(plugins.GetRegisteredRoomTags)
 
@@ -222,10 +222,10 @@ func main() {
 
 	if !isCopyover {
 		timeStart := time.Now()
-		idx := users.InitUserIndex()
+		idx := accounts.InitUserIndex()
 		if !idx.Exists() {
 			// Since it doesn't exist yet, that's a good indication we should do a quick format migration check
-			users.DoUserMigrations()
+			accounts.DoUserMigrations()
 		}
 		if idx.IsUpToDate() {
 			mudlog.Info("UserIndex", "info", "User index up to date.", "users", idx.GetMetaData().RecordCount, "time taken", time.Since(timeStart))
@@ -236,8 +236,8 @@ func main() {
 		}
 	}
 
-	users.GetCharacterIndex().Rebuild()
-	mudlog.Info("CharacterIndex", "info", "Active character names indexed.", "characters", users.GetCharacterIndex().Len())
+	accounts.GetCharacterIndex().Rebuild()
+	mudlog.Info("CharacterIndex", "info", "Active character names indexed.", "characters", accounts.GetCharacterIndex().Len())
 
 	// Load the round count from the file
 	if !isCopyover {
@@ -267,7 +267,7 @@ func main() {
 		configs.GetFilePathsConfig().DataFiles.String(),
 	)
 
-	mudlog.Info("CharacterIndex", "info", "Character name index complete.", "characters", users.GetCharacterIndex().Len())
+	mudlog.Info("CharacterIndex", "info", "Character name index complete.", "characters", accounts.GetCharacterIndex().Len())
 
 	web.SetWebPlugin(plugins.GetPluginRegistry())
 
@@ -344,7 +344,7 @@ func main() {
 			if cd == nil || cd.State() != connections.LoggedIn {
 				continue
 			}
-			u := users.GetByConnectionId(connId)
+			u := accounts.GetByConnectionId(connId)
 			if u == nil {
 				continue
 			}
@@ -414,7 +414,7 @@ func main() {
 	time.Sleep(1 * time.Second)
 }
 
-func resumeRestoredConnection(connDetails *connections.ConnectionDetails, userObject *users.UserRecord, wg *sync.WaitGroup) {
+func resumeRestoredConnection(connDetails *connections.ConnectionDetails, userObject *accounts.Account, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	mudlog.Info("Copyover", "resuming connection", connDetails.ConnectionId(), "userId", userObject.UserId)
@@ -428,7 +428,7 @@ func resumeRestoredConnection(connDetails *connections.ConnectionDetails, userOb
 	connDetails.AddInputHandler("EchoInputHandler", inputhandlers.EchoInputHandler)
 	connDetails.AddInputHandler("HistoryInputHandler", inputhandlers.HistoryInputHandler)
 
-	if userObject.Role == users.RoleAdmin {
+	if userObject.Role == accounts.RoleAdmin {
 		connDetails.AddInputHandler("SystemCommandInputHandler", inputhandlers.SystemCommandInputHandler)
 	}
 
@@ -723,7 +723,7 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 	// 3. Returns false (which we ignore here, as we aren't in the main loop yet).
 	loginHandler(initialTriggerInput, sharedState)
 
-	var userObject *users.UserRecord
+	var userObject *accounts.Account
 	lastInput := time.Now()
 	c := configs.GetConfig()
 
@@ -800,7 +800,7 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 			// Retrieve the UserObject stored by the completion function
 			if uo, exists := sharedState["UserObject"]; exists {
 				var ok bool
-				userObject, ok = uo.(*users.UserRecord)
+				userObject, ok = uo.(*accounts.Account)
 				if !ok {
 					mudlog.Error("UserObject type assertion failed", "connectionId", clientInput.ConnectionId)
 					connections.Remove(clientInput.ConnectionId)
@@ -822,7 +822,7 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 			// Add admin command handler
 			connDetails.AddInputHandler("HistoryInputHandler", inputhandlers.HistoryInputHandler) // Put history tracking after login handling, since login handling aborts input until complete
 
-			if userObject.Role == users.RoleAdmin {
+			if userObject.Role == accounts.RoleAdmin {
 				connDetails.AddInputHandler("SystemCommandInputHandler", inputhandlers.SystemCommandInputHandler)
 			}
 
@@ -917,7 +917,7 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 
 func HandleWebSocketConnection(conn *websocket.Conn) {
 
-	var userObject *users.UserRecord
+	var userObject *accounts.Account
 	connDetails := connections.Add(nil, conn)
 
 	// Setup shared state map for this connection's handlers
@@ -981,9 +981,9 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 		// Check for a copyover reconnect token before normal input handling.
 		if userObject == nil {
 			if userId, ok := copyover.ConsumeReconnectToken(string(message)); ok {
-				tmpUser := users.GetByUserId(userId)
+				tmpUser := accounts.GetByUserId(userId)
 				if tmpUser != nil {
-					loggedInUser, msg, loginErr := users.CopyoverReconnectUser(tmpUser, clientInput.ConnectionId)
+					loggedInUser, msg, loginErr := accounts.CopyoverReconnectUser(tmpUser, clientInput.ConnectionId)
 					if loginErr != nil {
 						if len(msg) > 0 {
 							connections.SendTo([]byte(msg), clientInput.ConnectionId)
@@ -999,7 +999,7 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 					connDetails.AddInputHandler("TextPrefixHandler", inputhandlers.TextPrefixHandler)
 					connDetails.AddInputHandler("EchoInputHandler", inputhandlers.EchoInputHandler)
 					connDetails.AddInputHandler("HistoryInputHandler", inputhandlers.HistoryInputHandler)
-					if userObject.Role == users.RoleAdmin {
+					if userObject.Role == accounts.RoleAdmin {
 						connDetails.AddInputHandler("SystemCommandInputHandler", inputhandlers.SystemCommandInputHandler)
 					}
 					connDetails.AddInputHandler("SignalHandler", inputhandlers.SignalHandler, "AnsiHandler")
@@ -1050,7 +1050,7 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 			// Retrieve the UserObject stored by the completion function
 			if uo, exists := sharedState["UserObject"]; exists {
 				var ok bool
-				userObject, ok = uo.(*users.UserRecord)
+				userObject, ok = uo.(*accounts.Account)
 				if !ok {
 					mudlog.Error("UserObject type assertion failed", "connectionId", clientInput.ConnectionId)
 					connections.Remove(clientInput.ConnectionId)
@@ -1073,7 +1073,7 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 			// Add admin command handler
 			connDetails.AddInputHandler("HistoryInputHandler", inputhandlers.HistoryInputHandler) // Put history tracking after login handling, since login handling aborts input until complete
 
-			if userObject.Role == users.RoleAdmin {
+			if userObject.Role == accounts.RoleAdmin {
 				connDetails.AddInputHandler("SystemCommandInputHandler", inputhandlers.SystemCommandInputHandler)
 			}
 
@@ -1308,7 +1308,7 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 	}
 	loginHandler(initialTriggerInput, sharedState)
 
-	var userObject *users.UserRecord
+	var userObject *accounts.Account
 	lastInput := time.Now()
 	c := configs.GetConfig()
 
@@ -1367,7 +1367,7 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 		if okContinue && lastHandlerName == "LoginPromptHandler" {
 			if uo, exists := sharedState["UserObject"]; exists {
 				var ok bool
-				userObject, ok = uo.(*users.UserRecord)
+				userObject, ok = uo.(*accounts.Account)
 				if !ok {
 					mudlog.Error("UserObject type assertion failed", "connectionId", clientInput.ConnectionId)
 					connections.Remove(clientInput.ConnectionId)
@@ -1384,7 +1384,7 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 			connDetails.AddInputHandler("EchoInputHandler", inputhandlers.EchoInputHandler)
 			connDetails.AddInputHandler("HistoryInputHandler", inputhandlers.HistoryInputHandler)
 
-			if userObject.Role == users.RoleAdmin {
+			if userObject.Role == accounts.RoleAdmin {
 				connDetails.AddInputHandler("SystemCommandInputHandler", inputhandlers.SystemCommandInputHandler)
 			}
 

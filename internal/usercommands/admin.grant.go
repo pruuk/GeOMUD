@@ -9,15 +9,15 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/templates"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 /*
 * Role Permissions:
 * grant 				(All)
  */
-func Grant(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Grant(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.grant", nil, user.UserId)
@@ -50,7 +50,7 @@ func Grant(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 
 		if targetUserId > 0 {
 
-			if u := users.GetByUserId(targetUserId); u != nil {
+			if u := accounts.GetByUserId(targetUserId); u != nil {
 				u.GrantXP(expAmt, `admin grant`)
 				user.SendText(fmt.Sprintf(`Granted <ansi fg="experience">%d experience</ansi> to <ansi fg="username">%s</ansi>.`, expAmt, u.Character.Name))
 				return true, nil

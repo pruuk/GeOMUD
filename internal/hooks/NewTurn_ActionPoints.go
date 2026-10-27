@@ -1,8 +1,8 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //
@@ -20,7 +20,7 @@ func ActionPoints(e events.Event) events.ListenerReturn {
 		}
 	*/
 
-	for _, user := range users.GetAllActiveUsers() {
+	for _, user := range accounts.GetAllActiveUsers() {
 		user.Character.ActionPoints += 1
 		if user.Character.ActionPoints > user.Character.ActionPointsMax.Value {
 			user.Character.ActionPoints = user.Character.ActionPointsMax.Value

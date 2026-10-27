@@ -7,14 +7,14 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 /*
 * Role Permissions:
 * mute 				(All)
  */
-func Mute(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Mute(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.mute", nil, user.UserId)
@@ -26,7 +26,7 @@ func Mute(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 
 	if targetUserId > 0 {
 
-		if u := users.GetByUserId(targetUserId); u != nil {
+		if u := accounts.GetByUserId(targetUserId); u != nil {
 
 			u.Muted = true
 
@@ -41,7 +41,7 @@ func Mute(rest string, user *users.UserRecord, room *rooms.Room, flags events.Ev
 	return true, nil
 }
 
-func UnMute(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func UnMute(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.mute", nil, user.UserId)
@@ -53,7 +53,7 @@ func UnMute(rest string, user *users.UserRecord, room *rooms.Room, flags events.
 
 	if targetUserId > 0 {
 
-		if u := users.GetByUserId(targetUserId); u != nil {
+		if u := accounts.GetByUserId(targetUserId); u != nil {
 
 			u.Muted = false
 

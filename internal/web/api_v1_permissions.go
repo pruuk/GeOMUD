@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 // PermissionDef describes a single permission key exposed by the catalog.
@@ -178,7 +178,7 @@ func apiV1PutUserPermissions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Prevent modifying admin accounts via this endpoint.
-	if u.Role == users.RoleAdmin {
+	if u.Role == accounts.RoleAdmin {
 		writeAPIError(w, http.StatusForbidden, "admin permissions cannot be changed via this endpoint")
 		return
 	}
@@ -212,12 +212,12 @@ func apiV1PutUserPermissions(w http.ResponseWriter, r *http.Request) {
 	updated := *u
 	updated.Permissions = deduped
 
-	if err := users.SaveUser(updated); err != nil {
+	if err := accounts.SaveUser(updated); err != nil {
 		writeAPIError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	users.UpdateOnlineUser(updated)
+	accounts.UpdateOnlineUser(updated)
 
 	writeJSON(w, http.StatusOK, APIResponse[map[string]any]{
 		Success: true,

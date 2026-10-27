@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -14,10 +15,9 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
-func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Start(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 	if user.Character.RoomId != -1 {
 		return false, errors.New(`only allowed in the void`)
 	}
@@ -125,7 +125,7 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 			return true, nil
 		}
 
-		if err := users.ValidateName(question.Response); err != nil {
+		if err := accounts.ValidateName(question.Response); err != nil {
 			user.SendText(`that name is not allowed: ` + err.Error())
 			question.RejectResponse()
 			return true, nil
@@ -137,7 +137,7 @@ func Start(rest string, user *users.UserRecord, room *rooms.Room, flags events.E
 			return true, nil
 		}
 
-		if foundUserId, _ := users.CharacterNameSearch(question.Response); foundUserId > 0 {
+		if foundUserId, _ := accounts.CharacterNameSearch(question.Response); foundUserId > 0 {
 			user.SendText(`that character name is already in use.`)
 			question.RejectResponse()
 			return true, nil

@@ -3,10 +3,10 @@ package hooks
 import (
 	"fmt"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //
@@ -21,7 +21,7 @@ func HandlePlayerDrop(e events.Event) events.ListenerReturn {
 		return events.Cancel
 	}
 
-	user := users.GetByUserId(evt.UserId)
+	user := accounts.GetByUserId(evt.UserId)
 	if user == nil {
 		mudlog.Error("HandlePlayerDrop", "error", fmt.Sprintf(`user %d not found`, evt.UserId))
 		return events.Cancel

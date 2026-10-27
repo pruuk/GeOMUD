@@ -3,12 +3,12 @@ package inputhandlers
 import (
 	"errors"
 	"fmt"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"net/mail"
 	"strings"
 )
@@ -89,7 +89,7 @@ func ValidateNewEntry(input string, _ map[string]string) (string, error) {
 
 // Specific Validators
 func ValidateUsername(input string, _ map[string]string) (string, error) {
-	if err := users.ValidateName(input); err != nil {
+	if err := accounts.ValidateName(input); err != nil {
 		return "", err
 	}
 
@@ -97,7 +97,7 @@ func ValidateUsername(input string, _ map[string]string) (string, error) {
 }
 
 func ValidatePassword(input string, _ map[string]string) (string, error) {
-	if err := users.ValidatePassword(input); err != nil {
+	if err := accounts.ValidatePassword(input); err != nil {
 		return "", err
 	}
 	return input, nil

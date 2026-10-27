@@ -1,11 +1,11 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //
@@ -31,7 +31,7 @@ func PruneBuffs(e events.Event) events.ListenerReturn {
 			logOff := false
 			for _, uId := range room.GetPlayers(rooms.FindBuffed) {
 
-				user := users.GetByUserId(uId)
+				user := accounts.GetByUserId(uId)
 
 				logOff = false
 				if buffsToPrune := user.Character.Buffs.Prune(); len(buffsToPrune) > 0 {

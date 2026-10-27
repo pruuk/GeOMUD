@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"errors"
@@ -27,7 +27,7 @@ var (
 )
 
 type ActiveUsers struct {
-	Users               map[int]*UserRecord                 // userId to UserRecord
+	Users               map[int]*Account                    // userId to UserRecord
 	Usernames           map[string]int                      // username to userId
 	Connections         map[connections.ConnectionId]int    // connectionId to userId
 	UserConnections     map[int]connections.ConnectionId    // userId to connectionId
@@ -36,7 +36,7 @@ type ActiveUsers struct {
 
 func newUserManager() *ActiveUsers {
 	return &ActiveUsers{
-		Users:               make(map[int]*UserRecord),
+		Users:               make(map[int]*Account),
 		Usernames:           make(map[string]int),
 		Connections:         make(map[connections.ConnectionId]int),
 		UserConnections:     make(map[int]connections.ConnectionId),
@@ -122,11 +122,11 @@ func GetConnectionIds(userIds []int) []connections.ConnectionId {
 	return connectionIds
 }
 
-func GetAllActiveUsers() []*UserRecord {
+func GetAllActiveUsers() []*Account {
 	userManagerMu.RLock()
 	defer userManagerMu.RUnlock()
 
-	ret := []*UserRecord{}
+	ret := []*Account{}
 	for _, userPtr := range userManager.Users {
 		if !userPtr.isLinkDead {
 			ret = append(ret, userPtr)
@@ -147,11 +147,11 @@ func GetOnlineUserIds() []int {
 	return onlineList
 }
 
-func GetByCharacterName(name string) *UserRecord {
+func GetByCharacterName(name string) *Account {
 	userManagerMu.RLock()
 	defer userManagerMu.RUnlock()
 
-	var closeMatch *UserRecord = nil
+	var closeMatch *Account = nil
 
 	name = strings.ToLower(name)
 	for _, user := range userManager.Users {
@@ -167,7 +167,7 @@ func GetByCharacterName(name string) *UserRecord {
 	return closeMatch
 }
 
-func GetByUserId(userId int) *UserRecord {
+func GetByUserId(userId int) *Account {
 	userManagerMu.RLock()
 	defer userManagerMu.RUnlock()
 
@@ -178,7 +178,7 @@ func GetByUserId(userId int) *UserRecord {
 	return nil
 }
 
-func GetByConnectionId(connectionId connections.ConnectionId) *UserRecord {
+func GetByConnectionId(connectionId connections.ConnectionId) *Account {
 	userManagerMu.RLock()
 	defer userManagerMu.RUnlock()
 
@@ -195,7 +195,7 @@ func GetByConnectionId(connectionId connections.ConnectionId) *UserRecord {
 // Unlike LoginUser, this always succeeds for users that are currently tracked
 // (zombie or not), because the old connection is a stale copyover socket that
 // is no longer connected.
-func CopyoverReconnectUser(user *UserRecord, connectionId connections.ConnectionId) (*UserRecord, string, error) {
+func CopyoverReconnectUser(user *Account, connectionId connections.ConnectionId) (*Account, string, error) {
 
 	mudlog.Info("CopyoverReconnectUser()", "username", user.Username, "connectionId", connectionId)
 
@@ -236,7 +236,7 @@ func CopyoverReconnectUser(user *UserRecord, connectionId connections.Connection
 }
 
 // First time creating a user.
-func LoginUser(user *UserRecord, connectionId connections.ConnectionId) (*UserRecord, string, error) {
+func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, string, error) {
 
 	mudlog.Info("LoginUser()", "username", user.Username, "connectionId", connectionId)
 
@@ -358,7 +358,7 @@ func SetLinkDeadUser(userId int) {
 
 func SaveAllUsers(isAutoSave ...bool) {
 	userManagerMu.RLock()
-	users := make([]*UserRecord, 0, len(userManager.Users))
+	users := make([]*Account, 0, len(userManager.Users))
 	for _, u := range userManager.Users {
 		users = append(users, u)
 	}
@@ -401,7 +401,7 @@ func LogOutUserByConnectionId(connectionId connections.ConnectionId) error {
 }
 
 // First time creating a user.
-func CreateUser(u *UserRecord) error {
+func CreateUser(u *Account) error {
 
 	if err := ValidateName(u.Username); err != nil {
 		return errors.New("that username is not allowed: " + err.Error())
@@ -427,7 +427,7 @@ func CreateUser(u *UserRecord) error {
 	return nil
 }
 
-func LoadUserById(userId int) (*UserRecord, error) {
+func LoadUserById(userId int) (*Account, error) {
 
 	idx := GetUserIndex()
 	username, found := idx.FindByUserId(userId)
@@ -438,7 +438,7 @@ func LoadUserById(userId int) (*UserRecord, error) {
 	return LoadUser(username)
 }
 
-func LoadUser(username string, skipValidation ...bool) (*UserRecord, error) {
+func LoadUser(username string, skipValidation ...bool) (*Account, error) {
 
 	idx := GetUserIndex()
 	userId, found := idx.FindByUsername(username)
@@ -454,7 +454,7 @@ func LoadUser(username string, skipValidation ...bool) (*UserRecord, error) {
 		return nil, err
 	}
 
-	loadedUser := &UserRecord{}
+	loadedUser := &Account{}
 	if err := yaml.Unmarshal([]byte(userFileTxt), loadedUser); err != nil {
 		mudlog.Error("LoadUser", "error", err.Error())
 	}
@@ -477,7 +477,7 @@ func LoadUser(username string, skipValidation ...bool) (*UserRecord, error) {
 
 // Loads all user recvords and runs against a function.
 // Stops searching if false is returned.
-func SearchOfflineUsers(searchFunc func(u *UserRecord) bool) {
+func SearchOfflineUsers(searchFunc func(u *Account) bool) {
 
 	basePath := util.FilePath(string(configs.GetFilePathsConfig().DataFiles), `/`, `users`)
 
@@ -495,7 +495,7 @@ func SearchOfflineUsers(searchFunc func(u *UserRecord) bool) {
 			return nil
 		}
 
-		var uRecord UserRecord
+		var uRecord Account
 
 		fpathLower := path[len(path)-5:] // Only need to compare the last 5 characters
 		if fpathLower == `.yaml` {
@@ -585,7 +585,7 @@ func CharacterNameSearch(nameToFind string) (foundUserId int, foundUserName stri
 // UpdateOnlineUser applies updated exported fields to the in-memory user
 // record if the user is currently online. Connection state and other
 // runtime-only fields are preserved from the live record.
-func UpdateOnlineUser(updated UserRecord) {
+func UpdateOnlineUser(updated Account) {
 	userManagerMu.Lock()
 	defer userManagerMu.Unlock()
 
@@ -607,7 +607,7 @@ func UpdateOnlineUser(updated UserRecord) {
 	*u = updated
 }
 
-func SaveUser(u UserRecord, isAutoSave ...bool) error {
+func SaveUser(u Account, isAutoSave ...bool) error {
 
 	fileWritten := false
 	tmpSaved := false
@@ -670,7 +670,7 @@ func GetUniqueUserId() int {
 	} else {
 
 		// Check all user id's of offline users
-		SearchOfflineUsers(func(u *UserRecord) bool {
+		SearchOfflineUsers(func(u *Account) bool {
 
 			if u.UserId > highestUserId {
 				highestUserId = u.UserId

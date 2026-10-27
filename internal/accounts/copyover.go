@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import (
 	"strconv"
@@ -84,7 +84,7 @@ func (u *usersCopyoverContributor) CopyoverRestore(dec *copyover.Decoder) error 
 }
 
 // loadUserById loads a user record directly from disk by userId.
-func loadUserById(userId int) (*UserRecord, error) {
+func loadUserById(userId int) (*Account, error) {
 	userFilePath := util.FilePath(string(configs.GetFilePathsConfig().DataFiles), `/`, `users`, `/`, strconv.Itoa(userId)+`.yaml`)
 
 	data, err := util.ReadFile(userFilePath)
@@ -92,7 +92,7 @@ func loadUserById(userId int) (*UserRecord, error) {
 		return nil, err
 	}
 
-	user := &UserRecord{}
+	user := &Account{}
 	if err := yaml.Unmarshal(data, user); err != nil {
 		return nil, err
 	}

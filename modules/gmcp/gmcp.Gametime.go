@@ -1,12 +1,12 @@
 package gmcp
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // ////////////////////////////////////////////////////////////////////
@@ -58,7 +58,7 @@ func (g *GMCPGametimeModule) newRoundHandler(e events.Event) events.ListenerRetu
 		MoonCount:  gd.MoonCount,
 	}
 
-	for _, user := range users.GetAllActiveUsers() {
+	for _, user := range accounts.GetAllActiveUsers() {
 		if !isGMCPEnabled(user.ConnectionId()) {
 			continue
 		}

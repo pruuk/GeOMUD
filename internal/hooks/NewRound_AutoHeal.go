@@ -3,10 +3,10 @@ package hooks
 import (
 	"fmt"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //
@@ -25,9 +25,9 @@ func AutoHeal(e events.Event) events.ListenerReturn {
 
 	deathRecoveryRoomId := int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)
 
-	onlineIds := users.GetOnlineUserIds()
+	onlineIds := accounts.GetOnlineUserIds()
 	for _, userId := range onlineIds {
-		user := users.GetByUserId(userId)
+		user := accounts.GetByUserId(userId)
 
 		// Only heal if not in combat
 		if user.Character.Aggro != nil {

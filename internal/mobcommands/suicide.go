@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
@@ -12,7 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/users"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -39,7 +39,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 	// Make sure to clean up any charm stuff if it's being removed
 	if charmedUserId := mob.Character.RemoveCharm(); charmedUserId > 0 {
-		if charmedUser := users.GetByUserId(charmedUserId); charmedUser != nil {
+		if charmedUser := accounts.GetByUserId(charmedUserId); charmedUser != nil {
 			charmedUser.Character.TrackCharmed(mob.InstanceId, false)
 		}
 	}
@@ -70,7 +70,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	// Mark this moment to prevent an immediate respawn
 	if mob.MobId == 38 {
 		if mob.Character.Charmed != nil {
-			if tmpU := users.GetByUserId(mob.Character.Charmed.UserId); tmpU != nil {
+			if tmpU := accounts.GetByUserId(mob.Character.Charmed.UserId); tmpU != nil {
 				tmpU.SetTempData(`lastGuideRound`, currentRound)
 			}
 		}
@@ -109,13 +109,13 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 		totalPlayerLevels := 0
 		for uId, _ := range mob.Character.PlayerDamage {
-			if user := users.GetByUserId(uId); user != nil {
+			if user := accounts.GetByUserId(uId); user != nil {
 				totalPlayerLevels += user.Character.Level
 			}
 		}
 
 		for uId, _ := range mob.Character.PlayerDamage {
-			if user := users.GetByUserId(uId); user != nil {
+			if user := accounts.GetByUserId(uId); user != nil {
 
 				if user.Character.Aggro != nil {
 					if user.Character.Aggro.MobInstanceId == mob.InstanceId {
@@ -249,7 +249,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 				for _, memberId := range allMembers {
 
-					if user := users.GetByUserId(memberId); user != nil {
+					if user := accounts.GetByUserId(memberId); user != nil {
 
 						if mob.Character.Zone != `Training` { // Don't track any kills in the training zone
 							user.Character.KD.AddMobKill(int(mob.MobId))

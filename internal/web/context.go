@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/GoMudEngine/GoMud/internal/users"
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 )
 
 type contextKey int
@@ -40,13 +40,13 @@ func IsTestModeRequest(r *http.Request) bool {
 }
 
 // withAuthedUser stores the authenticated UserRecord in the request context.
-func withAuthedUser(ctx context.Context, u *users.UserRecord) context.Context {
+func withAuthedUser(ctx context.Context, u *accounts.Account) context.Context {
 	return context.WithValue(ctx, authedUserKey, u)
 }
 
 // GetAuthedUser retrieves the authenticated UserRecord from the request context.
 // Returns nil when no user is stored (e.g. internal requests).
-func GetAuthedUser(r *http.Request) *users.UserRecord {
-	u, _ := r.Context().Value(authedUserKey).(*users.UserRecord)
+func GetAuthedUser(r *http.Request) *accounts.Account {
+	u, _ := r.Context().Value(authedUserKey).(*accounts.Account)
 	return u
 }

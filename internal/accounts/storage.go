@@ -1,4 +1,4 @@
-package users
+package accounts
 
 import "github.com/GoMudEngine/GoMud/internal/items"
 

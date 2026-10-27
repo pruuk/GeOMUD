@@ -3,10 +3,10 @@ package gmcp
 import (
 	"encoding/json"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
-	"github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // ////////////////////////////////////////////////////////////////////
@@ -69,7 +69,7 @@ type GMCPGamePlayer struct {
 
 func (g *GMCPGameModule) buildWhoPayload() []GMCPGamePlayer {
 	players := []GMCPGamePlayer{}
-	for _, user := range users.GetAllActiveUsers() {
+	for _, user := range accounts.GetAllActiveUsers() {
 		info := user.GetOnlineInfo()
 		players = append(players, GMCPGamePlayer{
 			Username:   info.Username,
@@ -89,7 +89,7 @@ func (g *GMCPGameModule) sendGamePayload(targetUserId int) {
 	c := configs.GetConfig()
 	tFormat := string(c.TextFormats.Time)
 
-	user := users.GetByUserId(targetUserId)
+	user := accounts.GetByUserId(targetUserId)
 	if user == nil {
 		return
 	}
@@ -115,7 +115,7 @@ func (g *GMCPGameModule) onJoinLeave(e events.Event) events.ListenerReturn {
 	playersJSON, _ := json.Marshal(players)
 	whoFragment := `"Who": { "Players": ` + string(playersJSON) + ` }`
 
-	for _, user := range users.GetAllActiveUsers() {
+	for _, user := range accounts.GetAllActiveUsers() {
 		infoStr := `"Info": { "logintime": "` + user.GetConnectTime().Format(tFormat) + `", "name": "` + string(c.Server.MudName) + `" }`
 		events.AddToQueue(GMCPOut{
 			UserId:  user.UserId,
