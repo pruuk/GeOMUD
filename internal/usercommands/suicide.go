@@ -12,6 +12,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -131,6 +132,7 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 			rooms.MoveToRoom(user.UserId, -1)
 
 			*user.Character = *characters.New()
+			user.Character.Id = ids.New(ids.NoCell) // a rerolled character is a new body
 
 			return true, nil
 		}

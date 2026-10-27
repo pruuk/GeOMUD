@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -25,6 +26,35 @@ func DoUserMigrations() {
 
 	DoFilenameMigrationV1()
 
+}
+
+// giveBodyId makes u's character its body ID if it has none, and reports
+// whether it did. A body ID is made once and never replaced (Phase 4b
+// decision 11), so this is only for a new character and for characters saved
+// before body IDs existed.
+func giveBodyId(u *Account) bool {
+	if u.Character == nil || !u.Character.Id.IsZero() {
+		return false
+	}
+	u.Character.Id = ids.New(ids.NoCell)
+	return true
+}
+
+// DoBodyIdMigrationV1 gives every saved character without a body ID one and
+// saves it. main runs it at startup before anyone can log in, so no two loads
+// of one account can race to give it two IDs. It is idempotent.
+func DoBodyIdMigrationV1() error {
+	var errorResult error
+	SearchOfflineUsers(func(u *Account) bool {
+		if giveBodyId(u) {
+			if err := SaveUser(*u); err != nil {
+				errorResult = err
+				return false
+			}
+		}
+		return true
+	})
+	return errorResult
 }
 
 func DoFilenameMigrationV1() error {

@@ -416,6 +416,8 @@ func CreateUser(u *Account) error {
 	idx := GetUserIndex()
 	idx.AddUser(u.UserId, u.Username)
 
+	giveBodyId(u)
+
 	if err := SaveUser(*u); err != nil {
 		return err
 	}
@@ -603,6 +605,7 @@ func UpdateOnlineUser(updated Account) {
 	// The live character pointer is shared with the account's actor, so it
 	// must not change: copy the edited character into it.
 	if updated.Character != nil && u.Character != nil {
+		updated.Character.Id = u.Character.Id // a body's ID never changes (decision 11)
 		*u.Character = *updated.Character
 		updated.Character = u.Character
 	}

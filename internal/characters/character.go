@@ -11,6 +11,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/races"
@@ -43,6 +44,7 @@ const (
 )
 
 type Character struct {
+	Id                  ids.ID                         `yaml:"id,omitempty"` // The body's ID, made once at creation and kept for good (Phase 4b decision 11)
 	Name                string                         // The name of the character
 	Description         string                         // A description of the character.
 	Adjectives          []string                       `yaml:"adjectives,omitempty"`    // Decorative text for the name of the character (e.g. "sleeping", "dead", "wounded")
