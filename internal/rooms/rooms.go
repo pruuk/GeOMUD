@@ -1334,16 +1334,6 @@ func (r *Room) MobVisitors() map[ids.ID]float64 {
 	return ret
 }
 
-func (r *Room) HasUserVisited(userId int) bool {
-	_, ok := r.userVisitors[userId]
-	return ok
-}
-
-func (r *Room) HasMobVisited(mobId ids.ID) bool {
-	_, ok := r.mobVisitors[mobId]
-	return ok
-}
-
 func (r *Room) GetDescriptionFormatted(lineSplit int, highlightNouns bool) string {
 
 	desc := util.SplitStringNL(r.GetDescription(), 80)
@@ -1468,7 +1458,9 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, error) {
 
 	if len(searchName) > 1 {
-		if searchName[0] == '@' {
+		// #N and @N are not name forms; refuse them so they cannot fall through to
+		// positional name matching (util.GetMatchNumber("#1") is the first mob).
+		if searchName[0] == '@' || searchName[0] == '#' {
 			return ids.ID{}, errors.New("mob not found")
 		}
 	}
@@ -2017,8 +2009,8 @@ func (r *Room) RoundTick() {
 	// If any players are in the room
 	// Update all mobs in the room that they've seen a player
 	if len(r.players) > 0 {
-		for _, mobInstanceId := range r.mobs {
-			if mob := mobs.GetInstance(mobInstanceId); mob != nil {
+		for _, mobId := range r.mobs {
+			if mob := mobs.GetInstance(mobId); mob != nil {
 				mob.BoredomCounter = 0
 			}
 		}

@@ -63,9 +63,9 @@ func PruneBuffs(e events.Event) events.ListenerReturn {
 	}
 
 	// Handle outstanding mob buffs
-	for _, mobInstanceId := range mobs.GetAllMobInstanceIds() {
+	for _, mobId := range mobs.GetAllMobInstanceIds() {
 
-		mob := mobs.GetInstance(mobInstanceId)
+		mob := mobs.GetInstance(mobId)
 
 		if buffsToPrune := mob.Character.Buffs.Prune(); len(buffsToPrune) > 0 {
 			mob.Character.Validate()

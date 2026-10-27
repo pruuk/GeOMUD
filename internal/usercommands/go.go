@@ -242,9 +242,9 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 				//
 				// When leaving a room, mobs who were attacking may follow
 				//
-				mobInstanceIds := room.GetMobs(rooms.FindFightingPlayer)
-				for _, mobInstanceId := range mobInstanceIds {
-					mob := mobs.GetInstance(mobInstanceId)
+				mobIds := room.GetMobs(rooms.FindFightingPlayer)
+				for _, mobId := range mobIds {
+					mob := mobs.GetInstance(mobId)
 					if mob == nil {
 						continue
 					}
@@ -276,9 +276,9 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 				//
 				// When entering a room, mobs might be waiting to attack
 				//
-				mobInstanceIds = destRoom.GetMobs(rooms.FindAll)
-				for _, mobInstanceId := range mobInstanceIds {
-					mob := mobs.GetInstance(mobInstanceId)
+				mobIds = destRoom.GetMobs(rooms.FindAll)
+				for _, mobId := range mobIds {
+					mob := mobs.GetInstance(mobId)
 					if mob == nil {
 						continue
 					}
