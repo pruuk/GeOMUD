@@ -63,8 +63,10 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 		// If they are doing some sort of combat thing,
 		// Don't do idle actions
 		if mob.Character.Aggro != nil {
-			if user := accounts.GetByBodyId(mob.Character.Aggro.Target); user != nil {
-				if user.Character.RoomId != mob.Character.RoomId {
+			// A player target who is offline or in another room is lost.
+			// A vanished NPC target is treated the same (accepted trade-off).
+			if t := mob.Character.Aggro.Target; !t.IsZero() && mobs.GetInstance(t) == nil {
+				if user := accounts.GetByBodyId(t); user == nil || user.Character.RoomId != mob.Character.RoomId {
 					mob.Command(`emote mumbles about losing their quarry.`)
 					mob.Character.Aggro = nil
 					events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})

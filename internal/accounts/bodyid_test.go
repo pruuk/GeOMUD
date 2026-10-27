@@ -39,6 +39,18 @@ func TestGetByBodyIdFindsTheOnlineAccount(t *testing.T) {
 	assert.Nil(t, GetByBodyId(ids.ID{}))
 }
 
+func TestGetByBodyIdSkipsAnAccountWithoutACharacter(t *testing.T) {
+	resetUserManager()
+	userManager.Users[86] = &Account{UserId: 86} // no Character
+	u := NewAccount(87, 7)
+	giveBodyId(u)
+	userManager.Users[87] = u
+	assert.NotPanics(t, func() {
+		assert.Same(t, u, GetByBodyId(u.Character.Id))
+		assert.Nil(t, GetByBodyId(ids.New(ids.NoCell)))
+	})
+}
+
 func TestUpdateOnlineUserKeepsTheBodyId(t *testing.T) {
 	resetUserManager()
 	live := NewAccount(83, 5)

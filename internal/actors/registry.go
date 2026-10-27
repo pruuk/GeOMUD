@@ -17,21 +17,39 @@ var (
 )
 
 // Spawn makes a live actor for char, driven by ctrl. The actor's ID is the
-// body's ID. A body without an ID is a bug: Spawn logs it and returns nil.
+// body's ID. A body without an ID, or a second body claiming an ID already
+// registered, is a bug: Spawn logs it and returns nil.
 func Spawn(char *characters.Character, ctrl Controller) *Actor {
 	mu.Lock()
 	defer mu.Unlock()
 	return spawnLocked(char, ctrl)
 }
 
+// kindOf names what a controller drives, for logs: a player or an NPC.
+func kindOf(ctrl Controller) string {
+	if ctrl != nil && ctrl.Account() != nil {
+		return "player"
+	}
+	return "npc"
+}
+
 // spawnLocked is Spawn with mu held. An actor already under the same ID is
-// replaced.
+// replaced only when it holds the same body; a different body with that ID
+// is refused.
 func spawnLocked(char *characters.Character, ctrl Controller) *Actor {
 	if char == nil || char.Id.IsZero() {
 		mudlog.Error("actor", "event", "no body id", "reason", "refusing to spawn a body without an ID")
 		return nil
 	}
 	if prev, ok := byId[char.Id]; ok {
+		if prev.Character != char {
+			// A different body claims an ID already registered: refuse it and
+			// leave the registered actor untouched.
+			mudlog.Error("actor", "event", "body id collision", "actorId", char.Id,
+				"registeredKind", kindOf(prev.controller), "claimingKind", kindOf(ctrl),
+				"reason", "refusing a second body with the same ID")
+			return nil
+		}
 		unindex(prev)
 	}
 	a := &Actor{Id: char.Id, Character: char, controller: ctrl}

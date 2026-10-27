@@ -79,6 +79,42 @@ func TestSetControllerKeepsTheId(t *testing.T) {
 	assert.Same(t, a, ByUserId(9))
 	assert.Same(t, acc, Get(id).Controller().Account())
 	assert.Error(t, SetController(ids.New(ids.NoCell), NewConnectionController(acc)))
+
+	// Now driven by an account, it is no longer treated as an NPC.
+	assert.Nil(t, unbindMob(id))
+	assert.Same(t, a, Get(id))
+}
+
+func TestSpawnRefusesASecondBodyWithTheSameId(t *testing.T) {
+	Reset()
+	acc := &accounts.Account{UserId: 21}
+	char := bodyChar()
+	first := Spawn(char, NewConnectionController(acc))
+	require.NotNil(t, first)
+
+	m := &mobs.Mob{}
+	m.Character.Id = char.Id // a different body claiming the same ID
+	assert.Nil(t, Spawn(&m.Character, NewBehaviourController(m)))
+
+	assert.Same(t, first, Get(char.Id))
+	assert.Same(t, char, first.Character)
+	assert.Same(t, acc, first.Controller().Account())
+	assert.Same(t, first, ByUserId(21))
+	assert.Len(t, All(), 1)
+}
+
+func TestLoginWithANewBodyIdRekeysTheActor(t *testing.T) {
+	Reset()
+	u := &accounts.Account{UserId: 94, Character: characters.New()}
+	u.Character.Id = ids.New(ids.NoCell)
+	accounts.OnActivate.Fire(u)
+	old := u.Character.Id
+	u.Character.Id = ids.New(ids.NoCell) // no BodyReplaced call
+	accounts.OnActivate.Fire(u)
+	assert.Nil(t, Get(old))
+	require.NotNil(t, Get(u.Character.Id))
+	assert.Same(t, u, Get(u.Character.Id).Controller().Account())
+	assert.Len(t, All(), 1)
 }
 
 func TestRemove(t *testing.T) {
