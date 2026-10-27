@@ -31,7 +31,7 @@ func TestSlotWhoseNPCRestsElsewhereStaysFilled(t *testing.T) {
 	assert.Equal(t, id, home.SpawnInfo[0].InstanceId, "the slot's NPC rests elsewhere; the slot stays filled")
 	assert.Zero(t, home.SpawnInfo[0].DespawnedRound)
 
-	home.CleanupMobSpawns(true)
+	home.CleanupMobSpawns()
 	assert.Equal(t, id, home.SpawnInfo[0].InstanceId, "CleanupMobSpawns keeps it too")
 
 	home.RoundTick()
@@ -44,7 +44,7 @@ func TestSlotWhoseNPCIsLiveElsewhereStaysFilled(t *testing.T) {
 	home := slotRoom(4100, id)
 
 	home.Prepare(false)
-	home.CleanupMobSpawns(false)
+	home.CleanupMobSpawns()
 	home.RoundTick()
 	assert.Equal(t, id, home.SpawnInfo[0].InstanceId)
 }
@@ -68,7 +68,7 @@ func TestSlotWhoseNPCWasDespawnedRespawnsAtOnce(t *testing.T) {
 	RecordEnding(id, 777, true)
 	home := slotRoom(4100, id)
 
-	home.CleanupMobSpawns(false)
+	home.CleanupMobSpawns()
 	assert.True(t, home.SpawnInfo[0].InstanceId.IsZero())
 	assert.Zero(t, home.SpawnInfo[0].DespawnedRound, "an admin's despawn has no cooldown")
 }

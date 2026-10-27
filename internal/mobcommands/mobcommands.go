@@ -37,6 +37,7 @@ var (
 		"put":       {Put, false},
 		"remove":    {Remove, false},
 		"replyto":   {ReplyTo, true},
+		"rest":      {Rest, false},
 		"say":       {Say, true},
 		"sayto":     {SayTo, true},
 		"saytoonly": {SayToOnly, true},

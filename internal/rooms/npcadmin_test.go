@@ -12,10 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// restIn makes a live NPC and rests it in roomId by unloading that room.
+// restIn makes a live slot NPC and rests it in roomId by unloading that room.
 func restIn(t *testing.T, roomId int) ids.ID {
 	t.Helper()
 	id := liveTestNPC(t, 5, 1, 0)
+	mobs.GetInstance(id).SpawnSlot = 1
 	r := memRoom(roomId)
 	r.bodies = append(r.bodies, id)
 	removeRoomFromMemory(r)

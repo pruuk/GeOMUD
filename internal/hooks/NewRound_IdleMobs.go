@@ -44,7 +44,7 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 		if allowedUnloadCt > 0 && mob.BoredomCounter >= maxBoredom {
 
 			if mob.Despawns() {
-				mob.Command(`despawn` + fmt.Sprintf(` depression %d/%d`, mob.BoredomCounter, maxBoredom))
+				mob.Command(`rest` + fmt.Sprintf(` depression %d/%d`, mob.BoredomCounter, maxBoredom))
 				allowedUnloadCt--
 
 			} else {

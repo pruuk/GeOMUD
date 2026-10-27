@@ -14,6 +14,7 @@ import (
 type SavedNPC struct {
 	Template     Mob                   `yaml:"mob"` // the instance's exported fields, including Character
 	HomeRoomId   int                   `yaml:"homeroomid"`
+	SpawnSlot    int                   `yaml:"spawnslot,omitempty"` // index plus one of the home room slot it fills; zero for none
 	IsElite      bool                  `yaml:"elite,omitempty"`
 	PermaBuffIds []int                 `yaml:"permabuffids,omitempty"` // spawn overrides replace the template list
 	Aggro        *characters.Aggro     `yaml:"aggro,omitempty"`
@@ -25,6 +26,7 @@ func Snapshot(m *Mob) SavedNPC {
 	return SavedNPC{
 		Template:     *m,
 		HomeRoomId:   m.HomeRoomId,
+		SpawnSlot:    m.SpawnSlot,
 		IsElite:      m.IsElite,
 		PermaBuffIds: m.Character.PermaBuffIds(),
 		Aggro:        m.Character.Aggro,
@@ -36,6 +38,7 @@ func Snapshot(m *Mob) SavedNPC {
 func (s SavedNPC) Mob() Mob {
 	m := s.Template
 	m.HomeRoomId = s.HomeRoomId
+	m.SpawnSlot = s.SpawnSlot
 	m.IsElite = s.IsElite
 	m.Character.SetPermaBuffs(s.PermaBuffIds)
 	m.Character.Aggro = s.Aggro

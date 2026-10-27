@@ -53,6 +53,22 @@ func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
 	assert.Zero(t, got.LastIdleCommand)
 }
 
+func TestSpawnSlotIsSavedButNotInTemplateYAML(t *testing.T) {
+	m := Mob{MobId: 7, SpawnSlot: 3}
+	m.Character = *characters.New()
+	m.Character.Id = ids.New(ids.NoCell)
+
+	tpl, err := yaml.Marshal(&m) // what Mob.Save writes
+	require.NoError(t, err)
+	assert.NotContains(t, string(tpl), "spawnslot", "the template YAML never carries a slot")
+
+	b, err := yaml.Marshal(Snapshot(&m))
+	require.NoError(t, err)
+	var back SavedNPC
+	require.NoError(t, yaml.Unmarshal(b, &back))
+	assert.Equal(t, 3, back.Mob().SpawnSlot)
+}
+
 func TestRestoreKeepsTheIdAndFires(t *testing.T) {
 	var created []*Mob
 	OnInstanceCreated.Register(func(m *Mob) *Mob { created = append(created, m); return m })

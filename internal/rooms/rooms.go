@@ -619,6 +619,7 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 				}
 
 				mob.Character.Zone = r.Zone
+				mob.SpawnSlot = idx + 1 // the NPC knows its slot, so only slot NPCs leave an ending
 				mob.Validate()
 
 				r.bodies = append(r.bodies, mob.Character.Id)
@@ -715,21 +716,15 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 
 }
 
-func (r *Room) CleanupMobSpawns(noCooldown bool) {
+// CleanupMobSpawns frees the slots whose NPC ended (its ending says whether
+// at once or after the respawn rate) or is lost.
+func (r *Room) CleanupMobSpawns() {
 
 	roundNow := util.GetRoundCount()
 	slotFreed := false
 	for idx := range r.SpawnInfo {
-		switch r.settleSlot(idx, roundNow) {
-		case "ended":
+		if state := r.settleSlot(idx, roundNow); state == "ended" || state == "lost" {
 			slotFreed = true
-		case "lost":
-			slotFreed = true
-			// Until deaths and despawns record endings (slice 2b Task 6),
-			// they reach here as lost; keep a despawn's zero cooldown.
-			if noCooldown {
-				r.SpawnInfo[idx].DespawnedRound = 0
-			}
 		}
 	}
 	if slotFreed {

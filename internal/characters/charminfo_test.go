@@ -27,8 +27,8 @@ func TestNewCharm(t *testing.T) {
 			name:          "Permanent charm",
 			by:            by2,
 			rounds:        CharmPermanent,
-			expireCommand: CharmExpiredDespawn,
-			want:          &CharmInfo{By: by2, RoundsRemaining: CharmPermanent, ExpiredCommand: CharmExpiredDespawn},
+			expireCommand: CharmExpiredRest,
+			want:          &CharmInfo{By: by2, RoundsRemaining: CharmPermanent, ExpiredCommand: CharmExpiredRest},
 		},
 		{
 			name:          "Empty expire command",
@@ -60,7 +60,7 @@ func TestCharmInfo_Expire(t *testing.T) {
 		},
 		{
 			name:     "Expire permanent charm",
-			initial:  &CharmInfo{By: ids.New(ids.NoCell), RoundsRemaining: CharmPermanent, ExpiredCommand: CharmExpiredDespawn},
+			initial:  &CharmInfo{By: ids.New(ids.NoCell), RoundsRemaining: CharmPermanent, ExpiredCommand: CharmExpiredRest},
 			expected: 0,
 		},
 		{

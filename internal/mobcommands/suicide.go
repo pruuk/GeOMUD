@@ -47,12 +47,15 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	// vanish is meant to remove the mob without any rewards/drops/etc.
 	if rest == `vanish` {
 
+		// The NPC ends (decision 15): a death waits its slot's respawn rate, a vanish does not.
+		rooms.NPCEnded(mob, rest == `vanish`)
+
 		// Destroy any record of this mob.
 		mobs.DestroyInstance(mob.Character.Id)
 
 		// Clean up mob from room...
 		if r := rooms.LoadRoom(mob.HomeRoomId); r != nil {
-			r.CleanupMobSpawns(false)
+			r.CleanupMobSpawns()
 		}
 
 		// Remove from current room
@@ -384,12 +387,15 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			}
 		}
 
+		// The NPC ends (decision 15): a death waits its slot's respawn rate, a vanish does not.
+		rooms.NPCEnded(mob, rest == `vanish`)
+
 		// Destroy any record of this mob.
 		mobs.DestroyInstance(mob.Character.Id)
 
 		// Clean up mob from room...
 		if r := rooms.LoadRoom(mob.HomeRoomId); r != nil {
-			r.CleanupMobSpawns(false)
+			r.CleanupMobSpawns()
 		}
 
 		// Remove from current room
@@ -411,12 +417,15 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		return true, nil
 	}
 
+	// The NPC ends (decision 15): a death waits its slot's respawn rate.
+	rooms.NPCEnded(mob, false)
+
 	// Destroy any record of this mob.
 	mobs.DestroyInstance(mob.Character.Id)
 
 	// Clean up mob from room...
 	if r := rooms.LoadRoom(mob.HomeRoomId); r != nil {
-		r.CleanupMobSpawns(false)
+		r.CleanupMobSpawns()
 	}
 
 	// Remove from current room
