@@ -596,10 +596,6 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 					mob.Character.Shop.Restock()
 				}
 
-				if len(spawnInfo.BuffIds) > 0 {
-					mob.Character.SetPermaBuffs(spawnInfo.BuffIds)
-				}
-
 				// If there are idle commands for this spawn, overwrite.
 				if len(spawnInfo.IdleCommands) > 0 {
 					mob.IdleCommands = append([]string{}, spawnInfo.IdleCommands...)

@@ -95,6 +95,11 @@ Counts are non-test Go files under `internal`, `modules` and the repo root unles
     (room unload, boredom, charm expiry, or a later cause). It never returns into a room that stayed
     in memory, so a farewell is not undone a round later. (Calabe, 2026-10-27. Nothing charms an NPC
     today and boredom needs more than 100 live NPCs; the rule is set now so later paths share it.)
+17. **A spawn slot does not add permanent buffs to the NPC it spawns; a variant is its own
+    template.** `SpawnInfo.BuffIds` goes (it never took effect on a fresh spawn and no content
+    uses it). Permanent buffs come from the mob template (and race and worn items), so a restored
+    NPC carries exactly what a fresh one does. Room-side effects applied to whoever is in a room
+    (for example regeneration) are a separate mechanism and stay. (Calabe, 2026-10-27.)
 
 ## 1. Actor model
 

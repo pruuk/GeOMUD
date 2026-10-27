@@ -13,7 +13,22 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// withTemplate registers a mob template for the test, as LoadDataFiles would.
+func withTemplate(t *testing.T, mobId int, buffIds []int) {
+	t.Helper()
+	old, had := mobs[mobId]
+	mobs[mobId] = &Mob{MobId: MobId(mobId), BuffIds: buffIds}
+	t.Cleanup(func() {
+		if had {
+			mobs[mobId] = old
+		} else {
+			delete(mobs, mobId)
+		}
+	})
+}
+
 func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
+	withTemplate(t, 7, []int{5, 6})
 	m := Mob{MobId: 7, HomeRoomId: 2, IsElite: true, MaxWander: 3, Hostile: true,
 		IdleCommands: []string{"emote sniffs"}, WanderCount: 5, BoredomCounter: 9, LastIdleCommand: 2}
 	m.Character = *characters.New()
@@ -22,7 +37,7 @@ func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
 	m.Character.Level = 4
 	m.Character.Health = 3
 	m.Character.Gold = 11
-	m.Character.SetPermaBuffs([]int{5, 6})
+	m.Character.SetPermaBuffs([]int{5, 6}) // as NewMobById sets from the template
 	target := ids.New(ids.NoCell)
 	m.Character.Aggro = &characters.Aggro{Target: target}
 	by := ids.New(ids.NoCell)
@@ -45,7 +60,7 @@ func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
 	assert.Equal(t, 4, got.Character.Level)
 	assert.Equal(t, 3, got.Character.Health)
 	assert.Equal(t, 11, got.Character.Gold)
-	assert.Equal(t, []int{5, 6}, got.Character.PermaBuffIds())
+	assert.Equal(t, []int{5, 6}, got.Character.PermaBuffIds(), "the template's permanent buffs")
 	require.NotNil(t, got.Character.Aggro)
 	assert.Equal(t, target, got.Character.Aggro.Target)
 	require.NotNil(t, got.Character.Charmed)
@@ -117,6 +132,7 @@ func TestRestoreThroughDiskKeepsWhatItHas(t *testing.T) {
 	for _, id := range []int{901, 902, 903} {
 		t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{BuffId: id, Name: fmt.Sprintf("test buff %d", id), TriggerRate: "1 round", TriggerCount: 5}))
 	}
+	withTemplate(t, 8, []int{901, 902})
 
 	m := Mob{MobId: 8}
 	m.Character = *characters.New()
@@ -126,7 +142,7 @@ func TestRestoreThroughDiskKeepsWhatItHas(t *testing.T) {
 	m.Character.Items = []items.Item{{ItemId: 30001}}
 	m.Character.Equipment.Body = items.Item{ItemId: 20001}
 	m.Character.SetAdjective("elite", true)
-	m.Character.SetPermaBuffs([]int{901, 902}) // a spawn slot's permabuffs, replacing the template's
+	m.Character.SetPermaBuffs([]int{901, 902}) // the template's, as NewMobById sets them
 	m.Character.Validate(true)
 	m.Character.AddBuff(903, false) // a buff that runs out
 	m.Character.Validate()
@@ -151,9 +167,49 @@ func TestRestoreThroughDiskKeepsWhatItHas(t *testing.T) {
 	assert.Contains(t, r.Character.Adjectives, "elite")
 	assert.Equal(t, mana, r.Character.Mana)
 	assert.Equal(t, []int{901, 902}, r.Character.PermaBuffIds())
-	assert.True(t, r.Character.HasBuff(901), "spawn permabuffs survive Validate(true)")
+	assert.True(t, r.Character.HasBuff(901), "template permabuffs survive Validate(true)")
 	assert.True(t, r.Character.HasBuff(902))
 	assert.True(t, r.Character.HasBuff(903), "and so does a buff that runs out")
+}
+
+func TestRestoreCarriesWhatAFreshSpawnOfItsTemplateCarries(t *testing.T) {
+	for _, id := range []int{901, 902} {
+		t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{BuffId: id, Name: fmt.Sprintf("test buff %d", id), TriggerRate: "1 round", TriggerCount: 5}))
+	}
+	withTemplate(t, 8, []int{901, 902})
+	m := Mob{MobId: 8}
+	m.Character = *characters.New()
+	m.Character.Id = ids.New(ids.NoCell)
+	m.Character.SetPermaBuffs([]int{901, 902})
+	m.Character.Validate(true)
+	saved := Snapshot(&m)
+
+	// The template now has only 901: a fresh spawn would carry 901 alone.
+	withTemplate(t, 8, []int{901})
+	r, err := Restore(saved)
+	require.NoError(t, err)
+	t.Cleanup(func() { Rest(r.Character.Id) })
+	assert.Equal(t, []int{901}, r.Character.PermaBuffIds())
+	r.Character.Buffs.Prune() // as the next turn's prune does
+	assert.True(t, r.Character.HasBuff(901))
+	assert.False(t, r.Character.HasBuff(902), "a permabuff its template no longer gives goes")
+}
+
+func TestRestoreWhoseTemplateIsGoneHasNoTemplatePermabuffs(t *testing.T) {
+	t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{BuffId: 901, Name: "test buff 901", TriggerRate: "1 round", TriggerCount: 5}))
+	m := Mob{MobId: 987650} // no such template
+	m.Character = *characters.New()
+	m.Character.Id = ids.New(ids.NoCell)
+	m.Character.SetPermaBuffs([]int{901})
+	m.Character.Validate(true)
+	require.True(t, m.Character.HasBuff(901))
+
+	r, err := Restore(Snapshot(&m))
+	require.NoError(t, err)
+	t.Cleanup(func() { Rest(r.Character.Id) })
+	assert.Empty(t, r.Character.PermaBuffIds())
+	r.Character.Buffs.Prune() // as the next turn's prune does
+	assert.False(t, r.Character.HasBuff(901))
 }
 
 func TestRestoreRefusesAZeroId(t *testing.T) {

@@ -927,12 +927,6 @@ var MapperUI = (function() {
         if (el) el.textContent = _reSpawnBuildHeaderSummary(card);
     }
 
-    function _reBuffChipHtml(buffId) {
-        var name = PickerConfigs.buffName(buffId);
-        return '<span class="re-buff-chip" data-buff-id="' + buffId + '">' + _reEsc(name) +
-            ' <button type="button" title="Remove" onclick="this.closest(\'[data-buff-id]\').remove()">&times;</button></span>';
-    }
-
     function _reSpawnAppendCard(list, s, openOnAdd) {
         s = s || {};
         var type = s._type || (s.MobId ? 'mob' : 'item');
@@ -944,8 +938,6 @@ var MapperUI = (function() {
         card.dataset.spawnType = type;
 
         var summary = _reSpawnSummaryFromData(type, s);
-        // Pre-compute buff chip html
-        var buffChips = (s.BuffIds || []).map(_reBuffChipHtml).join('');
 
         card.innerHTML =
             '<div class="re-spawn-header" onclick="this.classList.toggle(\'open\');this.nextElementSibling.classList.toggle(\'open\')">'+
@@ -1047,14 +1039,6 @@ var MapperUI = (function() {
                 '<div class="field-hint">Added to resolved level. Can be negative.</div>'+
             '</div>'+
 
-            // --- Buff IDs (mob) ---
-            '<div class="re-spawn-field span2" style="' + (isMob ? shown : hidden) + '">'+
-                '<label>Permanent Buffs</label>'+
-                '<div class="re-buff-chips-wrap re-spawn-buffids">' + buffChips + '</div>'+
-                '<button type="button" class="room-editor-noun-add" style="margin-top:4px" onclick="MapperUI._rePickBuff(this)">+ Pick Buffs…</button>'+
-                '<div class="field-hint">Buffs always active on this mob instance.</div>'+
-            '</div>'+
-
             // --- Idle Commands (mob) ---
             '<div class="re-spawn-field span2" style="' + (isMob ? shown : hidden) + '">'+
                 '<label>Idle Commands</label>'+
@@ -1118,8 +1102,6 @@ var MapperUI = (function() {
                 if (level) s.Level = level;
                 var lmod = parseInt(card.querySelector('.re-spawn-levelmod').value, 10);
                 if (lmod) s.LevelMod = lmod;
-                var bi = Array.from(card.querySelectorAll('.re-spawn-buffids [data-buff-id]')).map(function(c) { return parseInt(c.dataset.buffId, 10); }).filter(function(n) { return !isNaN(n); });
-                if (bi.length) s.BuffIds = bi;
                 var ic = card.querySelector('.re-spawn-idlecommands').value.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
                 if (ic.length) s.IdleCommands = ic;
             } else {
@@ -1177,19 +1159,6 @@ var MapperUI = (function() {
         delete disp.dataset.itemId;
         disp.classList.add('empty');
         _reSpawnUpdateHeader(card);
-    }
-
-    function _rePickBuff(btn) {
-        var card = btn.closest('.re-spawn-card');
-        var wrap = card.querySelector('.re-spawn-buffids');
-        var existing = Array.from(wrap.querySelectorAll('[data-buff-id]')).map(function(c) { return parseInt(c.dataset.buffId, 10); });
-        Picker.open(Object.assign({}, PickerConfigs.buffs, {
-            multi:    true,
-            selected: existing,
-            onSelect: function(buffs) {
-                wrap.innerHTML = buffs.map(function(b) { return _reBuffChipHtml(b.BuffId); }).join('');
-            }
-        }));
     }
 
     // =====================================================================
@@ -1670,7 +1639,6 @@ var MapperUI = (function() {
         _rePickMob:       _rePickMob,
         _rePickItem:      _rePickItem,
         _reClearItem:     _reClearItem,
-        _rePickBuff:      _rePickBuff,
         saveAllChanges: saveAllChanges, discardChanges: discardChanges
     };
 

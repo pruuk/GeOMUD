@@ -2029,12 +2029,13 @@ func (c *Character) RemoveFromBody(i items.Item) bool {
 	return false
 }
 
-// Used with SpawnInfo to gift spawning mobs with permabuffs
+// SetPermaBuffs sets a mob's permanent buff list from its template (Phase 4b
+// decision 17: a spawn slot adds none). Validate(true) applies it.
 func (c *Character) SetPermaBuffs(buffIds []int) {
 	c.permaBuffIds = buffIds
 }
 
-// PermaBuffIds is the spawn or template permabuff list SetPermaBuffs set.
+// PermaBuffIds is the template permabuff list SetPermaBuffs set.
 func (c *Character) PermaBuffIds() []int { return append([]int{}, c.permaBuffIds...) }
 
 func (c *Character) reapplyPermabuffs(removedItems ...items.Item) {

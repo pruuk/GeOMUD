@@ -13,7 +13,6 @@ type SpawnInfo struct {
 	ForceHostile bool     `yaml:"forcehostile,omitempty"` // (optional) if true, forces the mob to be hostile.
 	MaxWander    int      `yaml:"maxwander,omitempty"`    // (optional) if set, will override the mob's max wander distance
 	IdleCommands []string `yaml:"idlecommands,omitempty"` // (optional) list of commands to override the default of the mob. Useful when you need a mob to be more unique.
-	BuffIds      []int    `yaml:"buffids,omitempty,flow"` // (optional) list of buffs the mob always has active
 	Level        int      `yaml:"level,omitempty"`        // (optional) force this mob to a specific level
 	LevelMod     int      `yaml:"levelmod,omitempty"`     // (optional) modify this mobs level by this amount
 	// spawn tracking and rate
