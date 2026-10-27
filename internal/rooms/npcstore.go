@@ -169,6 +169,101 @@ func dropFromSidecarLocked(path string, id ids.ID) {
 	}
 }
 
+// deleteRoomNPCFile removes a room's sidecar (the room is being deleted) and
+// forgets what it held.
+func deleteRoomNPCFile(zone string, roomId int) error {
+	path := filepath.Clean(roomNPCPath(zone, roomId))
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	trackSidecarLocked(path, roomNPCFile{})
+	return nil
+}
+
+// moveRoomNPCFile moves a room's sidecar to another zone's folder (the room
+// moved zone), keeping the record of which NPC is in which sidecar.
+func moveRoomNPCFile(oldZone, newZone string, roomId int) error {
+	oldPath := filepath.Clean(roomNPCPath(oldZone, roomId))
+	newPath := filepath.Clean(roomNPCPath(newZone, roomId))
+	if err := os.MkdirAll(filepath.Dir(newPath), 0777); err != nil {
+		return err
+	}
+	if err := os.Rename(oldPath, newPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	retrackPathLocked(oldPath, newPath)
+	return nil
+}
+
+// renameZoneNPCFiles keeps the record of which NPC is in which sidecar after
+// a zone's rooms.instances folder was renamed (the files moved with it).
+func renameZoneNPCFiles(oldZone, newZone string) {
+	oldDir := filepath.Clean(filepath.Join(npcStoreRoot(), filepath.FromSlash(ZoneToFolder(oldZone)))) + string(filepath.Separator)
+	newDir := filepath.Clean(filepath.Join(npcStoreRoot(), filepath.FromSlash(ZoneToFolder(newZone)))) + string(filepath.Separator)
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	for path := range sidecarNPCs {
+		if strings.HasPrefix(path, oldDir) {
+			retrackPathLocked(path, newDir+strings.TrimPrefix(path, oldDir))
+		}
+	}
+}
+
+// retrackPathLocked records that the sidecar at oldPath is now at newPath.
+// The caller holds npcStoreMu.
+func retrackPathLocked(oldPath, newPath string) {
+	held, ok := sidecarNPCs[oldPath]
+	if !ok {
+		return
+	}
+	delete(sidecarNPCs, oldPath)
+	sidecarNPCs[newPath] = held
+	for _, id := range held {
+		if npcSidecarOf[id] == oldPath {
+			npcSidecarOf[id] = newPath
+		}
+	}
+}
+
+// endRestingIn ends the NPCs resting in a room being deleted: each leaves the
+// resting index and gets an ending (a death's, so a slot elsewhere that owns
+// it refills after its respawn rate). It returns the NPCs ended.
+func endRestingIn(roomId int, round uint64) []ids.ID {
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	ended := []ids.ID{}
+	for id, r := range restingIndex {
+		if r != roomId {
+			continue
+		}
+		delete(restingIndex, id)
+		endingsLedger[id] = ending{Round: round}
+		ended = append(ended, id)
+	}
+	if len(ended) > 0 {
+		if err := saveEndingsLocked(); err != nil {
+			mudlog.Error("npc store: endings not saved", "room", roomId, "error", err)
+		}
+	}
+	return ended
+}
+
+// endDeletedRoomNPCs settles a room being deleted: its resting NPCs end and
+// its sidecar goes. NPCs live in it stay live, as a room delete has always
+// left them.
+func endDeletedRoomNPCs(zone string, roomId int) {
+	if ended := endRestingIn(roomId, util.GetRoundCount()); len(ended) > 0 {
+		mudlog.Info("npc store: room deleted, its resting NPCs ended", "room", roomId, "count", len(ended))
+	}
+	if err := deleteRoomNPCFile(zone, roomId); err != nil {
+		mudlog.Error("npc store: sidecar of deleted room not removed", "room", roomId, "error", err)
+	}
+}
+
 func writeNPCFileAt(path string, f roomNPCFile) error {
 	if len(f.Resting) == 0 && len(f.Slots) == 0 {
 		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {

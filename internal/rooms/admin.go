@@ -261,6 +261,8 @@ func DeleteRoomForAdmin(roomId int) error {
 		os.Remove(instancePath)
 	}
 
+	endDeletedRoomNPCs(summary.Zone, roomId)
+
 	ClearRoomCache(roomId)
 	delete(roomManager.roomIdToFileCache, roomId)
 	delete(roomManager.roomSummaries, roomId)
@@ -536,11 +538,14 @@ func RenameZoneForAdmin(oldName, newName string) error {
 		os.Rename(newRoomsDir, oldRoomsDir)
 		return fmt.Errorf("renaming rooms.instances folder: %w", err)
 	}
+	// NPC sidecars moved with the folder
+	renameZoneNPCFiles(oldName, newName)
 
 	// Rename mobs folder (may not exist).
 	if err := os.Rename(oldMobsDir, newMobsDir); err != nil && !os.IsNotExist(err) {
 		os.Rename(newRoomsDir, oldRoomsDir)
 		os.Rename(newInstancesDir, oldInstancesDir)
+		renameZoneNPCFiles(newName, oldName)
 		return fmt.Errorf("renaming mobs folder: %w", err)
 	}
 
@@ -656,6 +661,7 @@ func DeleteZoneForAdmin(zoneName string) error {
 	instanceDir := util.FilePath(basePath, `/rooms.instances/`, zoneFolder)
 
 	for roomId := range zoneInfo.RoomIds {
+		endDeletedRoomNPCs(zoneName, roomId)
 		delete(roomManager.rooms, roomId)
 		delete(roomManager.roomsWithUsers, roomId)
 		delete(roomManager.roomsWithMobs, roomId)

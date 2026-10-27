@@ -55,6 +55,11 @@ type RoomManager struct {
 
 // Deletes any knowledge of a room in memory.
 // Loading this room after the fact will trigger full re-loading and caching of room data.
+// ClearRoomCache drops a room from memory without saving it or resting its
+// NPCs. Its callers replace the room (addRoomToMemory with force, which
+// SaveRoomTemplate follows with the same bodies and resting NPCs) or delete
+// it (DeleteRoomForAdmin, which ends its resting NPCs first). To take a room
+// out of memory and keep its NPCs, use removeRoomFromMemory.
 func ClearRoomCache(roomId int) error {
 
 	room := roomManager.rooms[roomId]
@@ -725,6 +730,11 @@ func MoveToZone(roomId int, newZoneName string) error {
 	}
 
 	os.Rename(oldInstanceFilePath, newInstanceFilePath)
+
+	// The room's resting NPCs and slot state move with it
+	if err := moveRoomNPCFile(oldZoneName, newZoneName, roomId); err != nil {
+		mudlog.Error("MoveToZone", "roomId", roomId, "error", fmt.Sprintf("npc sidecar not moved: %v", err))
+	}
 
 	delete(oldZoneInfo.RoomIds, roomId)
 	roomManager.zones[oldZoneName] = oldZoneInfo
