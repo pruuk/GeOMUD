@@ -265,6 +265,51 @@ func TestEphemeralUnloadDestroysAndWritesNothing(t *testing.T) {
 	}
 }
 
+func TestEphemeralUnloadEndsASlotNPCAsADeath(t *testing.T) {
+	dir := persistSetup(t)
+	id := liveTestNPC(t, 5, 3, 0)
+	mobs.GetInstance(id).SpawnSlot = 1
+	home := slotRoom(4100, id)
+	a := memRoom(4101)
+	a.bodies = append(a.bodies, id)
+	require.NoError(t, saveRoomNPCs(a)) // an old copy on disk from before it wandered
+	a.removeBody(id)
+
+	r := memRoom(ephemeralRoomIdMinimum + 5)
+	r.bodies = append(r.bodies, id)
+	removeRoomFromMemory(r)
+
+	e, ok := peekEnding(id)
+	require.True(t, ok, "its slot reads an ending, not a lost NPC")
+	assert.False(t, e.Immediate, "and waits the respawn rate, as after a death")
+	assert.Empty(t, allRestingOnDisk(t, dir), "the old copy cannot bring it back")
+
+	home.Prepare(false)
+	assert.True(t, home.SpawnInfo[0].InstanceId.IsZero())
+	assert.Equal(t, e.Round, home.SpawnInfo[0].DespawnedRound)
+}
+
+func TestEndEphemeralNPCIsADeathForASlotNPC(t *testing.T) {
+	persistSetup(t)
+	slotted := liveTestNPC(t, 5, 3, 0)
+	slotless := liveTestNPC(t, 6, 3, 0)
+	mobs.GetInstance(slotted).SpawnSlot = 1
+	r := memRoom(ephemeralRoomIdMinimum + 6)
+	r.bodies = append(r.bodies, slotted, slotless)
+
+	r.EndEphemeralNPC(mobs.GetInstance(slotted))
+	r.EndEphemeralNPC(mobs.GetInstance(slotless))
+
+	assert.Nil(t, mobs.GetInstance(slotted))
+	assert.Nil(t, mobs.GetInstance(slotless))
+	assert.Empty(t, r.GetMobs())
+	e, ok := peekEnding(slotted)
+	require.True(t, ok)
+	assert.False(t, e.Immediate, "a rest where nothing is saved ends the NPC as a death, not an admin despawn")
+	_, ok = peekEnding(slotless)
+	assert.False(t, ok)
+}
+
 func TestTemplateEditCarriesRestingAndSlots(t *testing.T) {
 	persistSetup(t)
 	id := ids.New(ids.NoCell)

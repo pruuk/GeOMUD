@@ -503,10 +503,13 @@ func removeRoomFromMemory(r *Room) {
 		return
 	}
 
-	// Ephemeral rooms are not saved: their NPCs end with them, as before.
+	// Ephemeral rooms are not saved: their NPCs end with them, as a death
+	// (a slot elsewhere that owns one refills after its respawn rate).
 	if room.IsEphemeral() {
 		for _, mobId := range room.mobIds() {
-			mobs.DestroyInstance(mobId)
+			if m := mobs.GetInstance(mobId); m != nil {
+				room.EndEphemeralNPC(m)
+			}
 		}
 
 		for _, spawnDetails := range room.SpawnInfo {
@@ -514,7 +517,7 @@ func removeRoomFromMemory(r *Room) {
 
 				if m := mobs.GetInstance(spawnDetails.InstanceId); m != nil {
 					if m.Character.RoomId == room.RoomId {
-						mobs.DestroyInstance(spawnDetails.InstanceId)
+						room.EndEphemeralNPC(m)
 					}
 				}
 

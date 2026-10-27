@@ -859,6 +859,17 @@ func takeEndings(ended []ids.ID) {
 	}
 }
 
+// EndEphemeralNPC ends an NPC leaving memory in an ephemeral room, where
+// nothing is saved so it cannot rest: it ends as a death would (a slot that
+// owns it refills after its respawn rate), leaves every sidecar, and is
+// destroyed and taken out of the room.
+func (r *Room) EndEphemeralNPC(m *mobs.Mob) {
+	id := m.Character.Id
+	NPCEnded(m, false)
+	mobs.DestroyInstance(id)
+	r.RemoveMob(id)
+}
+
 // takeEnding reads and removes an NPC's ending and saves the ledger.
 func takeEnding(id ids.ID) (ending, bool) {
 	npcStoreMu.Lock()
