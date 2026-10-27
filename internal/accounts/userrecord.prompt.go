@@ -14,7 +14,7 @@ import (
 )
 
 //
-// This file contains vars/receiver methods for the UserRecord struct dealing with the prmopt.
+// This file contains vars/receiver methods for the Account struct dealing with the prmopt.
 // This just makes it easier to find and make adjustments to. It got annoying searching userrecord.go
 // NOTE: NOT to be confused with an interactive question/answer prompt.
 //
@@ -52,7 +52,7 @@ type PromptData struct {
 //
 // Example registration from a module:
 //
-//	users.OnBuildPrompt.Register(func(d users.PromptData) users.PromptData {
+//	accounts.OnBuildPrompt.Register(func(d accounts.PromptData) accounts.PromptData {
 //	    for i, t := range d.Tokens {
 //	        if t.Tag == "{mytoken}" {
 //	            d.Tokens[i].Value = computeMyValue(d.User)

@@ -27,7 +27,7 @@ var (
 )
 
 type ActiveUsers struct {
-	Users               map[int]*Account                    // userId to UserRecord
+	Users               map[int]*Account                    // userId to Account
 	Usernames           map[string]int                      // username to userId
 	Connections         map[connections.ConnectionId]int    // connectionId to userId
 	UserConnections     map[int]connections.ConnectionId    // userId to connectionId

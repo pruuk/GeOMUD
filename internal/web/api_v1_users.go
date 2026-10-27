@@ -20,7 +20,7 @@ func resolveUserId(w http.ResponseWriter, idStr string) int {
 	return id
 }
 
-// loadUserRecord loads a UserRecord by id, checking the online cache first.
+// loadUserRecord loads an Account by id, checking the online cache first.
 // Writes a 404 error response and returns nil when the user does not exist.
 func loadUserRecord(w http.ResponseWriter, userId int) *accounts.Account {
 	if u := accounts.GetByUserId(userId); u != nil {
@@ -65,7 +65,7 @@ func apiV1PatchUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Capture the plaintext password from the request before decoding into the
-	// UserRecord, because UserRecord.Password stores a bcrypt hash and we need
+	// Account, because Account.Password stores a bcrypt hash and we need
 	// to call SetPassword to hash a new plaintext value.
 	var raw struct {
 		Password string `json:"Password"`

@@ -23,7 +23,8 @@ var (
 )
 
 // activateLocked records u as online on connectionId. The caller holds
-// userManagerMu and calls activated(u) after unlocking.
+// lifecycleMu for the whole operation and userManagerMu around this call,
+// and calls activated(u) after releasing userManagerMu.
 func activateLocked(u *Account, connectionId connections.ConnectionId) {
 	u.sess().connectionId = connectionId
 	userManager.Users[u.UserId] = u

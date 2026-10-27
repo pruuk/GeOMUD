@@ -153,10 +153,11 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, 
 	s.do("account: repeat password", b.pass, "Email Address")
 	s.do("account: email", "", "screen reader")
 	s.do("account: screen reader", "n", "create a new user/login named "+b.user)
-	// One signup at a time: users.CreateUser reads the highest user ID and
-	// adds the new one without a lock, so two signups at once can get the
-	// same ID and then share each other's output. Known engine bug, not
-	// what this test is for.
+	// One signup at a time: upstream's accounts.CreateUser read the highest
+	// user ID and added the new one without a lock, so two signups at once
+	// could get the same ID and share each other's output. Phase 4b slice 1
+	// put CreateUser under lifecycleMu, which likely fixes it; this stays
+	// until a 50-bot run without it proves that (status.md).
 	signupMu.Lock()
 	s.do("account: create", "y", "Type start to begin playing")
 	signupMu.Unlock()
