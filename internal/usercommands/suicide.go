@@ -82,14 +82,14 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 	allowPenalties := user.Character.Level > int(config.Death.ProtectionLevels)
 
 	killerMobId := 0
-	if !user.Character.KillerMobInstanceId.IsZero() {
-		if killerMob := mobs.GetInstance(user.Character.KillerMobInstanceId); killerMob != nil {
+	if !user.Character.KilledBy.IsZero() {
+		if killerMob := mobs.GetInstance(user.Character.KilledBy); killerMob != nil {
 			killerMobId = int(killerMob.MobId)
 		}
 		if user.Character.KillerMobIsElite {
 			user.Character.KD.AddEliteDeath(killerMobId, user.Character.KillerMobName)
 		}
-		user.Character.KillerMobInstanceId = ids.ID{}
+		user.Character.KilledBy = ids.ID{}
 		user.Character.KillerMobIsElite = false
 		user.Character.KillerMobName = ``
 	}

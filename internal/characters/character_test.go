@@ -12,7 +12,27 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestAggroHoldsOneTarget(t *testing.T) {
+	c := New()
+	target := ids.New(ids.NoCell)
+	c.SetAggro(target, DefaultAttack)
+	require.NotNil(t, c.Aggro)
+	assert.Equal(t, target, c.Aggro.Target)
+	assert.True(t, c.IsAggro(target))
+	assert.False(t, c.IsAggro(ids.New(ids.NoCell)))
+}
+
+func TestCharmRemembersTheCharmersBody(t *testing.T) {
+	c := New()
+	by := ids.New(ids.NoCell)
+	c.Charm(by, 5, "")
+	assert.Equal(t, by, c.GetCharmedBy())
+	assert.True(t, c.IsCharmed(by))
+	assert.False(t, c.IsCharmed(ids.New(ids.NoCell)))
+}
 
 func TestMain(m *testing.M) {
 	// Seed the skills cache so skill-gated helpers (SetSkill/TrainSkill/GetSkillLevel)
@@ -1222,31 +1242,27 @@ func TestCharacter_GetCharmIds(t *testing.T) {
 		})
 	}
 }
-func TestCharacter_GetCharmedUserId(t *testing.T) {
+func TestCharacter_GetCharmedBy(t *testing.T) {
+	by := ids.New(ids.NoCell)
 	tests := []struct {
-		name       string
-		charmed    *CharmInfo
-		wantUserId int
+		name    string
+		charmed *CharmInfo
+		wantBy  ids.ID
 	}{
 		{
-			name:       "Charmed is nil returns 0",
-			charmed:    nil,
-			wantUserId: 0,
+			name:    "Charmed is nil returns the zero ID",
+			charmed: nil,
+			wantBy:  ids.ID{},
 		},
 		{
-			name:       "Charmed is set returns userId",
-			charmed:    &CharmInfo{UserId: 42},
-			wantUserId: 42,
+			name:    "Charmed is set returns the charmer's body",
+			charmed: &CharmInfo{By: by},
+			wantBy:  by,
 		},
 		{
-			name:       "Charmed is set with negative userId",
-			charmed:    &CharmInfo{UserId: -7},
-			wantUserId: -7,
-		},
-		{
-			name:       "Charmed is set with zero userId",
-			charmed:    &CharmInfo{UserId: 0},
-			wantUserId: 0,
+			name:    "Charmed is set with the zero ID",
+			charmed: &CharmInfo{},
+			wantBy:  ids.ID{},
 		},
 	}
 
@@ -1254,70 +1270,59 @@ func TestCharacter_GetCharmedUserId(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := New()
 			c.Charmed = tt.charmed
-			got := c.GetCharmedUserId()
-			assert.Equal(t, tt.wantUserId, got)
+			got := c.GetCharmedBy()
+			assert.Equal(t, tt.wantBy, got)
 		})
 	}
 }
 func TestCharacter_IsCharmed(t *testing.T) {
+	a, b, x, y := ids.New(ids.NoCell), ids.New(ids.NoCell), ids.New(ids.NoCell), ids.New(ids.NoCell)
 	tests := []struct {
 		name    string
 		charmed *CharmInfo
-		userIds []int
+		by      []ids.ID
 		want    bool
 	}{
 		{
 			name:    "No charmed info returns false",
 			charmed: nil,
-			userIds: nil,
+			by:      nil,
 			want:    false,
 		},
 		{
-			name:    "Charmed info, no userId arg returns true",
-			charmed: &CharmInfo{UserId: 42},
-			userIds: nil,
-			want:    true,
-		},
-		{
-			name:    "Charmed info, userId matches",
-			charmed: &CharmInfo{UserId: 99},
-			userIds: []int{99},
-			want:    true,
-		},
-		{
-			name:    "Charmed info, userId does not match",
-			charmed: &CharmInfo{UserId: 77},
-			userIds: []int{88},
+			name:    "No charmed info, with an ID, returns false",
+			charmed: nil,
+			by:      []ids.ID{a},
 			want:    false,
 		},
 		{
-			name:    "Charmed info, multiple userIds, one matches",
-			charmed: &CharmInfo{UserId: 55},
-			userIds: []int{11, 22, 55, 99},
+			name:    "Charmed info, no ID arg returns true",
+			charmed: &CharmInfo{By: a},
+			by:      nil,
 			want:    true,
 		},
 		{
-			name:    "Charmed info, multiple userIds, none match",
-			charmed: &CharmInfo{UserId: 101},
-			userIds: []int{1, 2, 3},
+			name:    "Charmed info, ID matches",
+			charmed: &CharmInfo{By: a},
+			by:      []ids.ID{a},
+			want:    true,
+		},
+		{
+			name:    "Charmed info, ID does not match",
+			charmed: &CharmInfo{By: a},
+			by:      []ids.ID{b},
 			want:    false,
 		},
 		{
-			name:    "Charmed info, userId is zero, matches zero",
-			charmed: &CharmInfo{UserId: 0},
-			userIds: []int{0},
+			name:    "Charmed info, several IDs, one matches",
+			charmed: &CharmInfo{By: a},
+			by:      []ids.ID{x, y, a, b},
 			want:    true,
 		},
 		{
-			name:    "Charmed info, userId is negative, matches negative",
-			charmed: &CharmInfo{UserId: -5},
-			userIds: []int{-5},
-			want:    true,
-		},
-		{
-			name:    "Charmed info, userId is negative, does not match",
-			charmed: &CharmInfo{UserId: -5},
-			userIds: []int{5},
+			name:    "Charmed info, several IDs, none match",
+			charmed: &CharmInfo{By: a},
+			by:      []ids.ID{x, y, b},
 			want:    false,
 		},
 	}
@@ -1326,17 +1331,18 @@ func TestCharacter_IsCharmed(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := New()
 			c.Charmed = tt.charmed
-			got := c.IsCharmed(tt.userIds...)
+			got := c.IsCharmed(tt.by...)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 func TestCharacter_RemoveCharm(t *testing.T) {
+	by := ids.New(ids.NoCell)
 	tests := []struct {
 		name           string
 		charmed        *CharmInfo
 		adjectives     []string
-		wantUserId     int
+		wantBy         ids.ID
 		wantCharmed    *CharmInfo
 		wantAdjectives []string
 	}{
@@ -1344,39 +1350,39 @@ func TestCharacter_RemoveCharm(t *testing.T) {
 			name:           "No charmed info, no adjectives",
 			charmed:        nil,
 			adjectives:     nil,
-			wantUserId:     0,
+			wantBy:         ids.ID{},
 			wantCharmed:    nil,
 			wantAdjectives: []string{},
 		},
 		{
 			name:           "Charmed info present, no adjectives",
-			charmed:        &CharmInfo{UserId: 42},
+			charmed:        &CharmInfo{By: by},
 			adjectives:     nil,
-			wantUserId:     42,
+			wantBy:         by,
 			wantCharmed:    nil,
 			wantAdjectives: []string{},
 		},
 		{
 			name:           "Charmed info present, 'charmed' adjective present",
-			charmed:        &CharmInfo{UserId: 7},
+			charmed:        &CharmInfo{By: by},
 			adjectives:     []string{"charmed", "sleepy"},
-			wantUserId:     7,
+			wantBy:         by,
 			wantCharmed:    nil,
 			wantAdjectives: []string{"sleepy"},
 		},
 		{
 			name:           "Charmed info present, 'charmed' not in adjectives",
-			charmed:        &CharmInfo{UserId: 99},
+			charmed:        &CharmInfo{By: by},
 			adjectives:     []string{"sleepy"},
-			wantUserId:     99,
+			wantBy:         by,
 			wantCharmed:    nil,
 			wantAdjectives: []string{"sleepy"},
 		},
 		{
 			name:           "Charmed info present, 'charmed' is only adjective",
-			charmed:        &CharmInfo{UserId: 123},
+			charmed:        &CharmInfo{By: by},
 			adjectives:     []string{"charmed"},
-			wantUserId:     123,
+			wantBy:         by,
 			wantCharmed:    nil,
 			wantAdjectives: []string{},
 		},
@@ -1384,7 +1390,7 @@ func TestCharacter_RemoveCharm(t *testing.T) {
 			name:           "No charmed info, 'charmed' adjective present",
 			charmed:        nil,
 			adjectives:     []string{"charmed", "alert"},
-			wantUserId:     0,
+			wantBy:         ids.ID{},
 			wantCharmed:    nil,
 			wantAdjectives: []string{"alert"},
 		},
@@ -1398,7 +1404,7 @@ func TestCharacter_RemoveCharm(t *testing.T) {
 				c.Adjectives = append([]string{}, tt.adjectives...)
 			}
 			got := c.RemoveCharm()
-			assert.Equal(t, tt.wantUserId, got)
+			assert.Equal(t, tt.wantBy, got)
 			assert.Equal(t, tt.wantCharmed, c.Charmed)
 			assert.ElementsMatch(t, tt.wantAdjectives, c.Adjectives)
 		})
@@ -2031,8 +2037,7 @@ func TestCharacter_EndAggro(t *testing.T) {
 			c := New()
 			if tt.setupAggro {
 				c.Aggro = &Aggro{
-					UserId:        1,
-					MobInstanceId: ids.New(ids.NoCell),
+					Target:        ids.New(ids.NoCell),
 					Type:          DefaultAttack,
 					RoundsWaiting: 3,
 				}

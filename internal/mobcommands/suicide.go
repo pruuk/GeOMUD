@@ -38,8 +38,8 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	mudlog.Debug(`Mob Death`, `name`, mob.Character.Name, `rest`, rest)
 
 	// Make sure to clean up any charm stuff if it's being removed
-	if charmedUserId := mob.Character.RemoveCharm(); charmedUserId > 0 {
-		if charmedUser := accounts.GetByUserId(charmedUserId); charmedUser != nil {
+	if charmedBy := mob.Character.RemoveCharm(); !charmedBy.IsZero() {
+		if charmedUser := accounts.GetByBodyId(charmedBy); charmedUser != nil {
 			charmedUser.Character.TrackCharmed(mob.Character.Id, false)
 		}
 	}
@@ -70,7 +70,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 	// Mark this moment to prevent an immediate respawn
 	if mob.MobId == 38 {
 		if mob.Character.Charmed != nil {
-			if tmpU := accounts.GetByUserId(mob.Character.Charmed.UserId); tmpU != nil {
+			if tmpU := accounts.GetByBodyId(mob.Character.Charmed.By); tmpU != nil {
 				tmpU.SetTempData(`lastGuideRound`, currentRound)
 			}
 		}
@@ -118,7 +118,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			if user := accounts.GetByUserId(uId); user != nil {
 
 				if user.Character.Aggro != nil {
-					if user.Character.Aggro.MobInstanceId == mob.Character.Id {
+					if user.Character.Aggro.Target == mob.Character.Id {
 						user.Character.Aggro = nil
 						events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
 					}

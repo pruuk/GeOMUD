@@ -48,7 +48,7 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 
 	for _, mobInstId := range room.GetMobs(rooms.FindCharmed) {
 		if mob := mobs.GetInstance(mobInstId); mob != nil {
-			if mob.Character.IsCharmed(evt.UserId) {
+			if mob.Character.IsCharmed(user.Character.Id) {
 				mob.Character.Charmed.Expire()
 			}
 		}

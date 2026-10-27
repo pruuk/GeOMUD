@@ -436,8 +436,8 @@ func (g *GMCPCharModule) GetCharNode(user *accounts.Account, gmcpModule string) 
 
 		aggroMobId := ids.ID{}
 		if user.Character.Aggro != nil {
-			if !user.Character.Aggro.MobInstanceId.IsZero() {
-				aggroMobId = user.Character.Aggro.MobInstanceId
+			if mobs.GetInstance(user.Character.Aggro.Target) != nil {
+				aggroMobId = user.Character.Aggro.Target
 			}
 		}
 

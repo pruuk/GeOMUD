@@ -131,7 +131,7 @@ func Teleport(rest string, user *accounts.Account, room *rooms.Room, flags event
 
 							for _, charmedMobId := range room.GetMobs(rooms.FindCharmed) {
 								if mob := mobs.GetInstance(charmedMobId); mob != nil {
-									if mob.Character.IsCharmed(partyUser.UserId) {
+									if mob.Character.IsCharmed(partyUser.Character.Id) {
 										room.RemoveMob(mob.Character.Id)
 										newRoom.AddMob(mob.Character.Id)
 									}

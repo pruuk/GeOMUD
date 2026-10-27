@@ -28,13 +28,13 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 				continue
 			}
 
-			if m.Character.Aggro.UserId == user.UserId {
+			if m.Character.Aggro.Target == user.Character.Id {
 				attackMobId = m.Character.Id
 				break
 			}
 
 			if partyInfo != nil {
-				if partyInfo.IsMember(m.Character.Aggro.UserId) {
+				if tu := accounts.GetByBodyId(m.Character.Aggro.Target); tu != nil && partyInfo.IsMember(tu.UserId) {
 					attackMobId = m.Character.Id
 					break
 				}
@@ -48,13 +48,13 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 					continue
 				}
 
-				if u.Character.Aggro.UserId == user.UserId {
+				if u.Character.Aggro.Target == user.Character.Id {
 					attackPlayerId = u.UserId
 					break
 				}
 
 				if partyInfo != nil {
-					if partyInfo.IsMember(u.Character.Aggro.UserId) {
+					if tu := accounts.GetByBodyId(u.Character.Aggro.Target); tu != nil && partyInfo.IsMember(tu.UserId) {
 						attackPlayerId = u.UserId
 						break
 					}
@@ -71,13 +71,15 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 							continue
 						}
 
-						if !partyUser.Character.Aggro.MobInstanceId.IsZero() {
-							attackMobId = partyUser.Character.Aggro.MobInstanceId
+						target := partyUser.Character.Aggro.Target
+
+						if mobs.GetInstance(target) != nil {
+							attackMobId = target
 							break
 						}
 
-						if partyUser.Character.Aggro.UserId > 0 {
-							attackPlayerId = partyUser.Character.Aggro.UserId
+						if tu := accounts.GetByBodyId(target); tu != nil {
+							attackPlayerId = tu.UserId
 							break
 						}
 
@@ -163,7 +165,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		m := mobs.GetInstance(attackMobId)
 
 		if m != nil {
-			if m.Character.IsCharmed(user.UserId) {
+			if m.Character.IsCharmed(user.Character.Id) {
 				user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
 				return true, nil
 			}
@@ -186,7 +188,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 				}
 			}
 
-			user.Character.SetAggro(0, attackMobId, characters.DefaultAttack)
+			user.Character.SetAggro(attackMobId, characters.DefaultAttack)
 
 			events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
 
@@ -232,7 +234,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 				}
 			}
 
-			user.Character.SetAggro(attackPlayerId, ids.ID{}, characters.DefaultAttack)
+			user.Character.SetAggro(p.Character.Id, characters.DefaultAttack)
 
 			events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
 

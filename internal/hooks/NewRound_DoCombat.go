@@ -15,7 +15,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -69,12 +68,12 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 		if user.Character.Aggro.Type == characters.Flee {
 
 			// Revert to Default combat regardless of outcome
-			user.Character.SetAggro(user.Character.Aggro.UserId, user.Character.Aggro.MobInstanceId, characters.DefaultAttack)
+			user.Character.SetAggro(user.Character.Aggro.Target, characters.DefaultAttack)
 
 			blockedByMob := ``
 			for _, mobInstId := range uRoom.GetMobs(rooms.FindFighting) {
 				if mob := mobs.GetInstance(mobInstId); mob != nil {
-					if mob.Character.Aggro == nil || mob.Character.Aggro.UserId != userId {
+					if mob.Character.Aggro == nil || mob.Character.Aggro.Target != user.Character.Id {
 						continue
 					}
 
@@ -97,7 +96,8 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 			blockedByPlayerId := 0
 			for _, userId := range uRoom.GetPlayers(rooms.FindFighting) {
 				if u := accounts.GetByUserId(userId); u != nil {
-					if u.Character.Aggro == nil || u.Character.Aggro.UserId != userId {
+					// Pre-existing bug E8c, kept for slice 5: the shadowed userId makes this compare u's target with u itself.
+					if u.Character.Aggro == nil || u.Character.Aggro.Target != u.Character.Id {
 						continue
 					}
 
@@ -148,7 +148,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				for _, instId := range uRoom.GetMobs(rooms.FindCharmed) {
 					if mob := mobs.GetInstance(instId); mob != nil {
 						// Charmed mobs assist
-						if mob.Character.IsCharmed(userId) {
+						if mob.Character.IsCharmed(user.Character.Id) {
 							mob.Command(exitName)
 						}
 					}
@@ -165,102 +165,14 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 		/**************************
 		*
-		* START HANDLING MAGIC
-		*
-		**************************/
-
-		if user.Character.Aggro != nil && user.Character.Aggro.Type == characters.SpellCast {
-
-			if user.Character.Aggro.RoundsWaiting > 0 {
-				user.Character.Aggro.RoundsWaiting--
-
-				continue
-			}
-
-			roll := util.RollDice(1, 100)
-			successChance := user.Character.GetBaseCastSuccessChance(user.Character.Aggro.SpellInfo.SpellId)
-			if roll >= successChance {
-
-				// fail
-				user.SendText(fmt.Sprintf(`<ansi fg="spell-text"><ansi fg="magenta">***</ansi> Your spell fizzles! <ansi fg="magenta">***</ansi> (Rolled %d on %d%% chance of success)</ansi>`, roll, successChance))
-				uRoom.SendText(fmt.Sprintf(`<ansi fg="spell-text"><ansi fg="username">%s</ansi> tries to cast a spell but it <ansi fg="magenta">fizzles</ansi>!</ansi>`, user.Character.Name), userId)
-				user.Character.Aggro = nil
-
-				continue
-
-			}
-
-			//
-			// Need to track before health to calculate if damage was done post-spell
-			//
-			mobHealthBefore := map[ids.ID]int{}
-			for _, mInstId := range user.Character.Aggro.SpellInfo.TargetMobInstanceIds {
-				if defMob := mobs.GetInstance(mInstId); defMob != nil {
-
-					// Remember who has hit him
-					defMob.Character.TrackPlayerDamage(user.UserId, 0)
-					mobHealthBefore[mInstId] = defMob.Character.Health
-
-				}
-			}
-
-			user.Character.TrackSpellCast(user.Character.Aggro.SpellInfo.SpellId)
-
-			if spellData := spells.GetSpell(user.Character.Aggro.SpellInfo.SpellId); spellData != nil {
-
-				if spellData.Type == spells.HarmSingle || spellData.Type == spells.HarmMulti || spellData.Type == spells.HarmArea {
-
-					for _, mobId := range user.Character.Aggro.SpellInfo.TargetMobInstanceIds {
-
-						affectedMobIds = append(affectedMobIds, mobId)
-
-						if defMob := mobs.GetInstance(mobId); defMob != nil {
-
-							// Track damage done
-							if hBefore, ok := mobHealthBefore[mobId]; ok {
-								hDelta := hBefore - defMob.Character.Health
-								if hDelta > 0 {
-									defMob.Character.TrackPlayerDamage(user.UserId, hDelta)
-								}
-							}
-
-							defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-							if defMob.Character.Health <= 0 {
-								defMob.Character.EndAggro()
-								events.AddToQueue(events.AggroChanged{MobInstanceId: defMob.Character.Id, RoomId: defMob.Character.RoomId})
-							} else if defMob.Character.Aggro == nil {
-								defMob.PreventIdle = true
-							}
-
-						}
-					}
-
-				}
-			}
-
-			user.Character.Aggro = nil
-
-			continue
-
-		}
-
-		/**************************
-		*
-		* END HANDLING MAGIC
-		*
-		**************************/
-
-		/**************************
-		*
 		* START HANDLING PHYSICAL COMBAT
 		*
 		**************************/
 
 		// In combat with another player
-		if user.Character.Aggro != nil && user.Character.Aggro.UserId > 0 {
+		if user.Character.Aggro != nil && accounts.GetByBodyId(user.Character.Aggro.Target) != nil {
 
-			defUser := accounts.GetByUserId(user.Character.Aggro.UserId)
+			defUser := accounts.GetByBodyId(user.Character.Aggro.Target)
 
 			uRoom := rooms.LoadRoom(roomId)
 
@@ -344,7 +256,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				continue
 			}
 
-			affectedPlayerIds = append(affectedPlayerIds, user.Character.Aggro.UserId)
+			affectedPlayerIds = append(affectedPlayerIds, defUser.UserId)
 
 			roundResult := combat.AttackPlayerVsPlayer(user, defUser)
 
@@ -429,17 +341,18 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				defUser.Character.EndAggro()
 				user.Character.EndAggro()
 			} else {
-				user.Character.SetAggro(defUser.UserId, ids.ID{}, characters.DefaultAttack)
+				user.Character.SetAggro(defUser.Character.Id, characters.DefaultAttack)
 			}
 
 		}
 
 		// In combat with a mob
-		if user.Character.Aggro != nil && !user.Character.Aggro.MobInstanceId.IsZero() {
+		// (any target that is not a player, so a vanished target is cleared here)
+		if user.Character.Aggro != nil && !user.Character.Aggro.Target.IsZero() && accounts.GetByBodyId(user.Character.Aggro.Target) == nil {
 
-			affectedMobIds = append(affectedMobIds, user.Character.Aggro.MobInstanceId)
+			affectedMobIds = append(affectedMobIds, user.Character.Aggro.Target)
 
-			defMob := mobs.GetInstance(user.Character.Aggro.MobInstanceId)
+			defMob := mobs.GetInstance(user.Character.Aggro.Target)
 
 			targetFound := true
 			if defMob == nil {
@@ -511,7 +424,8 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				continue
 			}
 
-			affectedPlayerIds = append(affectedPlayerIds, user.Character.Aggro.UserId)
+			// Pre-existing bug E8e, kept for slice 5: this appended the aggro target's user ID, always 0 in a mob fight.
+			affectedPlayerIds = append(affectedPlayerIds, 0)
 
 			var roundResult combat.AttackResult
 
@@ -576,7 +490,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				user.Character.EndAggro()
 				events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
 			} else {
-				user.Character.SetAggro(0, defMob.Character.Id, characters.DefaultAttack)
+				user.Character.SetAggro(defMob.Character.Id, characters.DefaultAttack)
 				events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
 			}
 
@@ -627,67 +541,6 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 		/**************************
 		*
-		* START HANDLING MAGIC
-		*
-		**************************/
-
-		if mob.Character.Aggro != nil && mob.Character.Aggro.Type == characters.SpellCast {
-
-			if mob.Character.Aggro.RoundsWaiting > 0 {
-				mob.Character.Aggro.RoundsWaiting--
-
-				continue
-			}
-
-			successChance := mob.Character.GetBaseCastSuccessChance(mob.Character.Aggro.SpellInfo.SpellId)
-			if util.RollDice(1, 100) >= successChance {
-
-				// fail
-				mobRoom.SendText(fmt.Sprintf(`<ansi fg="mobnamme">%s</ansi> tries to cast a spell but it <ansi fg="magenta">fizzles</ansi>!`, mob.Character.Name))
-				mob.Character.Aggro = nil
-
-				continue
-
-			}
-
-			if spellData := spells.GetSpell(mob.Character.Aggro.SpellInfo.SpellId); spellData != nil {
-
-				if spellData.Type == spells.HarmSingle || spellData.Type == spells.HarmMulti || spellData.Type == spells.HarmArea {
-
-					for _, mobId := range mob.Character.Aggro.SpellInfo.TargetMobInstanceIds {
-
-						affectedMobIds = append(affectedMobIds, mobId)
-
-						if defMob := mobs.GetInstance(mobId); defMob != nil {
-
-							defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-							if defMob.Character.Health <= 0 {
-								defMob.Character.EndAggro()
-							} else if defMob.Character.Aggro == nil {
-								defMob.PreventIdle = true
-							}
-
-						}
-					}
-
-				}
-			}
-
-			mob.Character.Aggro = nil
-
-			continue
-
-		}
-
-		/**************************
-		*
-		* END HANDLING MAGIC
-		*
-		**************************/
-
-		/**************************
-		*
 		* START HANDLING PHYSICAL COMBAT
 		*
 		**************************/
@@ -729,9 +582,9 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 		affectedMobIds = append(affectedMobIds, mob.Character.Id)
 
 		// mob attacks player
-		if mob.Character.Aggro != nil && mob.Character.Aggro.UserId > 0 {
+		if mob.Character.Aggro != nil && accounts.GetByBodyId(mob.Character.Aggro.Target) != nil {
 
-			defUser := accounts.GetByUserId(mob.Character.Aggro.UserId)
+			defUser := accounts.GetByBodyId(mob.Character.Aggro.Target)
 			if defUser == nil || mob.Character.RoomId != defUser.Character.RoomId {
 				mob.Character.Aggro = nil
 				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
@@ -756,7 +609,7 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 				continue
 			}
 
-			affectedPlayerIds = append(affectedPlayerIds, mob.Character.Aggro.UserId)
+			affectedPlayerIds = append(affectedPlayerIds, defUser.UserId)
 
 			// If no weapon but has stuff in the backpack, look for a weapon
 			// Especially useful for when they get disarmed
@@ -883,17 +736,18 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 				defUser.Character.EndAggro()
 				events.AddToQueue(events.AggroChanged{UserId: defUser.UserId, RoomId: defUser.Character.RoomId})
 			} else {
-				mob.Character.SetAggro(defUser.UserId, ids.ID{}, characters.DefaultAttack)
+				mob.Character.SetAggro(defUser.Character.Id, characters.DefaultAttack)
 				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
 			}
 		}
 
 		// mob attacks mob
-		if mob.Character.Aggro != nil && !mob.Character.Aggro.MobInstanceId.IsZero() {
+		// (any target that is not a player, so a vanished target is cleared here)
+		if mob.Character.Aggro != nil && !mob.Character.Aggro.Target.IsZero() && accounts.GetByBodyId(mob.Character.Aggro.Target) == nil {
 
-			affectedMobIds = append(affectedMobIds, mob.Character.Aggro.MobInstanceId)
+			affectedMobIds = append(affectedMobIds, mob.Character.Aggro.Target)
 
-			defMob := mobs.GetInstance(mob.Character.Aggro.MobInstanceId)
+			defMob := mobs.GetInstance(mob.Character.Aggro.Target)
 
 			if defMob == nil || mob.Character.RoomId != defMob.Character.RoomId {
 				mob.Character.Aggro = nil
@@ -1004,7 +858,7 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 				defMob.Character.EndAggro()
 				events.AddToQueue(events.AggroChanged{MobInstanceId: defMob.Character.Id, RoomId: defMob.Character.RoomId})
 			} else {
-				mob.Character.SetAggro(0, defMob.Character.Id, characters.DefaultAttack)
+				mob.Character.SetAggro(defMob.Character.Id, characters.DefaultAttack)
 				events.AddToQueue(events.AggroChanged{MobInstanceId: mob.Character.Id, RoomId: mob.Character.RoomId})
 			}
 
@@ -1036,9 +890,9 @@ func handleAffected(affectedPlayerIds []int, affectedMobIds []ids.ID) {
 
 			if user.Character.Health <= -10 {
 
-				if user.Character.Aggro != nil && !user.Character.Aggro.MobInstanceId.IsZero() {
-					user.Character.KillerMobInstanceId = user.Character.Aggro.MobInstanceId
-					if killerMob := mobs.GetInstance(user.Character.Aggro.MobInstanceId); killerMob != nil {
+				if user.Character.Aggro != nil && !user.Character.Aggro.Target.IsZero() && accounts.GetByBodyId(user.Character.Aggro.Target) == nil {
+					user.Character.KilledBy = user.Character.Aggro.Target
+					if killerMob := mobs.GetInstance(user.Character.Aggro.Target); killerMob != nil {
 						user.Character.KillerMobIsElite = killerMob.IsElite
 						user.Character.KillerMobName = killerMob.Character.Name
 					}

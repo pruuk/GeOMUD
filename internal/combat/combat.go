@@ -8,6 +8,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -84,9 +85,9 @@ func AttackMobVsMob(mobAtk *mobs.Mob, mobDef *mobs.Mob) AttackResult {
 	mobDef.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
 
 	// If attacking mob was player charmed, attribute damage done to that player
-	if charmedUserId := mobAtk.Character.GetCharmedUserId(); charmedUserId > 0 {
+	if charmer := accounts.GetByBodyId(mobAtk.Character.GetCharmedBy()); charmer != nil {
 		// Remember who has hit him
-		mobDef.Character.TrackPlayerDamage(charmedUserId, attackResult.DamageToTarget)
+		mobDef.Character.TrackPlayerDamage(charmer.UserId, attackResult.DamageToTarget)
 	}
 
 	return attackResult
@@ -166,11 +167,11 @@ func buildCombatMessages(
 	}
 
 	if sourceType == Mob {
-		tokenReplacements[items.TokenSource] = sourceChar.GetMobName(0).String()
+		tokenReplacements[items.TokenSource] = sourceChar.GetMobName(ids.ID{}).String()
 	}
 
 	if targetType == Mob {
-		tokenReplacements[items.TokenTarget] = targetChar.GetMobName(0).String()
+		tokenReplacements[items.TokenTarget] = targetChar.GetMobName(ids.ID{}).String()
 	}
 
 	if sourceChar.RoomId == targetChar.RoomId {
@@ -254,7 +255,7 @@ func calculateCombat(sourceChar characters.Character, targetChar characters.Char
 			attackResult.Crit = true
 			attackMessagePrefix = `<ansi fg="magenta-bold">*[BACKSTAB]*</ansi> `
 			// Failover to the default attack
-			sourceChar.SetAggro(sourceChar.Aggro.UserId, sourceChar.Aggro.MobInstanceId, characters.DefaultAttack)
+			sourceChar.SetAggro(sourceChar.Aggro.Target, characters.DefaultAttack)
 		}
 
 		for wIdx, weapon := range attackWeapons {

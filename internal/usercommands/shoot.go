@@ -77,12 +77,12 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 		if m != nil {
 
-			if m.Character.IsCharmed(user.UserId) {
+			if m.Character.IsCharmed(user.Character.Id) {
 				user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
 				return true, nil
 			}
 
-			user.Character.SetAggroRemote(exitName, 0, attackMobId, characters.Shooting)
+			user.Character.SetAggroRemote(exitName, attackMobId, characters.Shooting)
 
 			user.SendText(
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="mobname">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, m.Character.Name, exitName),
@@ -110,7 +110,7 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 				}
 			}
 
-			user.Character.SetAggroRemote(exitName, attackPlayerId, ids.ID{}, characters.Shooting)
+			user.Character.SetAggroRemote(exitName, p.Character.Id, characters.Shooting)
 
 			user.SendText(
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="username">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, p.Character.Name, exitName),

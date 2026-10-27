@@ -46,8 +46,8 @@ func MobRoundTick(e events.Event) events.ListenerReturn {
 		// Do charm cleanup
 		if mob.Character.IsCharmed() && mob.Character.Charmed.RoundsRemaining == 0 {
 			cmd := mob.Character.Charmed.ExpiredCommand
-			if charmedUserId := mob.Character.RemoveCharm(); charmedUserId > 0 {
-				if charmedUser := accounts.GetByUserId(charmedUserId); charmedUser != nil {
+			if charmedBy := mob.Character.RemoveCharm(); !charmedBy.IsZero() {
+				if charmedUser := accounts.GetByBodyId(charmedBy); charmedUser != nil {
 					charmedUser.Character.TrackCharmed(mob.Character.Id, false)
 				}
 			}

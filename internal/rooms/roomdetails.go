@@ -260,7 +260,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 					}
 				}
 
-				pName := player.Character.GetPlayerName(user.UserId, renderFlags...)
+				pName := player.Character.GetPlayerName(user.Character.Id, renderFlags...)
 				details.VisiblePlayers = append(details.VisiblePlayers, pName.String())
 			}
 		}
@@ -279,7 +279,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 			tmpNameFlags := nameFlags
 
-			mobName := mob.Character.GetMobName(user.UserId, tmpNameFlags...)
+			mobName := mob.Character.GetMobName(user.Character.Id, tmpNameFlags...)
 
 			if mob.Character.IsCharmed() {
 				visibleFriendlyMobs = append(visibleFriendlyMobs, mobName.String())

@@ -233,7 +233,7 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 				if mob.Character.RoomId != originRoomId {
 					continue
 				}
-				if mob.Character.IsCharmed(user.UserId) { // Charmed mobs follow
+				if mob.Character.IsCharmed(user.Character.Id) { // Charmed mobs follow
 					mob.Command(rest)
 				}
 			}
@@ -249,7 +249,7 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 						continue
 					}
 
-					if mob.Character.Aggro == nil || mob.Character.Aggro.UserId != user.UserId {
+					if mob.Character.Aggro == nil || mob.Character.Aggro.Target != user.Character.Id {
 						continue
 					}
 

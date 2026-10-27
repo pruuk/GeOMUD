@@ -1123,11 +1123,11 @@ func (r *Room) GetMobs(findTypes ...FindFlag) []ids.ID {
 		}
 
 		if mob.Character.Aggro != nil {
-			if typeFlag&FindFightingPlayer == FindFightingPlayer && mob.Character.Aggro.UserId != 0 {
+			if typeFlag&FindFightingPlayer == FindFightingPlayer && accounts.GetByBodyId(mob.Character.Aggro.Target) != nil {
 				mobMatches = append(mobMatches, mobId)
 				continue
 			}
-			if typeFlag&FindFightingMob == FindFightingMob && !mob.Character.Aggro.MobInstanceId.IsZero() {
+			if typeFlag&FindFightingMob == FindFightingMob && mobs.GetInstance(mob.Character.Aggro.Target) != nil {
 				mobMatches = append(mobMatches, mobId)
 				continue
 			}
@@ -1225,11 +1225,11 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 		}
 
 		if user.Character.Aggro != nil {
-			if typeFlag&FindFightingPlayer == FindFightingPlayer && user.Character.Aggro.UserId != 0 {
+			if typeFlag&FindFightingPlayer == FindFightingPlayer && accounts.GetByBodyId(user.Character.Aggro.Target) != nil {
 				playerMatches = append(playerMatches, userId)
 				continue
 			}
-			if typeFlag&FindFightingMob == FindFightingMob && !user.Character.Aggro.MobInstanceId.IsZero() {
+			if typeFlag&FindFightingMob == FindFightingMob && mobs.GetInstance(user.Character.Aggro.Target) != nil {
 				playerMatches = append(playerMatches, userId)
 				continue
 			}
@@ -1275,17 +1275,19 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 }
 
 func (r *Room) IsCalm() bool {
-	return !r.ArePlayersAttacking(0) && !r.AreMobsAttacking(0)
+	return !r.ArePlayersAttacking(ids.ID{}) && !r.AreMobsAttacking(ids.ID{})
 }
 
-func (r *Room) ArePlayersAttacking(userId int) bool {
+// ArePlayersAttacking reports whether any player here is attacking target
+// (any target at all when target is the zero ID).
+func (r *Room) ArePlayersAttacking(target ids.ID) bool {
 
 	for _, playerId := range r.players {
-		if playerId == userId {
-			continue
-		}
 		if u := accounts.GetByUserId(playerId); u != nil {
-			if u.Character.Aggro != nil && (userId == 0 || u.Character.Aggro.UserId == userId) {
+			if !target.IsZero() && u.Character.Id == target {
+				continue
+			}
+			if u.Character.Aggro != nil && (target.IsZero() || u.Character.Aggro.Target == target) {
 				return true
 			}
 		}
@@ -1294,14 +1296,16 @@ func (r *Room) ArePlayersAttacking(userId int) bool {
 	return false
 }
 
-func (r *Room) AreMobsAttacking(userId int) bool {
+// AreMobsAttacking reports whether any mob here is attacking target
+// (any target at all when target is the zero ID).
+func (r *Room) AreMobsAttacking(target ids.ID) bool {
 
 	for _, mobId := range r.mobs {
 		mob := mobs.GetInstance(mobId)
 		if mob == nil {
 			continue
 		}
-		if mob.Character.Aggro != nil && (userId == 0 || mob.Character.Aggro.UserId == userId) {
+		if mob.Character.Aggro != nil && (target.IsZero() || mob.Character.Aggro.Target == target) {
 			return true
 		}
 	}

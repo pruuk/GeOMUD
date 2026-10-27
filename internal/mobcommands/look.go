@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
@@ -117,7 +118,7 @@ func Look(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			}
 
 			if !isSneaking {
-				targetName := m.Character.GetMobName(0).String()
+				targetName := m.Character.GetMobName(ids.ID{}).String()
 				room.SendText(
 					fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is looking at %s.`, mob.Character.Name, targetName),
 				)

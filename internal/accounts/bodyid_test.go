@@ -29,6 +29,16 @@ func TestBodyIdSurvivesTheUserFile(t *testing.T) {
 	assert.Equal(t, u.Character.Id, back.Character.Id)
 }
 
+func TestGetByBodyIdFindsTheOnlineAccount(t *testing.T) {
+	resetUserManager()
+	u := NewAccount(84, 6)
+	giveBodyId(u)
+	userManager.Users[84] = u
+	assert.Same(t, u, GetByBodyId(u.Character.Id))
+	assert.Nil(t, GetByBodyId(ids.New(ids.NoCell)))
+	assert.Nil(t, GetByBodyId(ids.ID{}))
+}
+
 func TestUpdateOnlineUserKeepsTheBodyId(t *testing.T) {
 	resetUserManager()
 	live := NewAccount(83, 5)
