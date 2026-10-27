@@ -54,6 +54,7 @@ func TestCharacterPointerIsNotReassigned(t *testing.T) {
 	allowed := map[string]string{
 		"internal/web/api_v1_users.go": "decodes the PATCH body into a copy; UpdateOnlineUser copies it into the live pointer",
 		"internal/accounts/users.go":   "UpdateOnlineUser points the edited copy at the live pointer",
+		"internal/actors/registry.go":  "bindAccount points the actor at its account's live character when a new record of the account comes online; no account's or mob's own pointer changes",
 	}
 	for path, f := range goFiles(t) {
 		ast.Inspect(f, func(n ast.Node) bool {
@@ -66,6 +67,76 @@ func TestCharacterPointerIsNotReassigned(t *testing.T) {
 					if _, ok := allowed[path]; !ok {
 						t.Errorf("%s: assigns .Character; copy into the pointer instead (*x.Character = v)", path)
 					}
+				}
+			}
+			return true
+		})
+	}
+}
+
+// TestNoControllerTypeAssertions enforces "ask the actor, never its type":
+// outside internal/actors nothing asserts or switches on a concrete
+// controller type.
+func TestNoControllerTypeAssertions(t *testing.T) {
+	concrete := map[string]bool{"ConnectionController": true, "BehaviourController": true}
+	names := func(e ast.Expr) string {
+		if star, ok := e.(*ast.StarExpr); ok {
+			e = star.X
+		}
+		if sel, ok := e.(*ast.SelectorExpr); ok {
+			if x, ok := sel.X.(*ast.Ident); ok && x.Name == "actors" && concrete[sel.Sel.Name] {
+				return sel.Sel.Name
+			}
+		}
+		return ""
+	}
+	for path, f := range goFiles(t) {
+		if strings.HasPrefix(path, "internal/actors/") {
+			continue
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			switch x := n.(type) {
+			case *ast.TypeAssertExpr:
+				if name := names(x.Type); name != "" {
+					t.Errorf("%s: asserts actors.%s; ask the controller instead", path, name)
+				}
+			case *ast.CaseClause:
+				for _, e := range x.List {
+					if name := names(e); name != "" {
+						t.Errorf("%s: type switch on actors.%s; ask the controller instead", path, name)
+					}
+				}
+			}
+			return true
+		})
+	}
+}
+
+// TestAccountsGoOnlineOneWay enforces that an account is recorded as online
+// only by activateLocked, so OnActivate (and so its actor) can never be
+// skipped. testhelpers.go is the test-only exception.
+func TestAccountsGoOnlineOneWay(t *testing.T) {
+	allowed := map[string]bool{
+		"internal/accounts/lifecycle.go":   true,
+		"internal/accounts/testhelpers.go": true,
+	}
+	for path, f := range goFiles(t) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			as, ok := n.(*ast.AssignStmt)
+			if !ok {
+				return true
+			}
+			for _, lhs := range as.Lhs {
+				idx, ok := lhs.(*ast.IndexExpr)
+				if !ok {
+					continue
+				}
+				sel, ok := idx.X.(*ast.SelectorExpr)
+				if !ok || sel.Sel.Name != "Users" {
+					continue
+				}
+				if x, ok := sel.X.(*ast.Ident); ok && x.Name == "userManager" && !allowed[path] {
+					t.Errorf("%s: writes userManager.Users directly; use activateLocked", path)
 				}
 			}
 			return true
