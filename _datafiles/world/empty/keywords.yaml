@@ -98,7 +98,7 @@ help-aliases:
   colors:           [color, ansi]
   macros:           [macro]
   history:          ['log']
-  about:            ['gomud']
+  about:            ['geomud', 'gomud']
   stats:            [stat, attributes, attrs]
 # Default aliases for commands
 # For example: inv -> inventory
