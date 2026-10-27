@@ -60,7 +60,7 @@ func (u *usersCopyoverContributor) CopyoverRestore(dec *copyover.Decoder) error 
 	}
 
 	for _, entry := range state.Entries {
-		user, err := loadUserById(entry.UserId)
+		user, err := restoreLoad(entry.UserId)
 		if err != nil {
 			mudlog.Error("copyover: restore user", "userId", entry.UserId, "error", err)
 			continue
@@ -69,17 +69,24 @@ func (u *usersCopyoverContributor) CopyoverRestore(dec *copyover.Decoder) error 
 		user.sess().connectionTime = time.Now()
 		user.SetLastInputRound(util.GetRoundCount())
 
+		userManagerMu.Lock()
 		activateLocked(user, entry.ConnectionId)
 
 		if entry.IsLinkDead {
 			userManager.LinkDeadConnections[user.sess().connectionId] = entry.LinkDeadTurn
+			user.sess().isLinkDead = true
 		}
+		userManagerMu.Unlock()
 
 		activated(user)
 	}
 
 	return nil
 }
+
+// restoreLoad loads an account for CopyoverRestore. Tests replace it to
+// restore from memory instead of the data folder.
+var restoreLoad = loadUserById
 
 // loadUserById loads a user record directly from disk by userId.
 func loadUserById(userId int) (*Account, error) {
@@ -96,6 +103,7 @@ func loadUserById(userId int) (*Account, error) {
 	}
 
 	user.Character.Validate()
+	user.sess() // a restored account always has a session, as LoadUser's do
 
 	return user, nil
 }

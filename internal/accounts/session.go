@@ -20,7 +20,10 @@ type Session struct {
 }
 
 // sess returns the account's session, creating an empty one for an account
-// decoded from disk that has not gone online yet.
+// decoded from disk. Every account in the online map already has a session:
+// each path that puts one there (activateLocked's callers, LoadUser,
+// loadUserById) creates it first, so readers holding only the read lock
+// never write u.session here.
 func (u *Account) sess() *Session {
 	if u.session == nil {
 		u.session = &Session{}
