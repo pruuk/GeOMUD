@@ -1,6 +1,7 @@
 package rooms
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -43,6 +44,34 @@ func restartStore(t *testing.T) {
 	require.NoError(t, BuildRestingIndex())
 	require.NoError(t, LoadEndings())
 }
+
+// crashAfterWrites lets the next n store writes reach disk and fails every
+// write after them, as a crash would stop the disk. Rebuilding from disk
+// (restartStore) then shows what the crash left.
+func crashAfterWrites(t *testing.T, n int) {
+	t.Helper()
+	oldWrite, oldRemove := npcWriteFile, npcRemove
+	left := n
+	crashed := errors.New("crashed")
+	npcWriteFile = func(path string, data []byte, perm os.FileMode) error {
+		if left <= 0 {
+			return crashed
+		}
+		left--
+		return oldWrite(path, data, perm)
+	}
+	npcRemove = func(path string) error {
+		if left <= 0 {
+			return crashed
+		}
+		left--
+		return oldRemove(path)
+	}
+	t.Cleanup(func() { npcWriteFile, npcRemove = oldWrite, oldRemove })
+}
+
+// diskWritesBack ends a crashAfterWrites, for the rebuild after it.
+func diskWritesBack() { npcWriteFile, npcRemove = os.WriteFile, os.Remove }
 
 func savedWithID(id ids.ID, mobId int) mobs.SavedNPC {
 	s := mobs.SavedNPC{HomeRoomId: 1}

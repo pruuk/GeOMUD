@@ -539,15 +539,13 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 	r.restoreResting()
 
 	// First ensure any mobs that should be here are spawned
-	slotFreed := false
+	var settling slotSettling
 	for idx, spawnInfo := range r.SpawnInfo {
 
 		// A slot keeps its NPC until it ends (decision 14). A freed slot
 		// waits for the next prepare to spawn, as before.
 		if !spawnInfo.InstanceId.IsZero() {
-			if state := r.settleSlot(idx, roundNow); state == "ended" || state == "lost" {
-				slotFreed = true
-			}
+			settling.settle(r, idx, roundNow)
 			continue
 		}
 
@@ -686,9 +684,7 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 
 	}
 
-	if slotFreed {
-		r.settleSlotsSaved()
-	}
+	settling.save(r)
 
 	// Reach out one more room to prepare those exit rooms
 	if !checkAdjacentRooms {
@@ -721,15 +717,11 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 func (r *Room) CleanupMobSpawns() {
 
 	roundNow := util.GetRoundCount()
-	slotFreed := false
+	var settling slotSettling
 	for idx := range r.SpawnInfo {
-		if state := r.settleSlot(idx, roundNow); state == "ended" || state == "lost" {
-			slotFreed = true
-		}
+		settling.settle(r, idx, roundNow)
 	}
-	if slotFreed {
-		r.settleSlotsSaved()
-	}
+	settling.save(r)
 }
 
 func (r *Room) AddMob(mobId ids.ID) {
@@ -2055,15 +2047,11 @@ func (r *Room) RoundTick() {
 	//
 
 	// A slot keeps its NPC until it ends (decision 14)
-	slotFreed := false
+	var settling slotSettling
 	for idx := range r.SpawnInfo {
-		if state := r.settleSlot(idx, roundNow); state == "ended" || state == "lost" {
-			slotFreed = true
-		}
+		settling.settle(r, idx, roundNow)
 	}
-	if slotFreed {
-		r.settleSlotsSaved()
-	}
+	settling.save(r)
 
 	// If any players are in the room
 	// Update all mobs in the room that they've seen a player

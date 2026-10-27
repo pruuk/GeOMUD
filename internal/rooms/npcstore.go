@@ -59,6 +59,11 @@ var (
 		return util.FilePath(configs.GetFilePathsConfig().DataFiles.String(), `/rooms.instances/`)
 	}
 
+	// npcWriteFile and npcRemove are every sidecar and ledger write; crash
+	// tests replace them to stop the disk after a given write.
+	npcWriteFile = os.WriteFile
+	npcRemove    = os.Remove
+
 	npcStoreMu    sync.Mutex
 	restingIndex  = map[ids.ID]int{}    // resting NPC ID to its room ID
 	endingsLedger = map[ids.ID]ending{} // ended NPC ID to its ending
@@ -246,7 +251,7 @@ func deleteRoomNPCFile(zone string, roomId int) error {
 	path := filepath.Clean(roomNPCPath(zone, roomId))
 	npcStoreMu.Lock()
 	defer npcStoreMu.Unlock()
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+	if err := npcRemove(path); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	setSidecarHeldLocked(path, nil)
@@ -339,23 +344,38 @@ func endRestingIn(roomId int, saved []mobs.SavedNPC, round uint64) []ids.ID {
 
 // endDeletedRoomNPCs settles a room being deleted: its resting NPCs end and
 // its sidecar goes. NPCs live in it stay live, as a room delete has always
-// left them.
+// left them. The sidecar goes before the endings are written, so a crash in
+// between leaves slots that log their NPC lost, never NPCs that come back.
+// An old copy it holds of an NPC now live in another room is first saved by
+// that room, so deleting the file never leaves the NPC on disk nowhere.
 func endDeletedRoomNPCs(zone string, roomId int) {
-	saved := readRoomNPCFile(zone, roomId).Resting
+	f := readRoomNPCFile(zone, roomId)
+	for _, s := range f.Resting {
+		m := mobs.GetInstance(s.Template.Character.Id)
+		if m == nil || m.Character.RoomId == roomId {
+			continue
+		}
+		if other := roomManager.rooms[m.Character.RoomId]; other != nil {
+			if err := saveRoomNPCs(other); err != nil {
+				mudlog.Error("npc store: room not saved before a delete", "room", other.RoomId, "error", err)
+			}
+		}
+	}
+	saved := f.Resting
 	if r := roomManager.rooms[roomId]; r != nil {
 		saved = append(saved, r.resting...)
 	}
-	if ended := endRestingIn(roomId, saved, util.GetRoundCount()); len(ended) > 0 {
-		mudlog.Info("npc store: room deleted, its resting NPCs ended", "room", roomId, "count", len(ended))
-	}
 	if err := deleteRoomNPCFile(zone, roomId); err != nil {
 		mudlog.Error("npc store: sidecar of deleted room not removed", "room", roomId, "error", err)
+	}
+	if ended := endRestingIn(roomId, saved, util.GetRoundCount()); len(ended) > 0 {
+		mudlog.Info("npc store: room deleted, its resting NPCs ended", "room", roomId, "count", len(ended))
 	}
 }
 
 func writeNPCFileAt(path string, f roomNPCFile) error {
 	if len(f.Resting) == 0 && len(f.Slots) == 0 {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		if err := npcRemove(path); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 		return nil
@@ -367,7 +387,7 @@ func writeNPCFileAt(path string, f roomNPCFile) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0777)
+	return npcWriteFile(path, data, 0777)
 }
 
 // BuildRestingIndex scans every *.npcs.yaml under rooms.instances and fills
@@ -427,7 +447,8 @@ func BuildRestingIndex() error {
 
 // slotNPC says what a slot's NPC is doing (decision 14): live anywhere,
 // resting anywhere, or ended; an NPC that is none of these is lost. An ended
-// NPC's ending is consumed (and the ledger saved).
+// NPC's ending is read, not consumed: settleSlotsSaved consumes it once the
+// freed slot is on disk.
 func slotNPC(id ids.ID) (state string, end ending) {
 	if mobs.GetInstance(id) != nil {
 		return "live", ending{}
@@ -435,16 +456,44 @@ func slotNPC(id ids.ID) (state string, end ending) {
 	if IsResting(id) {
 		return "resting", ending{}
 	}
-	if e, ok := takeEnding(id); ok {
+	if e, ok := peekEnding(id); ok {
 		return "ended", e
 	}
 	return "lost", ending{}
+}
+
+// slotSettling collects what a pass of settleSlot over a room's slots freed.
+type slotSettling struct {
+	freed bool     // a slot was freed, so the sidecar is rewritten
+	ended []ids.ID // endings to consume once it is
+}
+
+// settle applies settleSlot to slot idx and records what it freed.
+func (s *slotSettling) settle(r *Room, idx int, roundNow uint64) {
+	npc := r.SpawnInfo[idx].InstanceId
+	state := r.settleSlot(idx, roundNow)
+	if state == "ended" || state == "lost" {
+		s.freed = true
+	}
+	if state == "ended" {
+		s.ended = append(s.ended, npc)
+	}
+}
+
+// save rewrites the room's sidecar if a slot was freed, and only then
+// consumes the endings that freed them: a crash in between leaves an ending
+// no slot will read, never a slot that owns an NPC that is nowhere.
+func (s *slotSettling) save(r *Room) {
+	if s.freed {
+		r.settleSlotsSaved(s.ended)
+	}
 }
 
 // settleSlot applies slotNPC to spawn slot idx. A live or resting NPC keeps
 // its slot. An ended one frees it: at once after an admin's despawn, else
 // from the round it ended, plus the respawn rate. A lost one is logged and
 // frees it from roundNow. It returns the state seen ("" for an empty slot).
+// Callers go through slotSettling, which consumes the ending.
 func (r *Room) settleSlot(idx int, roundNow uint64) string {
 	si := r.SpawnInfo[idx]
 	if si.InstanceId.IsZero() {
@@ -468,13 +517,15 @@ func (r *Room) settleSlot(idx int, roundNow uint64) string {
 	return state
 }
 
-// settleSlotsSaved rewrites the room's sidecar after settleSlot freed a slot,
-// so a consumed ending is never left on disk as a slot that still owns the
-// NPC (which a restart would call lost).
-func (r *Room) settleSlotsSaved() {
+// settleSlotsSaved rewrites the room's sidecar after settleSlot freed a slot
+// (with its wait), then consumes the endings that freed them. If the sidecar
+// is not written the endings stay, so a restart still reads them.
+func (r *Room) settleSlotsSaved(ended []ids.ID) {
 	if err := saveRoomNPCs(r); err != nil {
 		mudlog.Error("npc store: sidecar not rewritten after a slot freed", "room", r.RoomId, "error", err)
+		return
 	}
+	takeEndings(ended)
 }
 
 // indexResting records that the NPC rests in roomId, unless the index already
@@ -678,7 +729,7 @@ func LoadEndings() error {
 func saveEndingsLocked() error {
 	path := endingsPath()
 	if len(endingsLedger) == 0 {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		if err := npcRemove(path); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 		return nil
@@ -690,7 +741,7 @@ func saveEndingsLocked() error {
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0777)
+	return npcWriteFile(path, data, 0777)
 }
 
 // saveEndings writes the ledger to disk.
@@ -713,16 +764,21 @@ func RecordEnding(id ids.ID, round uint64, immediate bool) {
 // NPCEnded is called as an NPC ends (death, or an admin's despawn with
 // immediate set), before it leaves memory. An NPC with a spawn slot gets a
 // ledger entry for that slot to read; one without ends with none, so the
-// ledger holds only entries a slot will consume. Either way it leaves the
-// sidecar it was last saved in, so a crash cannot bring it back.
+// ledger holds only entries a slot will consume. Either way it first leaves
+// every sidecar holding it, so a crash before the ledger write leaves a slot
+// that logs its NPC lost, never an NPC that comes back.
 func NPCEnded(m *mobs.Mob, immediate bool) {
 	id := m.Character.Id
-	if m.SpawnSlot > 0 {
-		RecordEnding(id, util.GetRoundCount(), immediate)
-	}
+	round := util.GetRoundCount()
 	npcStoreMu.Lock()
 	defer npcStoreMu.Unlock()
 	forgetNPCLocked(id)
+	if m.SpawnSlot > 0 {
+		endingsLedger[id] = ending{Round: round, Immediate: immediate}
+		if err := saveEndingsLocked(); err != nil {
+			mudlog.Error("NPCEnded", "id", id.String(), "error", err)
+		}
+	}
 }
 
 // RestNPC rests one live NPC in this room (decision 15: boredom and charm
@@ -762,8 +818,38 @@ func (r *Room) RestNPC(m *mobs.Mob) bool {
 	return true
 }
 
-// takeEnding reads and removes an NPC's ending (a spawn slot consumes it) and
-// saves the ledger.
+// peekEnding reads an NPC's ending without consuming it.
+func peekEnding(id ids.ID) (ending, bool) {
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	e, ok := endingsLedger[id]
+	return e, ok
+}
+
+// takeEndings removes these NPCs' endings (spawn slots consumed them) and
+// saves the ledger once.
+func takeEndings(ended []ids.ID) {
+	if len(ended) == 0 {
+		return
+	}
+	npcStoreMu.Lock()
+	defer npcStoreMu.Unlock()
+	changed := false
+	for _, id := range ended {
+		if _, ok := endingsLedger[id]; ok {
+			delete(endingsLedger, id)
+			changed = true
+		}
+	}
+	if !changed {
+		return
+	}
+	if err := saveEndingsLocked(); err != nil {
+		mudlog.Error("takeEndings", "count", len(ended), "error", err)
+	}
+}
+
+// takeEnding reads and removes an NPC's ending and saves the ledger.
 func takeEnding(id ids.ID) (ending, bool) {
 	npcStoreMu.Lock()
 	defer npcStoreMu.Unlock()
