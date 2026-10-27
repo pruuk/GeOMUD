@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 )
@@ -44,9 +45,27 @@ func (co *copyoverCheck) run(ctx context.Context, addr string, adm adminLogin, t
 		return
 	}
 	defer s.c.Close()
-	s.doFor("copyover: run", 2*time.Minute, "copyover", "Copyover complete.")
+	s.c.send("copyover")
+	failed := ""
+	s.err = s.c.until(ctx, 2*time.Minute, "copyover: run", func(got string, _ bool) (bool, string) {
+		if i := strings.Index(got, "Copyover failed:"); i >= 0 {
+			failed = strings.TrimSpace(strings.SplitN(got[i:], "\n", 2)[0])
+			return true, ""
+		}
+		if strings.Contains(got, "Copyover complete.") {
+			return true, ""
+		}
+		return false, `no "Copyover complete."`
+	})
+	if s.err == nil && failed != "" {
+		s.err = &stepError{"copyover: run", failed, s.c.screen()}
+	}
 	if s.err == nil {
-		s.err = srv.adoptCopyoverChild(time.Minute)
+		// The resumed connection drops a line within Timing.TurnMs of its resume (main.go resumeRestoredConnection sets lastInput), as a new connection does.
+		s.c.lastSend = time.Now()
+	}
+	if s.err == nil {
+		s.err = srv.adoptCopyoverChild(ctx, time.Minute)
 	}
 	if s.err == nil {
 		co.ran = true

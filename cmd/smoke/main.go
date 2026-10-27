@@ -159,7 +159,7 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 			copyoverFailed = true
 			fmt.Printf("smoke: FAIL copyover step: %v\n", co.err)
 		} else {
-			fmt.Println("smoke: copyover step ran: every bot kept its connection, room and item")
+			fmt.Println("smoke: copyover step ran (each bot's checks are in the bot results)")
 		}
 	}
 	total := time.Since(start)

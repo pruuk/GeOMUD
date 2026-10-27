@@ -218,6 +218,10 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, 
 		arrive()
 		if co.wait(ctx) {
 			s.wait("copyover: complete", "Copyover complete.")
+			if s.err == nil {
+				// The resumed connection drops a line within Timing.TurnMs of its resume (main.go resumeRestoredConnection sets lastInput), as a new connection does.
+				s.c.lastSend = time.Now()
+			}
 			s.do("copyover: still in the start room", "look", startRoomTitle)
 			s.field("copyover: still holds the item", "inventory", "Carrying:", smokeItem)
 			if s.err != nil {

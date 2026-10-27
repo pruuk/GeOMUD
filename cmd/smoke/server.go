@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -123,7 +124,7 @@ func (s *server) logPath() string { return filepath.Join(s.dir, "server.log") }
 // adoptCopyoverChild waits for the server copyover started to log its start
 // (it inherits the log file) and records its PID so stop kills it: the
 // process this program started exits during copyover.
-func (s *server) adoptCopyoverChild(timeout time.Duration) error {
+func (s *server) adoptCopyoverChild(ctx context.Context, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for {
 		b, _ := os.ReadFile(s.logPath())
@@ -134,7 +135,11 @@ func (s *server) adoptCopyoverChild(timeout time.Duration) error {
 		if time.Now().After(deadline) {
 			return fmt.Errorf("copyover: no new server start in the log after %s", timeout)
 		}
-		time.Sleep(200 * time.Millisecond)
+		select {
+		case <-time.After(200 * time.Millisecond):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 }
 
@@ -183,6 +188,12 @@ func (s *server) stop(showLog bool) {
 	if s.cmd != nil && s.cmd.Process != nil {
 		s.cmd.Process.Kill()
 		<-s.done
+		// A copyover child started before a failed step is not in children yet.
+		if b, err := os.ReadFile(s.logPath()); err == nil {
+			if pid := lastStartPid(string(b)); pid != 0 && pid != s.cmd.Process.Pid && !slices.Contains(s.children, pid) {
+				s.children = append(s.children, pid)
+			}
+		}
 	}
 	for _, pid := range s.children {
 		if p, err := os.FindProcess(pid); err == nil {
