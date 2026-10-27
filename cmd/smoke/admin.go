@@ -25,7 +25,7 @@ const recoveryRoomTitle = "Waiting room"
 // player change before any other command works. The change is handled in
 // changePasswordIfForced.
 func prepareItems(ctx context.Context, addr, user, pass string, n int, timeout time.Duration) error {
-	c, err := dial(ctx, addr, timeout)
+	c, err := dial(ctx, addr, timeout, nil)
 	if err != nil {
 		return &stepError{"admin: connect", err.Error(), ""}
 	}

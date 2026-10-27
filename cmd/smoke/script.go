@@ -126,8 +126,9 @@ func (s *script) quit(step string) {
 //
 // It also returns the GMCP package names the bot received (both connections
 // together), and fails the bot unless they include Char, Room and Comm packages.
-func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) (map[string]int, error) {
-	c, err := dial(ctx, addr, timeout)
+// rec, when not nil, records the bot's transcript across both connections.
+func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, rec *recorder) (map[string]int, error) {
+	c, err := dial(ctx, addr, timeout, rec)
 	if err != nil {
 		return nil, &stepError{"connect", err.Error(), ""}
 	}
@@ -173,7 +174,7 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration) 
 		return s.gmcp, s.err
 	}
 
-	c, err = dial(ctx, addr, timeout)
+	c, err = dial(ctx, addr, timeout, rec)
 	if err != nil {
 		return s.gmcp, &stepError{"reconnect", err.Error(), ""}
 	}

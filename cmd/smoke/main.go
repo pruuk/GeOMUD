@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sort"
 	"sync"
 	"syscall"
@@ -39,6 +40,7 @@ func run() int {
 	serverLog := flag.String("server-log", "", "launch mode: copy the server's log to this file when the run ends")
 	adminUser := flag.String("admin-user", "admin", "admin account that spawns the bots' items (launch mode: the temp world's stock admin)")
 	adminPass := flag.String("admin-pass", "password", "admin's current password (a forced first-login change sets it to this same text)")
+	transcript := flag.String("transcript", "", "directory to write each bot's transcript to (bot<N>.txt); empty writes none")
 	flag.Parse()
 	if *bots < 1 {
 		fmt.Fprintln(os.Stderr, "smoke: -bots must be at least 1")
@@ -63,14 +65,14 @@ func run() int {
 		fmt.Printf("smoke: server pid %d listening on %s (ready in %s)\n",
 			srv.cmd.Process.Pid, srv.addr, time.Since(start).Round(time.Millisecond))
 		*addr = srv.addr
-		passed = runBots(ctx, *addr, *bots, *timeout, *hold, adm)
+		passed = runBots(ctx, *addr, *bots, *timeout, *hold, adm, *transcript)
 		if !passed {
 			return 1
 		}
 		return 0
 	}
 
-	if !runBots(ctx, *addr, *bots, *timeout, *hold, adm) {
+	if !runBots(ctx, *addr, *bots, *timeout, *hold, adm, *transcript) {
 		return 1
 	}
 	return 0
@@ -88,7 +90,13 @@ type adminLogin struct{ user, pass string }
 
 // runBots has the admin spawn one item per bot, plays n bots at once and
 // prints a summary. It reports whether every bot passed.
-func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duration, adm adminLogin) bool {
+func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duration, adm adminLogin, transcriptDir string) bool {
+	if transcriptDir != "" {
+		if err := os.MkdirAll(transcriptDir, 0o755); err != nil {
+			fmt.Printf("smoke: FAIL transcript dir: %v\n", err)
+			return false
+		}
+	}
 	tag := runTag()
 	fmt.Printf("smoke: %d bot(s) against %s, run tag %s\n", n, addr, tag)
 
@@ -110,7 +118,17 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 		go func() {
 			defer wg.Done()
 			t := time.Now()
-			pkgs, err := play(ctx, addr, b, timeout, hold)
+			var rec *recorder
+			if transcriptDir != "" {
+				rec = &recorder{}
+			}
+			pkgs, err := play(ctx, addr, b, timeout, hold, rec)
+			if rec != nil {
+				name := filepath.Join(transcriptDir, fmt.Sprintf("bot%d.txt", i))
+				if werr := os.WriteFile(name, []byte(rec.String()), 0o644); werr != nil && err == nil {
+					err = fmt.Errorf("write transcript: %w", werr)
+				}
+			}
 			took := time.Since(t)
 			if err == nil {
 				took -= hold // a failed bot never reached the hold
