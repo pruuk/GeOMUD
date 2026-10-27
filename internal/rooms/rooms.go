@@ -539,16 +539,14 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 	r.restoreResting()
 
 	// First ensure any mobs that should be here are spawned
+	slotFreed := false
 	for idx, spawnInfo := range r.SpawnInfo {
 
-		// Make sure to clean up any instances that may be dead
+		// A slot keeps its NPC until it ends (decision 14). A freed slot
+		// waits for the next prepare to spawn, as before.
 		if !spawnInfo.InstanceId.IsZero() {
-			// Mob gone missing. Reset the spawn info.
-			if mob := mobs.GetInstance(spawnInfo.InstanceId); mob == nil {
-				spawnInfo.InstanceId = ids.ID{}
-				spawnInfo.DespawnedRound = roundNow
-				r.SpawnInfo[idx] = spawnInfo
-				continue
+			if state := r.settleSlot(idx, roundNow); state == "ended" || state == "lost" {
+				slotFreed = true
 			}
 			continue
 		}
@@ -687,6 +685,10 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 
 	}
 
+	if slotFreed {
+		r.settleSlotsSaved()
+	}
+
 	// Reach out one more room to prepare those exit rooms
 	if !checkAdjacentRooms {
 		return
@@ -716,25 +718,22 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 func (r *Room) CleanupMobSpawns(noCooldown bool) {
 
 	roundNow := util.GetRoundCount()
-	// First ensure any mobs that should be here are spawned
-	for idx, spawnInfo := range r.SpawnInfo {
-
-		// Make sure to clean up any instances that may be dead
-		if !spawnInfo.InstanceId.IsZero() {
-
-			if mob := mobs.GetInstance(spawnInfo.InstanceId); mob == nil {
-
-				spawnInfo.InstanceId = ids.ID{}
-				if noCooldown {
-					spawnInfo.DespawnedRound = 0
-				} else {
-					spawnInfo.DespawnedRound = roundNow
-				}
-
+	slotFreed := false
+	for idx := range r.SpawnInfo {
+		switch r.settleSlot(idx, roundNow) {
+		case "ended":
+			slotFreed = true
+		case "lost":
+			slotFreed = true
+			// Until deaths and despawns record endings (slice 2b Task 6),
+			// they reach here as lost; keep a despawn's zero cooldown.
+			if noCooldown {
+				r.SpawnInfo[idx].DespawnedRound = 0
 			}
 		}
-
-		r.SpawnInfo[idx] = spawnInfo
+	}
+	if slotFreed {
+		r.settleSlotsSaved()
 	}
 }
 
@@ -2060,17 +2059,15 @@ func (r *Room) RoundTick() {
 	// Done adding mutator buffs
 	//
 
-	for idx, spawnInfo := range r.SpawnInfo {
-
-		// Make sure to clean up any instances that may be dead
-		if !spawnInfo.InstanceId.IsZero() {
-			if mob := mobs.GetInstance(spawnInfo.InstanceId); mob == nil {
-				spawnInfo.InstanceId = ids.ID{}
-				spawnInfo.DespawnedRound = roundNow
-				r.SpawnInfo[idx] = spawnInfo
-			}
+	// A slot keeps its NPC until it ends (decision 14)
+	slotFreed := false
+	for idx := range r.SpawnInfo {
+		if state := r.settleSlot(idx, roundNow); state == "ended" || state == "lost" {
+			slotFreed = true
 		}
-
+	}
+	if slotFreed {
+		r.settleSlotsSaved()
 	}
 
 	// If any players are in the room

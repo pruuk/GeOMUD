@@ -241,6 +241,58 @@ func BuildRestingIndex() error {
 	return nil
 }
 
+// slotNPC says what a slot's NPC is doing (decision 14): live anywhere,
+// resting anywhere, or ended; an NPC that is none of these is lost. An ended
+// NPC's ending is consumed (and the ledger saved).
+func slotNPC(id ids.ID) (state string, end ending) {
+	if mobs.GetInstance(id) != nil {
+		return "live", ending{}
+	}
+	if IsResting(id) {
+		return "resting", ending{}
+	}
+	if e, ok := takeEnding(id); ok {
+		return "ended", e
+	}
+	return "lost", ending{}
+}
+
+// settleSlot applies slotNPC to spawn slot idx. A live or resting NPC keeps
+// its slot. An ended one frees it: at once after an admin's despawn, else
+// from the round it ended, plus the respawn rate. A lost one is logged and
+// frees it from roundNow. It returns the state seen ("" for an empty slot).
+func (r *Room) settleSlot(idx int, roundNow uint64) string {
+	si := r.SpawnInfo[idx]
+	if si.InstanceId.IsZero() {
+		return ""
+	}
+	state, end := slotNPC(si.InstanceId)
+	switch state {
+	case "live", "resting":
+		return state
+	case "ended":
+		si.DespawnedRound = end.Round
+		if end.Immediate {
+			si.DespawnedRound = 0
+		}
+	default:
+		mudlog.Error("npc store: slot lost its NPC", "room", r.RoomId, "npc", si.InstanceId.String())
+		si.DespawnedRound = roundNow
+	}
+	si.InstanceId = ids.ID{}
+	r.SpawnInfo[idx] = si
+	return state
+}
+
+// settleSlotsSaved rewrites the room's sidecar after settleSlot freed a slot,
+// so a consumed ending is never left on disk as a slot that still owns the
+// NPC (which a restart would call lost).
+func (r *Room) settleSlotsSaved() {
+	if err := saveRoomNPCs(r); err != nil {
+		mudlog.Error("npc store: sidecar not rewritten after a slot freed", "room", r.RoomId, "error", err)
+	}
+}
+
 // indexResting records that the NPC rests in roomId, unless the index already
 // places it somewhere.
 func indexResting(id ids.ID, roomId int) {
