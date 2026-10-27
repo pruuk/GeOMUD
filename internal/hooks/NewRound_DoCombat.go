@@ -382,6 +382,12 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 			if !targetFound {
 				user.SendText("Your target can't be found.")
 				user.Character.Aggro = nil
+				// A vanished target may be a player who logged out mid-fight, whose old
+				// path queued this event. Its kind is gone with it, so it fires for any
+				// vanished target.
+				if defMob == nil {
+					events.AddToQueue(events.AggroChanged{UserId: user.UserId, RoomId: user.Character.RoomId})
+				}
 				continue
 			}
 
