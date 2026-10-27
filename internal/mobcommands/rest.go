@@ -7,8 +7,8 @@ import (
 )
 
 // Rest takes the NPC out of memory without ending it (Phase 4b decision 15):
-// it rests in its current room and comes back when that room is next
-// prepared. Boredom and charm expiry use it. In an ephemeral room, where
+// it rests in its current room and comes back only when that room is next
+// loaded from disk (decision 16). Boredom and charm expiry use it. In an ephemeral room, where
 // nothing is saved, it cannot rest and ends as a death would: a slot that
 // owns it refills after its respawn rate.
 func Rest(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {

@@ -10,12 +10,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRestNPCRestsOneNPCAndPrepareRestoresIt(t *testing.T) {
+// loadedRoom brings room roomId into memory from disk, as LoadRoom does.
+func loadedRoom(roomId int) *Room {
+	r := memRoom(roomId)
+	loadRoomNPCs(r)
+	return r
+}
+
+func TestRestNPCInALoadedRoomStaysRestingWhileTheRoomStays(t *testing.T) {
 	persistSetup(t)
 	id := liveTestNPC(t, 5, 1, 0)
 	other := liveTestNPC(t, 6, 1, 0)
-	r := memRoom(4100)
+	r := loadedRoom(4100)
 	r.bodies = append(r.bodies, id, other)
+	r.Prepare(false) // a player arrived: the room's first prepare after its load
 
 	require.True(t, r.RestNPC(mobs.GetInstance(id)))
 
@@ -26,10 +34,62 @@ func TestRestNPCRestsOneNPCAndPrepareRestoresIt(t *testing.T) {
 	assert.ElementsMatch(t, []ids.ID{id, other}, restingIds(readRoomNPCFile(persistZone, 4100)),
 		"the sidecar has it as resting and the other as live, once each")
 
+	// Rounds pass: prepares (as HandleRespawns and arrivals run them) and saves.
+	for i := 0; i < 5; i++ {
+		r.Prepare(false)
+		r.CleanupMobSpawns()
+		require.NoError(t, saveRoomNPCs(r))
+	}
+	assert.Nil(t, mobs.GetInstance(id), "it does not come back into a room that stayed in memory")
+	assert.True(t, IsResting(id))
+	assert.Equal(t, []ids.ID{other}, r.GetMobs())
+	assert.ElementsMatch(t, []ids.ID{id, other}, restingIds(readRoomNPCFile(persistZone, 4100)),
+		"and later saves keep it resting")
+}
+
+func TestRestNPCComesBackOnceAfterItsRoomUnloadsAndLoads(t *testing.T) {
+	persistSetup(t)
+	id := liveTestNPC(t, 5, 1, 0)
+	other := liveTestNPC(t, 6, 1, 0)
+	r := loadedRoom(4100)
+	r.bodies = append(r.bodies, id, other)
 	r.Prepare(false)
-	assert.NotNil(t, mobs.GetInstance(id))
+	require.True(t, r.RestNPC(mobs.GetInstance(id)))
+
+	removeRoomFromMemory(r)
+	assert.Nil(t, mobs.GetInstance(id))
+	assert.Nil(t, mobs.GetInstance(other))
+	assert.ElementsMatch(t, []ids.ID{id, other}, restingIds(readRoomNPCFile(persistZone, 4100)),
+		"the unload keeps it resting, once")
+
+	r2 := loadedRoom(4100)
+	r2.Prepare(false)
+	assert.NotNil(t, mobs.GetInstance(id), "the first prepare after the load restores it")
+	assert.NotNil(t, mobs.GetInstance(other))
 	assert.False(t, IsResting(id))
-	assert.ElementsMatch(t, []ids.ID{id, other}, r.GetMobs())
+	assert.ElementsMatch(t, []ids.ID{id, other}, r2.GetMobs())
+
+	r2.Prepare(false)
+	assert.ElementsMatch(t, []ids.ID{id, other}, r2.GetMobs(), "once")
+}
+
+func TestRestNPCIntoALoadedButUnpreparedRoomWaitsForTheNextLoad(t *testing.T) {
+	persistSetup(t)
+	before := liveTestNPC(t, 5, 1, 0)
+	r := memRoom(4100)
+	r.bodies = append(r.bodies, before)
+	removeRoomFromMemory(r) // before rests on disk
+
+	r2 := loadedRoom(4100)
+	late := liveTestNPC(t, 6, 1, 0)
+	r2.bodies = append(r2.bodies, late)
+	require.True(t, r2.RestNPC(mobs.GetInstance(late))) // rested before the room's first prepare
+
+	r2.Prepare(false)
+	assert.NotNil(t, mobs.GetInstance(before), "what the load read comes back")
+	assert.Nil(t, mobs.GetInstance(late), "what rested after the load does not")
+	assert.True(t, IsResting(late))
+	assert.ElementsMatch(t, []ids.ID{before, late}, restingIds(readRoomNPCFile(persistZone, 4100)))
 }
 
 func TestNPCEndedRecordsOnlySlotNPCsAndLeavesItsSidecar(t *testing.T) {

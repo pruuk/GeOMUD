@@ -637,6 +637,7 @@ func loadRoomNPCs(r *Room) {
 	}
 	f := readRoomNPCFile(r.Zone, r.RoomId)
 	r.resting = nil
+	r.restoreDue = nil
 	for _, s := range f.Resting {
 		id := s.Template.Character.Id
 		if mobs.GetInstance(id) != nil {
@@ -646,6 +647,12 @@ func loadRoomNPCs(r *Room) {
 		}
 		r.resting = append(r.resting, s)
 		indexResting(id, r.RoomId)
+		// The room is loading from disk: its first prepare brings these
+		// back (decision 16).
+		if r.restoreDue == nil {
+			r.restoreDue = map[ids.ID]bool{}
+		}
+		r.restoreDue[id] = true
 	}
 	for _, s := range f.Slots {
 		if s.Index < len(r.SpawnInfo) && r.SpawnInfo[s.Index].MobId == s.MobId {
@@ -662,6 +669,13 @@ func loadRoomNPCs(r *Room) {
 // index and MobId.
 func carryNPCState(from, to *Room) {
 	to.resting = append([]mobs.SavedNPC(nil), from.resting...)
+	if len(from.restoreDue) > 0 {
+		// Loaded but not yet prepared: its first prepare still restores them.
+		to.restoreDue = map[ids.ID]bool{}
+		for id := range from.restoreDue {
+			to.restoreDue[id] = true
+		}
+	}
 	for idx := range to.SpawnInfo {
 		if idx < len(from.SpawnInfo) && to.SpawnInfo[idx].InstanceId.IsZero() && from.SpawnInfo[idx].MobId == to.SpawnInfo[idx].MobId {
 			to.SpawnInfo[idx].InstanceId = from.SpawnInfo[idx].InstanceId
@@ -672,15 +686,25 @@ func carryNPCState(from, to *Room) {
 	}
 }
 
-// restoreResting brings a room's resting NPCs back into memory and into the
-// room, then rewrites its sidecar. An NPC that cannot be restored (it is
-// already live, or the save is bad) is logged and dropped.
+// restoreResting runs on the room's first prepare after it loaded from disk
+// (decision 16): the resting NPCs read from its sidecar then come back into
+// memory and into the room, and its sidecar is rewritten. An NPC rested into
+// the room while it stayed in memory stays resting until the room unloads
+// and loads again. An NPC that cannot be restored (it is already live, or the
+// save is bad) is logged and dropped.
 func (r *Room) restoreResting() {
-	if len(r.resting) == 0 {
+	due := r.restoreDue
+	r.restoreDue = nil // never again for this room instance
+	if len(due) == 0 {
 		return
 	}
+	var still []mobs.SavedNPC
 	for _, s := range r.resting {
 		id := s.Template.Character.Id
+		if !due[id] {
+			still = append(still, s)
+			continue
+		}
 		m, err := mobs.Restore(s)
 		if err != nil {
 			unindexResting(id, r.RoomId)
@@ -696,7 +720,7 @@ func (r *Room) restoreResting() {
 		r.removeBody(id) // never listed twice
 		r.bodies = append(r.bodies, id)
 	}
-	r.resting = nil
+	r.resting = still
 	if r.MobCt() > 0 {
 		roomManager.roomsWithMobs[r.RoomId] = r.MobCt()
 	}
@@ -793,8 +817,11 @@ func NPCEnded(m *mobs.Mob, immediate bool) {
 
 // RestNPC rests one live NPC in this room (decision 15: boredom and charm
 // expiry): saved into the room's sidecar, out of the room and out of memory,
-// listed in the resting index. No ending. It reports false, leaving the NPC
-// live, for an ephemeral room (nothing there is saved) or a failed save.
+// listed in the resting index. No ending. It stays resting while the room
+// stays in memory, written by each of its saves, and comes back on the first
+// prepare after the room unloads and loads again (decision 16). It reports
+// false, leaving the NPC live, for an ephemeral room (nothing there is saved)
+// or a failed save.
 func (r *Room) RestNPC(m *mobs.Mob) bool {
 	if r.IsEphemeral() {
 		return false

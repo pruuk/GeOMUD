@@ -94,6 +94,7 @@ type Room struct {
 	lastVisited   uint64            // last round a visitor was in the room
 	tempDataStore map[string]any    // Temporary data store for the room
 	resting       []mobs.SavedNPC   // NPCs saved to disk and out of memory that belong to this room (Phase 4b decision 12). Saved in the sidecar, not the instance diff.
+	restoreDue    map[ids.ID]bool   // resting NPCs read from disk when the room loaded; its first Prepare restores them, and only them (decision 16)
 }
 
 type TrainingRange struct {
@@ -535,7 +536,8 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 		}
 	}
 
-	// NPCs resting here come back before any slot is considered
+	// On the first prepare after the room loaded from disk, the NPCs resting
+	// here come back before any slot is considered (decision 16)
 	r.restoreResting()
 
 	// First ensure any mobs that should be here are spawned

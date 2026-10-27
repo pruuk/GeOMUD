@@ -91,6 +91,10 @@ Counts are non-test Go files under `internal`, `modules` and the repo root unles
     it is saved with the room it is in and comes back later, the same as an NPC in a room that
     unloads. Only death, and despawn by an admin, end an NPC. (Replaces decision 14's "despawned by
     cleanup is death" for boredom and charm expiry.)
+16. **A resting NPC comes back only when its room is next loaded from disk**, whatever rested it
+    (room unload, boredom, charm expiry, or a later cause). It never returns into a room that stayed
+    in memory, so a farewell is not undone a round later. (Calabe, 2026-10-27. Nothing charms an NPC
+    today and boredom needs more than 100 live NPCs; the rule is set now so later paths share it.)
 
 ## 1. Actor model
 
