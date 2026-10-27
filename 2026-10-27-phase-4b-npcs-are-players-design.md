@@ -87,6 +87,10 @@ Counts are non-test Go files under `internal`, `modules` and the repo root unles
     time. Unloading is not death; being killed, or despawned by an admin or cleanup, is. A slot
     respawns only after a recorded death and its respawn time. An index records where each saved
     NPC is; a slot whose NPC is neither live nor in the index logs an error and respawns.
+15. **Leaving memory is never an ending.** Boredom (the memory valve) and charm expiry unload an NPC:
+    it is saved with the room it is in and comes back later, the same as an NPC in a room that
+    unloads. Only death, and despawn by an admin, end an NPC. (Replaces decision 14's "despawned by
+    cleanup is death" for boredom and charm expiry.)
 
 ## 1. Actor model
 
