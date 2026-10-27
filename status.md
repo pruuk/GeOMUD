@@ -1,11 +1,13 @@
 # Status (updated 2026-10-27)
 
 ## Now
-- GeOMUD branding for players: `help about`, login splash, `Server.MudName` (PR #14, branch
-  `docs/about-template`). Strip Phases 0-4 are merged (`gomud_strip_plan.md`)
+- Phase 4b (NPCs are players): design spec `2026-10-27-phase-4b-npcs-are-players-design.md` written,
+  approved 2026-10-27 (branch `strip/phase-4b-npcs-are-players`). Seven slices, one plan each.
+  Slice 1 plan `2026-10-27-phase-4b-1-actors-plan.md` in Calabe's review.
+  Strip Phases 0-4 and GeOMUD player branding (PR #14) are merged (`gomud_strip_plan.md`)
 
 ## Next
-1. Phase 4b: NPCs are players (decision 4). Starts with a design spec for Calabe's review
+1. Phase 4b implementation, staged per the spec
 2. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
    `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
    `professions`/`skills`/`spells` world folders, `set shopstyle`, `help spell` and the loot goblin
@@ -17,9 +19,11 @@
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
-- Go-ahead to start the Phase 4b design
+- Review of the Phase 4b slice 1 plan
 
 ## Watch
+- Login splash globe (`templates/login/connect-splash.template`): Calabe called it weak, fine for
+  now (2026-10-27). Redo it when the splash is next touched
 - Phase 5 seam: `buffs` has 11 importers; `characters` imports six rules packages (buffs, races,
   skills, spells, statmods, stats)
 - 3 Go tests fail on Windows only (`geomud-verifying` lists them); Linux CI is the reference
