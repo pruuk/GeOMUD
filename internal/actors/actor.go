@@ -3,11 +3,14 @@
 // Spec: 2026-10-27-phase-4b-npcs-are-players-design.md.
 package actors
 
-import "github.com/GoMudEngine/GoMud/internal/characters"
+import (
+	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/ids"
+)
 
-// ActorId identifies a live actor. It is runtime only and never saved: a
-// player's ActorId differs between logins. Zero means no actor.
-type ActorId int
+// ActorId identifies a live actor. It is the body's own ID (Character.Id), so
+// a player keeps the same ActorId across logins. The zero ID means no actor.
+type ActorId = ids.ID
 
 // Actor is one live body in the world.
 type Actor struct {

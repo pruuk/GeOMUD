@@ -26,6 +26,9 @@ func Init() {
 
 func accountOnline(u *accounts.Account) {
 	a, spawned, rebound := bindAccount(u)
+	if a == nil {
+		return
+	}
 	switch {
 	case spawned:
 		mudlog.Debug("actor", "event", "spawned", "kind", "player", "actorId", a.Id, "userId", u.UserId)
@@ -42,11 +45,14 @@ func accountOffline(u *accounts.Account) {
 
 func mobSpawned(m *mobs.Mob) {
 	a := Spawn(&m.Character, NewBehaviourController(m))
-	mudlog.Debug("actor", "event", "spawned", "kind", "npc", "actorId", a.Id, "mobInstanceId", m.Character.Id)
+	if a == nil {
+		return
+	}
+	mudlog.Debug("actor", "event", "spawned", "kind", "npc", "actorId", a.Id)
 }
 
-func mobDestroyed(instanceId ids.ID) {
-	if a := unbindMob(instanceId); a != nil {
-		mudlog.Debug("actor", "event", "removed", "kind", "npc", "actorId", a.Id, "mobInstanceId", instanceId)
+func mobDestroyed(id ids.ID) {
+	if a := unbindMob(id); a != nil {
+		mudlog.Debug("actor", "event", "removed", "kind", "npc", "actorId", a.Id)
 	}
 }

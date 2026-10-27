@@ -6,6 +6,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/stretchr/testify/assert"
@@ -18,20 +19,29 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// bodyAccount is an account record whose character has the given body ID.
+func bodyAccount(userId int, body ids.ID) *accounts.Account {
+	c := characters.New()
+	c.Id = body
+	return &accounts.Account{UserId: userId, Character: c}
+}
+
 func TestAccountOnlineAndOffline(t *testing.T) {
 	Reset()
-	u := &accounts.Account{UserId: 31, Character: characters.New()}
+	body := ids.New(ids.NoCell)
+	u := bodyAccount(31, body)
 
 	accounts.OnActivate.Fire(u)
 	a := ByUserId(31)
 	require.NotNil(t, a)
 	assert.Same(t, u.Character, a.Character)
+	assert.Equal(t, body, a.Id)
 
 	accounts.OnActivate.Fire(u) // link-dead reconnect: same record
 	assert.Same(t, a, ByUserId(31))
 	assert.Len(t, All(), 1)
 
-	again := &accounts.Account{UserId: 31, Character: characters.New()} // copyover: new record
+	again := bodyAccount(31, body) // copyover: new record, same saved body
 	accounts.OnActivate.Fire(again)
 	b := ByUserId(31)
 	assert.Equal(t, a.Id, b.Id, "the same account keeps its actor")
@@ -48,23 +58,32 @@ func TestMobSpawnAndDestroy(t *testing.T) {
 	m := bodyMob()
 
 	mobs.OnInstanceCreated.Fire(m)
-	a := ByMobInstanceId(m.Character.Id)
+	a := Get(m.Character.Id)
 	require.NotNil(t, a)
 	assert.Same(t, &m.Character, a.Character)
 	assert.Nil(t, a.Controller().Account())
 
 	mobs.OnInstanceDestroyed.Fire(m.Character.Id)
-	assert.Nil(t, ByMobInstanceId(m.Character.Id))
+	assert.Nil(t, Get(m.Character.Id))
 	assert.Empty(t, All())
+}
+
+func TestMobDestroyedLeavesAPlayerActorAlone(t *testing.T) {
+	Reset()
+	u := bodyAccount(72, ids.New(ids.NoCell))
+	accounts.OnActivate.Fire(u)
+	mobs.OnInstanceDestroyed.Fire(u.Character.Id)
+	assert.NotNil(t, ByUserId(72))
 }
 
 func TestStaleLogoutDoesNotRemoveTheLiveActor(t *testing.T) {
 	Reset()
-	old := &accounts.Account{UserId: 71, Character: characters.New()}
+	body := ids.New(ids.NoCell)
+	old := bodyAccount(71, body)
 	accounts.OnActivate.Fire(old)
 	id := ByUserId(71).Id
 
-	fresh := &accounts.Account{UserId: 71, Character: characters.New()} // a new login of the same account
+	fresh := bodyAccount(71, body) // a new login of the same account
 	accounts.OnActivate.Fire(fresh)
 	accounts.OnDeactivate.Fire(old) // the old record's logout lands late
 

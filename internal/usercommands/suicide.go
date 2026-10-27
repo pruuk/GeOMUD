@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
@@ -131,8 +132,10 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 
 			rooms.MoveToRoom(user.UserId, -1)
 
+			oldBodyId := user.Character.Id
 			*user.Character = *characters.New()
 			user.Character.Id = ids.New(ids.NoCell) // a rerolled character is a new body
+			actors.BodyReplaced(user, oldBodyId)
 
 			return true, nil
 		}
