@@ -2,13 +2,14 @@
 
 ## Now
 - Phase 4b (NPCs are players), spec `2026-10-27-phase-4b-npcs-are-players-design.md`. Slice 1
-  (actors) merged (PR #16). Slice 2 (one ID space, `0x<cell>:0x<random>` IDs, decisions 10-11)
-  plan `2026-10-27-phase-4b-2-ids-plan.md` with its inventory, in Calabe's review. New slices 2b
-  (NPC and companion persistence) and 2c (item IDs) are in the spec
+  (actors) merged (PR #16). Slice 2 (one ID space, `0x<cell>:0x<random>` IDs) is in its PR,
+  branch `strip/phase-4b-2-ids`; plan and inventory in `docs/completed/2026-10-27-phase-4b-2-*`
 - Strip Phases 0-4 and GeOMUD player branding (PR #14) are merged (`gomud_strip_plan.md`)
 
 ## Next
-1. Phase 4b slice 2: execute the plan once approved; then slice 2b's plan
+1. Phase 4b slice 2b (NPC and companion persistence across copyover and restart): write its plan
+   once slice 2 merges. Its design questions: what NPC state survives, and how spawn tables count a
+   restored NPC
 2. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
    `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
    `professions`/`skills`/`spells` world folders, `set shopstyle`, `help spell` and the loot goblin
@@ -20,9 +21,17 @@
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
-- Review of the Phase 4b slice 2 plan
+- Merge of the Phase 4b slice 2 PR
 
 ## Watch
+- Phase 4b slice 2 permadeath reroll (`internal/usercommands/suicide.go`): body re-keying and event
+  ordering are unverified live, because permadeath is off in the `empty` world. Check it with
+  permadeath on (and `LivesStart: 0`) before relying on it. A reroll also orphans the old body's
+  charmed mobs until the charm expires (charm has no live callers today)
+- `_datafiles/html/admin/docs-modules.html` code examples at about lines 462, 621, 910, 1399 and
+  1492 still use upstream's `*users.UserRecord` (now `*accounts.Account`)
+- A web-created account (`apiV1CreateUser`, connection 0) stays online with an actor, and that user
+  then cannot log in by telnet ("already logged in"). Upstream behaviour
 - For the Phase 4b slice 2 plan (from the slice 1 design review, 2026-10-27):
   - Nothing outside `actors` can reach the mob behind an NPC actor without a type assertion (which
     the guard forbids). Put the body's identity on the `Actor` (for example `Actor.Mob`, nil for
