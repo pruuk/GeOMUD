@@ -1,14 +1,14 @@
 # Status (updated 2026-10-27)
 
 ## Now
-- Phase 4b (NPCs are players), spec `2026-10-27-phase-4b-npcs-are-players-design.md`, seven slices
-  with one plan each. Slice 1 (actors) is in its PR, branch `strip/phase-4b-1-actors`; plan
-  `docs/completed/2026-10-27-phase-4b-1-actors-plan.md`. Its copyover step runs only on Linux CI
+- Phase 4b (NPCs are players), spec `2026-10-27-phase-4b-npcs-are-players-design.md`. Slice 1
+  (actors) merged (PR #16). Slice 2 (one ID space, `0x<cell>:0x<random>` IDs, decisions 10-11)
+  plan `2026-10-27-phase-4b-2-ids-plan.md` with its inventory, in Calabe's review. New slices 2b
+  (NPC and companion persistence) and 2c (item IDs) are in the spec
 - Strip Phases 0-4 and GeOMUD player branding (PR #14) are merged (`gomud_strip_plan.md`)
 
 ## Next
-1. Phase 4b slice 2 (one ID space): write its plan once slice 1 merges, starting from the review
-   notes under Watch
+1. Phase 4b slice 2: execute the plan once approved; then slice 2b's plan
 2. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
    `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
    `professions`/`skills`/`spells` world folders, `set shopstyle`, `help spell` and the loot goblin
@@ -20,7 +20,7 @@
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
-- Merge of the Phase 4b slice 1 PR
+- Review of the Phase 4b slice 2 plan
 
 ## Watch
 - For the Phase 4b slice 2 plan (from the slice 1 design review, 2026-10-27):
