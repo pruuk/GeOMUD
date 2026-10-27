@@ -504,20 +504,13 @@ func unindexNPC(id ids.ID) {
 	delete(restingIndex, id)
 }
 
-// roomNPCFileOf is the sidecar a room saves now: its resting NPCs, a snapshot
-// of each live NPC in it (one entry per ID, so an NPC both resting and live
-// is written once), and every spawn slot that owns an NPC.
+// roomNPCFileOf is the sidecar a room saves now: a snapshot of each live NPC
+// in it, its resting NPCs (one entry per ID: an NPC both live and resting is
+// written as it is live, and its resting entry is dropped), every spawn slot
+// that owns an NPC and every slot still waiting after a death.
 func roomNPCFileOf(r *Room) roomNPCFile {
 	var f roomNPCFile
 	seen := map[ids.ID]bool{}
-	for _, s := range r.resting {
-		id := s.Template.Character.Id
-		if seen[id] {
-			continue
-		}
-		seen[id] = true
-		f.Resting = append(f.Resting, s)
-	}
 	for _, id := range r.mobIds() {
 		if seen[id] {
 			continue
@@ -525,6 +518,23 @@ func roomNPCFileOf(r *Room) roomNPCFile {
 		if m := mobs.GetInstance(id); m != nil {
 			seen[id] = true
 			f.Resting = append(f.Resting, mobs.Snapshot(m))
+		}
+	}
+	var resting []mobs.SavedNPC
+	for _, s := range r.resting {
+		id := s.Template.Character.Id
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		f.Resting = append(f.Resting, s)
+		resting = append(resting, s)
+	}
+	if len(resting) != len(r.resting) {
+		r.resting = resting
+		// SaveRoomInstance saves a copy: drop them from the room itself too.
+		if mem := roomManager.rooms[r.RoomId]; mem != nil && mem != r {
+			mem.resting = resting
 		}
 	}
 	roundNow := util.GetRoundCount()
@@ -724,14 +734,30 @@ func (r *Room) RestNPC(m *mobs.Mob) bool {
 		return false
 	}
 	id := m.Character.Id
-	r.resting = append(r.resting, mobs.Snapshot(m))
+	saved := mobs.Snapshot(m)
+	// Live in the room, the save writes it; one not listed here is written
+	// from its resting entry.
+	before := len(r.resting)
+	inRoom := false
+	for _, b := range r.mobIds() {
+		if b == id {
+			inRoom = true
+			break
+		}
+	}
+	if !inRoom {
+		r.resting = append(r.resting, saved)
+	}
 	if err := saveRoomNPCs(r); err != nil {
 		mudlog.Error("npc store: NPC not rested, its room could not be saved", "room", r.RoomId, "npc", id.String(), "error", err)
-		r.resting = r.resting[:len(r.resting)-1]
+		r.resting = r.resting[:before]
 		return false
 	}
 	r.RemoveMob(id)
 	mobs.Rest(id)
+	if inRoom {
+		r.resting = append(r.resting, saved)
+	}
 	indexResting(id, r.RoomId)
 	return true
 }

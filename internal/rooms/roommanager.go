@@ -15,7 +15,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/exit"
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
-	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -527,27 +526,21 @@ func removeRoomFromMemory(r *Room) {
 	}
 
 	// Leaving memory is never an ending (decision 15): every live NPC in the
-	// room rests here. Save first; only then take them out of memory.
-	restingBefore := len(room.resting)
-	resting := []ids.ID{}
-	for _, mobId := range room.mobIds() {
-		if m := mobs.GetInstance(mobId); m != nil {
-			room.resting = append(room.resting, mobs.Snapshot(m))
-			resting = append(resting, mobId)
-		}
-	}
-
+	// room rests here. Save first (the save writes each live NPC); only then
+	// take them out of memory.
 	if err := saveRoomNPCs(room); err != nil {
 		mudlog.Error("npc store: room kept in memory, its NPCs could not be saved", "room", room.RoomId, "error", err)
-		room.resting = room.resting[:restingBefore]
 		return
 	}
 
 	saveRoomInstanceData(*room)
 
-	for _, mobId := range resting {
-		mobs.Rest(mobId)
-		indexResting(mobId, room.RoomId)
+	for _, mobId := range room.mobIds() {
+		if m := mobs.GetInstance(mobId); m != nil {
+			room.resting = append(room.resting, mobs.Snapshot(m))
+			mobs.Rest(mobId)
+			indexResting(mobId, room.RoomId)
+		}
 	}
 
 	delete(roomManager.rooms, r.RoomId)

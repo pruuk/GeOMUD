@@ -119,6 +119,22 @@ func TestSaveWritesLiveNPCsOnceAndSlots(t *testing.T) {
 	assert.True(t, r2.SpawnInfo[2].InstanceId.IsZero(), "a slot whose MobId changed starts fresh")
 }
 
+func TestLiveStateBeatsAStaleRestingCopy(t *testing.T) {
+	persistSetup(t)
+	id := liveTestNPC(t, 5, 3, 10)
+	r := memRoom(4100)
+	r.bodies = append(r.bodies, id)
+	r.resting = []mobs.SavedNPC{mobs.Snapshot(mobs.GetInstance(id))} // stale: gold 10
+	mobs.GetInstance(id).Character.Gold = 50
+
+	SaveRoomInstance(*r) // as SaveAllRooms saves, by value (the test room has no template, so the instance diff errors)
+
+	f := readRoomNPCFile(persistZone, 4100)
+	require.Len(t, f.Resting, 1)
+	assert.Equal(t, 50, f.Resting[0].Template.Character.Gold, "the live snapshot is written")
+	assert.Empty(t, r.resting, "and the room's stale resting entry is dropped")
+}
+
 func TestNPCIsInOneSidecarAtATime(t *testing.T) {
 	persistSetup(t)
 	id := liveTestNPC(t, 5, 3, 0)
