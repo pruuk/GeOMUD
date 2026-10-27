@@ -66,18 +66,16 @@ func (u *usersCopyoverContributor) CopyoverRestore(dec *copyover.Decoder) error 
 			continue
 		}
 
-		user.sess().connectionId = entry.ConnectionId
 		user.sess().connectionTime = time.Now()
 		user.SetLastInputRound(util.GetRoundCount())
 
-		userManager.Users[user.UserId] = user
-		userManager.Usernames[user.Username] = user.UserId
-		userManager.Connections[user.sess().connectionId] = user.UserId
-		userManager.UserConnections[user.UserId] = user.sess().connectionId
+		activateLocked(user, entry.ConnectionId)
 
 		if entry.IsLinkDead {
 			userManager.LinkDeadConnections[user.sess().connectionId] = entry.LinkDeadTurn
 		}
+
+		activated(user)
 	}
 
 	return nil

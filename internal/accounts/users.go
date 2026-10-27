@@ -213,16 +213,13 @@ func CopyoverReconnectUser(user *Account, connectionId connections.ConnectionId)
 		}
 	}
 
-	user.sess().connectionId = connectionId
 	user.Character.SetAdjective(`zombie`, false)
 	user.sess().connectionTime = time.Now()
 	user.SetLastInputRound(util.GetRoundCount())
 
-	userManager.Users[user.UserId] = user
-	userManager.Usernames[user.Username] = user.UserId
-	userManager.Connections[user.sess().connectionId] = user.UserId
-	userManager.UserConnections[user.UserId] = user.sess().connectionId
+	activateLocked(user, connectionId)
 	userManagerMu.Unlock()
+	activated(user)
 
 	for _, mobInstId := range user.Character.GetCharmIds() {
 		if !mobs.MobInstanceExists(mobInstId) {
@@ -261,14 +258,10 @@ func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, 
 
 				removeLinkDeadConnectionLocked(otherConnId)
 
-				user.sess().connectionId = connectionId
-
-				userManager.Users[user.UserId] = user
-				userManager.Usernames[user.Username] = user.UserId
-				userManager.Connections[user.sess().connectionId] = user.UserId
-				userManager.UserConnections[user.UserId] = user.sess().connectionId
+				activateLocked(user, connectionId)
 
 				userManagerMu.Unlock()
+				activated(user)
 
 				for _, mobInstId := range user.Character.GetCharmIds() {
 					if !mobs.MobInstanceExists(mobInstId) {
@@ -296,14 +289,10 @@ func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, 
 	// Set their input round to current to track idle time fresh
 	user.SetLastInputRound(util.GetRoundCount())
 
-	user.sess().connectionId = connectionId
-
-	userManager.Users[user.UserId] = user
-	userManager.Usernames[user.Username] = user.UserId
-	userManager.Connections[user.sess().connectionId] = user.UserId
-	userManager.UserConnections[user.UserId] = user.sess().connectionId
+	activateLocked(user, connectionId)
 
 	userManagerMu.Unlock()
+	activated(user)
 
 	mudlog.Info("LOGIN", "userId", user.UserId)
 
@@ -377,7 +366,6 @@ func LogOutUserByConnectionId(connectionId connections.ConnectionId) error {
 	u := GetByConnectionId(connectionId)
 
 	userManagerMu.Lock()
-	defer userManagerMu.Unlock()
 
 	if _, ok := userManager.Connections[connectionId]; ok {
 
@@ -390,13 +378,20 @@ func LogOutUserByConnectionId(connectionId connections.ConnectionId) error {
 			delete(userManager.Usernames, u.Username)
 			delete(userManager.Connections, u.sess().connectionId)
 			delete(userManager.UserConnections, u.UserId)
-		} else {
-			// Connection exists but user record is missing - clean up the connection entry
-			delete(userManager.Connections, connectionId)
+
+			userManagerMu.Unlock()
+			deactivated(u)
+			return nil
 		}
 
+		// Connection exists but user record is missing - clean up the connection entry
+		delete(userManager.Connections, connectionId)
+
+		userManagerMu.Unlock()
 		return nil
 	}
+
+	userManagerMu.Unlock()
 	return errors.New("user not found for connection")
 }
 
@@ -418,11 +413,9 @@ func CreateUser(u *Account) error {
 	}
 
 	userManagerMu.Lock()
-	userManager.Users[u.UserId] = u
-	userManager.Usernames[u.Username] = u.UserId
-	userManager.Connections[u.sess().connectionId] = u.UserId
-	userManager.UserConnections[u.UserId] = u.sess().connectionId
+	activateLocked(u, u.sess().connectionId)
 	userManagerMu.Unlock()
+	activated(u)
 
 	return nil
 }
