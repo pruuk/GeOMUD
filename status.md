@@ -1,15 +1,14 @@
 # Status (updated 2026-10-27)
 
 ## Now
-- Phase 4b (NPCs are players), spec `2026-10-27-phase-4b-npcs-are-players-design.md`. Slice 1
-  (actors) merged (PR #16). Slice 2 (one ID space, `0x<cell>:0x<random>` IDs) is in its PR,
-  branch `strip/phase-4b-2-ids`; plan and inventory in `docs/completed/2026-10-27-phase-4b-2-*`
+- Phase 4b (NPCs are players), spec `2026-10-27-phase-4b-npcs-are-players-design.md`. Slices 1
+  (actors, PR #16) and 2 (one ID space, PR #18) merged. Slice 2b (NPC and companion persistence,
+  decisions 12-15) plan `2026-10-27-phase-4b-2b-npc-persistence-plan.md` with its inventory, in
+  Calabe's review
 - Strip Phases 0-4 and GeOMUD player branding (PR #14) are merged (`gomud_strip_plan.md`)
 
 ## Next
-1. Phase 4b slice 2b (NPC and companion persistence across copyover and restart): write its plan
-   once slice 2 merges. Its design questions: what NPC state survives, and how spawn tables count a
-   restored NPC
+1. Phase 4b slice 2b: execute the plan once approved; then slice 2c (item IDs) or 3 (messaging)
 2. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
    `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
    `professions`/`skills`/`spells` world folders, `set shopstyle`, `help spell` and the loot goblin
@@ -21,7 +20,7 @@
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
-- Merge of the Phase 4b slice 2 PR
+- Review of the Phase 4b slice 2b plan
 
 ## Watch
 - Phase 4b slice 2 permadeath reroll (`internal/usercommands/suicide.go`): body re-keying and event

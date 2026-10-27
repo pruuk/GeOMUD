@@ -73,6 +73,25 @@ Counts are non-test Go files under `internal`, `modules` and the repo root unles
     template is a new thing with a new ID. This replaces decision 3's "every live actor has a
     runtime `ActorId`" and section 1's "`ActorId` is never saved".
 
+## Decisions (Calabe, 2026-10-27, slice 2b design)
+
+12. **An existing NPC survives anything that is not its death**: copyover, restart and room unload.
+    It is saved with the room it is in when that room unloads or the server stops, and comes back
+    when the room loads. Live NPC instances are saved world state.
+13. **A restored NPC keeps what it is, what it has and who it is tangled with; what it was doing
+    resets.** Kept: template, level, elite flag, home room, applied spawn overrides, health and
+    mana, inventory, gold, equipment, buffs, adjectives, aggro target, who charmed it. Reset: path,
+    wander count, boredom, last idle command, temporary data. It comes back as saved, whatever the
+    elapsed time; change over elapsed time belongs to the geo time-and-deltas work.
+14. **A spawn slot keeps its NPC until that NPC dies.** Slots save which NPC they own and its death
+    time. Unloading is not death; being killed, or despawned by an admin or cleanup, is. A slot
+    respawns only after a recorded death and its respawn time. An index records where each saved
+    NPC is; a slot whose NPC is neither live nor in the index logs an error and respawns.
+15. **Leaving memory is never an ending.** Boredom (the memory valve) and charm expiry unload an NPC:
+    it is saved with the room it is in and comes back later, the same as an NPC in a room that
+    unloads. Only death, and despawn by an admin, end an NPC. (Replaces decision 14's "despawned by
+    cleanup is death" for boredom and charm expiry.)
+
 ## 1. Actor model
 
 ```
