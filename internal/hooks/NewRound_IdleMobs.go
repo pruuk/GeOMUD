@@ -108,6 +108,11 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 					if exitInfo, ok := room.Exits[nextStep.ExitName()]; ok {
 						if exitInfo.RoomId == nextStep.RoomId() {
 							mob.Command(nextStep.ExitName())
+							if nextStep.Waypoint() {
+								// Anytime a mob reaches a waypoint, introduce a 1 second delay before they can perform any additional commands.
+								// This gives a more natural feel to mob behavior, and gives those following a moment to catch up before the mob does something.
+								mob.Command("noop", 1)
+							}
 							continue
 						}
 					}

@@ -148,9 +148,10 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 				for _, instId := range uRoom.GetMobs(rooms.FindCharmed) {
 					if mob := mobs.GetInstance(instId); mob != nil {
-						// Charmed mobs assist
+						// A charmed mob fighting beside its master is in the
+						// fight too: it flees on its own roll (Decision 6).
 						if mob.Character.IsCharmed(user.Character.Id) {
-							mob.Command(exitName)
+							mob.Command(`flee`)
 						}
 					}
 				}

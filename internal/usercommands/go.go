@@ -12,7 +12,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
 func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
@@ -20,7 +19,8 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 	// nil for an NPC; used only for the account parts (GMCP, party, hostility groups).
 	user := actor.Controller().Account()
 
-	if actor.Character.Aggro != nil {
+	// Nobody walks out of a fight; they flee (Decision 4).
+	if inFight(actor, room) {
 		tell(actor, "You can't do that! You are in combat!")
 		return true, nil
 	}
@@ -90,7 +90,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 				tell(actor, `You know this lock well, you quickly pick it.`)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> quickly picks the lock on the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, exitName),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> quickly picks the lock on the <ansi fg="exit">%s</ansi> exit.`, nameColour(actor), actor.Character.Name, exitName),
 					excludeId(actor))
 
 				exitInfo.Lock.SetUnlocked()
@@ -99,7 +99,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 			} else if hasKey {
 				tell(actor, fmt.Sprintf(`You use the key on your key ring to unlock the <ansi fg="exit">%s</ansi> exit.`, exitName))
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, exitName),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, nameColour(actor), actor.Character.Name, exitName),
 					excludeId(actor))
 
 				exitInfo.Lock.SetUnlocked()
@@ -114,7 +114,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 					tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, exitName),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, nameColour(actor), actor.Character.Name, exitName),
 						excludeId(actor))
 
 					// Key entries look like:
@@ -197,14 +197,14 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 				// Tell the old room they are leaving
 				room.SendText(
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> leaves towards the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, exitName),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> leaves towards the <ansi fg="exit">%s</ansi> exit.`, nameColour(actor), actor.Character.Name, exitName),
 					),
 					excludeId(actor))
 
 				// Tell the new room they have arrived
 				destRoom.SendText(
 					fmt.Sprintf(string(c.EnterRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> enters from <ansi fg="exit">%s</ansi>.`, actor.Character.Name, enterFromExit),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> enters from <ansi fg="exit">%s</ansi>.`, nameColour(actor), actor.Character.Name, enterFromExit),
 					),
 					excludeId(actor))
 
@@ -249,44 +249,13 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 			}
 
 			if !isSneaking {
-				//
-				// When leaving a room, mobs who were attacking may follow
-				//
-				mobIds := room.GetMobs(rooms.FindFightingPlayer)
-				for _, mobId := range mobIds {
-					mob := mobs.GetInstance(mobId)
-					if mob == nil {
-						continue
-					}
-
-					if mob.Character.Aggro == nil || mob.Character.Aggro.Target != actor.Character.Id {
-						continue
-					}
-
-					speedDelta := mob.Character.Stats.Speed.ValueAdj - actor.Character.Stats.Speed.ValueAdj
-					if speedDelta < 1 {
-						speedDelta = 1
-					}
-
-					// Chance that a mob follows the player
-					targetVal := 20 + mob.Character.Stats.Perception.ValueAdj + speedDelta
-
-					roll := util.Rand(100)
-
-					util.LogRoll(`Mob Follow`, roll, targetVal)
-
-					if roll >= targetVal {
-						continue
-					}
-
-					mob.Command(rest)
-
-				}
+				// No pursuit on a walk: nobody who is fighting the actor lets it
+				// walk away (inFight), and fleeing escapes pursuers (Decision 6).
 
 				//
 				// When entering a room, mobs might be waiting to attack
 				//
-				mobIds = destRoom.GetMobs(rooms.FindAll)
+				mobIds := destRoom.GetMobs(rooms.FindAll)
 				for _, mobId := range mobIds {
 					mob := mobs.GetInstance(mobId)
 					if mob == nil {
@@ -344,7 +313,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 				room.SendText(
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> is bumping into walls.`, actor.Character.Name),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> is bumping into walls.`, nameColour(actor), actor.Character.Name),
 					),
 					excludeId(actor))
 			}
@@ -354,4 +323,26 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 	}
 
 	return handled, nil
+}
+
+// inFight reports whether the actor is in a fight: it has an aggro target, or
+// another body in its room has the actor as its aggro target (Decision 4).
+// Being attacked from another room does not count.
+func inFight(actor *actors.Actor, room *rooms.Room) bool {
+	if actor.Character.Aggro != nil {
+		return true
+	}
+	for _, bodyId := range room.GetBodies() {
+		if bodyId == actor.Id {
+			continue
+		}
+		other := actors.Get(bodyId)
+		if other == nil {
+			continue
+		}
+		if aggro := other.Character.Aggro; aggro != nil && aggro.Target == actor.Id {
+			return true
+		}
+	}
+	return false
 }

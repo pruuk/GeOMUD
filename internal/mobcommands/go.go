@@ -127,12 +127,8 @@ func Go(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 		destRoom.SendTextToExits(`You hear someone moving around.`, true, room.GetPlayers(rooms.FindAll)...)
 
-		if currentStep := mob.Path.Current(); currentStep != nil && currentStep.Waypoint() {
-
-			// Anytime a mob reaches a waypoint, introduce a 1 second delay before they can perform any additional commands.
-			// This gives a more natural feel to mob behavior, and gives those following a moment to catch up before the mob does something.
-			mob.Command("noop", 1)
-		}
+		// The waypoint delay is queued by the path walking that issued this step
+		// (hooks/NewRound_IdleMobs.go), not by go.
 
 		return true, nil
 	}
