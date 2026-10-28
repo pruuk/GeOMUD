@@ -40,8 +40,8 @@ Ann: You gained <ansi fg="yellow-bold">5000 experience points</ansi>! <ansi fg="
 Bob: You start following <ansi fg="username">Ann</ansi>.
 Ann: <ansi fg="username">Bob</ansi> is following you.
 > Ann: north
-Ann: You head towards the <ansi fg="exit">north</ansi> exit.
 Bob: <ansi fg="username">Ann</ansi> leaves towards the <ansi fg="exit">north</ansi> exit.
+Ann: You head towards the <ansi fg="exit">north</ansi> exit.
 Ann:
 Ann| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room B</ansi> <ansi fg="room-zone">[readszone]</ansi>
 Ann: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗

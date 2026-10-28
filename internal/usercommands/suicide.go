@@ -39,7 +39,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 	currentRound := util.GetRoundCount()
 
 	if user.Character.Zone == `Shadow Realm` {
-		user.SendText(`You're already dead!`)
+		Tell(actor, `You're already dead!`)
 		return true, errors.New(`already dead`)
 	}
 
@@ -90,10 +90,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 		msg = fmt.Sprintf(`<ansi fg="magenta-bold">***</ansi> <ansi fg="username">%s</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by %s) <ansi fg="magenta-bold">***</ansi>%s`, user.Character.Name, killedBy, term.CRLFStr)
 	}
 
-	// slice 7: stays a Broadcast. messaging adds a newline after the CRLF the
-	// text carries, Broadcast has screen-reader and refresh fields messaging
-	// lacks, and the "killed by" list is text, not a role.
-	events.AddToQueue(events.Broadcast{
+	messaging.Notify(messaging.Notice{
 		Text: msg,
 	})
 
@@ -134,7 +131,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 
 			// Perma-died!!!
 			textOut, _ := templates.Process("character/permadeath", nil, user.UserId)
-			user.SendText(colorpatterns.ApplyColorPattern(textOut, `red`))
+			Tell(actor, colorpatterns.ApplyColorPattern(textOut, `red`))
 
 			// Unequip everything
 			for _, itm := range user.Character.GetAllWornItems() {
@@ -251,7 +248,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 					user.Character.Experience = user.Character.XPTNL()
 					user.Character.Level++
 
-					user.SendText(fmt.Sprintf(`You lost <ansi fg="yellow">%d experience points</ansi>.`, oldExperience-user.Character.Experience))
+					Tell(actor, fmt.Sprintf(`You lost <ansi fg="yellow">%d experience points</ansi>.`, oldExperience-user.Character.Experience))
 
 					user.EventLog.Add(`death`, fmt.Sprintf(`Lost <ansi fg="yellow">%d experience points</ansi> on death`, oldExperience-user.Character.Experience))
 
@@ -267,7 +264,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 					loss := int(math.Floor(float64(user.Character.Experience) * pct))
 					user.Character.Experience -= loss
 
-					user.SendText(fmt.Sprintf(`You lost <ansi fg="yellow">%d experience points</ansi>.`, loss))
+					Tell(actor, fmt.Sprintf(`You lost <ansi fg="yellow">%d experience points</ansi>.`, loss))
 
 					user.EventLog.Add(`death`, fmt.Sprintf(`Lost <ansi fg="yellow">%d experience points</ansi> on death`, loss))
 				}

@@ -163,7 +163,7 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 						before := fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, alignmentBefore, alignmentBefore)
 						after := fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, alignmentAfter, alignmentAfter)
 						updateTxt := fmt.Sprintf(`<ansi fg="231">Your alignment has shifted from %s to %s!</ansi>`, before, after)
-						user.SendText(updateTxt)
+						messaging.Tell(user.Character.Id, updateTxt)
 						events.AddToQueue(events.AlignmentChanged{
 							UserId:       user.UserId,
 							AlignmentOld: alignmentBefore,
@@ -194,9 +194,9 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 							if currentSkill < 50 {
 								user.Character.MobMastery.SetTame(int(mob.MobId), currentSkill+1)
 								if currentSkill == -1 {
-									user.SendText(fmt.Sprintf(`<ansi fg="magenta">***</ansi> You've learned how to tame a <ansi fg="mobname">%s</ansi>! <ansi fg="magenta">***</ansi>`, mob.Character.Name))
+									messaging.Tell(user.Character.Id, fmt.Sprintf(`<ansi fg="magenta">***</ansi> You've learned how to tame a <ansi fg="mobname">%s</ansi>! <ansi fg="magenta">***</ansi>`, mob.Character.Name))
 								} else {
-									user.SendText(fmt.Sprintf(`<ansi fg="magenta">***</ansi> Your <ansi fg="mobname">%s</ansi> taming skills get a little better! <ansi fg="magenta">***</ansi>`, mob.Character.Name))
+									messaging.Tell(user.Character.Id, fmt.Sprintf(`<ansi fg="magenta">***</ansi> Your <ansi fg="mobname">%s</ansi> taming skills get a little better! <ansi fg="magenta">***</ansi>`, mob.Character.Name))
 								}
 							}
 
@@ -216,9 +216,7 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 
 	}
 
-	// slice 7: party XP and the per-member sends below stay as they are (one
-	// Interface message per member), as do the item and gold drop lines (they
-	// name no actor).
+	// Party XP: one Interface message per member.
 	if len(partyTracker) > 0 {
 
 		for leaderId, xp := range partyTracker {
@@ -262,7 +260,7 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 							before := fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, alignmentBefore, alignmentBefore)
 							after := fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, alignmentAfter, alignmentAfter)
 							updateTxt := fmt.Sprintf(`<ansi fg="231">Your alignment has shifted from %s to %s!</ansi>`, before, after)
-							user.SendText(updateTxt)
+							messaging.Tell(user.Character.Id, updateTxt)
 							events.AddToQueue(events.AlignmentChanged{
 								UserId:       user.UserId,
 								AlignmentOld: alignmentBefore,
@@ -294,9 +292,9 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 									user.Character.MobMastery.SetTame(int(mob.MobId), currentSkill+1)
 
 									if currentSkill == -1 {
-										user.SendText(fmt.Sprintf(`<ansi fg="magenta">***</ansi> You've learned how to tame a <ansi fg="mobname">%s</ansi>! <ansi fg="magenta">***</ansi>`, mob.Character.Name))
+										messaging.Tell(user.Character.Id, fmt.Sprintf(`<ansi fg="magenta">***</ansi> You've learned how to tame a <ansi fg="mobname">%s</ansi>! <ansi fg="magenta">***</ansi>`, mob.Character.Name))
 									} else {
-										user.SendText(fmt.Sprintf(`<ansi fg="magenta">***</ansi> Your <ansi fg="mobname">%s</ansi> taming skills get a little better! <ansi fg="magenta">***</ansi>`, mob.Character.Name))
+										messaging.Tell(user.Character.Id, fmt.Sprintf(`<ansi fg="magenta">***</ansi> Your <ansi fg="mobname">%s</ansi> taming skills get a little better! <ansi fg="magenta">***</ansi>`, mob.Character.Name))
 									}
 								}
 
@@ -321,8 +319,13 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 			if config.Death.CorpseItems && config.Death.CorpsesEnabled {
 				corpseItems = append(corpseItems, item)
 			} else {
-				msg := fmt.Sprintf(`<ansi fg="item">%s</ansi> drops to the ground.`, item.DisplayName())
-				room.SendText(msg)
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Room:         room.RoomId,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ObserverText: fmt.Sprintf(`<ansi fg="item">%s</ansi> drops to the ground.`, item.DisplayName()),
+				})
 				events.AddToQueue(events.MobItemDrop{
 					MobId:  int(mob.MobId),
 					RoomId: room.RoomId,
@@ -352,8 +355,13 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 			if config.Death.CorpseItems && config.Death.CorpsesEnabled {
 				corpseItems = append(corpseItems, item)
 			} else {
-				msg := fmt.Sprintf(`<ansi fg="item">%s</ansi> drops to the ground.`, item.DisplayName())
-				room.SendText(msg)
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Room:         room.RoomId,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ObserverText: fmt.Sprintf(`<ansi fg="item">%s</ansi> drops to the ground.`, item.DisplayName()),
+				})
 				events.AddToQueue(events.MobItemDrop{
 					MobId:  int(mob.MobId),
 					RoomId: room.RoomId,
@@ -368,8 +376,13 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 			if config.Death.CorpseItems && config.Death.CorpsesEnabled {
 				corpseGold = mob.Character.Gold
 			} else {
-				msg := fmt.Sprintf(`<ansi fg="yellow-bold">%d gold</ansi> drops to the ground.`, mob.Character.Gold)
-				room.SendText(msg)
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Room:         room.RoomId,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ObserverText: fmt.Sprintf(`<ansi fg="yellow-bold">%d gold</ansi> drops to the ground.`, mob.Character.Gold),
+				})
 				room.Gold += mob.Character.Gold
 			}
 		}

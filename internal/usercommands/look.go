@@ -13,8 +13,10 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 )
@@ -52,10 +54,13 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	if len(lookAt) == 0 {
 
 		if !secretLook && !isSneaking {
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking around.`, NameColour(actor), actor.Character.Name),
-				ExcludeId(actor),
-			)
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ObserverText: `{actor} is looking around.`,
+			})
 
 			// Make it a "secret looks" now because we don't want another look message sent out by the lookRoom() func
 			secretLook = true
@@ -84,13 +89,18 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			u := *uPtr
 
 			if !isSneaking {
-				u.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at you.`, NameColour(actor), actor.Character.Name),
-				)
-
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at <ansi fg="username">%s</ansi>.`, NameColour(actor), actor.Character.Name, u.Character.Name),
-					u.UserId)
+				// The looker no longer reads "X is looking at Y" about itself (decision 1).
+				if targetActor := actors.ByUserId(u.UserId); targetActor != nil {
+					messaging.Send(perception.Message{
+						Kind:         perception.WorldEvent,
+						Actor:        actor.Id,
+						Target:       targetActor.Id,
+						Senses:       perception.Sight | perception.Sound,
+						Range:        perception.Room,
+						TargetText:   `{actor} is looking at you.`,
+						ObserverText: `{actor} is looking at {target}.`,
+					})
+				}
 			}
 
 			Tell(actor, buildDescriptionPanel(u.Character))
@@ -111,10 +121,14 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 			if !isSneaking {
 				targetName := m.Character.GetMobName(ids.ID{}).String()
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at %s.`, NameColour(actor), actor.Character.Name, targetName),
-					ExcludeId(actor),
-				)
+				// targetName stays baked in: it carries adjectives {target} cannot.
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Actor:        actor.Id,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ObserverText: fmt.Sprintf(`{actor} is looking at %s.`, targetName),
+				})
 			}
 
 			Tell(actor, buildDescriptionPanel(&m.Character))
@@ -240,7 +254,13 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		Tell(actor, fmt.Sprintf("You peer toward the %s.", exitName))
 		if !isSneaking {
-			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> peers toward the %s.`, NameColour(actor), actor.Character.Name, exitName), ExcludeId(actor))
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ObserverText: fmt.Sprintf(`{actor} peers toward the %s.`, exitName),
+			})
 		}
 
 		lookRoom(actor, lookRoomId, secretLook || isSneaking)
@@ -271,10 +291,13 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		Tell(actor, ``)
 
 		if !isSneaking {
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is admiring their <ansi fg="item">%s</ansi>.`, NameColour(actor), actor.Character.Name, lookItem.DisplayName()),
-				ExcludeId(actor),
-			)
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ObserverText: fmt.Sprintf(`{actor} is admiring their <ansi fg="item">%s</ansi>.`, lookItem.DisplayName()),
+			})
 		}
 
 		Tell(actor,
@@ -324,10 +347,13 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 				}
 			}
 
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is examining the <ansi fg="noun">%s</ansi>.`, NameColour(actor), actor.Character.Name, foundNoun),
-				ExcludeId(actor),
-			)
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ObserverText: fmt.Sprintf(`{actor} is examining the <ansi fg="noun">%s</ansi>.`, foundNoun),
+			})
 		}
 
 		for _, outLine := range finalNounDesc {
@@ -376,7 +402,13 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			}
 
 			Tell(actor, fmt.Sprintf(`You look at the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name))
-			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at the <ansi fg="%s">%s corpse</ansi>.`, NameColour(actor), actor.Character.Name, corpseColor, corpse.Character.Name), ExcludeId(actor))
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ObserverText: fmt.Sprintf(`{actor} is looking at the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name),
+			})
 
 			Tell(actor, buildCorpseDescriptionPanel(&corpse.Character))
 
@@ -425,17 +457,22 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 	if !secretLook {
 		// Find the exit back
 		lookFromName := room.FindExitTo(actor.Character.RoomId)
+		var lookingIn string
 		if lookFromName == "" {
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking into the room from somewhere...`, NameColour(actor), actor.Character.Name),
-				ExcludeId(actor),
-			)
+			lookingIn = `is looking into the room from somewhere...`
 		} else {
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking into the room from the <ansi fg="exit">%s</ansi> exit`, NameColour(actor), actor.Character.Name, lookFromName),
-				ExcludeId(actor),
-			)
+			lookingIn = fmt.Sprintf(`is looking into the room from the <ansi fg="exit">%s</ansi> exit`, lookFromName)
 		}
+		// The looker is not in this room, so the line is an actorless world event
+		// for it, and the name stays baked in (no {actor} for a body elsewhere).
+		messaging.Send(perception.Message{
+			Kind:         perception.WorldEvent,
+			Room:         room.RoomId,
+			Senses:       perception.Sight | perception.Sound,
+			Range:        perception.Room,
+			Exclude:      []ids.ID{actor.Id},
+			ObserverText: fmt.Sprintf(`<ansi fg="%s">%s</ansi> %s`, NameColour(actor), actor.Character.Name, lookingIn),
+		})
 	}
 
 	// The room view reads account settings and is text for the caller only:
@@ -471,7 +508,7 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 				ZoomLevel: 1,
 				Width:     5,
 				Height:    5,
-				UserId:    ExcludeId(actor),
+				UserId:    UserIdOf(actor),
 			}
 
 			c.OverrideSymbol(roomId, '@', `You`)
@@ -525,7 +562,7 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 		details = rooms.GetDetails(room, user)
 	}
 
-	textOut, _ := templates.Process("descriptions/room-title", details, ExcludeId(actor))
+	textOut, _ := templates.Process("descriptions/room-title", details, UserIdOf(actor))
 	Tell(actor, textOut)
 
 	Tell(actor, buildRoomDescPanel(details))
@@ -533,9 +570,9 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 	signCt := 0
 	privateSigns := room.GetPrivateSigns()
 	for _, sign := range privateSigns {
-		if sign.VisibleUserId == ExcludeId(actor) {
+		if sign.VisibleUserId == UserIdOf(actor) {
 			signCt++
-			textOut, _ = templates.Process("descriptions/rune", sign, ExcludeId(actor))
+			textOut, _ = templates.Process("descriptions/rune", sign, UserIdOf(actor))
 			Tell(actor, textOut)
 		}
 	}
@@ -543,7 +580,7 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 	publicSigns := room.GetPublicSigns()
 	for _, sign := range publicSigns {
 		signCt++
-		textOut, _ = templates.Process("descriptions/sign", sign, ExcludeId(actor))
+		textOut, _ = templates.Process("descriptions/sign", sign, UserIdOf(actor))
 		Tell(actor, textOut)
 	}
 
@@ -551,7 +588,7 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 		Tell(actor, "")
 	}
 
-	textOut, _ = templates.Process("descriptions/who", details, ExcludeId(actor))
+	textOut, _ = templates.Process("descriptions/who", details, UserIdOf(actor))
 	if len(textOut) > 0 {
 		Tell(actor, textOut)
 	}
@@ -590,7 +627,7 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 		if !item.IsValid() {
 			room.RemoveItem(item, true)
 		}
-		if item.StashedBy != ExcludeId(actor) {
+		if item.StashedBy != UserIdOf(actor) {
 			continue
 		}
 		name := item.DisplayName() + ` <ansi fg="item-stashed">(stashed)</ansi>`
@@ -604,12 +641,12 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 		`IsDark`:      room.GetBiome().IsDark(),
 		`IsNight`:     gametime.IsNight(),
 	}
-	textOut, _ = templates.Process("descriptions/ontheground", groundDetails, ExcludeId(actor))
+	textOut, _ = templates.Process("descriptions/ontheground", groundDetails, UserIdOf(actor))
 	if len(textOut) > 0 {
 		Tell(actor, textOut)
 	}
 
-	textOut, _ = templates.Process("descriptions/exits", details, ExcludeId(actor))
+	textOut, _ = templates.Process("descriptions/exits", details, UserIdOf(actor))
 	Tell(actor, textOut)
 
 }
