@@ -10,8 +10,9 @@ Ann: <ansi fg="username">Bob</ansi> joined the party!
 > Ann: teleport 93103
 Ann: Moved to room 93103.
 Cid: <ansi fg="username">Ann</ansi> appears in a flash of light!
-Bob: <ansi fg="username">Ann</ansi> appears in a flash of light!
 Bob: Moved to room 93103.
+Cid: <ansi fg="username">Bob</ansi> appears in a flash of light!
+Ann: <ansi fg="username">Bob</ansi> appears in a flash of light!
 Cid: <ansi fg="username">Bob</ansi> is looking around.
 Ann: <ansi fg="username">Bob</ansi> is looking around.
 Bob:
@@ -59,8 +60,8 @@ Bob: You gained <ansi fg="yellow-bold">10 experience points</ansi>! <ansi fg="7"
 Ann: Granted <ansi fg="experience">10 experience</ansi> to <ansi fg="username">Bob</ansi>.
 == spawn gold 5
 > Ann: spawn gold 5
-Ann: You wave your hands around and <ansi fg="gold">5 gold</ansi> appears from thin air and falls to the ground.
 Cid: <ansi fg="username">Ann</ansi> waves their hands around and <ansi fg="gold">5 gold</ansi> appears from thin air and falls to the ground.
+Ann: You wave your hands around and <ansi fg="gold">5 gold</ansi> appears from thin air and falls to the ground.
 Bob: <ansi fg="username">Ann</ansi> waves their hands around and <ansi fg="gold">5 gold</ansi> appears from thin air and falls to the ground.
 == syslogs with no args
 > Ann: syslogs

@@ -8,6 +8,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -27,7 +28,7 @@ func Visit(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 	if len(args) == 0 {
 		infoOutput, _ := templates.Process("admincommands/help/command.visit", nil, user.UserId)
-		user.SendText(infoOutput)
+		messaging.ToAccount(user, infoOutput)
 		return true, nil
 	}
 
@@ -43,7 +44,7 @@ func Visit(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		return visit_SetUnset(args, user, false)
 	default:
 		infoOutput, _ := templates.Process("admincommands/help/command.visit", nil, user.UserId)
-		user.SendText(infoOutput)
+		messaging.ToAccount(user, infoOutput)
 	}
 
 	return true, nil
@@ -67,7 +68,7 @@ func visit_List(args []string, user *accounts.Account) (bool, error) {
 
 	targetUser, isOffline, err := visit_resolveTarget(args, user)
 	if err != nil {
-		user.SendText(err.Error())
+		messaging.ToAccount(user, err.Error())
 		return true, nil
 	}
 
@@ -106,7 +107,7 @@ func visit_List(args []string, user *accounts.Account) (bool, error) {
 
 	tableData := templates.GetTable(title, headers, rows)
 	tplTxt, _ := templates.Process("tables/generic", tableData, user.UserId)
-	user.SendText(tplTxt)
+	messaging.ToAccount(user, tplTxt)
 
 	return true, nil
 }
@@ -115,7 +116,7 @@ func visit_SetUnset(args []string, user *accounts.Account, markVisited bool) (bo
 
 	if len(args) == 0 {
 		infoOutput, _ := templates.Process("admincommands/help/command.visit", nil, user.UserId)
-		user.SendText(infoOutput)
+		messaging.ToAccount(user, infoOutput)
 		return true, nil
 	}
 
@@ -124,7 +125,7 @@ func visit_SetUnset(args []string, user *accounts.Account, markVisited bool) (bo
 
 	targetUser, isOffline, err := visit_resolveTarget(userArgs, user)
 	if err != nil {
-		user.SendText(err.Error())
+		messaging.ToAccount(user, err.Error())
 		return true, nil
 	}
 
@@ -143,7 +144,7 @@ func visit_SetUnset(args []string, user *accounts.Account, markVisited bool) (bo
 			accounts.SaveUser(*targetUser)
 		}
 
-		user.SendText(fmt.Sprintf(`All zones %s for <ansi fg="username">%s</ansi>.`, action, targetUser.Character.Name))
+		messaging.ToAccount(user, fmt.Sprintf(`All zones %s for <ansi fg="username">%s</ansi>.`, action, targetUser.Character.Name))
 		return true, nil
 	}
 
@@ -154,7 +155,7 @@ func visit_SetUnset(args []string, user *accounts.Account, markVisited bool) (bo
 		resolvedZone = closeZone
 	}
 	if resolvedZone == `` {
-		user.SendText(fmt.Sprintf(`Zone "%s" not found.`, zonePart))
+		messaging.ToAccount(user, fmt.Sprintf(`Zone "%s" not found.`, zonePart))
 		return true, nil
 	}
 
@@ -164,7 +165,7 @@ func visit_SetUnset(args []string, user *accounts.Account, markVisited bool) (bo
 		accounts.SaveUser(*targetUser)
 	}
 
-	user.SendText(fmt.Sprintf(`Zone <ansi fg="yellow">%s</ansi> %s for <ansi fg="username">%s</ansi>.`, resolvedZone, action, targetUser.Character.Name))
+	messaging.ToAccount(user, fmt.Sprintf(`Zone <ansi fg="yellow">%s</ansi> %s for <ansi fg="username">%s</ansi>.`, resolvedZone, action, targetUser.Character.Name))
 
 	return true, nil
 }

@@ -25,33 +25,33 @@ func Reload(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.reload", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
 	switch strings.ToLower(rest) {
 	case `items`:
 		items.LoadDataFiles()
-		user.SendText(`Items reloaded.`)
+		Tell(actor, `Items reloaded.`)
 	case `biomes`:
 		rooms.LoadBiomeDataFiles()
-		user.SendText(`Biomes reloaded.`)
+		Tell(actor, `Biomes reloaded.`)
 	case `buffs-flags`:
 		buffs.LoadFlagDataFiles()
-		user.SendText(`Buff flags reloaded.`)
+		Tell(actor, `Buff flags reloaded.`)
 	case `skills`:
 		skills.LoadDataFiles()
 		skills.LoadProfessionDataFiles()
-		user.SendText(`Skills and professions reloaded.`)
+		Tell(actor, `Skills and professions reloaded.`)
 	case `translations`:
 		ok := language.ReloadTranslation()
 		if !ok {
-			user.SendText(`Translations reload failed.`)
+			Tell(actor, `Translations reload failed.`)
 		} else {
-			user.SendText(`Translations reloaded.`)
+			Tell(actor, `Translations reloaded.`)
 		}
 	default:
-		user.SendText(`Unknown reload command.`)
+		Tell(actor, `Unknown reload command.`)
 	}
 	return true, nil
 }

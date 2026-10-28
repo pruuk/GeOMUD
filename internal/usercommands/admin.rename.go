@@ -6,6 +6,8 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -26,7 +28,7 @@ func Rename(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 	if len(args) < 2 {
 		// send some sort of help info?
 		infoOutput, _ := templates.Process("admincommands/help/command.rename", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -35,7 +37,7 @@ func Rename(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 	rest = strings.Join(args[1:], " ")
 
 	if !found {
-		user.SendText(fmt.Sprintf("You don't have a %s to rename.", rest))
+		Tell(actor, fmt.Sprintf("You don't have a %s to rename.", rest))
 	} else {
 		// Swap the item location
 		user.Character.RemoveItem(matchItem)
@@ -52,13 +54,14 @@ func Rename(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 		user.Character.StoreItem(matchItem)
 
-		user.SendText(
-			fmt.Sprintf(`You chant softly and wave your hand over the <ansi fg="item">%s</ansi>. Success! It's now a <ansi fg="item">%s</ansi>`, oldNameSimple, matchItem.DisplayName()),
-		)
-		room.SendText(
-			fmt.Sprintf(`<ansi fg="username">%s</ansi> chants softly and waves their hand over <ansi fg="item">%s</ansi>, causing it to glow briefly.`, user.Character.Name, oldName),
-			user.UserId,
-		)
+		messaging.Send(perception.Message{
+			Kind:         perception.WorldEvent,
+			Actor:        actor.Id,
+			Senses:       perception.Sight | perception.Sound,
+			Range:        perception.Room,
+			ActorText:    fmt.Sprintf(`You chant softly and wave your hand over the <ansi fg="item">%s</ansi>. Success! It's now a <ansi fg="item">%s</ansi>`, oldNameSimple, matchItem.DisplayName()),
+			ObserverText: fmt.Sprintf(`{actor} chants softly and waves their hand over <ansi fg="item">%s</ansi>, causing it to glow briefly.`, oldName),
+		})
 	}
 
 	return true, nil

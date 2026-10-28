@@ -27,7 +27,7 @@ func Grant(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.grant", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -58,21 +58,21 @@ func Grant(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 			if u := accounts.GetByUserId(targetUserId); u != nil {
 				u.GrantXP(expAmt, `admin grant`)
-				user.SendText(fmt.Sprintf(`Granted <ansi fg="experience">%d experience</ansi> to <ansi fg="username">%s</ansi>.`, expAmt, u.Character.Name))
+				Tell(actor, fmt.Sprintf(`Granted <ansi fg="experience">%d experience</ansi> to <ansi fg="username">%s</ansi>.`, expAmt, u.Character.Name))
 				return true, nil
 			}
 
 		} else if !targetMobId.IsZero() {
-			user.SendText(`Cannot grant experience to mobs.`)
+			Tell(actor, `Cannot grant experience to mobs.`)
 			return true, nil
 		}
 
-		user.SendText(`Target not found.`)
+		Tell(actor, `Target not found.`)
 		return true, errors.New(`target not found`)
 
 	}
 
-	user.SendText(`Invalid command.`)
+	Tell(actor, `Invalid command.`)
 
 	return false, errors.New(`unrecognized command`)
 }

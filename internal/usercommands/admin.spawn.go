@@ -7,6 +7,8 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -27,7 +29,7 @@ func Spawn(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if len(args) == 0 {
 		// send some sort of help info?
 		infoOutput, _ := templates.Process("admincommands/help/command.spawn", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -50,13 +52,14 @@ func Spawn(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 			containerName := room.SpawnTempContainer(spawnTarget, "3 rounds", 0)
 
-			user.SendText(
-				fmt.Sprintf(`You wave your hands around and <ansi fg="container">%s</ansi> appears from thin air and falls to the ground.`, containerName),
-			)
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> waves their hands around and <ansi fg="container">%s</ansi> appears from thin air and falls to the ground.`, user.Character.Name, containerName),
-				user.UserId,
-			)
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ActorText:    fmt.Sprintf(`You wave your hands around and <ansi fg="container">%s</ansi> appears from thin air and falls to the ground.`, containerName),
+				ObserverText: fmt.Sprintf(`{actor} waves their hands around and <ansi fg="container">%s</ansi> appears from thin air and falls to the ground.`, containerName),
+			})
 
 			return true, nil
 		}
@@ -76,26 +79,28 @@ func Spawn(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 			room.Gold += goldAmt
 
-			user.SendText(
-				fmt.Sprintf(`You wave your hands around and <ansi fg="gold">%d gold</ansi> appears from thin air and falls to the ground.`, goldAmt),
-			)
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> waves their hands around and <ansi fg="gold">%d gold</ansi> appears from thin air and falls to the ground.`, user.Character.Name, goldAmt),
-				user.UserId,
-			)
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ActorText:    fmt.Sprintf(`You wave your hands around and <ansi fg="gold">%d gold</ansi> appears from thin air and falls to the ground.`, goldAmt),
+				ObserverText: fmt.Sprintf(`{actor} waves their hands around and <ansi fg="gold">%d gold</ansi> appears from thin air and falls to the ground.`, goldAmt),
+			})
 
 			return true, nil
 		}
 
 	}
 
-	user.SendText(
-		"You wave your hands around pathetically.",
-	)
-	room.SendText(
-		fmt.Sprintf(`<ansi fg="username">%s</ansi> waves their hands around pathetically.`, user.Character.Name),
-		user.UserId,
-	)
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        actor.Id,
+		Senses:       perception.Sight | perception.Sound,
+		Range:        perception.Room,
+		ActorText:    "You wave your hands around pathetically.",
+		ObserverText: "{actor} waves their hands around pathetically.",
+	})
 
 	return true, nil
 }

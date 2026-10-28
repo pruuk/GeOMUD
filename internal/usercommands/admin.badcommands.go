@@ -38,7 +38,7 @@ func BadCommands(rest string, actor *actors.Actor, room *rooms.Room, flags event
 	badCommandTableData := templates.GetTable(`Bad Commands`, headers, rows)
 	tplTxt, _ := templates.Process("tables/generic", badCommandTableData, user.UserId, user.UserId)
 
-	user.SendText(tplTxt)
+	Tell(actor, tplTxt)
 
 	return true, nil
 }

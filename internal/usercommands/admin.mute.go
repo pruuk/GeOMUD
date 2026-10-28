@@ -23,7 +23,7 @@ func Mute(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.mute", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -35,14 +35,14 @@ func Mute(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 			u.Muted = true
 
-			user.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> (<ansi fg="username">%s</ansi>) has been <ansi fg="alert-5">MUTED</ansi>`, u.Username, u.Character.Name))
+			Tell(actor, fmt.Sprintf(`<ansi fg="username">%s</ansi> (<ansi fg="username">%s</ansi>) has been <ansi fg="alert-5">MUTED</ansi>`, u.Username, u.Character.Name))
 
 			return true, nil
 		}
 
 	}
 
-	user.SendText("Could not find user.")
+	Tell(actor, "Could not find user.")
 	return true, nil
 }
 
@@ -54,7 +54,7 @@ func UnMute(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.mute", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -66,13 +66,13 @@ func UnMute(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 			u.Muted = false
 
-			user.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> (<ansi fg="username">%s</ansi>) has been <ansi fg="alert-1">UNMUTED</ansi>`, u.Username, u.Character.Name))
+			Tell(actor, fmt.Sprintf(`<ansi fg="username">%s</ansi> (<ansi fg="username">%s</ansi>) has been <ansi fg="alert-1">UNMUTED</ansi>`, u.Username, u.Character.Name))
 
 			return true, nil
 		}
 
 	}
 
-	user.SendText("Could not find user.")
+	Tell(actor, "Could not find user.")
 	return true, nil
 }

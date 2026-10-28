@@ -9,9 +9,11 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -33,7 +35,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 	if len(rest) == 0 {
 		// send some sort of help info?
 		infoOutput, _ := templates.Process("admincommands/help/command.teleport", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 
 		return true, nil
 	}
@@ -56,7 +58,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 		if mapper.IsCompassDirection(rest) {
 
 			if !user.HasRolePermission(`teleport.direction`) {
-				user.SendText(`you do not have <ansi fg="command">teleport.direction</ansi> permission`)
+				Tell(actor, `you do not have <ansi fg="command">teleport.direction</ansi> permission`)
 				return true, nil
 			}
 
@@ -64,7 +66,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 			if zMapper == nil {
 				err := fmt.Errorf("Could not find mapper for zone: %s", room.Zone)
 				mudlog.Error("Map", "error", err)
-				user.SendText(`No map found (or an error occured)"`)
+				Tell(actor, `No map found (or an error occured)"`)
 				return true, err
 			}
 
@@ -76,7 +78,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 			if locateUser := accounts.GetByCharacterName(rest); locateUser != nil {
 
 				if !user.HasRolePermission(`teleport.playername`) {
-					user.SendText(`you do not have <ansi fg="command">teleport.direction</ansi> permission`)
+					Tell(actor, `you do not have <ansi fg="command">teleport.direction</ansi> permission`)
 					return true, nil
 				}
 
@@ -87,7 +89,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 
 	} else {
 		if !user.HasRolePermission(`teleport.roomid`) {
-			user.SendText(`you do not have <ansi fg="command">teleport.direction</ansi> permission`)
+			Tell(actor, `you do not have <ansi fg="command">teleport.direction</ansi> permission`)
 			return true, nil
 		}
 	}
@@ -95,20 +97,23 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 	if gotoRoomId != 0 || rest == `0` {
 
 		if err := rooms.MoveToRoom(targetUser.Character.Id, gotoRoomId); err != nil {
-			user.SendText(err.Error())
+			Tell(actor, err.Error())
 
 		} else {
 
-			user.SendText(fmt.Sprintf("Moved to room %d.", gotoRoomId))
+			Tell(actor, fmt.Sprintf("Moved to room %d.", gotoRoomId))
 
 			gotoRoom := rooms.LoadRoom(gotoRoomId)
 			if gotoRoom == nil {
 				return true, nil
 			}
-			gotoRoom.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> appears in a flash of light!`, targetUser.Character.Name),
-				targetUser.UserId,
-			)
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        targetUser.Character.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ObserverText: `{actor} appears in a flash of light!`,
+			})
 
 			if party := parties.Get(targetUser.UserId); party != nil {
 
@@ -129,8 +134,14 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 							}
 
 							rooms.MoveToRoom(partyUser.Character.Id, gotoRoomId)
-							partyUser.SendText(fmt.Sprintf("Moved to room %d.", gotoRoomId))
-							room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> appears in a flash of light!`, partyUser.Character.Name), partyUser.UserId)
+							messaging.Tell(partyUser.Character.Id, fmt.Sprintf("Moved to room %d.", gotoRoomId))
+							messaging.Send(perception.Message{
+								Kind:         perception.WorldEvent,
+								Actor:        partyUser.Character.Id,
+								Senses:       perception.Sight | perception.Sound,
+								Range:        perception.Room,
+								ObserverText: `{actor} appears in a flash of light!`,
+							})
 
 							if partyActor := actors.ByUserId(partyUser.UserId); partyActor != nil {
 								Look(``, partyActor, gotoRoom, flags)
@@ -157,7 +168,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 
 		}
 	} else {
-		user.SendText(fmt.Sprintf(`Invalid teleport command: <ansi fg="command">%s</ansi> (No RoomId, direction, or character name match)`, rest))
+		Tell(actor, fmt.Sprintf(`Invalid teleport command: <ansi fg="command">%s</ansi> (No RoomId, direction, or character name match)`, rest))
 	}
 
 	return true, nil

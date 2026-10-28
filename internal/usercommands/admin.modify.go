@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -28,7 +29,7 @@ func Modify(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 	if len(args) < 3 {
 		infoOutput, _ := templates.Process("admincommands/help/command.modify", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -36,7 +37,7 @@ func Modify(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 	if args[0] == `role` {
 
 		if !user.HasRolePermission(`modify.role`) {
-			user.SendText(`you do not have <ansi fg="command">modify.role</ansi> permission`)
+			Tell(actor, `you do not have <ansi fg="command">modify.role</ansi> permission`)
 			return true, nil
 		}
 
@@ -44,7 +45,7 @@ func Modify(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		newRole := args[2]
 
 		if newRole != accounts.RoleAdmin && newRole != accounts.RoleUser && newRole != accounts.RoleMod {
-			user.SendText(`<ansi fg="alert-4">Invalid role. Valid roles: user, mod, admin</ansi>`)
+			Tell(actor, `<ansi fg="alert-4">Invalid role. Valid roles: user, mod, admin</ansi>`)
 			return true, nil
 		}
 
@@ -55,12 +56,12 @@ func Modify(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 			if strings.EqualFold(searchUser, u.Username) {
 
 				if u.Role == accounts.RoleAdmin {
-					user.SendText(`<ansi fg="alert-4">Admin role cannot be removed this way.</ansi>`)
+					Tell(actor, `<ansi fg="alert-4">Admin role cannot be removed this way.</ansi>`)
 					return true, nil
 				}
 
 				if u.Role == newRole {
-					user.SendText(`<ansi fg="alert-4">That role is already set for this user.</ansi>`)
+					Tell(actor, `<ansi fg="alert-4">That role is already set for this user.</ansi>`)
 					return true, nil
 				}
 
@@ -71,7 +72,7 @@ func Modify(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 				accounts.SaveUser(*u)
 
-				u.SendText(`<ansi fg="alert-3">Your role has been set to: ` + newRole + `</ansi>`)
+				messaging.ToAccount(u, `<ansi fg="alert-3">Your role has been set to: `+newRole+`</ansi>`)
 				break
 			}
 		}
@@ -82,12 +83,12 @@ func Modify(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 				if strings.EqualFold(searchUser, u.Username) {
 
 					if u.Role == accounts.RoleAdmin {
-						user.SendText(`<ansi fg="alert-4">Admin role cannot be removed this way.</ansi>`)
+						Tell(actor, `<ansi fg="alert-4">Admin role cannot be removed this way.</ansi>`)
 						return false
 					}
 
 					if u.Role == newRole {
-						user.SendText(`<ansi fg="alert-4">That role is already set for this user.</ansi>`)
+						Tell(actor, `<ansi fg="alert-4">That role is already set for this user.</ansi>`)
 						return false
 					}
 
@@ -106,7 +107,7 @@ func Modify(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		}
 
 		if len(foundUsername) > 0 {
-			user.SendText(fmt.Sprintf(`Role changed for user <ansi fg="username">%s</ansi> (Character name: <ansi fg="username">%s</ansi>).`, foundUsername, foundCharacterName))
+			Tell(actor, fmt.Sprintf(`Role changed for user <ansi fg="username">%s</ansi> (Character name: <ansi fg="username">%s</ansi>).`, foundUsername, foundCharacterName))
 			return true, nil
 		}
 

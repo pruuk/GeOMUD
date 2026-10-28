@@ -16,10 +16,10 @@ func Copyover(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 	if user == nil {
 		return false, nil
 	}
-	user.SendText(`Initiating copyover...`)
+	Tell(actor, `Initiating copyover...`)
 	if err := triggerCopyoverFunc(); err != nil {
 		mudlog.Error("copyover command", "error", err)
-		user.SendText(`Copyover failed: ` + err.Error())
+		Tell(actor, `Copyover failed: `+err.Error())
 	}
 	return true, nil
 }
