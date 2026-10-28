@@ -90,7 +90,7 @@ type Character struct {
 	roomHistory      []int                          // A stack FILO of the last X rooms the character has been in
 	PlayerDamage     map[int]int                    `yaml:"-"` // key = who, value = how much
 	LastPlayerDamage uint64                         `yaml:"-"` // last round a player damaged this character
-	KilledBy         ids.ID                         `yaml:"-"` // transient: the NPC that delivered the killing blow; zero for a PvP kill (slice 5 revisits)
+	KilledBy         ids.ID                         `yaml:"-"` // transient: the actor whose combat damage downed this player (NPC or player)
 	KillerMobIsElite bool                           `yaml:"-"` // transient: true if the killing mob was elite
 	KillerMobName    string                         `yaml:"-"` // transient: name of the mob that delivered the killing blow
 	permaBuffIds     []int                          // Buff Id's that are always present for this character

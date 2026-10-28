@@ -36,7 +36,7 @@ func Attack(attacker, defender *actors.Actor) AttackResult {
 	defender.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
 
 	// Remember who has hit him
-	if acct := creditAccount(attacker); acct != nil {
+	if acct := CreditAccount(attacker); acct != nil {
 		defender.Character.TrackPlayerDamage(acct.UserId, attackResult.DamageToTarget)
 	}
 
@@ -57,9 +57,10 @@ func accountOf(a *actors.Actor) *accounts.Account {
 	return nil
 }
 
-// creditAccount is the account a's attacks are credited to: its own, else
-// the account of whoever charmed it, else none.
-func creditAccount(a *actors.Actor) *accounts.Account {
+// CreditAccount is the account a's attacks are credited to: its own, else
+// the account of whoever charmed it, else none. Kill credit and group
+// hatred both follow it (plan Decisions 3 and 8).
+func CreditAccount(a *actors.Actor) *accounts.Account {
 	if acct := accountOf(a); acct != nil {
 		return acct
 	}

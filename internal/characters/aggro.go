@@ -24,4 +24,7 @@ type Aggro struct {
 	SpellInfo     SpellAggroInfo // If Type is SpellCast, this is the spell info
 	ExitName      string         // For example, firing a weapon in a direction
 	RoundsWaiting int            // How many rounds must pass before this triggers
+	// FleeFrom is, for a Flee, the target the actor had when it fled (zero
+	// if none). A blocked or exitless flee resumes the fight with it.
+	FleeFrom ids.ID
 }
