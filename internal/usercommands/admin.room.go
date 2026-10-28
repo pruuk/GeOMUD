@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
@@ -32,7 +33,11 @@ import (
 * room.info				(See a room summary)
 * room.set				(Set properties of the room)
  */
-func Room(rest string, user *accounts.Account, liveRoom *rooms.Room, flags events.EventFlag) (bool, error) {
+func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	handled := true
 

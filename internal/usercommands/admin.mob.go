@@ -18,6 +18,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 )
 
 /*
@@ -26,7 +27,11 @@ import (
 * mob.create		(Create new mobs)
 * mob.spawn			(Spawn a mob in the room)
  */
-func Mob(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Mob(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	args := util.SplitButRespectQuotes(rest)
 

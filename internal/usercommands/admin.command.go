@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 )
 
@@ -16,7 +17,11 @@ import (
 * Role Permissions:
 * command 				(All)
  */
-func AdminCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func AdminCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	// args should look like one of the following:
 	// target buffId - put buff on target if in the room

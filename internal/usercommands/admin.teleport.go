@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -23,7 +24,11 @@ import (
 * teleport.playername	(Teleport to a player name)
 * teleport.roomid		(Teleport to a roomId)
  */
-func Teleport(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	if len(rest) == 0 {
 		// send some sort of help info?

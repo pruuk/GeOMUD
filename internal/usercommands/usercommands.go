@@ -94,12 +94,12 @@ var (
 	userCommands map[string]CommandAccess = map[string]CommandAccess{
 		`alias`:       {accountCommand(Alias), true, false},
 		`attack`:      {accountCommand(Attack), false, false},
-		`badcommands`: {accountCommand(BadCommands), true, true}, // Admin only
+		`badcommands`: {BadCommands, true, true}, // Admin only
 		`biome`:       {accountCommand(Biome), true, false},
 		`broadcast`:   {accountCommand(Broadcast), true, false},
-		`build`:       {accountCommand(Build), false, true},        // Admin only
-		`command`:     {accountCommand(AdminCommand), false, true}, // Admin only
-		`copyover`:    {accountCommand(Copyover), true, true},      // Admin only
+		`build`:       {Build, false, true},        // Admin only
+		`command`:     {AdminCommand, false, true}, // Admin only
+		`copyover`:    {Copyover, true, true},      // Admin only
 		`consider`:    {accountCommand(Consider), true, false},
 		`default`:     {accountCommand(Default), false, false},
 		`drop`:        {accountCommand(Drop), true, false},
@@ -109,55 +109,55 @@ var (
 		`get`:         {accountCommand(Get), false, false},
 		`give`:        {accountCommand(Give), false, false},
 		`go`:          {accountCommand(Go), false, false},
-		`grant`:       {accountCommand(Grant), true, true}, // Admin only
+		`grant`:       {Grant, true, true}, // Admin only
 		`help`:        {accountCommand(Help), true, false},
 		`keyring`:     {accountCommand(KeyRing), true, false},
 		`history`:     {accountCommand(History), true, false},
 		`inventory`:   {accountCommand(Inventory), true, false},
-		`item`:        {accountCommand(Item), true, true},   // Admin only
-		`locate`:      {accountCommand(Locate), true, true}, // Admin only
+		`item`:        {Item, true, true},   // Admin only
+		`locate`:      {Locate, true, true}, // Admin only
 		`lock`:        {accountCommand(Lock), false, false},
 		`look`:        {accountCommand(Look), true, false},
 		`macros`:      {accountCommand(Macros), true, false},
-		`mob`:         {accountCommand(Mob), true, true},    // Admin only
-		`modify`:      {accountCommand(Modify), true, true}, // Admin only
+		`mob`:         {Mob, true, true},    // Admin only
+		`modify`:      {Modify, true, true}, // Admin only
 		`motd`:        {accountCommand(Motd), true, false},
-		`mute`:        {accountCommand(Mute), true, true},
+		`mute`:        {Mute, true, true},
 		`noop`:        {accountCommand(Noop), true, false},
 		`online`:      {accountCommand(Online), true, false},
 		`party`:       {accountCommand(Party), true, false},
 		`password`:    {accountCommand(Password), true, false},
-		`prepare`:     {accountCommand(Prepare), true, true}, // Admin only
+		`prepare`:     {Prepare, true, true}, // Admin only
 		`print`:       {accountCommand(Print), true, false},
 		`printline`:   {accountCommand(PrintLine), true, false},
 		`put`:         {accountCommand(Put), false, false},
 		`quit`:        {accountCommand(Quit), true, false},
 		`read`:        {accountCommand(Read), false, false},
-		`reload`:      {accountCommand(Reload), true, true}, // Admin only
+		`reload`:      {Reload, true, true}, // Admin only
 		`remove`:      {accountCommand(Remove), false, false},
-		`rename`:      {accountCommand(Rename), false, true},     // Admin only
-		`redescribe`:  {accountCommand(Redescribe), false, true}, // Admin only
-		`room`:        {accountCommand(Room), false, true},       // Admin only
+		`rename`:      {Rename, false, true},     // Admin only
+		`redescribe`:  {Redescribe, false, true}, // Admin only
+		`room`:        {Room, false, true},       // Admin only
 		`save`:        {accountCommand(Save), true, false},
 		`say`:         {accountCommand(Say), true, false},
-		`server`:      {accountCommand(Server), false, true}, // Admin only
+		`server`:      {Server, false, true}, // Admin only
 		`set`:         {accountCommand(Set), true, false},
 		`shoot`:       {accountCommand(Shoot), false, false},
 		`shout`:       {accountCommand(Shout), true, false},
 		`show`:        {accountCommand(Show), true, false},
-		`spawn`:       {accountCommand(Spawn), false, true}, // Admin only
+		`spawn`:       {Spawn, false, true}, // Admin only
 
 		// Kept until Phase 5: NewRound_AutoHeal and NewRound_DoCombat dispatch it as player death.
 		`suicide`:  {accountCommand(Suicide), true, false},
-		`syslogs`:  {accountCommand(SysLogs), true, true},  // Admin only
-		`teleport`: {accountCommand(Teleport), true, true}, // Admin only
+		`syslogs`:  {SysLogs, true, true},  // Admin only
+		`teleport`: {Teleport, true, true}, // Admin only
 		`unlock`:   {accountCommand(Unlock), false, false},
-		`unmute`:   {accountCommand(UnMute), true, true}, // Admin only
+		`unmute`:   {UnMute, true, true}, // Admin only
 		`whisper`:  {accountCommand(Whisper), true, false},
 		`who`:      {accountCommand(Who), true, false},
-		`visit`:    {accountCommand(Visit), true, true}, // Admin only
+		`visit`:    {Visit, true, true}, // Admin only
 		`visited`:  {accountCommand(Visited), true, false},
-		`zone`:     {accountCommand(Zone), false, true}, // Admin only
+		`zone`:     {Zone, false, true}, // Admin only
 		// Special command only used upon creating a new account
 		`start`: {accountCommand(Start), false, false},
 	}
