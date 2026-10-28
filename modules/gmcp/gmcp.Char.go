@@ -854,7 +854,7 @@ func newInventory_Item(itm items.Item) GMCPCharModule_Payload_Inventory_Item {
 
 	itmSpec := itm.GetSpec()
 	d := GMCPCharModule_Payload_Inventory_Item{
-		Id:      itm.ShorthandId(),
+		Id:      itm.Id.String(),
 		Name:    itm.Name(),
 		Type:    string(itmSpec.Type),
 		SubType: string(itmSpec.Subtype),

@@ -2,13 +2,12 @@ package items
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"unicode"
 
 	"github.com/GoMudEngine/GoMud/internal/colorpatterns"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/util"
-	"github.com/GoMudEngine/GoMud/internal/uuid"
 )
 
 //
@@ -28,15 +27,10 @@ var (
 	}
 )
 
-const (
-	// TODO: Centralize these types somewhere, eventually?
-	UUIDItem = uuid.IDType(0b00000001)
-)
-
 // Instance properties that may change
 type Item struct {
 	ItemId            int            `yaml:"itemid,omitempty"`
-	UUID              uuid.UUID      `yaml:"-"`                       // `yaml:"uuid,omitempty"`
+	Id                ids.ID         `yaml:"id,omitempty"`            // This item, for good (Phase 4b decision 11)
 	Blob              string         `yaml:"blob,omitempty"`          // Does this item have a blob? Should be base64 encoded.
 	Uses              int            `yaml:"uses,omitempty"`          // How many uses it has left
 	LastUsedRound     uint64         `yaml:"lastusedround,omitempty"` // Last round this item was used
@@ -54,7 +48,7 @@ func New(itemId int) Item {
 
 	newItm := Item{}
 	if itemSpec != nil {
-		newItm.UUID = uuid.New(UUIDItem)
+		newItm.Id = ids.New(ids.NoCell) // rooms carry no cell until the geo room key
 		newItm.ItemId = itemId
 		if itemSpec.Uses > 0 {
 			newItm.Uses = itemSpec.Uses
@@ -151,9 +145,10 @@ func (i *Item) Validate() {
 		return
 	}
 
-	// Make sure has a uid
-	if i.UUID.IsNil() {
-		i.UUID = uuid.New(UUIDItem)
+	// An item without an ID came from a template file or was saved before
+	// item IDs existed: it becomes a thing now, and keeps this ID from here on.
+	if i.Id.IsZero() {
+		i.Id = ids.New(ids.NoCell)
 	}
 
 	iSpec := i.GetSpec()
@@ -381,7 +376,44 @@ func (i *Item) GetDefense() int {
 }
 
 func (i *Item) Equals(b Item) bool {
-	return i.ItemId == b.ItemId && i.UUID == b.UUID
+	return i.ItemId == b.ItemId && i.Id == b.Id
+}
+
+// FromTemplate makes a new item from an item in a template (an NPC's template
+// holdings): the same state, its own ID, and no slices or overrides shared
+// with the template. An empty or disabled slot is returned as it is.
+func FromTemplate(tpl Item) Item {
+	if tpl.ItemId < 1 {
+		return tpl
+	}
+	itm := tpl
+	itm.Id = ids.New(ids.NoCell) // rooms carry no cell until the geo room key
+	itm.Adjectives = append([]string(nil), tpl.Adjectives...)
+	if tpl.Spec != nil {
+		spec := *tpl.Spec
+		itm.Spec = &spec
+	}
+	itm.tempDataStore = nil
+	return itm
+}
+
+// WithoutId is i as written to a template file: an item in a template is not
+// a thing yet, so it has no ID.
+func (i Item) WithoutId() Item {
+	i.Id = ids.ID{}
+	return i
+}
+
+// WithoutIds copies list with every item's ID cleared (see WithoutId).
+func WithoutIds(list []Item) []Item {
+	if list == nil {
+		return nil
+	}
+	out := make([]Item, len(list))
+	for idx, itm := range list {
+		out[idx] = itm.WithoutId()
+	}
+	return out
 }
 
 func (i *Item) IsValid() bool {
@@ -475,14 +507,6 @@ func (i *Item) Name() string {
 	return i.GetSpec().Name
 }
 
-func (i *Item) ShorthandId() string {
-	if i.ItemId < 1 { // Used to represent item slots that are disabled
-		return ``
-	}
-
-	return fmt.Sprintf(`!%d:%s`, i.ItemId, i.UUID.String())
-}
-
 func (i *Item) NameSimple() string {
 
 	if i.ItemId < 1 { // Used to represent item slots that are disabled
@@ -570,41 +594,18 @@ func startsWithVowel(s string) bool {
 
 // Provided a name and a list of items, find the first item that matches the name
 // Will first provide a pair of starts-width and exact matches,
-// and if not found then a contains.
+// and if not found then a contains. An ID token matches only the item with
+// that ID.
 func FindMatchIn(itemName string, items ...Item) (pMatch Item, fMatch Item) {
 
-	if len(itemName) > 1 {
-		if itemName[0] == '!' { // Special meaning to specify an item
-
-			var itemIdMatch int = 0
-			var itemUUIDMatch uuid.UUID = uuid.UUID{}
-
-			parts := strings.Split(itemName[1:], `:`)
-			itemIdMatch, _ = strconv.Atoi(parts[0])
-
-			if len(parts) > 1 {
-				itemUUIDMatch, _ = uuid.FromString(parts[1])
+	// Clients name an item by its ID token (GMCP ids); people name it by name.
+	if id, err := ids.Parse(itemName); err == nil {
+		for _, itm := range items {
+			if itm.Id == id {
+				return itm, itm
 			}
-
-			for _, itm := range items {
-
-				// If a uid was included, it takes priority over qualifying/disqualifying
-				if !itemUUIDMatch.IsNil() {
-					if itm.UUID != itemUUIDMatch {
-						continue
-					}
-					return itm, itm
-				}
-
-				if itemIdMatch > 0 {
-					if itm.ItemId != itemIdMatch {
-						continue
-					}
-					return itm, itm
-				}
-			}
-			return Item{}, Item{}
 		}
+		return Item{}, Item{}
 	}
 
 	itemName, itemNumber := util.GetMatchNumber(itemName)

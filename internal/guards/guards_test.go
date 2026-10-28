@@ -165,6 +165,7 @@ func TestIdsAreMadeOnlyAtCreation(t *testing.T) {
 		"internal/mobs/mobs.go":            "addInstance: a new NPC instantiation",
 		"internal/usercommands/suicide.go": "permadeath reroll: a new character",
 		"cmd/newid/main.go":                "a builder creating a thing by hand",
+		"internal/items/items.go":          "New: a new item; Validate: an item that has none (from a template file, or saved before item IDs existed); FromTemplate: an NPC's template item instantiated",
 	}
 	for path, f := range goFiles(t) {
 		ast.Inspect(f, func(n ast.Node) bool {
