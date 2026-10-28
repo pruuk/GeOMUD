@@ -165,10 +165,6 @@ const (
 
 	// Tokens
 	TokenItemName     TokenName = "{itemname}"
-	TokenSource       TokenName = "{source}"
-	TokenSourceType   TokenName = "{sourcetype}" // will be 'user' or 'mob'
-	TokenTarget       TokenName = "{target}"
-	TokenTargetType   TokenName = "{targettype}" // will be 'user' or 'mob'
 	TokenUsesLeft     TokenName = "{usesleft}"
 	TokenDamage       TokenName = "{damage}"
 	TokenEntranceName TokenName = "{entrancename}"

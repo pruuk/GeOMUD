@@ -207,34 +207,18 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="tok-name">{source}</td>
-                            <td class="tok-resolves">Attacker's display name</td>
+                            <td class="tok-name">{actor}</td>
+                            <td class="tok-resolves">Attacker's name, already colored</td>
                             <td class="tok-context">
-                                Always available. Use in messages shown to the defender or the room so they know who is attacking.
-                                <br><span class="tok-badge badge-always">always set</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="tok-name">{sourcetype}</td>
-                            <td class="tok-resolves"><code>username</code> or <code>mobname</code></td>
-                            <td class="tok-context">
-                                Always available. Used as an ANSI color tag foreground value to color the attacker's name correctly, e.g. <code>&lt;ansi fg="{sourcetype}"&gt;{source}&lt;/ansi&gt;</code>.
+                                Always available. Use in messages shown to the defender or the room so they know who is attacking. The game colors the name for each reader (a player or a mob) and reads "someone" when the reader cannot see the attacker, so do not wrap it in an ansi tag.
                                 <br><span class="tok-badge badge-always">always set</span>
                             </td>
                         </tr>
                         <tr>
                             <td class="tok-name">{target}</td>
-                            <td class="tok-resolves">Defender's display name</td>
+                            <td class="tok-resolves">Defender's name, already colored</td>
                             <td class="tok-context">
-                                Always available. Use in messages shown to the attacker or the room so they know who is being hit.
-                                <br><span class="tok-badge badge-always">always set</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="tok-name">{targettype}</td>
-                            <td class="tok-resolves"><code>username</code> or <code>mobname</code></td>
-                            <td class="tok-context">
-                                Always available. Used as an ANSI color tag foreground value to color the defender's name correctly, e.g. <code>&lt;ansi fg="{targettype}"&gt;{target}&lt;/ansi&gt;</code>.
+                                Always available. Use in messages shown to the attacker or the room so they know who is being hit. Colored and hidden the same way as <code>{actor}</code>.
                                 <br><span class="tok-badge badge-always">always set</span>
                             </td>
                         </tr>
@@ -527,12 +511,23 @@
     function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function escAttr(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
+    // Fills the message tokens with sample values for the preview. The game
+    // colors {actor} and {target} per reader; the preview shows a player
+    // attacking a mob.
+    function fillPreviewTokens(s) {
+        return String(s)
+            .replace(/\{actor\}/g, '<ansi fg="username">Alice</ansi>')
+            .replace(/\{target\}/g, '<ansi fg="mobname">the rat</ansi>')
+            .replace(/\{itemname\}/g, 'sword')
+            .replace(/\{damage\}/g, '7')
+            .replace(/\{exitname\}/g, 'north')
+            .replace(/\{entrancename\}/g, 'south');
+    }
+
     function updateAddPreview(textarea, id) {
         var el = document.getElementById('preview-' + id);
         if (!el) return;
-        var raw = textarea.value
-            .replace(/\{sourcetype\}/g, 'username')
-            .replace(/\{targettype\}/g, 'mobname');
+        var raw = fillPreviewTokens(textarea.value);
         if (!raw.trim()) {
             el.classList.remove('visible');
             el.innerHTML = '';
@@ -545,9 +540,7 @@
     var _ansiTooltip = null;
     function showAnsiTooltip(event, el) {
         if (!_ansiTooltip) _ansiTooltip = document.getElementById('ansiTooltip');
-        var raw = el.textContent
-            .replace(/\{sourcetype\}/g, 'username')
-            .replace(/\{targettype\}/g, 'mobname');
+        var raw = fillPreviewTokens(el.textContent);
         _ansiTooltip.innerHTML = ansitags.parse(raw);
         _ansiTooltip.style.display = 'block';
         positionTooltip(event);
@@ -592,9 +585,7 @@
         var preview = document.createElement('div');
         preview.className = 'msg-inline-preview';
         var renderPreview = function() {
-            var raw = ta.value
-                .replace(/\{sourcetype\}/g, 'username')
-                .replace(/\{targettype\}/g, 'mobname');
+            var raw = fillPreviewTokens(ta.value);
             preview.innerHTML = raw.trim() ? ansitags.parse(raw) : '';
         };
         renderPreview();

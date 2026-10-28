@@ -55,7 +55,7 @@
             <div class="response-examples">
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"claws":{"OptionId":"claws","Options":{"normal":{"Together":{"ToAttacker":["You rake {target} with your claws!"],"ToDefender":["{attacker} rakes you with their claws!"],"ToRoom":["{attacker} rakes {target} with their claws!"]},"Separate":{"ToAttacker":["You rake {target} with your claws!"],"ToDefender":["You are raked by claws from afar!"],"ToAttackerRoom":["{attacker} rakes the air with their claws!"],"ToDefenderRoom":["Claws rake {target} from nowhere!"]}}}}}}
+                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"claws":{"OptionId":"claws","Options":{"normal":{"Together":{"ToAttacker":["You rake {target} with your claws!"],"ToDefender":["{actor} rakes you with their claws!"],"ToRoom":["{actor} rakes {target} with their claws!"]},"Separate":{"ToAttacker":["You rake {target} with your claws!"],"ToDefender":["You are raked by claws from afar!"],"ToAttackerRoom":["{actor} rakes the air with their claws!"],"ToDefenderRoom":["Claws rake {target} from nowhere!"]}}}}}}
                 </details>
             </div>
         </div>
@@ -78,7 +78,7 @@
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
      <span class="flag">-X</span> <span class="kw">PUT</span> \
      <span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \
-     <span class="flag">-d</span> <span class="str">'{"message":"You lunge at &lt;ansi fg=\"{targettype}\"&gt;{target}&lt;/ansi&gt; with your &lt;ansi fg=\"item\"&gt;{itemname}&lt;/ansi&gt;!"}'</span> \
+     <span class="flag">-d</span> <span class="str">'{"message":"You lunge at {target} with your &lt;ansi fg=\"item\"&gt;{itemname}&lt;/ansi&gt;!"}'</span> \
      <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/items/attack-messages/claws/normal/together/toattacker</span></div>
             <div class="response-examples">
                 <details class="resp-entry">
