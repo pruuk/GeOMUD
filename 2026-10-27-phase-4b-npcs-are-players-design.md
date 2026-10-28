@@ -297,7 +297,9 @@ Each slice plan reads these first; a note leaves once a slice settles it.
   rooms with players; wander state resets on copyover and restore; `GetRandomExit` and `findPath`
   pick in map order, so a seed does not fix wandering where a room has two or more exits (the rat
   test uses a ring of one-exit rooms); actors tick in ID order, so same-round lines may come in a
-  different order than before; alignment decay is accounts-only (Phase 5).
+  different order than before; alignment decay is accounts-only (Phase 5). `maxwander` counts
+  wander moves since last home; Calabe (2026-10-28) would rather it meant rooms away from home, but
+  not during the strip: revisit when behaviour is built back up.
 - **Slice 5 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-5-one-combat-path-plan.md`,
   decisions 1-14; inventory beside it). Calabe's rulings: a hidden attacker reads "Someone"
   everywhere; anyone fighting a fleer may block it and a blocked fleer resumes its pre-flee target
