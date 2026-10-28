@@ -1,13 +1,13 @@
 # Status (updated 2026-10-28)
 
 ## Now
-- Phase 4b slice 7 (output conversion), the last slice of Phase 4b: built on
-  `strip/phase-4b-7-output`, PR open (plan `2026-10-28-phase-4b-7-output-plan.md`, inventory beside it)
-- Strip Phases 0-4 and Phase 4b slices 1-6 (with 2b and 2c) are merged (`gomud_strip_plan.md`; spec
-  `2026-10-27-phase-4b-npcs-are-players-design.md`; slice plans in `docs/completed/`)
+- Nothing in flight. Strip Phases 0-4 and Phase 4b (NPCs are players, slices 1-7) are merged
+  (`gomud_strip_plan.md`; spec `2026-10-27-phase-4b-npcs-are-players-design.md`, whose "Notes for
+  later slices" carry what Phase 4b leaves; slice plans in `docs/completed/`)
 
 ## Next
-1. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
+1. Phase 5: rules seam. Read the spec's "Notes for later slices" first. Takes over the death
+   stand-in (revive at 1 health, portal out of room 75;
    `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
    `professions`/`skills`/`spells` world folders, `set shopstyle`, `help spell` and the loot goblin
    config. Spells, scripted buffs and charm do nothing until then
@@ -24,6 +24,6 @@
 - Copyover runs only on Linux: the smoke copyover step (player and NPC IDs survive) is CI-only
 - Permadeath reroll and companion persistence are tested but never run live (permadeath off,
   nothing charms); spec "Notes for later slices"
-- Phase 5 seam: `buffs` has 11 importers; `characters` imports six rules packages (buffs, races,
-  skills, spells, statmods, stats)
+- Phase 5 seam: `buffs` has 11 importing packages; `characters` imports six rules packages (buffs,
+  races, skills, spells, statmods, stats)
 - Known engine and world issues, most from upstream: `docs/known-issues.md`
