@@ -237,7 +237,7 @@ code it replaces, so no slice leaves two live paths behind.
 | 7 | Output conversion | 3, 4 | Every remaining output site moves to `messaging`, split by command group across subagents | direct `SendText` and `connections.SendTo` outside `messaging` | Guard allowlist holds only the GMCP exception. Text parity holds. The Phase 4b Done-when line in `gomud_strip_plan.md` holds |
 
 Order: 1, 2, 2b, 3, 4, 5, 6, 7 (2c fits anywhere after 2; rooms take the ID format with the geo
-room key). Slice 3 needs only slice 1, so its plan can be written while slice 2 is
+room key). Built so far: 1, 2, 2b, 2c. Slice 3 needs only slice 1, so its plan can be written while slice 2 is
 in review.
 
 Plan files sit at the repo root as `<date>-phase-4b-<n>-<slug>-plan.md` (for example
@@ -284,6 +284,15 @@ Each slice plan reads these first; a note leaves once a slice settles it.
 - **Permadeath reroll** (`usercommands/suicide.go`): body re-keying and event order are unverified
   live (permadeath is off in `empty`). Check with permadeath on and `LivesStart: 0`. A reroll
   orphans the old body's charmed mobs until the charm expires.
+- **Slice 2c (built 2026-10-28) leaves for later:** item IDs now survive saves, so any path that
+  puts one item in two saved places gives two items one ID. The whole-branch review found none on
+  normal play paths; the known ones (corpse looting with `CorpseItems` on, admin room API calls) are
+  in `docs/known-issues.md`. A saved-room NPC that walks into an ephemeral room leaves its old copy
+  in the first room's sidecar, and the ephemeral room never saves, so a restart restores the old
+  copy with items it has since given away (reachability unverified: no content found with such an
+  exit); crash windows between the user and room saves do the same. A duplicate-ID check logged at
+  save time would show these. The admin user page still sends items by `ItemId` only, so of two
+  identical items the first is kept when one is removed.
 - **Slice 2b gaps:** a fresh spawn reaches disk only at its room's next save; a crash between a slot
   settle's two writes leaves an unread ledger entry; NPCs live in a deleted room or zone are saved
   nowhere (upstream behaviour); a room delete can lose an NPC in a crash if the deleted room held an
