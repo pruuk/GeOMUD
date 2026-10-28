@@ -237,7 +237,7 @@ code it replaces, so no slice leaves two live paths behind.
 | 7 | Output conversion | 3, 4 | Every remaining output site moves to `messaging`, split by command group across subagents | direct `SendText` and `connections.SendTo` outside `messaging` | Guard allowlist holds only the GMCP exception. Text parity holds. The Phase 4b Done-when line in `gomud_strip_plan.md` holds |
 
 Order: 1, 2, 2b, 3, 4, 5, 6, 7 (2c fits anywhere after 2; rooms take the ID format with the geo
-room key). Built so far: 1, 2, 2b, 2c. Slice 3 needs only slice 1, so its plan can be written while slice 2 is
+room key). Built so far: 1, 2, 2b, 2c, 3. Slice 3 needs only slice 1, so its plan can be written while slice 2 is
 in review.
 
 Plan files sit at the repo root as `<date>-phase-4b-<n>-<slug>-plan.md` (for example
@@ -284,6 +284,21 @@ Each slice plan reads these first; a note leaves once a slice settles it.
 - **Permadeath reroll** (`usercommands/suicide.go`): body re-keying and event order are unverified
   live (permadeath is off in `empty`). Check with permadeath on and `LivesStart: 0`. A reroll
   orphans the old body's charmed mobs until the charm expires.
+- **Slice 3 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-3-messaging-core-plan.md`,
+  decisions 1-11): `Message.TargetRoomText` was added after review so ranged combat can give the
+  attacker's and the target's rooms different observer text, as `combat.go:113-137` does. Slice 5
+  rules on a hidden attacker: today its target and room messages are suppressed (`combat.go:124`);
+  through messaging they would read "someone". Under the Named audience a target that is not named
+  gets nothing. Delivery is synchronous and re-entrant: a `Perceive` that calls `Send` nests, and
+  `util.Hook.Fire` holds its lock while handlers run, so slice 6 queues NPC reactions rather than
+  sending from inside `OnBehaviourPerceive` (two NPCs reacting to each other would recurse).
+  Text that varies per receiver beyond the three tokens (adjectives from `GetPlayerName(viewer)`,
+  language) has no form yet; slice 7 may need a per-receiver render hook. `Message.Room` is ignored
+  when there is an actor. Slices 5 and 7 start a text with `{actor}` when today's line starts with
+  the name, so "Someone" capitalises. Slice 7 also moves `main.go`'s raw `net.Conn` "server full"
+  writes (the guard does not see them), decides whether telnet and terminal negotiation
+  (`term_iac.go`, `term_ansi.go`, `echo.go`) is a second named exception like GMCP, and adds
+  interface text before an actor exists.
 - **Slice 2c (built 2026-10-28) leaves for later:** item IDs now survive saves, so any path that
   puts one item in two saved places gives two items one ID. The whole-branch review found none on
   normal play paths; the known ones (corpse looting with `CorpseItems` on, admin room API calls) are

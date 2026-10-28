@@ -1,14 +1,15 @@
 # Status (updated 2026-10-28)
 
 ## Now
-- Phase 4b slice 2c (item IDs) is built on branch `strip/phase-4b-2c-item-ids`, awaiting Calabe's
-  go to push and open the PR (plan `2026-10-28-phase-4b-2c-item-ids-plan.md`). Strip Phases 0-4 and
-  Phase 4b slices 1, 2 and 2b are merged (`gomud_strip_plan.md`; spec
-  `2026-10-27-phase-4b-npcs-are-players-design.md`)
+- Phase 4b slice 3 (messaging core): built on `strip/phase-4b-3-messaging-core`, PR open
+  (plan `2026-10-28-phase-4b-3-messaging-core-plan.md`)
+- Strip Phases 0-4 and Phase 4b slices 1, 2, 2b and 2c are merged (`gomud_strip_plan.md`; spec
+  `2026-10-27-phase-4b-npcs-are-players-design.md`; 2c plan in `docs/completed/`)
 
 ## Next
-1. Phase 4b slice 3 (messaging core); its plan reads the spec's "Notes for later slices" first
-2. Phase 4b slices 4-7 (one command set, one combat path, one tick, output conversion); each plan
+1. Phase 4b slice 4 (one command set and input path); its plan reads the spec's "Notes for later
+   slices" first
+2. Phase 4b slices 5-7 (one command set, one combat path, one tick, output conversion); each plan
    reads the spec's "Notes for later slices" first
 3. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
    `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
@@ -20,7 +21,7 @@
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
-- Push and PR for slice 2c
+- Nothing
 
 ## Watch
 - 3 Go tests fail on Windows only (`geomud-verifying` lists them); Linux CI is the reference
