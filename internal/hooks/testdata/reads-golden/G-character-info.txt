@@ -1,0 +1,116 @@
+seed 1107
+== help say (substituted for help: the bare index is in map order)
+> Ann: help say
+Ann:
+Ann|
+Ann| <ansi fg="6">  .--.      .-'.      .--.      .--.      .--.      .--.      .`-.      .--.
+Ann| <ansi fg="187">:::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187"></ansi>
+Ann| '      `--'      `.-'      `--'      `--'      `--'      `-.'      `--'      `</ansi>
+Ann|
+Ann| <ansi fg="md" bg="md-bg"><ansi fg="md-h1" bg="md-h1-bg"><ansi fg="md-h1-prefix" bg="md-h1-prefix-bg">.:</ansi> Help for <ansi fg="md-sp1" bg="md-sp1-bg">say</ansi></ansi>
+Ann|
+Ann| <ansi fg="md-p" bg="md-p-bg">The <ansi fg="md-sp1" bg="md-sp1-bg">say</ansi> command says something aloud for anyone in the room to hear.</ansi>
+Ann|
+Ann| <ansi fg="md-p" bg="md-p-bg">Example:</ansi>
+Ann|
+Ann| <ansi fg="md-p" bg="md-p-bg">    [HP:10/10 MP:10/10]: say hello everyone!
+Ann|     you say, "hello everyone!"
+Ann|     [HP:10/10 MP:10/10]:</ansi></ansi>
+Ann|
+== set
+> Ann: set
+Ann: <ansi fg="yellow-bold">description:</ansi>
+Ann: <ansi fg="yellow">They seem thoroughly uninteresting.</ansi>
+Ann:
+Ann: <ansi fg="yellow-bold">ScreenReader:</ansi> <ansi fg="red">OFF</ansi>
+Ann:
+Ann: <ansi fg="yellow-bold">auction:</ansi> <ansi fg="green">ON</ansi>
+Ann:
+Ann: <ansi fg="yellow-bold">shortadjectives:</ansi> <ansi fg="green">ON</ansi>
+Ann:
+Ann: <ansi fg="yellow-bold">tinymap:</ansi> <ansi fg="green">ON</ansi>
+Ann:
+Ann: <ansi fg="yellow-bold">prompt:</ansi> {8}[{t} {T} {255}HP:{hp}{8}/{HP} {255}MP:{13}{mp}{8}/{13}{MP}{8}]{239}{h}{8}:
+Ann:
+Ann: <ansi fg="yellow-bold">fprompt:</ansi> {8}[{t} {T} {255}HP:{hp}{8}/{HP} {255}MP:{13}{mp}{8}/{13}{MP}{8}]{239}{h}{8}:
+Ann:
+Ann: <ansi fg="yellow-bold">wimpy:</ansi> 0%
+Ann:
+Ann: <ansi fg="yellow-bold">shopstyle:</ansi> default
+Ann:
+Ann: See: <ansi fg="command">help set</ansi>
+== who
+> Ann: who
+Ann: <ansi fg="room-description-dark">Also here: </ansi><ansi fg="username">Bob</ansi> and <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>
+Ann|
+== inventory
+> Ann: inventory
+Ann:  ┌─ <ansi fg="black-bold">.:</ansi><ansi fg="20">Equipment</ansi> ──────────────────────────────────────────────────────────────┐
+Ann|  │ <ansi fg="yellow">Weapon:</ansi>   <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                        │
+Ann|    <ansi fg="yellow">Offhand:</ansi>  <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                         
+Ann|    <ansi fg="yellow">Head:</ansi>     <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                         
+Ann|    <ansi fg="yellow">Neck:</ansi>     <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                         
+Ann|    <ansi fg="yellow">Body:</ansi>     <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                         
+Ann|    <ansi fg="yellow">Belt:</ansi>     <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                         
+Ann|    <ansi fg="yellow">Gloves:</ansi>   <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                         
+Ann|    <ansi fg="yellow">Ring:</ansi>     <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                         
+Ann|    <ansi fg="yellow">Legs:</ansi>     <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                         
+Ann|  │ <ansi fg="yellow">Feet:</ansi>     <ansi fg="itemname"><ansi fg="item-nothing">-nothing-</ansi></ansi>                                                        │
+Ann|  └────────────────────────────────────────────────────────────────────────────┘
+Ann|  Carrying: 
+Ann|
+== history
+> Ann: history
+Ann: <ansi fg="black-bold">.:</ansi> <ansi fg="table-title">History</ansi>
+Ann| <ansi fg="yellow-bold">╒══════╕══════╕═════╕
+Ann| │<ansi fg="white"> Type </ansi>│<ansi fg="white"> Time </ansi>│<ansi fg="white"> Log </ansi>│
+Ann| └──────┘──────┘─────┘
+Ann| └──────┘──────┘─────┘</ansi>
+Ann|
+== macros
+> Ann: macros
+Ann: You have no macros set.
+== visited
+> Ann: visited
+Ann:  ┌─ <ansi fg="black-bold">.:</ansi><ansi fg="20">Zones Discovered</ansi> ─────────────────────────────────────────────────────┐
+Ann|  └──────────────────────────────────────────────────────────────────────────┘
+Ann|
+== keyring
+> Ann: keyring
+Ann: <ansi fg="black-bold">.:</ansi> <ansi fg="table-title">Your Keyring:</ansi>
+Ann| <ansi fg="yellow-bold">╒══════╕══════════╕═══════╕══════════╕
+Ann| │<ansi fg="white"> Type </ansi>│<ansi fg="white"> Location </ansi>│<ansi fg="white"> Where </ansi>│<ansi fg="white"> Sequence </ansi>│
+Ann| └──────┘──────────┘───────┘──────────┘
+Ann| └──────┘──────────┘───────┘──────────┘</ansi>
+Ann|
+== save
+> Ann: save
+Ann: Saving...
+Ann: done.
+== motd
+> Ann: motd
+Ann:
+== biome
+> Ann: biome
+Ann: ┌─  <ansi fg="black-bold">.:</ansi> Biome Info  ──────────────────────────────────────────────────────────┐
+Ann| │ <ansi fg="yellow">Name:</ansi>         Default                                                      │
+Ann|   <ansi fg="yellow">Symbol:</ansi>                                                                     
+Ann|   <ansi fg="yellow">Lighting:</ansi>     It is kept well lit at night.                                 
+Ann| │ <ansi fg="yellow">Description:</ansi>                                                               │
+Ann| └────────────────────────────────────────────────────────────────────────────┘
+Ann|
+== print hello
+> Ann: print hello
+Ann: hello
+== alias zz=look (substituted for alias: the bare listing is in map order)
+> Ann: alias zz=look
+Ann: <ansi fg="yellow">Custom Alias Added:</ansi> <ansi fg="command">zz</ansi>=<ansi fg="command">look</ansi>
+== online (Ann the only active account: the list is in map order)
+> Ann: online
+Ann: <ansi fg="black-bold">.:</ansi> <ansi fg="table-title">1 user online</ansi>
+Ann| <ansi fg="yellow-bold">╒══════╕═══════╕═══════════╕════════════╕═════════════╕══════╕
+Ann| │<ansi fg="white"> Name </ansi>│<ansi fg="white"> Level </ansi>│<ansi fg="white"> Alignment </ansi>│<ansi fg="white"> Profession </ansi>│<ansi fg="white"> Online      </ansi>│<ansi fg="white"> Role </ansi>│
+Ann| └──────┘───────┘───────────┘────────────┘─────────────┘──────┘
+Ann| │<ansi fg="name"> <ansi fg="username">Ann </ansi> </ansi>│<ansi fg="level"> <ansi fg="red">1    </ansi> </ansi>│<ansi fg="alignment"> <ansi fg="neutral">neutral  </ansi> </ansi>│<ansi fg="profession"> <ansi fg="white-bold">scrub     </ansi> </ansi>│<ansi fg="online"> <ansi fg="magenta">2562047h47m</ansi> </ansi>│<ansi fg="role"> <ansi fg="role-user-bold">user</ansi> </ansi>│
+Ann| └──────┘───────┘───────────┘────────────┘─────────────┘──────┘</ansi>
+Ann|

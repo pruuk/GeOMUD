@@ -10,6 +10,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 )
@@ -126,7 +127,7 @@ func trySystemCommand(cmd string, connectionId connections.ConnectionId) bool {
 		// Not building complex output, so just preparse the ansi in the template and cache that
 		tplTxt, _ := templates.Process("goodbye", nil)
 
-		connections.SendTo([]byte(templates.AnsiParse(tplTxt)), connectionId)
+		messaging.Raw(connectionId, []byte(templates.AnsiParse(tplTxt)))
 
 		connections.Kick(connectionId, `/quit`)
 		return true
@@ -169,7 +170,7 @@ func trySystemCommand(cmd string, connectionId connections.ConnectionId) bool {
 
 				if writeOut {
 
-					events.AddToQueue(events.Broadcast{Text: fmt.Sprintf(tplTxt, i)})
+					messaging.Notify(messaging.Notice{Text: fmt.Sprintf(tplTxt, i)})
 
 				}
 

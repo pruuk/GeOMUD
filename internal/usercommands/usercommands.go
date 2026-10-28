@@ -10,6 +10,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -32,17 +33,15 @@ type CommandAccess struct {
 // the input line, the actor, its room and the input flags.
 type Command func(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error)
 
-// Tell writes text to the actor: to its account when it has one, nowhere
-// otherwise (Decision 11; slice 7 points this at messaging).
+// Tell writes interface text to the actor through messaging: to its account
+// when it has one, nowhere otherwise; empty text writes a blank line.
 func Tell(actor *actors.Actor, text string) {
-	if user := actor.Controller().Account(); user != nil {
-		user.SendText(text)
-	}
+	messaging.Tell(actor.Id, text)
 }
 
-// ExcludeId is the ID a room send excludes for actor: its account's UserId,
-// or 0 for an NPC, which never receives room text (Decision 11).
-func ExcludeId(actor *actors.Actor) int {
+// UserIdOf is the actor's account UserId, or 0 for an NPC: the user ID
+// templates and the mapper take.
+func UserIdOf(actor *actors.Actor) int {
 	if user := actor.Controller().Account(); user != nil {
 		return user.UserId
 	}
@@ -302,8 +301,8 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 	}
 
 	if user != nil && user.HasPlaintextPassword() && cmd != `password` {
-		user.SendText(`<ansi fg="alert-5">You must change your password before doing anything else.</ansi>`)
-		user.SendText(`<ansi fg="yellow">Type <ansi fg="yellow-bold">password</ansi> to set a new password.</ansi>`)
+		Tell(actor, `<ansi fg="alert-5">You must change your password before doing anything else.</ansi>`)
+		Tell(actor, `<ansi fg="yellow">Type <ansi fg="yellow-bold">password</ansi> to set a new password.</ansi>`)
 		return true, nil
 	}
 
@@ -344,7 +343,7 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 				// Refused silently: an NPC is never told anything about admin commands.
 				return true, nil
 			}
-			user.SendText(fmt.Sprintf(`You don't have permission to use <ansi fg="command">%s</ansi>.`, cmd))
+			Tell(actor, fmt.Sprintf(`You don't have permission to use <ansi fg="command">%s</ansi>.`, cmd))
 			return true, nil
 		}
 	}

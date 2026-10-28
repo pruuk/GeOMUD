@@ -10,6 +10,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -39,18 +40,18 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		// check if they are already part of a party
 		if currentParty != nil {
 			if currentParty.Invited(user.UserId) {
-				user.SendText(`You already have a pending party invite. Try <ansi fg="command">party accept/decline</ansi> first`)
+				Tell(actor, `You already have a pending party invite. Try <ansi fg="command">party accept/decline</ansi> first`)
 			} else if currentParty.IsLeader(user.UserId) {
-				user.SendText(`You already own a party Type <ansi fg="command">party list</ansi> for more info.`)
+				Tell(actor, `You already own a party Type <ansi fg="command">party list</ansi> for more info.`)
 			} else {
-				user.SendText(`You are already party of a party.`)
+				Tell(actor, `You are already party of a party.`)
 			}
 			return true, nil
 		}
 
 		if currentParty = parties.New(user.UserId); currentParty != nil {
 			user.EventLog.Add(`party`, `Started a new party`)
-			user.SendText(`You started a new party!`)
+			Tell(actor, `You started a new party!`)
 
 			//
 			// User started a new party
@@ -61,7 +62,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 			})
 
 		} else {
-			user.SendText(`Something went wrong.`)
+			Tell(actor, `Something went wrong.`)
 		}
 
 		return true, nil
@@ -75,7 +76,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if partyCommand == `invite` {
 
 		if rest == `` {
-			user.SendText(`Invite who?`)
+			Tell(actor, `Invite who?`)
 			return true, nil
 		}
 
@@ -85,7 +86,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		}
 
 		if !currentParty.IsLeader(user.UserId) {
-			user.SendText(`You are not the leader of your party.`)
+			Tell(actor, `You are not the leader of your party.`)
 			return true, nil
 		}
 
@@ -93,7 +94,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		if maxCount := int(partyCfg.MaxPlayerCount); maxCount > 0 {
 			if len(currentParty.UserIds)+len(currentParty.InviteUserIds) >= maxCount {
-				user.SendText(fmt.Sprintf(`Your party is full (%d/%d).`, len(currentParty.UserIds), maxCount))
+				Tell(actor, fmt.Sprintf(`Your party is full (%d/%d).`, len(currentParty.UserIds), maxCount))
 				return true, nil
 			}
 		}
@@ -108,22 +109,22 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		}
 
 		if invitePlayerId == 0 {
-			user.SendText(fmt.Sprintf(`%s not found.`, rest))
+			Tell(actor, fmt.Sprintf(`%s not found.`, rest))
 			return true, nil
 		}
 
 		if invitedParty := parties.Get(invitePlayerId); invitedParty != nil {
-			user.SendText(`That player is already in a party.`)
+			Tell(actor, `That player is already in a party.`)
 			return true, nil
 		}
 
 		invitedUser := accounts.GetByUserId(invitePlayerId)
 
 		if invitedUser != nil && currentParty.InvitePlayer(invitePlayerId) {
-			user.SendText(fmt.Sprintf(`You invited <ansi fg="username">%s</ansi> to your party.`, invitedUser.Character.Name))
-			invitedUser.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> invited you to their party. Type <ansi fg="command">party accept</ansi> or <ansi fg="command">party decline</ansi> to respond.`, user.Character.Name))
+			Tell(actor, fmt.Sprintf(`You invited <ansi fg="username">%s</ansi> to your party.`, invitedUser.Character.Name))
+			messaging.ToAccount(invitedUser, fmt.Sprintf(`<ansi fg="username">%s</ansi> invited you to their party. Type <ansi fg="command">party accept</ansi> or <ansi fg="command">party decline</ansi> to respond.`, user.Character.Name))
 		} else {
-			user.SendText(`Something went wrong.`)
+			Tell(actor, `Something went wrong.`)
 		}
 
 		//
@@ -142,21 +143,21 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	//
 
 	if currentParty == nil {
-		user.SendText(`You are not attached to a party.`)
+		Tell(actor, `You are not attached to a party.`)
 		return true, nil
 	}
 
 	if partyCommand == `accept` || partyCommand == `join` {
 
 		if !currentParty.Invited(user.UserId) {
-			user.SendText(`You haven't accepted an invitation to the party.`)
+			Tell(actor, `You haven't accepted an invitation to the party.`)
 			return true, nil
 		}
 
 		if bool(configs.GetGamePlayConfig().Party.SameRoomOnly) {
 			leader := accounts.GetByUserId(currentParty.LeaderUserId)
 			if leader == nil || leader.Character.RoomId != user.Character.RoomId {
-				user.SendText(`You must be in the same room as the party leader to join.`)
+				Tell(actor, `You must be in the same room as the party leader to join.`)
 				return true, nil
 			}
 		}
@@ -164,13 +165,13 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		if currentParty.AcceptInvite(user.UserId) {
 
 			user.EventLog.Add(`party`, `Joined a party`)
-			user.SendText(`You joined the party!`)
+			Tell(actor, `You joined the party!`)
 			for _, uid := range currentParty.UserIds {
 				if uid == user.UserId {
 					continue
 				}
 				if u := accounts.GetByUserId(uid); u != nil {
-					u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> joined the party!`, user.Character.Name))
+					messaging.ToAccount(u, fmt.Sprintf(`<ansi fg="username">%s</ansi> joined the party!`, user.Character.Name))
 				}
 			}
 
@@ -183,7 +184,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 			})
 
 		} else {
-			user.SendText(`Something went wrong.`)
+			Tell(actor, `Something went wrong.`)
 		}
 		return true, nil
 	}
@@ -201,12 +202,12 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		if currentParty.DeclineInvite(user.UserId) {
 
 			if u := accounts.GetByUserId(currentParty.LeaderUserId); u != nil {
-				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> declined the invitation.`, user.Character.Name))
+				messaging.ToAccount(u, fmt.Sprintf(`<ansi fg="username">%s</ansi> declined the invitation.`, user.Character.Name))
 			}
-			user.SendText(`You decline the invitation.`)
+			Tell(actor, `You decline the invitation.`)
 
 		} else {
-			user.SendText(`Something went wrong.`)
+			Tell(actor, `Something went wrong.`)
 		}
 		return true, nil
 	}
@@ -339,16 +340,16 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 			partyTableData := templates.GetTable(`Party Members`, headers, rows, formatting...)
 			partyTxt, _ := templates.Process("tables/generic", partyTableData, user.UserId)
-			user.SendText(partyTxt)
+			Tell(actor, partyTxt)
 
 			if isInvited {
-				user.SendText(`Type <ansi fg="command">party accept/decline</ansi> to finalize your party membership.`)
+				Tell(actor, `Type <ansi fg="command">party accept/decline</ansi> to finalize your party membership.`)
 			}
 		}
 	}
 
 	if currentParty.Invited(user.UserId) {
-		user.SendText(`You haven't accepted an invitation to the party.`)
+		Tell(actor, `You haven't accepted an invitation to the party.`)
 		return true, nil
 	}
 
@@ -362,7 +363,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		} else if rest == `off` {
 			autoAttackOn = false
 		} else {
-			user.SendText(`Usage: <ansi fg="command">party autoattack [on/off]</ansi>`)
+			Tell(actor, `Usage: <ansi fg="command">party autoattack [on/off]</ansi>`)
 			return true, nil
 		}
 
@@ -370,15 +371,15 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		if autoAttackOn {
 			if wasOnBefore {
-				user.SendText(`You already have auto-attack enabled.`)
+				Tell(actor, `You already have auto-attack enabled.`)
 			} else {
-				user.SendText(`You are now auto-attacking with your party.`)
+				Tell(actor, `You are now auto-attacking with your party.`)
 			}
 		} else {
 			if wasOnBefore {
-				user.SendText(`You are no longer auto-attacking with your party.`)
+				Tell(actor, `You are no longer auto-attacking with your party.`)
 			} else {
-				user.SendText(`You already have auto-attacking disabled.`)
+				Tell(actor, `You already have auto-attacking disabled.`)
 			}
 		}
 
@@ -406,7 +407,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 				})
 
 				user.EventLog.Add(`party`, `Disbanded your party`)
-				user.SendText(`You disbanded the party.`)
+				Tell(actor, `You disbanded the party.`)
 				currentParty.Disband()
 
 				return true, nil
@@ -437,9 +438,9 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 					if u := accounts.GetByUserId(uid); u != nil {
 						if currentParty.LeaderUserId == uid {
 							u.EventLog.Add(`party`, `Promoted to party leader`)
-							u.SendText(`You are now the leader of the party.`)
+							messaging.ToAccount(u, `You are now the leader of the party.`)
 						} else {
-							u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is now the leader of the party.`, newLeaderUser.Character.Name))
+							messaging.ToAccount(u, fmt.Sprintf(`<ansi fg="username">%s</ansi> is now the leader of the party.`, newLeaderUser.Character.Name))
 						}
 					}
 				}
@@ -455,7 +456,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 			currentParty.Leave(user.UserId)
 			user.EventLog.Add(`party`, `Left the party`)
-			user.SendText(`You left the party.`)
+			Tell(actor, `You left the party.`)
 
 			return true, nil
 		}
@@ -470,14 +471,14 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		currentParty.Leave(user.UserId)
 		user.EventLog.Add(`party`, `Left the party`)
-		user.SendText(`You left the party.`)
+		Tell(actor, `You left the party.`)
 
 		for _, uid := range currentParty.UserIds {
 			if uid == user.UserId {
 				continue
 			}
 			if u := accounts.GetByUserId(uid); u != nil {
-				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> left the party.`, user.Character.Name))
+				messaging.ToAccount(u, fmt.Sprintf(`<ansi fg="username">%s</ansi> left the party.`, user.Character.Name))
 			}
 		}
 
@@ -486,7 +487,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if partyCommand == `disband` || partyCommand == `stop` {
 
 		if !currentParty.IsLeader(user.UserId) {
-			user.SendText(`You are not the leader of your party.`)
+			Tell(actor, `You are not the leader of your party.`)
 			return true, nil
 		}
 
@@ -495,12 +496,12 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 				continue
 			}
 			if u := accounts.GetByUserId(uid); u != nil {
-				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> disbanded the party.`, user.Character.Name))
+				messaging.ToAccount(u, fmt.Sprintf(`<ansi fg="username">%s</ansi> disbanded the party.`, user.Character.Name))
 			}
 		}
 		for _, uid := range currentParty.InviteUserIds {
 			if u := accounts.GetByUserId(uid); u != nil {
-				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> disbanded the party.`, user.Character.Name))
+				messaging.ToAccount(u, fmt.Sprintf(`<ansi fg="username">%s</ansi> disbanded the party.`, user.Character.Name))
 			}
 		}
 
@@ -514,7 +515,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		currentParty.Disband()
 		user.EventLog.Add(`party`, `Disbanded the party`)
-		user.SendText(`You disbanded the party.`)
+		Tell(actor, `You disbanded the party.`)
 
 		return true, nil
 	}
@@ -522,7 +523,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if partyCommand == `kick` {
 
 		if !currentParty.IsLeader(user.UserId) {
-			user.SendText(`You are not the leader of your party.`)
+			Tell(actor, `You are not the leader of your party.`)
 			return true, nil
 		}
 
@@ -543,7 +544,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		}
 
 		if matchUser == `` {
-			user.SendText(fmt.Sprintf(`%s not found.`, rest))
+			Tell(actor, fmt.Sprintf(`%s not found.`, rest))
 			return true, nil
 		}
 
@@ -560,12 +561,12 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		currentParty.Leave(kickUserId)
 
 		if u := accounts.GetByUserId(kickUserId); u != nil {
-			u.SendText(`You were kicked from the party.`)
+			messaging.ToAccount(u, `You were kicked from the party.`)
 		}
 
 		for _, uid := range currentParty.UserIds {
 			if u := accounts.GetByUserId(uid); u != nil {
-				u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> was kicked from the party.`, matchUser))
+				messaging.ToAccount(u, fmt.Sprintf(`<ansi fg="username">%s</ansi> was kicked from the party.`, matchUser))
 			}
 		}
 	}
@@ -573,7 +574,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if partyCommand == `promote` {
 
 		if !currentParty.IsLeader(user.UserId) {
-			user.SendText(`You are not the leader of your party.`)
+			Tell(actor, `You are not the leader of your party.`)
 			return true, nil
 		}
 
@@ -594,7 +595,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		}
 
 		if matchUser == `` {
-			user.SendText(fmt.Sprintf(`%s not found.`, rest))
+			Tell(actor, fmt.Sprintf(`%s not found.`, rest))
 			return true, nil
 		}
 
@@ -612,13 +613,13 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		if u := accounts.GetByUserId(promoteUserId); u != nil {
 			u.EventLog.Add(`party`, `Promoted to party leader`)
-			u.SendText(`You have been promoted to party leader.`)
+			messaging.ToAccount(u, `You have been promoted to party leader.`)
 		}
 
 		for _, uid := range currentParty.UserIds {
 			if uid != promoteUserId {
 				if u := accounts.GetByUserId(uid); u != nil {
-					u.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is now the party leader.`, matchUser))
+					messaging.ToAccount(u, fmt.Sprintf(`<ansi fg="username">%s</ansi> is now the party leader.`, matchUser))
 				}
 			}
 		}
@@ -628,7 +629,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if partyCommand == `chat` || partyCommand == `say` {
 
 		if len(rest) == 0 {
-			user.SendText(`What do you want to say?`)
+			Tell(actor, `What do you want to say?`)
 			return true, nil
 		}
 
@@ -637,11 +638,11 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 				continue
 			}
 			if u := accounts.GetByUserId(uId); u != nil {
-				u.SendText(fmt.Sprintf(`<ansi fg="magenta">(party)</ansi> <ansi fg="username">%s</ansi> says, "<ansi fg="yellow">%s</ansi>`, user.Character.Name, rest))
+				messaging.ToAccount(u, fmt.Sprintf(`<ansi fg="magenta">(party)</ansi> <ansi fg="username">%s</ansi> says, "<ansi fg="yellow">%s</ansi>`, user.Character.Name, rest))
 			}
 		}
 
-		user.SendText(fmt.Sprintf(`<ansi fg="magenta">(party)</ansi> You say, "<ansi fg="yellow">%s</ansi>"`, rest))
+		Tell(actor, fmt.Sprintf(`<ansi fg="magenta">(party)</ansi> You say, "<ansi fg="yellow">%s</ansi>"`, rest))
 
 		events.AddToQueue(events.Communication{
 			SourceActorId: user.Character.Id,

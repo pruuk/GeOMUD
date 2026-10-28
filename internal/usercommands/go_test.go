@@ -126,8 +126,9 @@ func TestPlayerMovePreparesTheDestination(t *testing.T) {
 
 func TestNPCWithAPMovesAndPaysTheCost(t *testing.T) {
 	npc, _, room := goSetup(t)
+	addReader(t, observerId, testRoomId)
 
-	msgs := capture[events.Message](t, func() {
+	reads := captureReads(t, func() {
 		handled, err := Go("north", npc, room, 0)
 		require.NoError(t, err)
 		assert.True(t, handled)
@@ -137,12 +138,8 @@ func TestNPCWithAPMovesAndPaysTheCost(t *testing.T) {
 	assert.NotContains(t, room.GetBodies(), npc.Id)
 	assert.Equal(t, 90, npc.Character.ActionPoints)
 
-	var left []string
-	for _, m := range msgs {
-		if m.RoomId == testRoomId {
-			left = append(left, m.Text)
-		}
-	}
+	// The player left behind in the room reads the leave line.
+	left := reads[observerId]
 	require.NotEmpty(t, left)
 	assert.Contains(t, left[0], `<ansi fg="mobname">Rat</ansi> leaves towards`)
 }

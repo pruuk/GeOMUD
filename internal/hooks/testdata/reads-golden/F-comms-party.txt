@@ -1,0 +1,56 @@
+seed 1106
+== say hi
+> Ann: say hi
+Ann: You say, "<ansi fg="saytext">hi</ansi>"
+Bob: <ansi fg="username">Ann</ansi> says, "<ansi fg="saytext">hi</ansi>"
+== say {target} (literal braces)
+> Ann: say {target}
+Ann: You say, "<ansi fg="saytext">{target}</ansi>"
+Bob: <ansi fg="username">Ann</ansi> says, "<ansi fg="saytext">{target}</ansi>"
+== shout hi (far text in C)
+> Ann: shout hi
+Ann: You shout, "<ansi fg="yellow">HI</ansi>"
+Bob: <ansi fg="username">Ann</ansi> shouts, "<ansi fg="yellow">HI</ansi>"
+Cid: Someone shouts from the <ansi fg="exit">west</ansi> direction, "<ansi fg="yellow">HI</ansi>"
+== emote waves
+> Ann: emote waves
+Ann: You Emote: <ansi fg="username">Ann</ansi> <ansi fg="20">waves</ansi>
+Bob: <ansi fg="username">Ann</ansi> <ansi fg="20">waves</ansi>
+== hidden: emote waves
+> Ann: emote waves
+Ann: You Emote: <ansi fg="username">Ann</ansi> <ansi fg="20">waves</ansi>
+Bob: Someone <ansi fg="20">waves</ansi>
+== hidden: say hi
+> Ann: say hi
+Ann: You say, "<ansi fg="saytext">hi</ansi>"
+Bob: Someone says, "<ansi fg="saytext">hi</ansi>"
+== whisper Bob psst
+> Ann: whisper Bob psst
+Ann: You sent a <ansi fg="command">whisper</ansi> to <ansi fg="username">Bob</ansi>
+Bob: <ansi fg="white">***</ansi> <ansi fg="black-bold"><ansi fg="username">Ann</ansi> whispers, "psst"</ansi> <ansi fg="white">***</ansi>
+== broadcast hello
+> Ann: broadcast hello
+Ann: <ansi fg="broadcast-prefix">(broadcast)</ansi> <ansi fg="username">Ann</ansi>: <ansi fg="broadcast-body">hello</ansi>
+Bob: <ansi fg="broadcast-prefix">(broadcast)</ansi> <ansi fg="username">Ann</ansi>: <ansi fg="broadcast-body">hello</ansi>
+Cid: <ansi fg="broadcast-prefix">(broadcast)</ansi> <ansi fg="username">Ann</ansi>: <ansi fg="broadcast-body">hello</ansi>
+== party invite Bob
+> Ann: party invite Bob
+Ann: You invited <ansi fg="username">Bob</ansi> to your party.
+Bob: <ansi fg="username">Ann</ansi> invited you to their party. Type <ansi fg="command">party accept</ansi> or <ansi fg="command">party decline</ansi> to respond.
+== party accept (Bob)
+> Bob: party accept
+Bob: You joined the party!
+Ann: <ansi fg="username">Bob</ansi> joined the party!
+== party chat hi
+> Ann: party chat hi
+Bob: <ansi fg="magenta">(party)</ansi> <ansi fg="username">Ann</ansi> says, "<ansi fg="yellow">hi</ansi>
+Ann: <ansi fg="magenta">(party)</ansi> You say, "<ansi fg="yellow">hi</ansi>"
+== party leave (Bob)
+> Bob: party leave
+Bob: You left the party.
+Ann: <ansi fg="username">Bob</ansi> left the party.
+== say hi (Cid in C, superhearing, hears it from the next room)
+> Ann: say hi
+Ann: You say, "<ansi fg="saytext">hi</ansi>"
+Bob: <ansi fg="username">Ann</ansi> says, "<ansi fg="saytext">hi</ansi>"
+Cid: (From <ansi fg="exit">west</ansi>) You hear someone talking.

@@ -1,0 +1,86 @@
+seed 1103
+== party setup for teleport
+> Ann: party invite Bob
+Ann: You invited <ansi fg="username">Bob</ansi> to your party.
+Bob: <ansi fg="username">Ann</ansi> invited you to their party. Type <ansi fg="command">party accept</ansi> or <ansi fg="command">party decline</ansi> to respond.
+> Bob: party accept
+Bob: You joined the party!
+Ann: <ansi fg="username">Bob</ansi> joined the party!
+== teleport Ann with Bob in her party to C
+> Ann: teleport 93103
+Ann: Moved to room 93103.
+Cid: <ansi fg="username">Ann</ansi> appears in a flash of light!
+Bob: Moved to room 93103.
+Cid: <ansi fg="username">Bob</ansi> appears in a flash of light!
+Ann: <ansi fg="username">Bob</ansi> appears in a flash of light!
+Cid: <ansi fg="username">Bob</ansi> is looking around.
+Ann: <ansi fg="username">Bob</ansi> is looking around.
+Bob:
+Bob| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room C</ansi> <ansi fg="room-zone">[readszone]</ansi>
+Bob: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗
+Bob|                                                                          ║<ansi fg="map-room">•</ansi>    ║
+Bob|                                                                          ║│    ║
+Bob|                                                                          ║<ansi fg="map-room">•</ansi>─<ansi fg="map-room">@</ansi>  ║
+Bob|                                                                          ║     ║
+Bob|                                                                          ║     ║
+Bob|                                                                          ╚═════╝</ansi>
+Bob: <ansi fg="room-description-dark">Also here: </ansi><ansi fg="username">Cid</ansi> and <ansi fg="username">Ann</ansi>
+Bob|
+Bob: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">west</ansi>
+Bob|
+Cid: <ansi fg="username">Ann</ansi> is looking around.
+Bob: <ansi fg="username">Ann</ansi> is looking around.
+Ann:
+Ann| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room C</ansi> <ansi fg="room-zone">[readszone]</ansi>
+Ann: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗
+Ann|                                                                          ║<ansi fg="map-room">•</ansi>    ║
+Ann|                                                                          ║│    ║
+Ann|                                                                          ║<ansi fg="map-room">•</ansi>─<ansi fg="map-room">@</ansi>  ║
+Ann|                                                                          ║     ║
+Ann|                                                                          ║     ║
+Ann|                                                                          ╚═════╝</ansi>
+Ann: <ansi fg="room-description-dark">Also here: </ansi><ansi fg="username">Cid</ansi> and <ansi fg="username">Bob</ansi>
+Ann|
+Ann: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">west</ansi>
+Ann|
+== locate Bob
+> Ann: locate Bob
+Ann: <ansi fg="username">Bob</ansi> is in room #<ansi fg="yellow-bold">93103</ansi> - <ansi fg="magenta">Room C</ansi> <ansi fg="red">【readszone】</ansi>
+Bob: You get the feeling someone is looking for you...
+== modify role bob mod
+> Ann: modify role bob mod
+Bob: <ansi fg="alert-3">Your role has been set to: mod</ansi>
+Ann: Role changed for user <ansi fg="username">bob</ansi> (Character name: <ansi fg="username">Bob</ansi>).
+== mute Bob
+> Ann: mute Bob
+Ann: <ansi fg="username">bob</ansi> (<ansi fg="username">Bob</ansi>) has been <ansi fg="alert-5">MUTED</ansi>
+== grant Bob 10 xp
+> Ann: grant Bob 10 xp
+Bob: You gained <ansi fg="yellow-bold">10 experience points</ansi>! <ansi fg="7">(admin grant)</ansi>
+Ann: Granted <ansi fg="experience">10 experience</ansi> to <ansi fg="username">Bob</ansi>.
+== spawn gold 5
+> Ann: spawn gold 5
+Cid: <ansi fg="username">Ann</ansi> waves their hands around and <ansi fg="gold">5 gold</ansi> appears from thin air and falls to the ground.
+Ann: You wave your hands around and <ansi fg="gold">5 gold</ansi> appears from thin air and falls to the ground.
+Bob: <ansi fg="username">Ann</ansi> waves their hands around and <ansi fg="gold">5 gold</ansi> appears from thin air and falls to the ground.
+== syslogs with no args
+> Ann: syslogs
+Ann: The <ansi fg="command">syslogs</ansi> command can be used to watch the server logs live.
+Ann|
+Ann| <ansi fg="command">syslogs on</ansi>  - Begin following all of the logs
+Ann|
+Ann| There are 4 levels of log importance you can enable. 
+Ann| Each level includes all logs of higher importance levels.
+Ann|
+Ann| <ansi fg="13">DEBUG</ansi> - Debugging logs. May not be enabled on this server.
+Ann| <ansi fg="2">INFO</ansi>  - General info that may or may not be useful.
+Ann| <ansi fg="11">WARN</ansi>  - Non urgent/critical warnings.
+Ann| <ansi fg="1">ERROR</ansi> - Very serious problems that should be tracked.
+Ann|
+Ann| Example:
+Ann|     <ansi fg="command">syslogs info</ansi>  - Receive all <ansi fg="2">INFO</ansi>, <ansi fg="11">WARN</ansi>, and <ansi fg="1">ERROR</ansi> logs.
+Ann|     <ansi fg="command">syslogs error</ansi>  - Receive only <ansi fg="1">ERROR</ansi> logs.
+Ann|
+Ann| <ansi fg="command">syslogs off</ansi> - Stop following the logs
+Ann|
+Ann|

@@ -2,6 +2,7 @@ package inputhandlers
 
 import (
 	"github.com/GoMudEngine/GoMud/internal/connections"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/term"
 )
@@ -108,9 +109,9 @@ func AnsiHandler(clientInput *connections.ClientInput, sharedState map[string]an
 
 			mudlog.Debug("Received", "type", "ANSI (MoveCursorUp)", "bsSequence", len(bsSequence), "spaceSequence", len(spaceSequence))
 
-			connections.SendTo(bsSequence, clientInput.ConnectionId)
-			connections.SendTo(spaceSequence, clientInput.ConnectionId)
-			connections.SendTo(bsSequence, clientInput.ConnectionId)
+			messaging.Raw(clientInput.ConnectionId, bsSequence)
+			messaging.Raw(clientInput.ConnectionId, spaceSequence)
+			messaging.Raw(clientInput.ConnectionId, bsSequence)
 
 			clientInput.History.Previous()
 			historicInput := clientInput.History.Get()
@@ -142,9 +143,9 @@ func AnsiHandler(clientInput *connections.ClientInput, sharedState map[string]an
 
 			mudlog.Debug("Received", "type", "ANSI (MoveCursorUp)", "bsSequence", len(bsSequence), "spaceSequence", len(spaceSequence))
 
-			connections.SendTo(bsSequence, clientInput.ConnectionId)
-			connections.SendTo(spaceSequence, clientInput.ConnectionId)
-			connections.SendTo(bsSequence, clientInput.ConnectionId)
+			messaging.Raw(clientInput.ConnectionId, bsSequence)
+			messaging.Raw(clientInput.ConnectionId, spaceSequence)
+			messaging.Raw(clientInput.ConnectionId, bsSequence)
 
 			clientInput.History.Next()
 			historicInput := clientInput.History.Get()

@@ -19,7 +19,7 @@ func Prepare(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.prepare", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -32,7 +32,7 @@ func Prepare(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 		room.Prepare(false) // we are preparing all rooms, no need to check adjacent rooms
 	}
 
-	user.SendText(
+	Tell(actor,
 		"All rooms have been Prepare()'ed",
 	)
 

@@ -4,6 +4,8 @@ import (
 	"strconv"
 
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -61,7 +63,13 @@ func RoomRoundTick(e events.Event) events.ListenerReturn {
 
 					msg := idleMsgs[idleMsgIndex]
 					if msg != `` {
-						room.SendText(msg)
+						messaging.Send(perception.Message{
+							Kind:         perception.WorldEvent,
+							Room:         room.RoomId,
+							Senses:       perception.Sight | perception.Sound,
+							Range:        perception.Room,
+							ObserverText: msg,
+						})
 					}
 				}
 			}

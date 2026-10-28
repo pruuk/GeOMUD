@@ -86,6 +86,7 @@ const struggle = `emote @struggles with their gear for a while, then gives up.`
 
 func TestPermaGearStruggleEmoteHasNoSelfEcho(t *testing.T) {
 	_, player, _ := setup(t)
+	t.Cleanup(rooms.AddTestDefaultBiome()) // messaging asks the room's light
 	room := rooms.LoadRoom(testRoomId)
 	givePermaGear(t, player)
 
@@ -100,20 +101,16 @@ func TestPermaGearStruggleEmoteHasNoSelfEcho(t *testing.T) {
 	assert.Contains(t, told[0], `Your gear won't budge.`)
 
 	// Run the queued line as the input path would.
+	reading(t, player.Controller().Account())
+	addReader(t, observerId, testRoomId)
 	rest := strings.TrimPrefix(queued[0].InputText, "emote ")
-	msgs := capture[events.Message](t, func() {
+	reads := captureReads(t, func() {
 		_, err := Emote(rest, player, room, 0)
 		require.NoError(t, err)
 	})
-	for _, m := range msgs {
-		if m.RoomId == 0 {
-			assert.NotContains(t, m.Text, "You Emote:")
-			assert.NotEqual(t, player.Controller().Account().UserId, m.UserId, "the player is told nothing")
-		}
-	}
-	room_ := messagesFor(msgs, testRoomId)
-	require.NotEmpty(t, room_, "the room still sees it")
-	assert.Contains(t, room_[0], "struggles with their gear")
+	assert.Empty(t, reads[player.Controller().Account().UserId], "the player is told nothing (no You Emote: echo)")
+	require.Len(t, reads[observerId], 1, "the room still sees it")
+	assert.Contains(t, reads[observerId][0], "struggles with their gear")
 }
 
 func TestNPCGetWithFullBackpackKeepsTheItem(t *testing.T) {
@@ -245,18 +242,22 @@ func TestReEquipWornItemIsSilentForAnyActor(t *testing.T) {
 			sword := testSword()
 			a.Character.Equipment.Weapon = sword
 			a.Character.StoreItem(sword) // the same item, also in the backpack
+			// Readers who would see any line: the player (actor in one
+			// case) and an observer.
+			reading(t, player.Controller().Account())
+			addReader(t, observerId, testRoomId)
 
 			var changes []events.EquipmentChange
-			var msgs []events.Message
+			var reads map[int][]string
 			changes = capture[events.EquipmentChange](t, func() {
-				msgs = captureMessages(t, func() {
+				reads = captureReads(t, func() {
 					_, err := Equip("testsword", a, room, 0)
 					require.NoError(t, err)
 				})
 			})
 
 			assert.Empty(t, changes, "no EquipmentChange")
-			assert.Empty(t, messagesFor(msgs, testRoomId), "no room text")
+			assert.Empty(t, reads, "nobody read anything")
 			assert.True(t, a.Character.Equipment.Weapon.Equals(sword), "still wielded")
 			assert.Equal(t, 1, countIn(a.Character.Items, sword), "backpack copy kept")
 		})
@@ -264,24 +265,26 @@ func TestReEquipWornItemIsSilentForAnyActor(t *testing.T) {
 }
 
 func TestEquipNewItemStillAnnouncesWithMobname(t *testing.T) {
+	t.Cleanup(rooms.AddTestDefaultBiome()) // messaging asks the room's light
 	npc, _, _ := setup(t)
 	room := rooms.LoadRoom(testRoomId)
 	npc.Character.Name = "Rat"
 	sword := testSword()
 	npc.Character.StoreItem(sword)
+	addReader(t, observerId, testRoomId)
 
 	var changes []events.EquipmentChange
-	var msgs []events.Message
+	var reads map[int][]string
 	changes = capture[events.EquipmentChange](t, func() {
-		msgs = captureMessages(t, func() {
+		reads = captureReads(t, func() {
 			_, err := Equip("testsword", npc, room, 0)
 			require.NoError(t, err)
 		})
 	})
 
 	assert.Len(t, changes, 1)
-	require.Len(t, messagesFor(msgs, testRoomId), 1)
-	text := messagesFor(msgs, testRoomId)[0]
+	require.Len(t, reads[observerId], 1)
+	text := reads[observerId][0]
 	assert.True(t, strings.Contains(text, `<ansi fg="mobname">Rat</ansi> wields their`), text)
 }
 

@@ -7,6 +7,9 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -41,9 +44,18 @@ func Whisper(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 		return true, nil
 	}
 
-	toUser.SendText(fmt.Sprintf(`<ansi fg="white">***</ansi> <ansi fg="black-bold"><ansi fg="username">%s</ansi> whispers, "%s"</ansi> <ansi fg="white">***</ansi>`, actor.Character.Name, rest))
-
-	Tell(actor, fmt.Sprintf(`You sent a <ansi fg="command">whisper</ansi> to <ansi fg="username">%s</ansi>`, toUser.Character.Name))
+	// Sound, world range, named: it reaches the target wherever they are.
+	messaging.Send(perception.Message{
+		Kind:       perception.WorldEvent,
+		Actor:      actor.Id,
+		Target:     toUser.Character.Id,
+		Senses:     perception.Sound,
+		Range:      perception.World,
+		Audience:   perception.Named,
+		Named:      []ids.ID{toUser.Character.Id},
+		ActorText:  fmt.Sprintf(`You sent a <ansi fg="command">whisper</ansi> to <ansi fg="username">%s</ansi>`, toUser.Character.Name),
+		TargetText: fmt.Sprintf(`<ansi fg="white">***</ansi> <ansi fg="black-bold"><ansi fg="username">%s</ansi> whispers, "%s"</ansi> <ansi fg="white">***</ansi>`, actor.Character.Name, messaging.Literal(rest)),
+	})
 
 	events.AddToQueue(events.Communication{
 		SourceActorId: actor.Character.Id,

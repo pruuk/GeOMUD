@@ -32,7 +32,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 	// Parties and party auto-attack belong to accounts; user is nil for an NPC.
 	user := actor.Controller().Account()
-	selfUserId := ExcludeId(actor)
+	selfUserId := UserIdOf(actor)
 
 	attackPlayerId := 0
 	attackMobId := ids.ID{}

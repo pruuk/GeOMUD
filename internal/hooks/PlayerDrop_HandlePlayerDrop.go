@@ -5,7 +5,9 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
@@ -27,16 +29,20 @@ func HandlePlayerDrop(e events.Event) events.ListenerReturn {
 		return events.Cancel
 	}
 
-	user.SendText(`<ansi fg="red">you drop to the ground!</ansi>`)
-
 	room := rooms.LoadRoom(evt.RoomId)
 	if room == nil {
+		messaging.Tell(user.Character.Id, `<ansi fg="red">you drop to the ground!</ansi>`)
 		return events.Continue
 	}
 
-	room.SendText(
-		fmt.Sprintf(`<ansi fg="username">%s</ansi> <ansi fg="red">drops to the ground!</ansi>`, user.Character.Name),
-		user.UserId)
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        user.Character.Id,
+		Senses:       perception.Sight | perception.Sound,
+		Range:        perception.Room,
+		ActorText:    `<ansi fg="red">you drop to the ground!</ansi>`,
+		ObserverText: `{actor} <ansi fg="red">drops to the ground!</ansi>`,
+	})
 
 	return events.Continue
 }

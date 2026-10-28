@@ -23,7 +23,7 @@ func Consider(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 	lookAt := args[0]
 
 	playerId, mobId := room.FindByName(lookAt)
-	if playerId == ExcludeId(actor) {
+	if playerId == UserIdOf(actor) {
 		playerId = 0
 	}
 

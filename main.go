@@ -30,6 +30,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/language"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/modmanager"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/gorilla/websocket"
@@ -105,6 +106,8 @@ func main() {
 
 	// Actors track every player and mob from here on (Phase 4b slice 1).
 	actors.Init()
+	// rooms and accounts send through messaging from here on (slice 7).
+	messaging.Init()
 	behaviour.Init()
 
 	// Register copyover contributors (must happen before Restore is called).
@@ -373,7 +376,7 @@ func main() {
 			wg.Add(1)
 			go resumeRestoredConnection(cd, u, &wg)
 		}
-		connections.Broadcast([]byte("\r\nCopyover complete.\r\n"))
+		messaging.RawAll([]byte("\r\nCopyover complete.\r\n"))
 		mudlog.Info("Copyover", "status", "complete")
 	}
 
@@ -387,7 +390,7 @@ func main() {
 		mudlog.Error("Template Error", "error", err)
 	}
 
-	events.AddToQueue(events.Broadcast{
+	messaging.Notify(messaging.Notice{
 		Text: templates.AnsiParse(tplTxt),
 	})
 
@@ -564,7 +567,7 @@ func detectClientType(connDetails *connections.ConnectionDetails, clientInput *c
 	// Ask the client to enable NEW-ENVIRON. A Mudlet client replies WILL, which
 	// TelnetIACHandler answers with the MNES SEND request; Mudlet then returns
 	// its CLIENT_NAME. Non-Mudlet clients reply WONT (or never reply -> timeout).
-	connections.SendTo(term.TelnetRequestNewEnviron.BytesWithPayload(nil), connId)
+	messaging.Raw(connId, term.TelnetRequestNewEnviron.BytesWithPayload(nil))
 
 	buf := make([]byte, connections.ReadBufferSize)
 	deadline := time.Now().Add(clientDetectTimeout)
@@ -634,14 +637,14 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 	loginHandler := inputhandlers.GetLoginPromptHandler()
 
 	// Turn off "line at a time", send chars as typed
-	connections.SendTo(
-		term.TelnetWILL(term.TELNET_OPT_SUP_GO_AHD),
+	messaging.Raw(
 		connDetails.ConnectionId(),
+		term.TelnetWILL(term.TELNET_OPT_SUP_GO_AHD),
 	)
 	// Tell the client we expect chars as they are typed
-	connections.SendTo(
-		term.TelnetWONT(term.TELNET_OPT_LINE_MODE),
+	messaging.Raw(
 		connDetails.ConnectionId(),
+		term.TelnetWONT(term.TELNET_OPT_LINE_MODE),
 	)
 
 	// NOTE: The echo negotiation (WILL/WONT ECHO) is deliberately NOT sent here.
@@ -651,29 +654,29 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 	// detection block further down.
 
 	// Request that the client report window size changes as they happen
-	connections.SendTo(
-		term.TelnetDO(term.TELNET_OPT_NAWS),
+	messaging.Raw(
 		connDetails.ConnectionId(),
+		term.TelnetDO(term.TELNET_OPT_NAWS),
 	)
 
 	// Send request to change charset
-	connections.SendTo(
-		term.TelnetRequestChangeCharset.BytesWithPayload(nil),
+	messaging.Raw(
 		connDetails.ConnectionId(),
+		term.TelnetRequestChangeCharset.BytesWithPayload(nil),
 	)
 
-	connections.SendTo(
-		term.TelnetSuppressGoAhead.BytesWithPayload(nil),
+	messaging.Raw(
 		connDetails.ConnectionId(),
+		term.TelnetSuppressGoAhead.BytesWithPayload(nil),
 	)
 
 	// Offer EOR (End Of Record) support. Mudlet prefers EOR over GA and uses it
 	// to delimit prompts; without it (and with SUPPRESS-GO-AHEAD set) Mudlet has
 	// no prompt anchor, which can prevent its input-line password masking from
 	// engaging even though it honors the ECHO option.
-	connections.SendTo(
-		term.TelnetWILL(term.TELNET_OPT_EOR),
+	messaging.Raw(
 		connDetails.ConnectionId(),
+		term.TelnetWILL(term.TELNET_OPT_EOR),
 	)
 
 	clientSetupCommands := "" + //term.AnsiAltModeStart.String() + // alternative mode (No scrollback)
@@ -683,9 +686,9 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 		term.AnsiRequestResolution.String() // Request resolution
 		//""
 
-	connections.SendTo(
-		[]byte(clientSetupCommands),
+	messaging.Raw(
 		connDetails.ConnectionId(),
+		[]byte(clientSetupCommands),
 	)
 
 	plugins.OnNetConnect(connDetails)
@@ -706,10 +709,10 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 	// --- Send Initial Welcome/Splash ---
 	// (This part was mostly correct before)
 	splashTxt, _ := templates.Process("login/connect-splash", nil)
-	connections.SendTo([]byte(templates.AnsiParse(splashTxt)), connDetails.ConnectionId())
+	messaging.Raw(connDetails.ConnectionId(), []byte(templates.AnsiParse(splashTxt)))
 
 	if connDetails.ConnType() == connections.ConnAI {
-		connections.SendTo([]byte("\r\nThis port is for AI clients. Human players, please use the standard telnet port.\r\n\r\n"), connDetails.ConnectionId())
+		messaging.Raw(connDetails.ConnectionId(), []byte("\r\nThis port is for AI clients. Human players, please use the standard telnet port.\r\n\r\n"))
 	}
 
 	// --- Detect the client type and pick the connect-time echo baseline ---
@@ -722,10 +725,10 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 	clientCS := connections.GetClientSettings(connDetails.ConnectionId())
 	if clientCS.IsMudlet {
 		// Mudlet does its own local echo -> baseline is WONT ECHO.
-		connections.SendTo(term.TelnetWONT(term.TELNET_OPT_ECHO), connDetails.ConnectionId())
+		messaging.Raw(connDetails.ConnectionId(), term.TelnetWONT(term.TELNET_OPT_ECHO))
 	} else {
 		// Raw telnet keeps server-side echo (unchanged behavior).
-		connections.SendTo(term.TelnetWILL(term.TELNET_OPT_ECHO), connDetails.ConnectionId())
+		messaging.Raw(connDetails.ConnectionId(), term.TelnetWILL(term.TELNET_OPT_ECHO))
 	}
 
 	// Now that the echo baseline is correct, add the login handler so the first
@@ -857,9 +860,9 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 			worldManager.SendEnterWorld(userObject.UserId, userObject.Character.RoomId)
 
 			if connDetails.ConnType() == connections.ConnAI && !userObject.IsAI {
-				connections.SendTo([]byte("\r\nWarning: this account is not flagged as AI but connected on the AI port.\r\n"), connDetails.ConnectionId())
+				messaging.Raw(connDetails.ConnectionId(), []byte("\r\nWarning: this account is not flagged as AI but connected on the AI port.\r\n"))
 			} else if connDetails.ConnType() == connections.ConnHuman && userObject.IsAI {
-				connections.SendTo([]byte("\r\nWarning: this AI account is connected on a human port. Please use the AI port.\r\n"), connDetails.ConnectionId())
+				messaging.Raw(connDetails.ConnectionId(), []byte("\r\nWarning: this AI account is connected on a human port. Please use the AI port.\r\n"))
 			}
 
 			clientInput.Reset()
@@ -884,9 +887,9 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 
 			if time.Since(lastInput) < time.Duration(c.Timing.TurnMs)*time.Millisecond {
 				/*
-					connections.SendTo(
-						[]byte("Slow down! You're typing too fast! "+time.Since(lastInput).String()+"\n"),
+					messaging.Raw(
 						connDetails.ConnectionId(),
+						[]byte("Slow down! You're typing too fast! "+time.Since(lastInput).String()+"\n"),
 					)
 				*/
 
@@ -901,9 +904,9 @@ func handleTelnetConnection(connDetails *connections.ConnectionDetails, wg *sync
 
 				if connDetails.ConnType() == connections.ConnAI {
 					if !connDetails.AICommandAllowed(int64(util.GetRoundCount()), int(c.Network.AI.CommandsPerRound)) {
-						connections.SendTo(
-							[]byte(fmt.Sprintf("Command dropped — AI rate limit (%d/round). Wait for the next round.\r\n", int(c.Network.AI.CommandsPerRound))),
+						messaging.Raw(
 							connDetails.ConnectionId(),
+							[]byte(fmt.Sprintf("Command dropped — AI rate limit (%d/round). Wait for the next round.\r\n", int(c.Network.AI.CommandsPerRound))),
 						)
 						clientInput.Reset()
 						userObject.SetUnsentText(``)
@@ -962,7 +965,7 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 	connDetails.AddInputHandler("LoginPromptHandler", loginHandler)
 
 	splashTxt, _ := templates.Process("login/connect-splash", nil)
-	connections.SendTo([]byte(templates.AnsiParse(splashTxt)), connDetails.ConnectionId())
+	messaging.Raw(connDetails.ConnectionId(), []byte(templates.AnsiParse(splashTxt)))
 
 	initialTriggerInput := &connections.ClientInput{
 		ConnectionId: connDetails.ConnectionId(),
@@ -1008,13 +1011,13 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 					loggedInUser, msg, loginErr := accounts.CopyoverReconnectUser(tmpUser, clientInput.ConnectionId)
 					if loginErr != nil {
 						if len(msg) > 0 {
-							connections.SendTo([]byte(msg), clientInput.ConnectionId)
+							messaging.Raw(clientInput.ConnectionId, []byte(msg))
 						}
 						connections.Remove(clientInput.ConnectionId)
 						return
 					}
 					if len(msg) > 0 {
-						connections.SendTo([]byte(msg), clientInput.ConnectionId)
+						messaging.Raw(clientInput.ConnectionId, []byte(msg))
 					}
 					userObject = loggedInUser
 					connDetails.RemoveInputHandler("LoginPromptHandler")
@@ -1064,10 +1067,7 @@ func HandleWebSocketConnection(conn *websocket.Conn) {
 
 			// Make sure web client text masking is off
 
-			events.AddToQueue(events.WebClientCommand{
-				ConnectionId: clientInput.ConnectionId,
-				Text:         `TEXTMASK:false`,
-			})
+			messaging.WebClient(clientInput.ConnectionId, `TEXTMASK:false`)
 
 			// Retrieve the UserObject stored by the completion function
 			if uo, exists := sharedState["UserObject"]; exists {
@@ -1159,9 +1159,9 @@ func TelnetListenOnPort(hostname string, portNum int, wg *sync.WaitGroup, maxCon
 				}
 				if activeCount >= maxConnections {
 					if connType == connections.ConnAI {
-						conn.Write([]byte("\n\n\n!!! AI connection pool is full. Try again later. !!!\n\n\n"))
+						messaging.RawConn(conn, []byte("\n\n\n!!! AI connection pool is full. Try again later. !!!\n\n\n"))
 					} else {
-						conn.Write([]byte(fmt.Sprintf("\n\n\n!!! Server is full (%d connections). Try again later. !!!\n\n\n", activeCount)))
+						messaging.RawConn(conn, []byte(fmt.Sprintf("\n\n\n!!! Server is full (%d connections). Try again later. !!!\n\n\n", activeCount)))
 					}
 					conn.Close()
 					continue
@@ -1208,7 +1208,7 @@ func SSHListenOnPort(portNum int, sshConfig *ssh.ServerConfig, wg *sync.WaitGrou
 
 			if maxConnections > 0 {
 				if connections.ActiveConnectionCount() >= maxConnections {
-					conn.Write([]byte("\n\n\n!!! Server is full. Try again later. !!!\n\n\n"))
+					messaging.RawConn(conn, []byte("\n\n\n!!! Server is full. Try again later. !!!\n\n\n"))
 					conn.Close()
 					continue
 				}
@@ -1323,7 +1323,7 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 	plugins.OnNetConnect(connDetails)
 
 	splashTxt, _ := templates.Process("login/connect-splash", nil)
-	connections.SendTo([]byte(templates.AnsiParse(splashTxt)), connDetails.ConnectionId())
+	messaging.Raw(connDetails.ConnectionId(), []byte(templates.AnsiParse(splashTxt)))
 
 	initialTriggerInput := &connections.ClientInput{
 		ConnectionId: connDetails.ConnectionId(),

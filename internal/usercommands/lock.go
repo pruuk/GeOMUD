@@ -45,8 +45,10 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			container.Lock.SetLocked()
 			room.Containers[containerName] = container
 
-			Tell(actor, fmt.Sprintf(`You use a key to relock the <ansi fg="container">%s</ansi>.`, containerName))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to relock the <ansi fg="container">%s</ansi>.`, actor.Character.Name, containerName), ExcludeId(actor))
+			itemRoomEvent(actor,
+				fmt.Sprintf(`You use a key to relock the <ansi fg="container">%s</ansi>.`, containerName),
+				fmt.Sprintf(`{actor} uses a key to relock the <ansi fg="container">%s</ansi>.`, containerName),
+			)
 		} else if hasBackpackKey {
 
 			itmSpec := backpackKeyItm.GetSpec()
@@ -65,10 +67,10 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 				Gained:  false,
 			})
 
-			Tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="container">%s</ansi>, and add it to your key ring for the future.`, itmSpec.Name, containerName))
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to lock the <ansi fg="container">%s</ansi>.`, actor.Character.Name, containerName),
-				ExcludeId(actor))
+			itemRoomEvent(actor,
+				fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="container">%s</ansi>, and add it to your key ring for the future.`, itmSpec.Name, containerName),
+				fmt.Sprintf(`{actor} uses a key to lock the <ansi fg="container">%s</ansi>.`, containerName),
+			)
 		} else {
 			Tell(actor, `You do not have the key for that.`)
 		}
@@ -97,8 +99,10 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			exitInfo.Lock.SetLocked()
 			room.SetExitLock(exitName, true)
 
-			Tell(actor, fmt.Sprintf(`You use a key to relock the <ansi fg="exit">%s</ansi> lock.`, exitName))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to relock the <ansi fg="exit">%s</ansi> lock`, actor.Character.Name, exitName), ExcludeId(actor))
+			itemRoomEvent(actor,
+				fmt.Sprintf(`You use a key to relock the <ansi fg="exit">%s</ansi> lock.`, exitName),
+				fmt.Sprintf(`{actor} uses a key to relock the <ansi fg="exit">%s</ansi> lock`, exitName),
+			)
 		} else if hasBackpackKey {
 
 			itmSpec := backpackKeyItm.GetSpec()
@@ -117,10 +121,10 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 				Gained:  false,
 			})
 
-			Tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to lock the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, exitName),
-				ExcludeId(actor))
+			itemRoomEvent(actor,
+				fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName),
+				fmt.Sprintf(`{actor} uses a key to lock the <ansi fg="exit">%s</ansi> exit.`, exitName),
+			)
 		} else {
 			Tell(actor, `You do not have the key for that.`)
 		}

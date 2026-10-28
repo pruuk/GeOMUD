@@ -247,7 +247,10 @@ func (cd *ConnectionDetails) AddInputHandler(name string, newInputHandler InputH
 	cd.inputHandlers = append(cd.inputHandlers, newInputHandler)
 }
 
-func (cd *ConnectionDetails) WriteRaw(p []byte) (n int, err error) {
+// writeRaw and write are unexported so only this package (SendTo,
+// SendRawTo, Broadcast) writes to a connection; everything else goes
+// through internal/messaging (slice 7 output rule).
+func (cd *ConnectionDetails) writeRaw(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
@@ -260,7 +263,7 @@ func (cd *ConnectionDetails) WriteRaw(p []byte) (n int, err error) {
 	return cd.conn.Write(p)
 }
 
-func (cd *ConnectionDetails) Write(p []byte) (n int, err error) {
+func (cd *ConnectionDetails) write(p []byte) (n int, err error) {
 
 	if cd.outputSuppressed {
 		return len(p), nil

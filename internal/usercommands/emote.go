@@ -5,6 +5,8 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
@@ -96,22 +98,28 @@ var (
 func Emote(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if len(rest) == 0 {
-		Tell(actor, "You emote.")
-		room.SendText(
-			fmt.Sprintf(`<ansi fg="%s">%s</ansi> emotes.`, NameColour(actor), actor.Character.Name),
-			ExcludeId(actor),
-		)
+		messaging.Send(perception.Message{
+			Kind:         perception.WorldEvent,
+			Actor:        actor.Id,
+			Senses:       perception.Sight | perception.Sound,
+			Range:        perception.Room,
+			ActorText:    "You emote.",
+			ObserverText: `{actor} emotes.`,
+		})
 		return true, nil
 	}
 
 	// emoteAliases are sent without regard to Mute (Not marked as a communication)
 	// This is because they are pre-written.
 	if emoteText, ok := emoteAliases[rest]; ok {
-		Tell(actor, fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, emoteText))
-		room.SendText(
-			fmt.Sprintf(`<ansi fg="%s">%s</ansi> <ansi fg="20">%s</ansi>`, NameColour(actor), actor.Character.Name, emoteText),
-			ExcludeId(actor),
-		)
+		messaging.Send(perception.Message{
+			Kind:         perception.WorldEvent,
+			Actor:        actor.Id,
+			Senses:       perception.Sight | perception.Sound,
+			Range:        perception.Room,
+			ActorText:    fmt.Sprintf(`You Emote: {actor} <ansi fg="20">%s</ansi>`, emoteText),
+			ObserverText: fmt.Sprintf(`{actor} <ansi fg="20">%s</ansi>`, emoteText),
+		})
 		return true, nil
 	}
 
@@ -120,16 +128,22 @@ func Emote(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		return true, nil
 	}
 
+	// A leading @ keeps the emoter's own line off their screen.
+	actorText := ``
 	if rest[0] == '@' && len(rest) > 1 {
 		rest = rest[1:]
 	} else {
-		Tell(actor, fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, rest))
+		actorText = fmt.Sprintf(`You Emote: {actor} <ansi fg="20">%s</ansi>`, messaging.Literal(rest))
 	}
 
-	room.SendTextCommunication(
-		fmt.Sprintf(`<ansi fg="%s">%s</ansi> <ansi fg="20">%s</ansi>`, NameColour(actor), actor.Character.Name, rest),
-		ExcludeId(actor),
-	)
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        actor.Id,
+		Senses:       perception.Sight | perception.Sound,
+		Range:        perception.Room,
+		ActorText:    actorText,
+		ObserverText: fmt.Sprintf(`{actor} <ansi fg="20">%s</ansi>`, messaging.Literal(rest)),
+	})
 
 	return true, nil
 }

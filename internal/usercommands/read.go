@@ -34,14 +34,14 @@ func Read(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	if len(foundItemName) == 0 {
 		Tell(actor, fmt.Sprintf(`You don't have a "%s" that can be read.`, rest))
 	} else {
-		Tell(actor,
-			fmt.Sprintf(`You look at <ansi fg="item">%s</ansi>...`, foundItemLongName),
-		)
+		youLine := fmt.Sprintf(`You look at <ansi fg="item">%s</ansi>...`, foundItemLongName)
 
-		if !isSneaking {
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> looks at their <ansi fg="item">%s</ansi>...`, actor.Character.Name, foundItemName),
-				ExcludeId(actor),
+		if isSneaking {
+			Tell(actor, youLine)
+		} else {
+			itemRoomEvent(actor,
+				youLine,
+				fmt.Sprintf(`{actor} looks at their <ansi fg="item">%s</ansi>...`, foundItemName),
 			)
 		}
 

@@ -23,7 +23,8 @@ func goFiles(t *testing.T) map[string]*ast.File {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() && (d.Name() == ".git" || d.Name() == "_datafiles") {
+		// .claude holds agent worktrees: whole other checkouts of the repo.
+		if d.IsDir() && (d.Name() == ".git" || d.Name() == "_datafiles" || d.Name() == ".claude") {
 			return filepath.SkipDir
 		}
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {

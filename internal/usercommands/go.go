@@ -8,9 +8,11 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
@@ -88,19 +90,27 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 			if lockpickItm.ItemId > 0 && hasSequence {
 
-				Tell(actor, `You know this lock well, you quickly pick it.`)
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> quickly picks the lock on the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
-					ExcludeId(actor))
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Actor:        actor.Id,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ActorText:    `You know this lock well, you quickly pick it.`,
+					ObserverText: fmt.Sprintf(`{actor} quickly picks the lock on the <ansi fg="exit">%s</ansi> exit.`, exitName),
+				})
 
 				exitInfo.Lock.SetUnlocked()
 				room.SetExitLock(exitName, false)
 
 			} else if hasKey {
-				Tell(actor, fmt.Sprintf(`You use the key on your key ring to unlock the <ansi fg="exit">%s</ansi> exit.`, exitName))
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
-					ExcludeId(actor))
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Actor:        actor.Id,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ActorText:    fmt.Sprintf(`You use the key on your key ring to unlock the <ansi fg="exit">%s</ansi> exit.`, exitName),
+					ObserverText: fmt.Sprintf(`{actor} uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, exitName),
+				})
 
 				exitInfo.Lock.SetUnlocked()
 				room.SetExitLock(exitName, false)
@@ -112,10 +122,14 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 					itmSpec := backpackKeyItm.GetSpec()
 
-					Tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
-					room.SendText(
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
-						ExcludeId(actor))
+					messaging.Send(perception.Message{
+						Kind:         perception.WorldEvent,
+						Actor:        actor.Id,
+						Senses:       perception.Sight | perception.Sound,
+						Range:        perception.Room,
+						ActorText:    fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName),
+						ObserverText: fmt.Sprintf(`{actor} uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, exitName),
+					})
 
 					// Key entries look like:
 					// "key-<roomid>-<exitname>": "<itemid>"
@@ -178,6 +192,22 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 			enterFromExit = fmt.Sprintf(`the <ansi fg="exit">%s</ansi>`, enterFromExit)
 		}
 
+		// Tell the old room they are leaving. This goes before the move, so
+		// the line reaches the room being left: a message reaches the room
+		// its actor is in (the slice 7 plan's conversion rules, group E note).
+		originBodies := room.GetBodies()
+		if !isSneaking {
+			messaging.Send(perception.Message{
+				Kind:   perception.WorldEvent,
+				Actor:  actor.Id,
+				Senses: perception.Sight | perception.Sound,
+				Range:  perception.Room,
+				ObserverText: fmt.Sprintf(string(c.ExitRoomMessageWrapper),
+					fmt.Sprintf(`{actor} leaves towards the <ansi fg="exit">%s</ansi> exit.`, exitName),
+				),
+			})
+		}
+
 		if err := rooms.MoveToRoom(actor.Character.Id, destRoom.RoomId); err != nil {
 			Tell(actor, "Oops, couldn't move there!")
 		} else {
@@ -194,21 +224,27 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 						fmt.Sprintf(`You head towards the <ansi fg="exit">%s</ansi> exit.`, exitName),
 					))
 
-				// Tell the old room they are leaving
-				room.SendText(
-					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> leaves towards the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
-					),
-					ExcludeId(actor))
-
 				// Tell the new room they have arrived
-				destRoom.SendText(
-					fmt.Sprintf(string(c.EnterRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> enters from <ansi fg="exit">%s</ansi>.`, NameColour(actor), actor.Character.Name, enterFromExit),
+				messaging.Send(perception.Message{
+					Kind:   perception.WorldEvent,
+					Actor:  actor.Id,
+					Senses: perception.Sight | perception.Sound,
+					Range:  perception.Room,
+					ObserverText: fmt.Sprintf(string(c.EnterRoomMessageWrapper),
+						fmt.Sprintf(`{actor} enters from <ansi fg="exit">%s</ansi>.`, enterFromExit),
 					),
-					ExcludeId(actor))
+				})
 
-				destRoom.SendTextToExits(`You hear someone moving around.`, true, room.GetPlayers(rooms.FindAll)...)
+				// The rooms next to the new room hear it faintly, but not the one just left.
+				messaging.Send(perception.Message{
+					Kind:    perception.WorldEvent,
+					Actor:   actor.Id,
+					Senses:  perception.Sound,
+					Faint:   true,
+					Range:   perception.Nearby,
+					Exclude: originBodies,
+					FarText: `(From {direction}) You hear someone moving around.`,
+				})
 			}
 
 			var currentParty *parties.Party
@@ -225,7 +261,9 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 						}
 						if partyUser := accounts.GetByUserId(partyMemberId); partyUser != nil {
 							if partyUser.Character.RoomId == room.RoomId {
-								partyUser.SendText(`You follow the party leader.`)
+								if partyActor := actors.ByUserId(partyUser.UserId); partyActor != nil {
+									messaging.Tell(partyActor.Id, `You follow the party leader.`)
+								}
 								partyUser.Command(rest)
 							}
 						}
@@ -311,11 +349,15 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 			if !actor.Character.HasBuffFlag("hidden") {
 
-				room.SendText(
-					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> is bumping into walls.`, NameColour(actor), actor.Character.Name),
+				messaging.Send(perception.Message{
+					Kind:   perception.WorldEvent,
+					Actor:  actor.Id,
+					Senses: perception.Sight | perception.Sound,
+					Range:  perception.Room,
+					ObserverText: fmt.Sprintf(string(c.ExitRoomMessageWrapper),
+						`{actor} is bumping into walls.`,
 					),
-					ExcludeId(actor))
+				})
 			}
 			handled = true
 		}

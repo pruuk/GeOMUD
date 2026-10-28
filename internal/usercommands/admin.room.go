@@ -15,6 +15,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/gamelock"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
@@ -50,7 +51,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 	if len(args) == 0 {
 		// send some sort of help info?
 		infoOutput, _ := templates.Process("admincommands/help/command.room", nil, user.UserId)
-		user.SendText(infoOutput)
+		messaging.ToAccount(user, infoOutput)
 
 		return handled, nil
 	}
@@ -65,7 +66,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 
 	if room == nil {
 		err := fmt.Errorf(`Something went wrong for RoomId: %d`, liveRoom.RoomId)
-		user.SendText(err.Error())
+		messaging.ToAccount(user, err.Error())
 		return true, err
 	}
 
@@ -76,14 +77,14 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 	if roomCmd == `edit` {
 
 		if !user.HasRolePermission(`room.edit`) {
-			user.SendText(`you do not have <ansi fg="command">room.edit</ansi> permission`)
+			messaging.ToAccount(user, `you do not have <ansi fg="command">room.edit</ansi> permission`)
 			return true, nil
 		}
 
 		if rest == `edit container` || rest == `edit containers` {
 
 			if !user.HasRolePermission(`room.edit.container`) {
-				user.SendText(`you do not have <ansi fg="command">room.edit.container</ansi> permission`)
+				messaging.ToAccount(user, `you do not have <ansi fg="command">room.edit.container</ansi> permission`)
 				return true, nil
 			}
 
@@ -93,7 +94,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 		if rest == `edit exit` || rest == `edit exits` {
 
 			if !user.HasRolePermission(`room.edit.exits`) {
-				user.SendText(`you do not have <ansi fg="command">room.edit.container</ansi> permission`)
+				messaging.ToAccount(user, `you do not have <ansi fg="command">room.edit.container</ansi> permission`)
 				return true, nil
 			}
 
@@ -103,17 +104,17 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 		if rest == `edit mutator` || rest == `edit mutators` {
 
 			if !user.HasRolePermission(`room.edit.mutators`) {
-				user.SendText(`you do not have <ansi fg="command">room.edit.container</ansi> permission`)
+				messaging.ToAccount(user, `you do not have <ansi fg="command">room.edit.container</ansi> permission`)
 				return true, nil
 			}
 
 			return room_Edit_Mutators(``, user, room, flags)
 		}
 
-		user.SendText(`<ansi fg="red">edit WHAT?</ansi> Try:`)
-		user.SendText(`    <ansi fg="command">room edit containers</ansi>`)
-		user.SendText(`    <ansi fg="command">room edit exits</ansi>`)
-		user.SendText(`    <ansi fg="command">room edit mutators</ansi>`)
+		messaging.ToAccount(user, `<ansi fg="red">edit WHAT?</ansi> Try:`)
+		messaging.ToAccount(user, `    <ansi fg="command">room edit containers</ansi>`)
+		messaging.ToAccount(user, `    <ansi fg="command">room edit exits</ansi>`)
+		messaging.ToAccount(user, `    <ansi fg="command">room edit mutators</ansi>`)
 
 		return true, nil
 	}
@@ -121,7 +122,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 	if roomCmd == `tag` || roomCmd == `tags` {
 
 		if !user.HasRolePermission(`room.tag`) {
-			user.SendText(`you do not have <ansi fg="command">room.tag</ansi> permission`)
+			messaging.ToAccount(user, `you do not have <ansi fg="command">room.tag</ansi> permission`)
 			return true, nil
 		}
 
@@ -142,9 +143,9 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 			tag := strings.ToLower(args[1])
 
 			if _, ok := allTags[tag]; !ok {
-				user.SendText(``)
-				user.SendText(fmt.Sprintf(`Invalid tag provided: <ansi fg="yellow">%s</ansi>`, tag))
-				user.SendText(``)
+				messaging.ToAccount(user, ``)
+				messaging.ToAccount(user, fmt.Sprintf(`Invalid tag provided: <ansi fg="yellow">%s</ansi>`, tag))
+				messaging.ToAccount(user, ``)
 				return true, fmt.Errorf(`Invalid tag provided: %s`, tag)
 			}
 
@@ -152,37 +153,37 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 				if t == tag {
 					room.Tags = append(room.Tags[:i], room.Tags[i+1:]...)
 					rooms.SaveRoomTemplate(*room)
-					user.SendText(fmt.Sprintf(`Tag <ansi fg="yellow">%s</ansi> removed.`, tag))
+					messaging.ToAccount(user, fmt.Sprintf(`Tag <ansi fg="yellow">%s</ansi> removed.`, tag))
 					return true, nil
 				}
 			}
 
 			room.Tags = append(room.Tags, tag)
 			rooms.SaveRoomTemplate(*room)
-			user.SendText(fmt.Sprintf(`Tag <ansi fg="yellow">%s</ansi> added.`, tag))
+			messaging.ToAccount(user, fmt.Sprintf(`Tag <ansi fg="yellow">%s</ansi> added.`, tag))
 			return true, nil
 		}
 
-		user.SendText(``)
+		messaging.ToAccount(user, ``)
 		if len(room.Tags) == 0 {
-			user.SendText(`No tags set on this room.`)
+			messaging.ToAccount(user, `No tags set on this room.`)
 		} else {
-			user.SendText(`Room Tags:`)
+			messaging.ToAccount(user, `Room Tags:`)
 			for _, tag := range room.Tags {
-				user.SendText(fmt.Sprintf(`  <ansi fg="yellow">%s</ansi>`, tag))
+				messaging.ToAccount(user, fmt.Sprintf(`  <ansi fg="yellow">%s</ansi>`, tag))
 			}
 		}
 
 		if len(registeredTags) > 0 {
-			user.SendText(``)
-			user.SendText(`Available Tags:`)
+			messaging.ToAccount(user, ``)
+			messaging.ToAccount(user, `Available Tags:`)
 			for _, name := range moduleNames {
-				user.SendText(fmt.Sprintf(`  <ansi fg="cyan">%s</ansi> module:`, name))
+				messaging.ToAccount(user, fmt.Sprintf(`  <ansi fg="cyan">%s</ansi> module:`, name))
 				for _, tag := range registeredTags[name] {
-					user.SendText(fmt.Sprintf(`    <ansi fg="yellow">%s</ansi>`, tag))
+					messaging.ToAccount(user, fmt.Sprintf(`    <ansi fg="yellow">%s</ansi>`, tag))
 				}
 			}
-			user.SendText(``)
+			messaging.ToAccount(user, ``)
 		}
 
 		return true, nil
@@ -191,7 +192,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 	if roomCmd == `noun` || roomCmd == `nouns` {
 
 		if !user.HasRolePermission(`room.nouns`) {
-			user.SendText(`you do not have <ansi fg="command">room.noun</ansi> permission`)
+			messaging.ToAccount(user, `you do not have <ansi fg="command">room.noun</ansi> permission`)
 			return true, nil
 		}
 
@@ -205,8 +206,8 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 			}
 			room.Nouns[noun] = description
 
-			user.SendText(`Noun Added:`)
-			user.SendText(fmt.Sprintf(`<ansi fg="noun">%s</ansi> - %s`, strings.Repeat(` `, 20-len(noun))+noun, description))
+			messaging.ToAccount(user, `Noun Added:`)
+			messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="noun">%s</ansi> - %s`, strings.Repeat(` `, 20-len(noun))+noun, description))
 
 			rooms.SaveRoomTemplate(*room)
 
@@ -218,9 +219,9 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 
 			if _, ok := room.Nouns[args[1]]; ok {
 				delete(room.Nouns, args[1])
-				user.SendText(`Noun deleted.`)
+				messaging.ToAccount(user, `Noun deleted.`)
 			} else {
-				user.SendText(`Noun not found.`)
+				messaging.ToAccount(user, `Noun not found.`)
 			}
 
 			return true, nil
@@ -228,9 +229,9 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 
 		// room noun
 		// room nouns
-		user.SendText(`Room Nouns:`)
+		messaging.ToAccount(user, `Room Nouns:`)
 		for noun, description := range room.Nouns {
-			user.SendText(fmt.Sprintf(`<ansi fg="noun">%s</ansi> - %s`, strings.Repeat(` `, 20-len(noun))+noun, description))
+			messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="noun">%s</ansi> - %s`, strings.Repeat(` `, 20-len(noun))+noun, description))
 		}
 		return true, nil
 	}
@@ -238,7 +239,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 	if roomCmd == "copy" && len(args) >= 3 {
 
 		if !user.HasRolePermission(`room.copy`) {
-			user.SendText(`you do not have <ansi fg="command">room.copy</ansi> permission`)
+			messaging.ToAccount(user, `you do not have <ansi fg="command">room.copy</ansi> permission`)
 			return true, nil
 		}
 
@@ -252,7 +253,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 				room.SpawnInfo = sourceRoom.SpawnInfo
 				rooms.SaveRoomTemplate(*room)
 
-				user.SendText("Spawn info copied/overwritten.")
+				messaging.ToAccount(user, "Spawn info copied/overwritten.")
 			}
 		}
 
@@ -264,7 +265,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 				room.IdleMessages = append(room.IdleMessages, sourceRoom.IdleMessages...)
 				rooms.SaveRoomTemplate(*room)
 
-				user.SendText("IdleMessages copied/overwritten.")
+				messaging.ToAccount(user, "IdleMessages copied/overwritten.")
 			}
 		}
 
@@ -276,14 +277,14 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 				room.Mutators = append(room.Mutators, sourceRoom.Mutators...)
 				rooms.SaveRoomTemplate(*room)
 
-				user.SendText("Mutators copied/overwritten.")
+				messaging.ToAccount(user, "Mutators copied/overwritten.")
 			}
 		}
 
 	} else if roomCmd == "info" {
 
 		if !user.HasRolePermission(`room.info`) {
-			user.SendText(`you do not have <ansi fg="command">room.info</ansi> permission`)
+			messaging.ToAccount(user, `you do not have <ansi fg="command">room.info</ansi> permission`)
 			return true, nil
 		}
 
@@ -295,7 +296,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 
 		targetRoom := rooms.LoadRoom(roomId)
 		if targetRoom == nil {
-			user.SendText(fmt.Sprintf("Room %d not found.", roomId))
+			messaging.ToAccount(user, fmt.Sprintf("Room %d not found.", roomId))
 			return false, fmt.Errorf("room %d not found", roomId)
 		}
 
@@ -305,12 +306,12 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 		}
 
 		infoOutput, _ := templates.Process("admincommands/ingame/roominfo", roomInfo, user.UserId)
-		user.SendText(infoOutput)
+		messaging.ToAccount(user, infoOutput)
 
 	} else if len(args) >= 2 && roomCmd == "exit" {
 
 		if !user.HasRolePermission(`room.exits`) {
-			user.SendText(`you do not have <ansi fg="command">room.exit</ansi> permission`)
+			messaging.ToAccount(user, `you do not have <ansi fg="command">room.exit</ansi> permission`)
 			return true, nil
 		}
 
@@ -332,7 +333,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 		// Will be erasing it.
 		if len(args) < 3 { // If NO room number/name supplied, delete
 			if _, ok := room.Exits[direction]; !ok {
-				user.SendText(fmt.Sprintf("Exit %s does not exist.", direction))
+				messaging.ToAccount(user, fmt.Sprintf("Exit %s does not exist.", direction))
 				return handled, nil
 			}
 			delete(room.Exits, direction)
@@ -340,13 +341,13 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 		}
 
 		if currentExit, ok := room.Exits[direction]; ok {
-			user.SendText(fmt.Sprintf("Exit %s already exists (overwriting).", direction))
+			messaging.ToAccount(user, fmt.Sprintf("Exit %s already exists (overwriting).", direction))
 
 			if exitRename != `` {
 				delete(room.Exits, direction)
 				room.Exits[exitRename] = currentExit
 
-				user.SendText(fmt.Sprintf("Exit %s renamed to %s.", direction, exitRename))
+				messaging.ToAccount(user, fmt.Sprintf("Exit %s renamed to %s.", direction, exitRename))
 				return true, nil
 			}
 		}
@@ -354,20 +355,20 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 		targetRoom := rooms.LoadRoom(roomId)
 		if targetRoom == nil {
 			err := fmt.Errorf(`room %d not found`, roomId)
-			user.SendText(err.Error())
+			messaging.ToAccount(user, err.Error())
 			return handled, nil
 		}
 
 		if err := rooms.ConnectRoom(room.RoomId, targetRoom.RoomId, direction); err != nil {
-			user.SendText(err.Error())
+			messaging.ToAccount(user, err.Error())
 			return handled, nil
 		}
-		user.SendText(fmt.Sprintf("Exit %s added.", direction))
+		messaging.ToAccount(user, fmt.Sprintf("Exit %s added.", direction))
 
 	} else if len(args) >= 2 && roomCmd == "secretexit" {
 
 		if !user.HasRolePermission(`room.exits`) {
-			user.SendText(`you do not have <ansi fg="command">room.exit</ansi> permission`)
+			messaging.ToAccount(user, `you do not have <ansi fg="command">room.exit</ansi> permission`)
 			return true, nil
 		}
 
@@ -377,21 +378,21 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 				exit.Secret = false
 				room.Exits[direction] = exit
 				rooms.SaveRoomTemplate(*room)
-				user.SendText(fmt.Sprintf("Exit %s secrecy REMOVED.", direction))
+				messaging.ToAccount(user, fmt.Sprintf("Exit %s secrecy REMOVED.", direction))
 			} else {
 				exit.Secret = true
 				room.Exits[direction] = exit
 				rooms.SaveRoomTemplate(*room)
-				user.SendText(fmt.Sprintf("Exit %s secrecy ADDED.", direction))
+				messaging.ToAccount(user, fmt.Sprintf("Exit %s secrecy ADDED.", direction))
 			}
 		} else {
-			user.SendText(fmt.Sprintf("Exit %s not found.", direction))
+			messaging.ToAccount(user, fmt.Sprintf("Exit %s not found.", direction))
 		}
 
 	} else if len(args) >= 2 && roomCmd == "set" {
 
 		if !user.HasRolePermission(`room.set`) {
-			user.SendText(`you do not have <ansi fg="command">room.set</ansi> permission`)
+			messaging.ToAccount(user, `you do not have <ansi fg="command">room.set</ansi> permission`)
 			return true, nil
 		}
 
@@ -407,32 +408,32 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 
 			if propertyValue == `` { // If none specified, list all mutators
 
-				user.SendText(`<ansi fg="table-title">Mutators:</ansi>`)
+				messaging.ToAccount(user, `<ansi fg="table-title">Mutators:</ansi>`)
 				if len(room.Mutators) == 0 {
-					user.SendText(`  None.`)
+					messaging.ToAccount(user, `  None.`)
 				}
 				for _, mut := range room.Mutators {
-					user.SendText(`  <ansi fg="mutator">` + mut.MutatorId + `</ansi>`)
+					messaging.ToAccount(user, `  <ansi fg="mutator">`+mut.MutatorId+`</ansi>`)
 				}
-				user.SendText(``)
+				messaging.ToAccount(user, ``)
 
 			} else { // Otherwise, toggle the mentioned mutator on/off
 
-				user.SendText(``)
+				messaging.ToAccount(user, ``)
 
 				if !mutators.IsMutator(propertyValue) {
-					user.SendText(`<ansi fg="table-title"><ansi fg="mutator">` + propertyValue + `</ansi> is an invalid mutator id.</ansi>`)
-					user.SendText(`<ansi fg="table-title">  Here is a list of valid mutator id's:</ansi>`)
+					messaging.ToAccount(user, `<ansi fg="table-title"><ansi fg="mutator">`+propertyValue+`</ansi> is an invalid mutator id.</ansi>`)
+					messaging.ToAccount(user, `<ansi fg="table-title">  Here is a list of valid mutator id's:</ansi>`)
 					for _, name := range mutators.GetAllMutatorIds() {
-						user.SendText(`    <ansi fg="mutator">` + name + `</ansi>`)
+						messaging.ToAccount(user, `    <ansi fg="mutator">`+name+`</ansi>`)
 					}
 				} else if room.Mutators.Remove(propertyValue) {
-					user.SendText(`<ansi fg="table-title">Mutator <ansi fg="mutator">` + propertyValue + `</ansi> Removed.</ansi>`)
+					messaging.ToAccount(user, `<ansi fg="table-title">Mutator <ansi fg="mutator">`+propertyValue+`</ansi> Removed.</ansi>`)
 				} else if room.Mutators.Add(propertyValue) {
-					user.SendText(`<ansi fg="table-title">Mutator <ansi fg="mutator">` + propertyValue + `</ansi> Added.</ansi>`)
+					messaging.ToAccount(user, `<ansi fg="table-title">Mutator <ansi fg="mutator">`+propertyValue+`</ansi> Added.</ansi>`)
 				}
 
-				user.SendText(``)
+				messaging.ToAccount(user, ``)
 			}
 
 			return true, nil
@@ -476,7 +477,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 		} else if propertyName == "zone" {
 			// Try moving it to the new zone.
 			if err := rooms.MoveToZone(room.RoomId, propertyValue); err != nil {
-				user.SendText(err.Error())
+				messaging.ToAccount(user, err.Error())
 				return handled, nil
 			}
 
@@ -489,29 +490,29 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 					rooms.UnregisterCoordinate(room.Zone, room.RoomId)
 					room.ClearCoordinates()
 					rooms.SaveRoomTemplate(*room)
-					user.SendText("Coordinates cleared.")
+					messaging.ToAccount(user, "Coordinates cleared.")
 				} else {
-					user.SendText("Room has no coordinates set.")
+					messaging.ToAccount(user, "Room has no coordinates set.")
 				}
 				return true, nil
 			}
 
 			coordParts := strings.Fields(propertyValue)
 			if len(coordParts) != 3 {
-				user.SendText("Usage: room set coordinates <x> <y> <z>")
-				user.SendText("       room set coordinates clear")
+				messaging.ToAccount(user, "Usage: room set coordinates <x> <y> <z>")
+				messaging.ToAccount(user, "       room set coordinates clear")
 				return true, nil
 			}
 			cx, errX := strconv.Atoi(coordParts[0])
 			cy, errY := strconv.Atoi(coordParts[1])
 			cz, errZ := strconv.Atoi(coordParts[2])
 			if errX != nil || errY != nil || errZ != nil {
-				user.SendText("Coordinates must be integers.")
+				messaging.ToAccount(user, "Coordinates must be integers.")
 				return true, nil
 			}
 			if !rooms.IsCoordinateAvailable(room.Zone, cx, cy, cz, room.RoomId) {
 				occupyingId, _ := rooms.GetRoomAtCoordinate(room.Zone, cx, cy, cz)
-				user.SendText(fmt.Sprintf("Coordinate (%d, %d, %d) is already occupied by room %d.", cx, cy, cz, occupyingId))
+				messaging.ToAccount(user, fmt.Sprintf("Coordinate (%d, %d, %d) is already occupied by room %d.", cx, cy, cz, occupyingId))
 				return true, nil
 			}
 			if room.HasCoordinates {
@@ -520,21 +521,21 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 			room.SetCoordinates(cx, cy, cz)
 			rooms.RegisterCoordinate(room.Zone, room.RoomId, cx, cy, cz)
 			rooms.SaveRoomTemplate(*room)
-			user.SendText(fmt.Sprintf("Coordinates set to (%d, %d, %d).", cx, cy, cz))
+			messaging.ToAccount(user, fmt.Sprintf("Coordinates set to (%d, %d, %d).", cx, cy, cz))
 			return true, nil
 
 		} else {
-			user.SendText(
+			messaging.ToAccount(user,
 				`Invalid property provided to <ansi fg="command">room set</ansi>.`,
 			)
 			return false, fmt.Errorf("room %d not found", roomId)
 		}
 
-		user.SendText(fmt.Sprintf("Room %s set to %s.", propertyName, propertyValue))
+		messaging.ToAccount(user, fmt.Sprintf("Room %s set to %s.", propertyName, propertyValue))
 	} else if roomCmd == "migrate-coordinates" {
 
 		if !user.HasRolePermission(`room.set`) {
-			user.SendText(`you do not have <ansi fg="command">room.set</ansi> permission`)
+			messaging.ToAccount(user, `you do not have <ansi fg="command">room.set</ansi> permission`)
 			return true, nil
 		}
 
@@ -542,22 +543,22 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 
 		migrated, conflicts, unreachable := mapper.MigrateCoordinates(force)
 
-		user.SendText(fmt.Sprintf("Migration complete: %d rooms updated.", migrated))
+		messaging.ToAccount(user, fmt.Sprintf("Migration complete: %d rooms updated.", migrated))
 		if len(conflicts) > 0 {
-			user.SendText(fmt.Sprintf("Coordinate conflicts (%d):", len(conflicts)))
+			messaging.ToAccount(user, fmt.Sprintf("Coordinate conflicts (%d):", len(conflicts)))
 			for _, c := range conflicts {
-				user.SendText(fmt.Sprintf("  %s", c))
+				messaging.ToAccount(user, fmt.Sprintf("  %s", c))
 			}
 		}
 		if len(unreachable) > 0 {
-			user.SendText(fmt.Sprintf("Unreachable rooms (not connected to zone root): %d", len(unreachable)))
+			messaging.ToAccount(user, fmt.Sprintf("Unreachable rooms (not connected to zone root): %d", len(unreachable)))
 			for _, rId := range unreachable {
-				user.SendText(fmt.Sprintf("  Room %d", rId))
+				messaging.ToAccount(user, fmt.Sprintf("  Room %d", rId))
 			}
 		}
 
 	} else {
-		user.SendText(fmt.Sprintf(`Invalid room command: <ansi fg="command">%s</ansi>`, roomCmd))
+		messaging.ToAccount(user, fmt.Sprintf(`Invalid room command: <ansi fg="command">%s</ansi>`, roomCmd))
 	}
 
 	return handled, nil
@@ -611,7 +612,7 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 	question := cmdPrompt.Ask(`Choose one:`, []string{`new`}, `new`)
 	if !question.Done {
 		tplTxt, _ := templates.Process("tables/numbered-list", containerOptions, user.UserId)
-		user.SendText(tplTxt)
+		messaging.ToAccount(user, tplTxt)
 		return true, nil
 	}
 
@@ -638,8 +639,8 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 
 		// Does the container name they entered not exist? Failure!
 		if !currentlyEditing.Exists {
-			user.SendText("Invalid option selected.")
-			user.SendText("Aborting...")
+			messaging.ToAccount(user, "Invalid option selected.")
+			messaging.ToAccount(user, "Aborting...")
 			user.ClearPrompt()
 			return true, nil
 		}
@@ -656,9 +657,9 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 			delete(room.Containers, currentlyEditing.Name)
 			rooms.SaveRoomTemplate(*room)
 
-			user.SendText(``)
-			user.SendText(fmt.Sprintf(`<ansi fg="container">%s</ansi> deleted from the room.`, currentlyEditing.Name))
-			user.SendText(``)
+			messaging.ToAccount(user, ``)
+			messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="container">%s</ansi> deleted from the room.`, currentlyEditing.Name))
+			messaging.ToAccount(user, ``)
 
 			user.ClearPrompt()
 			return true, nil
@@ -684,8 +685,8 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 
 		// Make sure they aren't using any reserved names.
 		if currentlyEditing.NameNew == `quit` || currentlyEditing.NameNew == `new` {
-			user.SendText("Invalid new name selected.")
-			user.SendText("Aborting...")
+			messaging.ToAccount(user, "Invalid new name selected.")
+			messaging.ToAccount(user, "Aborting...")
 			user.ClearPrompt()
 			return true, nil
 		}
@@ -694,7 +695,7 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 		if currentlyEditing.Name != currentlyEditing.NameNew {
 			if _, ok := room.Containers[currentlyEditing.NameNew]; ok {
 
-				user.SendText(`<ansi fg="red">A container with that name already exists!</ansi>`)
+				messaging.ToAccount(user, `<ansi fg="red">A container with that name already exists!</ansi>`)
 				question.RejectResponse()
 				return true, nil
 
@@ -728,7 +729,7 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 
 			// Make sure the provided difficulty is within acceptable range.
 			if difficultyInt < 2 || difficultyInt > 32 {
-				user.SendText("Difficulty must between 2 and 32, inclusive.")
+				messaging.ToAccount(user, "Difficulty must between 2 and 32, inclusive.")
 				question.RejectResponse()
 				return true, nil
 			}
@@ -793,7 +794,7 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 				question := cmdPrompt.Ask(`Select a buff to add to the trap, or nothing to continue:`, []string{}, `0`)
 				if !question.Done {
 					tplTxt, _ := templates.Process("tables/numbered-list-doubled", buffOptions, user.UserId)
-					user.SendText(tplTxt)
+					messaging.ToAccount(user, tplTxt)
 					return true, nil
 				}
 
@@ -824,11 +825,11 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 
 					if buffSelectedInt == 0 {
 
-						user.SendText("Invalid selection.")
+						messaging.ToAccount(user, "Invalid selection.")
 						question.RejectResponse()
 
 						tplTxt, _ := templates.Process("tables/numbered-list-doubled", buffOptions, user.UserId)
-						user.SendText(tplTxt)
+						messaging.ToAccount(user, tplTxt)
 						return true, nil
 					}
 
@@ -861,7 +862,7 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 					}
 
 					tplTxt, _ := templates.Process("tables/numbered-list-doubled", buffOptions, user.UserId)
-					user.SendText(tplTxt)
+					messaging.ToAccount(user, tplTxt)
 					return true, nil
 
 				}
@@ -919,7 +920,7 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 			}
 
 			if recipeNow != 0 && items.GetItemSpec(recipeNow) == nil {
-				user.SendText(`<ansi fg="red">Invalid selection.</ansi>`)
+				messaging.ToAccount(user, `<ansi fg="red">Invalid selection.</ansi>`)
 				question.RejectResponse()
 				return true, nil
 			}
@@ -969,7 +970,7 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 				question := cmdPrompt.Ask(`Modify which (or new)?`, []string{`skip`}, `skip`)
 				if !question.Done {
 					tplTxt, _ := templates.Process("tables/numbered-list", recipeOptions, user.UserId)
-					user.SendText(tplTxt)
+					messaging.ToAccount(user, tplTxt)
 					return true, nil
 				}
 
@@ -999,7 +1000,7 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 					itemIdInt, _ := strconv.Atoi(question.Response)
 					if items.GetItemSpec(itemIdInt) == nil {
 
-						user.SendText("Invalid itemId.")
+						messaging.ToAccount(user, "Invalid itemId.")
 						question.RejectResponse()
 
 						return true, nil
@@ -1028,8 +1029,8 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 				question = cmdPrompt.Ask(`Enter an itemId to add to the recipe, or nothing to continue:`, []string{``}, `skip`)
 				if !question.Done {
 					// They have a recipe to modify, ask for item id's
-					user.SendText(``)
-					user.SendText(`<ansi fg="cyan">Positive numbers add items, negative numbers remove items.</ansi>`)
+					messaging.ToAccount(user, ``)
+					messaging.ToAccount(user, `<ansi fg="cyan">Positive numbers add items, negative numbers remove items.</ansi>`)
 
 					room_Edit_Containers_SendRecipes(user, recipeNow, neededItems)
 
@@ -1047,7 +1048,7 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 					recipeAdjustment := items.FindItem(question.Response)
 
 					if itemSpec := items.GetItemSpec(recipeAdjustment); itemSpec == nil {
-						user.SendText(`<ansi fg="red">Invalid ItemId provided.</ansi>`)
+						messaging.ToAccount(user, `<ansi fg="red">Invalid ItemId provided.</ansi>`)
 
 						room_Edit_Containers_SendRecipes(user, recipeNow, neededItems)
 
@@ -1121,22 +1122,22 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 	room.Containers[currentlyEditing.NameNew] = currentlyEditing.Container
 	rooms.SaveRoomTemplate(*room)
 
-	user.SendText(``)
+	messaging.ToAccount(user, ``)
 
 	if currentlyEditing.Container.Lock.Difficulty > 0 {
 		lockId := fmt.Sprintf(`%d-%s`, room.RoomId, currentlyEditing.NameNew)
-		user.SendText(fmt.Sprintf(`<ansi fg="red">To Create Key -  LockId: <ansi fg="231" bg="5">%s</ansi></ansi>`, lockId))
+		messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="red">To Create Key -  LockId: <ansi fg="231" bg="5">%s</ansi></ansi>`, lockId))
 
 		seqString := ``
 		for _, dir := range util.GetLockSequence(lockId, int(currentlyEditing.Container.Lock.Difficulty), string(configs.GetServerConfig().Seed)) {
 			seqString += string(dir) + " "
 		}
-		user.SendText(fmt.Sprintf(`<ansi fg="red">To pick lock - Sequence: <ansi fg="green">%s</ansi></ansi>`, seqString))
+		messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="red">To pick lock - Sequence: <ansi fg="green">%s</ansi></ansi>`, seqString))
 	}
 
-	user.SendText(``)
-	user.SendText(`Changes saved.`)
-	user.SendText(``)
+	messaging.ToAccount(user, ``)
+	messaging.ToAccount(user, `Changes saved.`)
+	messaging.ToAccount(user, ``)
 
 	user.ClearPrompt()
 
@@ -1145,8 +1146,8 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 
 func room_Edit_Containers_SendRecipes(user *accounts.Account, recipeResultItemId int, recipeItems map[int]int) {
 
-	user.SendText(``)
-	user.SendText(fmt.Sprintf(`    Current Recipe for %d (<ansi fg="itemname">%s</ansi>):`, recipeResultItemId, specDisplayName(recipeResultItemId)))
+	messaging.ToAccount(user, ``)
+	messaging.ToAccount(user, fmt.Sprintf(`    Current Recipe for %d (<ansi fg="itemname">%s</ansi>):`, recipeResultItemId, specDisplayName(recipeResultItemId)))
 
 	itemsList := []string{}
 	for itemId, qty := range recipeItems {
@@ -1159,10 +1160,10 @@ func room_Edit_Containers_SendRecipes(user *accounts.Account, recipeResultItemId
 	})
 
 	for _, txt := range itemsList {
-		user.SendText(txt)
+		messaging.ToAccount(user, txt)
 	}
 
-	user.SendText(``)
+	messaging.ToAccount(user, ``)
 }
 
 func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
@@ -1208,7 +1209,7 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 	question := cmdPrompt.Ask(`Choose one:`, []string{`new`}, `new`)
 	if !question.Done {
 		tplTxt, _ := templates.Process("tables/numbered-list", exitOptions, user.UserId)
-		user.SendText(tplTxt)
+		messaging.ToAccount(user, tplTxt)
 		return true, nil
 	}
 
@@ -1235,8 +1236,8 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 
 		// Does the exit name they entered not exist? Failure!
 		if !currentlyEditing.Exists {
-			user.SendText("Invalid option selected.")
-			user.SendText("Aborting...")
+			messaging.ToAccount(user, "Invalid option selected.")
+			messaging.ToAccount(user, "Aborting...")
 			user.ClearPrompt()
 			return true, nil
 		}
@@ -1253,9 +1254,9 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 			delete(room.Exits, currentlyEditing.Name)
 			rooms.SaveRoomTemplate(*room)
 
-			user.SendText(``)
-			user.SendText(fmt.Sprintf(`<ansi fg="exit">%s</ansi> deleted from the room.`, currentlyEditing.Name))
-			user.SendText(``)
+			messaging.ToAccount(user, ``)
+			messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="exit">%s</ansi> deleted from the room.`, currentlyEditing.Name))
+			messaging.ToAccount(user, ``)
 
 			user.ClearPrompt()
 			return true, nil
@@ -1281,8 +1282,8 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 
 		// Make sure they aren't using any reserved names.
 		if currentlyEditing.NameNew == `quit` || currentlyEditing.NameNew == `new` {
-			user.SendText("Invalid new name selected.")
-			user.SendText("Aborting...")
+			messaging.ToAccount(user, "Invalid new name selected.")
+			messaging.ToAccount(user, "Aborting...")
 			user.ClearPrompt()
 			return true, nil
 		}
@@ -1291,7 +1292,7 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 		if currentlyEditing.Name != currentlyEditing.NameNew {
 			if _, ok := room.Exits[currentlyEditing.NameNew]; ok {
 
-				user.SendText(`<ansi fg="red">An exit with that name already exists!</ansi>`)
+				messaging.ToAccount(user, `<ansi fg="red">An exit with that name already exists!</ansi>`)
 				question.RejectResponse()
 				return true, nil
 
@@ -1314,7 +1315,7 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 
 		// Make sure they aren't using any reserved names.
 		if rooms.LoadRoom(currentlyEditing.Exit.RoomId) == nil {
-			user.SendText("Invalid RoomId provided.")
+			messaging.ToAccount(user, "Invalid RoomId provided.")
 			question.RejectResponse()
 			return true, nil
 		}
@@ -1384,7 +1385,7 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 
 			// Make sure the provided difficulty is within acceptable range.
 			if difficultyInt < 2 || difficultyInt > 32 {
-				user.SendText("Difficulty must between 2 and 32, inclusive.")
+				messaging.ToAccount(user, "Difficulty must between 2 and 32, inclusive.")
 				question.RejectResponse()
 				return true, nil
 			}
@@ -1449,7 +1450,7 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 				question := cmdPrompt.Ask(`Select a buff to add to the trap, or nothing to continue:`, []string{}, `0`)
 				if !question.Done {
 					tplTxt, _ := templates.Process("tables/numbered-list-doubled", buffOptions, user.UserId)
-					user.SendText(tplTxt)
+					messaging.ToAccount(user, tplTxt)
 					return true, nil
 				}
 
@@ -1480,11 +1481,11 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 
 					if buffSelectedInt == 0 {
 
-						user.SendText("Invalid selection.")
+						messaging.ToAccount(user, "Invalid selection.")
 						question.RejectResponse()
 
 						tplTxt, _ := templates.Process("tables/numbered-list-doubled", buffOptions, user.UserId)
-						user.SendText(tplTxt)
+						messaging.ToAccount(user, tplTxt)
 						return true, nil
 					}
 
@@ -1517,7 +1518,7 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 					}
 
 					tplTxt, _ := templates.Process("tables/numbered-list-doubled", buffOptions, user.UserId)
-					user.SendText(tplTxt)
+					messaging.ToAccount(user, tplTxt)
 					return true, nil
 
 				}
@@ -1557,22 +1558,22 @@ func room_Edit_Exits(rest string, user *accounts.Account, room *rooms.Room, flag
 	room.Exits[currentlyEditing.NameNew] = currentlyEditing.Exit
 	rooms.SaveRoomTemplate(*room)
 
-	user.SendText(``)
+	messaging.ToAccount(user, ``)
 
 	if currentlyEditing.Exit.Lock.Difficulty > 0 {
 		lockId := fmt.Sprintf(`%d-%s`, room.RoomId, currentlyEditing.NameNew)
-		user.SendText(fmt.Sprintf(`<ansi fg="red">To Create Key -  LockId: <ansi fg="231" bg="5">%s</ansi></ansi>`, lockId))
+		messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="red">To Create Key -  LockId: <ansi fg="231" bg="5">%s</ansi></ansi>`, lockId))
 
 		seqString := ``
 		for _, dir := range util.GetLockSequence(lockId, int(currentlyEditing.Exit.Lock.Difficulty), string(configs.GetServerConfig().Seed)) {
 			seqString += string(dir) + " "
 		}
-		user.SendText(fmt.Sprintf(`<ansi fg="red">To pick lock - Sequence: <ansi fg="green">%s</ansi></ansi>`, seqString))
+		messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="red">To pick lock - Sequence: <ansi fg="green">%s</ansi></ansi>`, seqString))
 	}
 
-	user.SendText(``)
-	user.SendText(`Changes saved.`)
-	user.SendText(``)
+	messaging.ToAccount(user, ``)
+	messaging.ToAccount(user, `Changes saved.`)
+	messaging.ToAccount(user, ``)
 
 	user.ClearPrompt()
 
@@ -1624,7 +1625,7 @@ func room_Edit_Mutators(rest string, user *accounts.Account, room *rooms.Room, f
 	question := cmdPrompt.Ask(`Select a mutator to add to the room, or nothing to continue:`, []string{}, `0`)
 	if !question.Done {
 		tplTxt, _ := templates.Process("tables/numbered-list-doubled", mutatorOptions, user.UserId)
-		user.SendText(tplTxt)
+		messaging.ToAccount(user, tplTxt)
 		return true, nil
 	}
 
@@ -1653,11 +1654,11 @@ func room_Edit_Mutators(rest string, user *accounts.Account, room *rooms.Room, f
 
 		if mutatorSelected == `` {
 
-			user.SendText("Invalid selection.")
+			messaging.ToAccount(user, "Invalid selection.")
 			question.RejectResponse()
 
 			tplTxt, _ := templates.Process("tables/numbered-list-doubled", mutatorOptions, user.UserId)
-			user.SendText(tplTxt)
+			messaging.ToAccount(user, tplTxt)
 			return true, nil
 		}
 
@@ -1688,7 +1689,7 @@ func room_Edit_Mutators(rest string, user *accounts.Account, room *rooms.Room, f
 		}
 
 		tplTxt, _ := templates.Process("tables/numbered-list-doubled", mutatorOptions, user.UserId)
-		user.SendText(tplTxt)
+		messaging.ToAccount(user, tplTxt)
 		return true, nil
 
 	}
@@ -1702,9 +1703,9 @@ func room_Edit_Mutators(rest string, user *accounts.Account, room *rooms.Room, f
 	}
 	rooms.SaveRoomTemplate(*room)
 
-	user.SendText(``)
-	user.SendText(`Changes saved.`)
-	user.SendText(``)
+	messaging.ToAccount(user, ``)
+	messaging.ToAccount(user, `Changes saved.`)
+	messaging.ToAccount(user, ``)
 
 	user.ClearPrompt()
 

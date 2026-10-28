@@ -6,6 +6,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
@@ -65,8 +66,8 @@ func HandleJoin(e events.Event) events.ListenerReturn {
 
 	// TODO HERE
 	if user.HasPlaintextPassword() {
-		user.SendText(`<ansi fg="alert-5">You must change your password before doing anything else.</ansi>`)
-		user.SendText(`<ansi fg="yellow">Type <ansi fg="yellow-bold">password</ansi> to set a new password.</ansi>`)
+		messaging.Tell(user.Character.Id, `<ansi fg="alert-5">You must change your password before doing anything else.</ansi>`)
+		messaging.Tell(user.Character.Id, `<ansi fg="yellow">Type <ansi fg="yellow-bold">password</ansi> to set a new password.</ansi>`)
 	} else {
 		loginCmds := configs.GetConfig().Server.OnLoginCommands
 		if len(loginCmds) > 0 {
@@ -87,7 +88,7 @@ func HandleJoin(e events.Event) events.ListenerReturn {
 	if room != nil {
 
 		if sendResetMessage {
-			user.SendText("A portal opens before you and you feel an intense pulling... you can't escape it... You are transported elsewhere!")
+			messaging.Tell(user.Character.Id, "A portal opens before you and you feel an intense pulling... you can't escape it... You are transported elsewhere!")
 		}
 
 		user.CommandFlagged(`look`, events.CmdSecretly) // Do a secret look.

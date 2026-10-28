@@ -61,20 +61,17 @@ func (i Input) Type() string { return `Input` }
 type Broadcast struct {
 	Text             string
 	TextScreenReader string // optional text for screenreader friendliness
-	IsCommunication  bool
-	SourceIsMod      bool
 	SkipLineRefresh  bool
 }
 
 func (b Broadcast) Type() string { return `Broadcast` }
 
 type Message struct {
-	UserId          int
-	ExcludeUserIds  []int
-	RoomId          int
-	Text            string
-	IsQuiet         bool // whether it can only be heard by superior "hearing"
-	IsCommunication bool // If true, this is a communication such as "say" or "emote"
+	UserId         int
+	ExcludeUserIds []int
+	RoomId         int
+	Text           string
+	IsQuiet        bool // whether it can only be heard by superior "hearing"
 }
 
 func (m Message) Type() string { return `Message` }

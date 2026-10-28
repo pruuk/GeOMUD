@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/connections"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/term"
 )
@@ -78,9 +79,9 @@ func TelnetIACHandler(clientInput *connections.ClientInput, sharedState map[stri
 
 		if ok, _ := term.Matches(iacCmd, term.TelnetAgreeChangeCharset); ok {
 			mudlog.Debug("Received", "type", "IAC (TelnetAgreeChangeCharset)")
-			connections.SendTo(
-				term.TelnetCharset.BytesWithPayload([]byte(" UTF-8")),
+			messaging.Raw(
 				clientInput.ConnectionId,
+				term.TelnetCharset.BytesWithPayload([]byte(" UTF-8")),
 			)
 			continue
 		}
@@ -128,7 +129,7 @@ func TelnetIACHandler(clientInput *connections.ClientInput, sharedState map[stri
 		// Mudlet replies with CLIENT_NAME among them.)
 		if ok, _ := term.Matches(iacCmd, term.TelnetWillNewEnviron); ok {
 			mudlog.Debug("Received", "type", "IAC (WILL NEW-ENVIRON)")
-			connections.SendTo(term.TelnetNewEnvironSendRequest.BytesWithPayload(nil), clientInput.ConnectionId)
+			messaging.Raw(clientInput.ConnectionId, term.TelnetNewEnvironSendRequest.BytesWithPayload(nil))
 			continue
 		}
 

@@ -9,7 +9,9 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -77,16 +79,16 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			targetUser.Character.StoreItem(giveItem)
 			actor.Character.RemoveItem(giveItem)
 
-			Tell(actor,
-				fmt.Sprintf(`You give the <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, giveItem.DisplayName(), targetUser.Character.Name),
-			)
-			targetUser.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives you their <ansi fg="item">%s</ansi>.`, NameColour(actor), actor.Character.Name, giveItem.DisplayName()),
-			)
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives <ansi fg="username">%s</ansi> a <ansi fg="itemname">%s</ansi>.`, NameColour(actor), actor.Character.Name, targetUser.Character.Name, giveItem.NameSimple()),
-				ExcludeId(actor),
-				targetUser.UserId)
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Target:       targetUser.Character.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ActorText:    fmt.Sprintf(`You give the <ansi fg="item">%s</ansi> to {target}.`, giveItem.DisplayName()),
+				TargetText:   fmt.Sprintf(`{actor} gives you their <ansi fg="item">%s</ansi>.`, giveItem.DisplayName()),
+				ObserverText: fmt.Sprintf(`{actor} gives {target} a <ansi fg="itemname">%s</ansi>.`, giveItem.NameSimple()),
+			})
 
 			events.AddToQueue(events.ItemOwnership{
 				ActorId: actor.Character.Id,
@@ -102,14 +104,12 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		} else if giveGoldAmount > 0 {
 
-			if targetUser.UserId == ExcludeId(actor) {
+			if targetUser.UserId == UserIdOf(actor) {
 
-				Tell(actor,
+				itemRoomEvent(actor,
 					fmt.Sprintf(`You count out <ansi fg="gold">%d gold</ansi> and put it back in your pocket.`, giveGoldAmount),
+					`{actor} counts out some <ansi fg="gold">gold</ansi> and put it back in their pocket.`,
 				)
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> counts out some <ansi fg="gold">gold</ansi> and put it back in their pocket.`, NameColour(actor), actor.Character.Name),
-					ExcludeId(actor))
 
 			} else {
 				targetUser.Character.Gold += giveGoldAmount
@@ -125,16 +125,16 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 					GoldChange: -giveGoldAmount,
 				})
 
-				Tell(actor,
-					fmt.Sprintf(`You give <ansi fg="gold">%d gold</ansi> to <ansi fg="username">%s</ansi>.`, giveGoldAmount, targetUser.Character.Name),
-				)
-				targetUser.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives you <ansi fg="gold">%d gold</ansi>.`, NameColour(actor), actor.Character.Name, giveGoldAmount),
-				)
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives <ansi fg="username">%s</ansi> some <ansi fg="gold">gold</ansi>.`, NameColour(actor), actor.Character.Name, targetUser.Character.Name),
-					ExcludeId(actor),
-					targetUser.UserId)
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Actor:        actor.Id,
+					Target:       targetUser.Character.Id,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ActorText:    fmt.Sprintf(`You give <ansi fg="gold">%d gold</ansi> to {target}.`, giveGoldAmount),
+					TargetText:   fmt.Sprintf(`{actor} gives you <ansi fg="gold">%d gold</ansi>.`, giveGoldAmount),
+					ObserverText: `{actor} gives {target} some <ansi fg="gold">gold</ansi>.`,
+				})
 			}
 		} else {
 			Tell(actor, "Something went wrong.")
@@ -167,25 +167,29 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 						GoldChange: -giveGoldAmount,
 					})
 
-					Tell(actor,
-						fmt.Sprintf(`You give <ansi fg="gold">%d gold</ansi> to <ansi fg="username">%s</ansi>.`, giveGoldAmount, m.Character.Name),
-					)
-					room.SendText(
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> gave some gold to <ansi fg="mobname">%s</ansi>.`, NameColour(actor), actor.Character.Name, m.Character.Name),
-						ExcludeId(actor),
-					)
+					messaging.Send(perception.Message{
+						Kind:         perception.WorldEvent,
+						Actor:        actor.Id,
+						Target:       mobId,
+						Senses:       perception.Sight | perception.Sound,
+						Range:        perception.Room,
+						ActorText:    fmt.Sprintf(`You give <ansi fg="gold">%d gold</ansi> to {target}.`, giveGoldAmount),
+						ObserverText: `{actor} gave some gold to {target}.`,
+					})
 				} else {
 
 					m.Character.StoreItem(giveItem)
 					actor.Character.RemoveItem(giveItem)
 
-					Tell(actor,
-						fmt.Sprintf(`You give the <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, giveItem.DisplayName(), m.Character.Name),
-					)
-					room.SendText(
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> gave their <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, NameColour(actor), actor.Character.Name, giveItem.DisplayName(), m.Character.Name),
-						ExcludeId(actor),
-					)
+					messaging.Send(perception.Message{
+						Kind:         perception.WorldEvent,
+						Actor:        actor.Id,
+						Target:       mobId,
+						Senses:       perception.Sight | perception.Sound,
+						Range:        perception.Room,
+						ActorText:    fmt.Sprintf(`You give the <ansi fg="item">%s</ansi> to {target}.`, giveItem.DisplayName()),
+						ObserverText: fmt.Sprintf(`{actor} gave their <ansi fg="item">%s</ansi> to {target}.`, giveItem.DisplayName()),
+					})
 
 					events.AddToQueue(events.ItemOwnership{
 						ActorId: actor.Character.Id,

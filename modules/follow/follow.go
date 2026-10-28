@@ -11,6 +11,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
@@ -199,14 +200,14 @@ func (f *FollowModule) onNewRound(e events.Event) events.ListenerReturn {
 
 			// user doing the following? Tell both users
 			if followSourceUser != nil {
-				followTargetUser.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> stopped following you.`, followSourceUser.Character.Name))
-				followSourceUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followTargetUser.Character.Name))
+				messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="username">%s</ansi> stopped following you.`, followSourceUser.Character.Name))
+				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followTargetUser.Character.Name))
 				continue
 			}
 
 			// mob doing the following? tell the target user
 			if followSourceMob != nil {
-				followTargetUser.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> stopped following you.`, followSourceMob.Character.Name))
+				messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> stopped following you.`, followSourceMob.Character.Name))
 				continue
 			}
 
@@ -218,7 +219,7 @@ func (f *FollowModule) onNewRound(e events.Event) events.ListenerReturn {
 
 			// user doing the following? Tell the following user
 			if followSourceUser != nil {
-				followSourceUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followTargetMob.Character.Name))
+				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followTargetMob.Character.Name))
 			}
 
 			continue
@@ -442,7 +443,7 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 				}
 
 				if followerUser := accounts.GetByUserId(fId.userId); followerUser != nil {
-					followerUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="%s">%s</ansi>.`, usercommands.NameColour(actor), actor.Character.Name))
+					messaging.Tell(followerUser.Character.Id, fmt.Sprintf(`You are no longer following <ansi fg="%s">%s</ansi>.`, usercommands.NameColour(actor), actor.Character.Name))
 				}
 			}
 
@@ -461,7 +462,7 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 		if wasFollowing.userId > 0 {
 
 			if followUser := accounts.GetByUserId(wasFollowing.userId); followUser != nil {
-				followUser.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> stopped following you.`, usercommands.NameColour(actor), actor.Character.Name))
+				messaging.Tell(followUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> stopped following you.`, usercommands.NameColour(actor), actor.Character.Name))
 				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followUser.Character.Name))
 				return true, nil
 			}
@@ -497,7 +498,7 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 
 		usercommands.Tell(actor, fmt.Sprintf(`You start following <ansi fg="username">%s</ansi>.`, targetUser.Character.Name))
 
-		targetUser.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> is following you.`, usercommands.NameColour(actor), actor.Character.Name))
+		messaging.Tell(targetUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> is following you.`, usercommands.NameColour(actor), actor.Character.Name))
 
 		return true, nil
 	}

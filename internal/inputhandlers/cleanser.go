@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/GoMudEngine/GoMud/internal/connections"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/term"
 )
 
@@ -25,10 +26,9 @@ func CleanserInputHandler(clientInput *connections.ClientInput, sharedState map[
 
 		clientInput.BSPressed = true
 
-		//connections.SendTo([]byte(term.AnsiMoveCursorBackward.String()+" "+term.AnsiMoveCursorBackward.String()), connDetails.UniqueId())
 		// send backspace, space, backspace
 		if len(clientInput.Buffer) > 0 {
-			connections.SendTo([]byte{term.ASCII_BACKSPACE, term.ASCII_SPACE, term.ASCII_BACKSPACE}, clientInput.ConnectionId)
+			messaging.Raw(clientInput.ConnectionId, []byte{term.ASCII_BACKSPACE, term.ASCII_SPACE, term.ASCII_BACKSPACE})
 
 			// Handle UTF-8 properly by removing the last complete character (rune)
 			bufferStr := string(clientInput.Buffer)

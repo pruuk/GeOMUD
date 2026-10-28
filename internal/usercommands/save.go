@@ -13,9 +13,9 @@ func Save(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		return false, nil
 	}
 
-	user.SendText("Saving...")
+	Tell(actor, "Saving...")
 	accounts.SaveUser(*user)
-	user.SendText("done.")
+	Tell(actor, "done.")
 
 	return true, nil
 }

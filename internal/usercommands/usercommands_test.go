@@ -12,6 +12,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -24,6 +25,7 @@ const testRoomId = 92001
 func TestMain(m *testing.M) {
 	mudlog.SetupLogger(nil, "", "", false)
 	actors.Init()
+	messaging.Init()
 	// TryCommand reads the keyword aliases, which need a data folder.
 	dataDir, err := filepath.Abs("../../_datafiles/world/empty")
 	if err != nil {
@@ -115,9 +117,9 @@ func TestTryCommandUnknownActor(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestTellAndExcludeId(t *testing.T) {
+func TestTellAndUserIdOf(t *testing.T) {
 	npc, player, _ := setup(t)
 	assert.NotPanics(t, func() { Tell(npc, "nobody hears this") })
-	assert.Equal(t, 0, ExcludeId(npc))
-	assert.Equal(t, 9201, ExcludeId(player))
+	assert.Equal(t, 0, UserIdOf(npc))
+	assert.Equal(t, 9201, UserIdOf(player))
 }

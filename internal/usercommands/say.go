@@ -6,6 +6,8 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -17,7 +19,6 @@ func Say(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		return true, nil
 	}
 
-	isSneaking := actor.Character.HasBuffFlag("hidden")
 	isDrunk := actor.Character.HasBuffFlag("drunk")
 
 	if isDrunk {
@@ -25,15 +26,25 @@ func Say(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		rest = drunkify(rest)
 	}
 
-	if isSneaking {
-		room.SendTextCommunication(fmt.Sprintf(`someone says, "<ansi fg="saytext">%s</ansi>"`, rest), ExcludeId(actor))
-	} else {
-		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="%s">%s</ansi> says, "<ansi fg="saytext">%s</ansi>"`, NameColour(actor), actor.Character.Name, rest), ExcludeId(actor))
-	}
+	// {actor} reads "Someone" for a receiver who cannot see a hidden speaker.
+	typed := messaging.Literal(rest)
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        actor.Id,
+		Senses:       perception.Sound,
+		Range:        perception.Room,
+		ActorText:    fmt.Sprintf(`You say, "<ansi fg="saytext">%s</ansi>"`, typed),
+		ObserverText: fmt.Sprintf(`{actor} says, "<ansi fg="saytext">%s</ansi>"`, typed),
+	})
 
-	Tell(actor, fmt.Sprintf(`You say, "<ansi fg="saytext">%s</ansi>"`, rest))
-
-	room.SendTextToExits(`You hear someone talking.`, true)
+	messaging.Send(perception.Message{
+		Kind:    perception.WorldEvent,
+		Actor:   actor.Id,
+		Senses:  perception.Sound,
+		Faint:   true,
+		Range:   perception.Nearby,
+		FarText: `(From {direction}) You hear someone talking.`,
+	})
 
 	events.AddToQueue(events.Communication{
 		SourceActorId: actor.Character.Id,

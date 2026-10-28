@@ -1,11 +1,11 @@
 package hooks
 
 import (
-	"fmt"
-
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
@@ -49,9 +49,17 @@ func AutoHeal(e events.Event) events.ListenerReturn {
 
 			} else {
 				user.Character.Health--
-				user.SendText(`<ansi fg="red">you are bleeding out!</ansi>`)
 				if room := rooms.LoadRoom(user.Character.RoomId); room != nil {
-					room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is <ansi fg="red">bleeding out</ansi>! Somebody needs to provide aid!`, user.Character.Name), user.UserId)
+					messaging.Send(perception.Message{
+						Kind:         perception.WorldEvent,
+						Actor:        user.Character.Id,
+						Senses:       perception.Sight | perception.Sound,
+						Range:        perception.Room,
+						ActorText:    `<ansi fg="red">you are bleeding out!</ansi>`,
+						ObserverText: `{actor} is <ansi fg="red">bleeding out</ansi>! Somebody needs to provide aid!`,
+					})
+				} else {
+					messaging.Tell(user.Character.Id, `<ansi fg="red">you are bleeding out!</ansi>`)
 				}
 			}
 

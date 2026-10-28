@@ -9,8 +9,10 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
@@ -37,7 +39,7 @@ func Mob(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 
 	if len(args) < 1 {
 		infoOutput, _ := templates.Process("admincommands/help/command.mob", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -45,7 +47,7 @@ func Mob(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	if args[0] == `create` {
 
 		if !user.HasRolePermission(`mob.create`) {
-			user.SendText(`you do not have <ansi fg="command">mob.create</ansi> permission`)
+			Tell(actor, `you do not have <ansi fg="command">mob.create</ansi> permission`)
 			return true, nil
 		}
 
@@ -56,7 +58,7 @@ func Mob(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	if args[0] == `spawn` {
 
 		if !user.HasRolePermission(`mob.spawn`) {
-			user.SendText(`you do not have <ansi fg="command">mob.spawn</ansi> permission`)
+			Tell(actor, `you do not have <ansi fg="command">mob.spawn</ansi> permission`)
 			return true, nil
 		}
 
@@ -67,7 +69,7 @@ func Mob(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	if args[0] == `list` {
 
 		if !user.HasRolePermission(`mob.spawn`) {
-			user.SendText(`you do not have <ansi fg="command">mob.spawn</ansi> permission`)
+			Tell(actor, `you do not have <ansi fg="command">mob.spawn</ansi> permission`)
 			return true, nil
 		}
 
@@ -113,11 +115,11 @@ func mob_List(rest string, user *accounts.Account, _ *rooms.Room, _ events.Event
 	numWidth := len(strconv.Itoa(len(mobList)))
 	colWidth := 1 + numWidth + 2 + longestName + 1
 
-	user.SendText(``)
+	messaging.ToAccount(user, ``)
 	sw := user.ClientSettings().Display.GetScreenWidth()
 	strOut := templates.DynamicList(mobList, colWidth, sw, numWidth, longestName)
-	user.SendText(strOut)
-	user.SendText(``)
+	messaging.ToAccount(user, strOut)
+	messaging.ToAccount(user, ``)
 
 	return true, nil
 }
@@ -129,7 +131,7 @@ func mob_Spawn(rest string, user *accounts.Account, room *rooms.Room, flags even
 	// special handling of loot goblin
 	if rest == `loot goblin` && c.RoomId != 0 {
 		if gRoom := rooms.LoadRoom(int(c.RoomId)); gRoom != nil { // loot goblin room
-			user.SendText(`Somewhere in the realm, a <ansi fg="mobname">loot goblin</ansi> appears!`)
+			messaging.ToAccount(user, `Somewhere in the realm, a <ansi fg="mobname">loot goblin</ansi> appears!`)
 			mudlog.Info(`Loot Goblin Spawn`, `roundNumber`, util.GetRoundCount(), `forced`, true)
 			gRoom.Prepare(false) // Make sure the loot goblin spawns.
 		}
@@ -147,19 +149,24 @@ func mob_Spawn(rest string, user *accounts.Account, room *rooms.Room, flags even
 		if mob := mobs.NewMobById(mobId, room.RoomId); mob != nil {
 			room.AddMob(mob.Character.Id)
 
-			user.SendText(
+			messaging.ToAccount(user,
 				fmt.Sprintf(`You wave your hands around and <ansi fg="mobname">%s</ansi> appears in the air and falls to the ground.`, mob.Character.Name),
 			)
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> waves their hands around and <ansi fg="mobname">%s</ansi> appears in the air and falls to the ground.`, user.Character.Name, mob.Character.Name),
-				user.UserId,
-			)
+			if spawner := actors.ByUserId(user.UserId); spawner != nil {
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Actor:        spawner.Id,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ObserverText: fmt.Sprintf(`{actor} waves their hands around and <ansi fg="mobname">%s</ansi> appears in the air and falls to the ground.`, mob.Character.Name),
+				})
+			}
 
 			return true, nil
 		}
 	}
 
-	user.SendText(
+	messaging.ToAccount(user,
 		fmt.Sprintf(`Mob <ansi fg="mobname">%s</ansi> not found.`, rest),
 	)
 
@@ -192,8 +199,8 @@ func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *
 	cmdPrompt, isNew := user.StartPrompt(`mob create`, rest)
 
 	if isNew {
-		user.SendText(``)
-		user.SendText(fmt.Sprintf(`Lets get a little info first.%s`, term.CRLFStr))
+		Tell(actor, ``)
+		Tell(actor, fmt.Sprintf(`Lets get a little info first.%s`, term.CRLFStr))
 	}
 
 	//
@@ -205,7 +212,7 @@ func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *
 	}
 
 	if question.Response == `` {
-		user.SendText("Aborting...")
+		Tell(actor, "Aborting...")
 		user.ClearPrompt()
 		return true, nil
 	}
@@ -239,14 +246,14 @@ func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *
 	question = cmdPrompt.Ask(`What race will the mob be?`, []string{raceName}, raceName)
 	if !question.Done {
 		tplTxt, _ := templates.Process("tables/numbered-list", raceOptions, user.UserId)
-		user.SendText(tplTxt)
-		user.SendText(`  <ansi fg="black-bold">Enter <ansi fg="command">help {racename}</ansi> or <ansi fg="command">help {number}</ansi> for details.</ansi>`)
-		user.SendText(``)
+		Tell(actor, tplTxt)
+		Tell(actor, `  <ansi fg="black-bold">Enter <ansi fg="command">help {racename}</ansi> or <ansi fg="command">help {number}</ansi> for details.</ansi>`)
+		Tell(actor, ``)
 		return true, nil
 	}
 
 	if question.Response == `` {
-		user.SendText("Aborting...")
+		Tell(actor, "Aborting...")
 		user.ClearPrompt()
 		return true, nil
 	}
@@ -287,9 +294,9 @@ func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *
 		question.RejectResponse()
 
 		tplTxt, _ := templates.Process("tables/numbered-list", raceOptions, user.UserId)
-		user.SendText(tplTxt)
-		user.SendText(`  <ansi fg="black-bold">Enter <ansi fg="command">help {racename}</ansi> or <ansi fg="command">help {number}</ansi> for details.</ansi>`)
-		user.SendText(``)
+		Tell(actor, tplTxt)
+		Tell(actor, `  <ansi fg="black-bold">Enter <ansi fg="command">help {racename}</ansi> or <ansi fg="command">help {number}</ansi> for details.</ansi>`)
+		Tell(actor, ``)
 
 		return true, nil
 	}
@@ -314,12 +321,12 @@ func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *
 	question = cmdPrompt.Ask(`What zone is this mob from?`, []string{newMob.Zone}, newMob.Zone)
 	if !question.Done {
 		tplTxt, _ := templates.Process("tables/numbered-list-doubled", zoneOptions, user.UserId)
-		user.SendText(tplTxt)
+		Tell(actor, tplTxt)
 		return true, nil
 	}
 
 	if question.Response == `` {
-		user.SendText("Aborting...")
+		Tell(actor, "Aborting...")
 		user.ClearPrompt()
 		return true, nil
 	}
@@ -342,7 +349,7 @@ func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *
 		question.RejectResponse()
 
 		tplTxt, _ := templates.Process("tables/numbered-list", zoneOptions, user.UserId)
-		user.SendText(tplTxt)
+		Tell(actor, tplTxt)
 		return true, nil
 	}
 
@@ -389,12 +396,12 @@ func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *
 	question = cmdPrompt.Ask(`Does this look correct?`, []string{`y`, `n`}, `n`)
 	if !question.Done {
 
-		user.SendText(`  <ansi fg="yellow-bold">Name:</ansi>    <ansi fg="white-bold">` + newMob.Character.Name + `</ansi>`)
-		user.SendText(`  <ansi fg="yellow-bold">Race:</ansi>    <ansi fg="white-bold">` + strconv.Itoa(newMob.Character.RaceId) + ` (` + raceNameSelection + `)</ansi>`)
-		user.SendText(`  <ansi fg="yellow-bold">Zone:</ansi>    <ansi fg="white-bold">` + newMob.Zone + `</ansi>`)
-		user.SendText(`  <ansi fg="yellow-bold">Desc:</ansi>    <ansi fg="white-bold">` + newMob.Character.Description + `</ansi>`)
-		user.SendText(`  <ansi fg="yellow-bold">Wander:</ansi>  <ansi fg="white-bold">` + strconv.Itoa(newMob.MaxWander) + `</ansi>`)
-		user.SendText(`  <ansi fg="yellow-bold">Hostile:</ansi> <ansi fg="white-bold">` + strconv.FormatBool(newMob.Hostile) + `</ansi>`)
+		Tell(actor, `  <ansi fg="yellow-bold">Name:</ansi>    <ansi fg="white-bold">`+newMob.Character.Name+`</ansi>`)
+		Tell(actor, `  <ansi fg="yellow-bold">Race:</ansi>    <ansi fg="white-bold">`+strconv.Itoa(newMob.Character.RaceId)+` (`+raceNameSelection+`)</ansi>`)
+		Tell(actor, `  <ansi fg="yellow-bold">Zone:</ansi>    <ansi fg="white-bold">`+newMob.Zone+`</ansi>`)
+		Tell(actor, `  <ansi fg="yellow-bold">Desc:</ansi>    <ansi fg="white-bold">`+newMob.Character.Description+`</ansi>`)
+		Tell(actor, `  <ansi fg="yellow-bold">Wander:</ansi>  <ansi fg="white-bold">`+strconv.Itoa(newMob.MaxWander)+`</ansi>`)
+		Tell(actor, `  <ansi fg="yellow-bold">Hostile:</ansi> <ansi fg="white-bold">`+strconv.FormatBool(newMob.Hostile)+`</ansi>`)
 
 		return true, nil
 	}
@@ -402,29 +409,29 @@ func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *
 	user.ClearPrompt()
 
 	if question.Response != `y` {
-		user.SendText("Aborting...")
+		Tell(actor, "Aborting...")
 		return true, nil
 	}
 
 	mobId, err := mobs.CreateNewMobFile(newMob)
 
 	if err != nil {
-		user.SendText("Error: " + err.Error())
+		Tell(actor, "Error: "+err.Error())
 		return true, nil
 	}
 
 	mobInst := mobs.GetMobSpec(mobId)
 	if mobInst == nil {
-		user.SendText("Error: mob spec not found after creation.")
+		Tell(actor, "Error: mob spec not found after creation.")
 		return true, nil
 	}
 
-	user.SendText(``)
-	user.SendText(`  <ansi bg="red" fg="white-bold">MOB CREATED</ansi>`)
-	user.SendText(``)
-	user.SendText(`  <ansi fg="yellow-bold">File Path:</ansi>   <ansi fg="white-bold">` + mobInst.Filepath() + `</ansi>`)
-	user.SendText(``)
-	user.SendText(`  <ansi fg="black-bold">note: Try <ansi fg="command">mob spawn ` + mobInst.Character.Name + `</ansi> to test it.`)
+	Tell(actor, ``)
+	Tell(actor, `  <ansi bg="red" fg="white-bold">MOB CREATED</ansi>`)
+	Tell(actor, ``)
+	Tell(actor, `  <ansi fg="yellow-bold">File Path:</ansi>   <ansi fg="white-bold">`+mobInst.Filepath()+`</ansi>`)
+	Tell(actor, ``)
+	Tell(actor, `  <ansi fg="black-bold">note: Try <ansi fg="command">mob spawn `+mobInst.Character.Name+`</ansi> to test it.`)
 
 	return true, nil
 }

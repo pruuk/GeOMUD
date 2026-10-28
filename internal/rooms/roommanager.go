@@ -22,6 +22,14 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
+// tellAccount writes interface text to an account through accounts.Tell, which
+// messaging.Init sets; with no messaging (package tests) it does nothing.
+func tellAccount(u *accounts.Account, text string) {
+	if accounts.Tell != nil {
+		accounts.Tell(u, text)
+	}
+}
+
 var (
 	roomManager = &RoomManager{
 		rooms:             make(map[int]*Room),
@@ -194,11 +202,11 @@ func RoomMaintenance() []int {
 					for _, sign := range prunedSigns {
 						if sign.VisibleUserId == 0 {
 							if u := accounts.GetByUserId(userId); u != nil {
-								u.SendText("A sign crumbles to dust.\n")
+								tellAccount(u, "A sign crumbles to dust.\n")
 							}
 						} else if sign.VisibleUserId == userId {
 							if u := accounts.GetByUserId(userId); u != nil {
-								u.SendText("The rune you had enscribed here has faded away.\n")
+								tellAccount(u, "The rune you had enscribed here has faded away.\n")
 							}
 						}
 					}
@@ -213,7 +221,7 @@ func RoomMaintenance() []int {
 				for _, exit := range prunedExits {
 					for _, userId := range roomPlayers {
 						if u := accounts.GetByUserId(userId); u != nil {
-							u.SendText(fmt.Sprintf("The %s vanishes.\n", exit.Title))
+							tellAccount(u, fmt.Sprintf("The %s vanishes.\n", exit.Title))
 						}
 					}
 				}

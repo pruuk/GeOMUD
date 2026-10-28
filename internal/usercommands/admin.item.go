@@ -8,6 +8,8 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
@@ -33,7 +35,7 @@ func Item(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 	if len(args) < 1 {
 		infoOutput, _ := templates.Process("admincommands/help/command.item", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -41,7 +43,7 @@ func Item(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	if args[0] == `create` {
 
 		if !user.HasRolePermission(`item.create`) {
-			user.SendText(`you do not have <ansi fg="command">item.create</ansi> permission`)
+			Tell(actor, `you do not have <ansi fg="command">item.create</ansi> permission`)
 			return true, nil
 		}
 
@@ -52,7 +54,7 @@ func Item(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	if args[0] == `spawn` {
 
 		if !user.HasRolePermission(`item.spawn`) {
-			user.SendText(`you do not have <ansi fg="command">item.create</ansi> permission`)
+			Tell(actor, `you do not have <ansi fg="command">item.create</ansi> permission`)
 			return true, nil
 		}
 
@@ -63,7 +65,7 @@ func Item(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	if args[0] == `list` {
 
 		if !user.HasRolePermission(`item.spawn`) {
-			user.SendText(`you do not have <ansi fg="command">item.create</ansi> permission`)
+			Tell(actor, `you do not have <ansi fg="command">item.create</ansi> permission`)
 			return true, nil
 		}
 
@@ -109,11 +111,11 @@ func item_List(rest string, user *accounts.Account, _ *rooms.Room, _ events.Even
 	numWidth := len(strconv.Itoa(len(itmNames)))
 	colWidth := 1 + numWidth + 2 + longestName + 1
 
-	user.SendText(``)
+	messaging.ToAccount(user, ``)
 	sw := user.ClientSettings().Display.GetScreenWidth()
 	strOut := templates.DynamicList(itmNames, colWidth, sw, numWidth, longestName)
-	user.SendText(strOut)
-	user.SendText(``)
+	messaging.ToAccount(user, strOut)
+	messaging.ToAccount(user, ``)
 
 	return true, nil
 }
@@ -127,20 +129,25 @@ func item_Spawn(rest string, user *accounts.Account, room *rooms.Room, flags eve
 		if itm.ItemId > 0 {
 			room.AddItem(itm, false)
 
-			user.SendText(
+			messaging.ToAccount(user,
 				fmt.Sprintf(`You wave your hands around and <ansi fg="item">%s</ansi> appears from thin air and falls to the ground.`, itm.DisplayName()),
 			)
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> waves their hands around and <ansi fg="item">%s</ansi> appears from thin air and falls to the ground.`, user.Character.Name, itm.DisplayName()),
-				user.UserId,
-			)
+			if spawner := actors.ByUserId(user.UserId); spawner != nil {
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Actor:        spawner.Id,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ObserverText: fmt.Sprintf(`{actor} waves their hands around and <ansi fg="item">%s</ansi> appears from thin air and falls to the ground.`, itm.DisplayName()),
+				})
+			}
 
 			return true, nil
 		}
 
 	}
 
-	user.SendText(
+	messaging.ToAccount(user,
 		fmt.Sprintf(`Item <ansi fg="itemname">%s</ansi> not found.`, rest),
 	)
 
@@ -163,8 +170,8 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 	cmdPrompt, isNew := user.StartPrompt(`item create`, rest)
 
 	if isNew {
-		user.SendText(``)
-		user.SendText(fmt.Sprintf(`Lets get a little info first.%s`, term.CRLFStr))
+		messaging.ToAccount(user, ``)
+		messaging.ToAccount(user, fmt.Sprintf(`Lets get a little info first.%s`, term.CRLFStr))
 	}
 
 	//
@@ -198,7 +205,7 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 		question := cmdPrompt.Ask(`What Type of item will it be?`, []string{string(newItemSpec.Type)}, string(newItemSpec.Type))
 		if !question.Done {
 			tplTxt, _ := templates.Process("tables/numbered-list", typeOptions, user.UserId)
-			user.SendText(tplTxt)
+			messaging.ToAccount(user, tplTxt)
 			return true, nil
 		}
 
@@ -219,7 +226,7 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 			question.RejectResponse()
 
 			tplTxt, _ := templates.Process("tables/numbered-list", typeOptions, user.UserId)
-			user.SendText(tplTxt)
+			messaging.ToAccount(user, tplTxt)
 
 			return true, nil
 		}
@@ -262,7 +269,7 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 		}
 
 		if question.Response == `` {
-			user.SendText("Aborting...")
+			messaging.ToAccount(user, "Aborting...")
 			user.ClearPrompt()
 			return true, nil
 		}
@@ -279,7 +286,7 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 		}
 
 		if question.Response == `` {
-			user.SendText("Aborting...")
+			messaging.ToAccount(user, "Aborting...")
 			user.ClearPrompt()
 			return true, nil
 		}
@@ -304,12 +311,12 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 		question := cmdPrompt.Ask(`What Subtype of item will it be?`, []string{string(newItemSpec.Subtype)}, string(newItemSpec.Subtype))
 		if !question.Done {
 			tplTxt, _ := templates.Process("tables/numbered-list", subTypeOptions, user.UserId)
-			user.SendText(tplTxt)
+			messaging.ToAccount(user, tplTxt)
 			return true, nil
 		}
 
 		if question.Response == `` {
-			user.SendText("Aborting...")
+			messaging.ToAccount(user, "Aborting...")
 			user.ClearPrompt()
 			return true, nil
 		}
@@ -331,7 +338,7 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 			question.RejectResponse()
 
 			tplTxt, _ := templates.Process("tables/numbered-list", subTypeOptions, user.UserId)
-			user.SendText(tplTxt)
+			messaging.ToAccount(user, tplTxt)
 
 			return true, nil
 		}
@@ -391,26 +398,26 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 		question := cmdPrompt.Ask(`Does this look correct?`, []string{`y`, `n`}, `n`)
 		if !question.Done {
 
-			user.SendText(`  <ansi fg="yellow-bold">Name:</ansi>        <ansi fg="white-bold">` + newItemSpec.Name + `</ansi>`)
-			user.SendText(`  <ansi fg="yellow-bold">Desc:</ansi>        <ansi fg="white-bold">` + newItemSpec.Description + `</ansi>`)
-			user.SendText(`  <ansi fg="yellow-bold">Type:</ansi>        <ansi fg="white-bold">` + string(newItemSpec.Type) + `</ansi>`)
+			messaging.ToAccount(user, `  <ansi fg="yellow-bold">Name:</ansi>        <ansi fg="white-bold">`+newItemSpec.Name+`</ansi>`)
+			messaging.ToAccount(user, `  <ansi fg="yellow-bold">Desc:</ansi>        <ansi fg="white-bold">`+newItemSpec.Description+`</ansi>`)
+			messaging.ToAccount(user, `  <ansi fg="yellow-bold">Type:</ansi>        <ansi fg="white-bold">`+string(newItemSpec.Type)+`</ansi>`)
 
 			if newItemSpec.Type == items.Key {
-				user.SendText(`  <ansi fg="yellow-bold">KeyId:</ansi>       <ansi fg="white-bold">` + newItemSpec.KeyLockId + `</ansi>`)
+				messaging.ToAccount(user, `  <ansi fg="yellow-bold">KeyId:</ansi>       <ansi fg="white-bold">`+newItemSpec.KeyLockId+`</ansi>`)
 			}
 			if newItemSpec.Type == items.Weapon {
-				user.SendText(`  <ansi fg="yellow-bold">Damage:</ansi>      <ansi fg="white-bold">` + newItemSpec.Damage.DiceRoll + `</ansi>`)
+				messaging.ToAccount(user, `  <ansi fg="yellow-bold">Damage:</ansi>      <ansi fg="white-bold">`+newItemSpec.Damage.DiceRoll+`</ansi>`)
 			}
 
 			if newItemSpec.Uses > 0 {
-				user.SendText(`  <ansi fg="yellow-bold">Uses:</ansi>        <ansi fg="white-bold">` + strconv.Itoa(newItemSpec.Uses) + `</ansi>`)
+				messaging.ToAccount(user, `  <ansi fg="yellow-bold">Uses:</ansi>        <ansi fg="white-bold">`+strconv.Itoa(newItemSpec.Uses)+`</ansi>`)
 			}
 
 			if newItemSpec.Value > 0 {
-				user.SendText(`  <ansi fg="yellow-bold">Value:</ansi>       <ansi fg="white-bold">` + strconv.Itoa(newItemSpec.Value) + `</ansi>`)
+				messaging.ToAccount(user, `  <ansi fg="yellow-bold">Value:</ansi>       <ansi fg="white-bold">`+strconv.Itoa(newItemSpec.Value)+`</ansi>`)
 			}
 
-			user.SendText(`  <ansi fg="yellow-bold">SubType:</ansi>     <ansi fg="white-bold">` + string(newItemSpec.Subtype) + `</ansi>`)
+			messaging.ToAccount(user, `  <ansi fg="yellow-bold">SubType:</ansi>     <ansi fg="white-bold">`+string(newItemSpec.Subtype)+`</ansi>`)
 
 			return true, nil
 		}
@@ -418,7 +425,7 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 		user.ClearPrompt()
 
 		if question.Response != `y` {
-			user.SendText("Aborting...")
+			messaging.ToAccount(user, "Aborting...")
 			return true, nil
 		}
 	}
@@ -426,22 +433,22 @@ func item_Create(rest string, user *accounts.Account, room *rooms.Room, flags ev
 	newItemId, err := items.CreateNewItemFile(newItemSpec)
 
 	if err != nil {
-		user.SendText("Error: " + err.Error())
+		messaging.ToAccount(user, "Error: "+err.Error())
 		return true, nil
 	}
 
 	itemInst := items.GetItemSpec(newItemId)
 	if itemInst == nil {
-		user.SendText("Error: item spec not found after creation.")
+		messaging.ToAccount(user, "Error: item spec not found after creation.")
 		return true, nil
 	}
 
-	user.SendText(``)
-	user.SendText(`  <ansi bg="red" fg="white-bold">ITEM CREATED</ansi>`)
-	user.SendText(``)
-	user.SendText(`  <ansi fg="yellow-bold">File Path:</ansi>   <ansi fg="white-bold">` + itemInst.Filepath() + `</ansi>`)
-	user.SendText(``)
-	user.SendText(`  <ansi fg="black-bold">note: Try <ansi fg="command">item spawn ` + newItemSpec.Name + `</ansi> to test it.`)
+	messaging.ToAccount(user, ``)
+	messaging.ToAccount(user, `  <ansi bg="red" fg="white-bold">ITEM CREATED</ansi>`)
+	messaging.ToAccount(user, ``)
+	messaging.ToAccount(user, `  <ansi fg="yellow-bold">File Path:</ansi>   <ansi fg="white-bold">`+itemInst.Filepath()+`</ansi>`)
+	messaging.ToAccount(user, ``)
+	messaging.ToAccount(user, `  <ansi fg="black-bold">note: Try <ansi fg="command">item spawn `+newItemSpec.Name+`</ansi> to test it.`)
 
 	return true, nil
 }

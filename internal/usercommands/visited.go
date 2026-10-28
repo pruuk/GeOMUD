@@ -60,7 +60,7 @@ func Visited(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 		Records:      records,
 	}
 
-	tplTxt, _ := templates.Process("character/visited", info, ExcludeId(actor))
+	tplTxt, _ := templates.Process("character/visited", info, UserIdOf(actor))
 	Tell(actor, tplTxt)
 
 	return true, nil

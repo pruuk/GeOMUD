@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
@@ -26,7 +27,7 @@ func Locate(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.locate", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 
@@ -38,11 +39,11 @@ func Locate(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 			return false, fmt.Errorf(`room %d not found`, locateUser.Character.RoomId)
 		}
 
-		user.SendText(
+		Tell(actor,
 			fmt.Sprintf(`<ansi fg="username">%s</ansi> is in room #<ansi fg="yellow-bold">%d</ansi> - <ansi fg="magenta">%s</ansi> <ansi fg="red">【%s】</ansi>`, locateUser.Character.Name, room.RoomId, room.Title, locateUser.Character.Zone),
 		)
 
-		locateUser.SendText(
+		messaging.Tell(locateUser.Character.Id,
 			`You get the feeling someone is looking for you...`,
 		)
 
@@ -156,7 +157,7 @@ func Locate(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 				if ct >= matchesPerPage {
 					onlineTableData := templates.GetTable(fmt.Sprintf(`Matches for "%s" [Page %d/%d]`, rest, pageNow+1, pageCt), headers, rows)
 					tplTxt, _ := templates.Process("tables/generic", onlineTableData, user.UserId)
-					user.SendText(tplTxt)
+					Tell(actor, tplTxt)
 					rows = [][]string{}
 					ct = 0
 					pageNow++
@@ -169,13 +170,13 @@ func Locate(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		if pageNow < pageCt {
 			onlineTableData := templates.GetTable(fmt.Sprintf(`Matches for "%s" [Page %d/%d]`, rest, pageNow+1, pageCt), headers, rows)
 			tplTxt, _ := templates.Process("tables/generic", onlineTableData, user.UserId)
-			user.SendText(tplTxt)
+			Tell(actor, tplTxt)
 		}
 
 		return true, nil
 	}
 
-	user.SendText(
+	Tell(actor,
 		fmt.Sprintf("No user or mob found with the name %s", rest),
 	)
 

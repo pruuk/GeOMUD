@@ -35,10 +35,10 @@ func NewConnectionController(a *accounts.Account) *ConnectionController {
 func (c *ConnectionController) Account() *accounts.Account { return c.account }
 
 // Perceive writes the receiver's text to the account's output, in order
-// with everything else it is sent. A perception with no text for this
-// receiver writes nothing.
+// with everything else it is sent. A world event with no text for this
+// receiver writes nothing; empty interface text writes a blank line.
 func (c *ConnectionController) Perceive(p perception.Perception) {
-	if p.Text == "" || c.account == nil {
+	if c.account == nil || (p.Text == "" && p.Message.Kind != perception.Interface) {
 		return
 	}
 	c.account.SendText(p.Text)

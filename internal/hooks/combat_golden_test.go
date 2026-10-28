@@ -7,19 +7,14 @@ package hooks
 // record is compared with testdata/combat-golden/<fixture>.txt; run with
 // -update to rewrite the files.
 //
-// Room messages are expanded per receiver the way Message_SendMessage
-// delivers them (a UserId message to that user; a RoomId message to every
-// player in the room at delivery time, minus the UserId and ExcludeUserIds,
-// honouring IsQuiet), so the record is "what each player read". Text is kept
-// as markup (before AnsiParse), so a colour change shows. Queued commands
-// (events.Input) are recorded, not run: a "suicide" in the record means the
-// round queued it.
+// Messages are expanded per receiver by the shared readsRecorder
+// (reads_golden_test.go), the way the writers deliver them, so the record is
+// "what each player read". Text is kept as markup (before AnsiParse), so a
+// colour change shows. Queued commands (events.Input) are recorded, not run:
+// a "suicide" in the record means the round queued it.
 
 import (
-	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -41,8 +36,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var updateCombatGolden = flag.Bool("update", false, "rewrite testdata/combat-golden/*.txt from this run")
-
 const (
 	goldenRoomA     = 93001
 	goldenRoomB     = 93002
@@ -59,8 +52,7 @@ type combatWorld struct {
 	t       *testing.T
 	players []*accounts.Account // record order
 	npcs    []*mobs.Mob         // record order
-	names   map[ids.ID]string
-	users   map[int]string
+	rec     *readsRecorder
 	groups  []string // NPC groups whose hatred of each player is recorded
 
 	// what the current round produced
@@ -101,57 +93,53 @@ func newCombatWorld(t *testing.T, seed int64) *combatWorld {
 	})
 
 	w := &combatWorld{
-		t:     t,
-		names: map[ids.ID]string{},
-		users: map[int]string{},
+		t:   t,
+		rec: newReadsRecorder(t),
 	}
 
+	// The recorder holds the reads and the queued inputs; the other events
+	// go into the same log, so their order with the inputs is kept.
+	note := w.rec.note
 	listeners := []events.ListenerId{}
 	listeners = append(listeners,
-		events.RegisterListener(events.Message{}, w.onMessage),
-		events.RegisterListener(events.Input{}, func(e events.Event) events.ListenerReturn {
-			in := e.(events.Input)
-			w.events = append(w.events, fmt.Sprintf("Input %s: %q", w.name(in.ActorId), in.InputText))
-			return events.Continue
-		}),
 		events.RegisterListener(events.AggroChanged{}, func(e events.Event) events.ListenerReturn {
 			ev := e.(events.AggroChanged)
-			w.events = append(w.events, fmt.Sprintf("AggroChanged %s room=%d", w.name(ev.ActorId), ev.RoomId))
+			note(fmt.Sprintf("AggroChanged %s room=%d", w.name(ev.ActorId), ev.RoomId))
 			return events.Continue
 		}),
 		events.RegisterListener(events.PlayerDrop{}, func(e events.Event) events.ListenerReturn {
 			ev := e.(events.PlayerDrop)
-			w.events = append(w.events, fmt.Sprintf("PlayerDrop %s room=%d", w.user(ev.UserId), ev.RoomId))
+			note(fmt.Sprintf("PlayerDrop %s room=%d", w.user(ev.UserId), ev.RoomId))
 			return events.Continue
 		}),
 		events.RegisterListener(events.CharacterVitalsChanged{}, func(e events.Event) events.ListenerReturn {
 			ev := e.(events.CharacterVitalsChanged)
-			w.events = append(w.events, fmt.Sprintf("CharacterVitalsChanged %s", w.user(ev.UserId)))
+			note(fmt.Sprintf("CharacterVitalsChanged %s", w.user(ev.UserId)))
 			return events.Continue
 		}),
 		events.RegisterListener(events.ItemOwnership{}, func(e events.Event) events.ListenerReturn {
 			ev := e.(events.ItemOwnership)
-			w.events = append(w.events, fmt.Sprintf("ItemOwnership %s item=%d gained=%v", w.name(ev.ActorId), ev.Item.ItemId, ev.Gained))
+			note(fmt.Sprintf("ItemOwnership %s item=%d gained=%v", w.name(ev.ActorId), ev.Item.ItemId, ev.Gained))
 			return events.Continue
 		}),
 		events.RegisterListener(events.Buff{}, func(e events.Event) events.ListenerReturn {
 			ev := e.(events.Buff)
-			w.events = append(w.events, fmt.Sprintf("Buff %s buff=%d source=%s", w.name(ev.ActorId), ev.BuffId, ev.Source))
+			note(fmt.Sprintf("Buff %s buff=%d source=%s", w.name(ev.ActorId), ev.BuffId, ev.Source))
 			return events.Continue
 		}),
 		events.RegisterListener(events.MobDeath{}, func(e events.Event) events.ListenerReturn {
 			ev := e.(events.MobDeath)
-			w.events = append(w.events, fmt.Sprintf("MobDeath %s", w.name(ev.ActorId)))
+			note(fmt.Sprintf("MobDeath %s", w.name(ev.ActorId)))
 			return events.Continue
 		}),
 		events.RegisterListener(events.PlayerDeath{}, func(e events.Event) events.ListenerReturn {
 			ev := e.(events.PlayerDeath)
-			w.events = append(w.events, fmt.Sprintf("PlayerDeath %s", w.user(ev.UserId)))
+			note(fmt.Sprintf("PlayerDeath %s", w.user(ev.UserId)))
 			return events.Continue
 		}),
 	)
 	t.Cleanup(func() {
-		zeros := []events.Event{events.Message{}, events.Input{}, events.AggroChanged{}, events.PlayerDrop{},
+		zeros := []events.Event{events.AggroChanged{}, events.PlayerDrop{},
 			events.CharacterVitalsChanged{}, events.ItemOwnership{}, events.Buff{}, events.MobDeath{}, events.PlayerDeath{}}
 		for i, z := range zeros {
 			events.UnregisterListener(z, listeners[i])
@@ -170,68 +158,27 @@ func newCombatWorld(t *testing.T, seed int64) *combatWorld {
 	return w
 }
 
-func (w *combatWorld) name(id ids.ID) string {
-	if n, ok := w.names[id]; ok {
-		return n
-	}
-	if id.IsZero() {
-		return "(none)"
-	}
-	return "(unknown)"
-}
+func (w *combatWorld) name(id ids.ID) string { return w.rec.name(id) }
 
-func (w *combatWorld) user(userId int) string {
-	if n, ok := w.users[userId]; ok {
-		return n
-	}
-	return fmt.Sprintf("(user %d)", userId)
-}
+func (w *combatWorld) user(userId int) string { return w.rec.user(userId) }
 
-// onMessage expands one message to its receivers as Message_SendMessage does.
-func (w *combatWorld) onMessage(e events.Event) events.ListenerReturn {
-	m := e.(events.Message)
-	text := strings.TrimSuffix(m.Text, "\n")
-	if n := strings.Count(text, "\n"); n > 0 {
-		// Combat lines are one line each; a multi-line text is a rendered
-		// screen (the look after a flee), recorded by its size only so the
-		// goldens do not pin the room template.
-		text = fmt.Sprintf("(multi-line text, %d lines)", n+1)
-	}
-	if m.UserId > 0 {
-		if accounts.GetByUserId(m.UserId) != nil {
-			w.reads[m.UserId] = append(w.reads[m.UserId], text)
+// collect sorts what the recorder holds into this round's reads per player
+// and events.
+func (w *combatWorld) collect() {
+	for _, e := range w.rec.take() {
+		if e.userId == 0 {
+			w.events = append(w.events, e.text)
+			continue
 		}
-	}
-	if m.RoomId > 0 {
-		room := rooms.LoadRoom(m.RoomId)
-		if room == nil {
-			return events.Continue
+		text := strings.TrimSuffix(e.text, "\n")
+		if n := strings.Count(text, "\n"); n > 0 {
+			// Combat lines are one line each; a multi-line text is a rendered
+			// screen (the look after a flee), recorded by its size only so the
+			// goldens do not pin the room template.
+			text = fmt.Sprintf("(multi-line text, %d lines)", n+1)
 		}
-		for _, userId := range room.GetPlayers() {
-			if userId == m.UserId {
-				continue
-			}
-			skip := false
-			for _, ex := range m.ExcludeUserIds {
-				if ex == userId {
-					skip = true
-					break
-				}
-			}
-			if skip {
-				continue
-			}
-			u := accounts.GetByUserId(userId)
-			if u == nil {
-				continue
-			}
-			if m.IsQuiet && !u.Character.HasBuffFlag("superhearing") {
-				continue
-			}
-			w.reads[userId] = append(w.reads[userId], text)
-		}
+		w.reads[e.userId] = append(w.reads[e.userId], text)
 	}
-	return events.Continue
 }
 
 // statted gives a character fixed stats (as training on top of its race's
@@ -261,8 +208,8 @@ func (w *combatWorld) addPlayer(userId int, name string, roomId int, speed, stre
 	accounts.SetTestUser(u)
 	rooms.LoadRoom(roomId).AddPlayer(userId)
 	w.players = append(w.players, u)
-	w.names[c.Id] = name
-	w.users[userId] = name
+	w.rec.names[c.Id] = name
+	w.rec.users[userId] = name
 	return u
 }
 
@@ -284,7 +231,7 @@ func (w *combatWorld) addNPC(mobId int, name string, raceId int, roomId int, spe
 	rooms.LoadRoom(roomId).AddMob(id)
 	statted(&inst.Character, speed, strength, perception, hp)
 	w.npcs = append(w.npcs, inst)
-	w.names[id] = name
+	w.rec.names[id] = name
 	w.groups = append(w.groups, groups...)
 	return inst
 }
@@ -396,6 +343,7 @@ func (w *combatWorld) writeState() {
 // start drops what setup queued and records the starting state.
 func (w *combatWorld) start() {
 	events.ProcessEvents()
+	w.rec.take()
 	fmt.Fprintf(&w.out, "== start\n")
 	w.writeState()
 }
@@ -422,6 +370,7 @@ func (w *combatWorld) rounds(max int) {
 		w.events = nil
 		DoCombat(events.NewRound{})
 		events.ProcessEvents()
+		w.collect()
 
 		fmt.Fprintf(&w.out, "== round %d\n", i)
 		for _, u := range w.players {
@@ -441,32 +390,7 @@ func (w *combatWorld) rounds(max int) {
 // check compares the record with the golden file, or writes it with -update.
 func (w *combatWorld) check(fixture string) {
 	w.t.Helper()
-	path := filepath.Join("testdata", "combat-golden", fixture+".txt")
-	got := w.out.String()
-	if *updateCombatGolden {
-		require.NoError(w.t, os.MkdirAll(filepath.Dir(path), 0o755))
-		require.NoError(w.t, os.WriteFile(path, []byte(got), 0o644))
-		return
-	}
-	wantBytes, err := os.ReadFile(path)
-	require.NoError(w.t, err, "no golden for %s: run go test ./internal/hooks/ -run TestCombatGolden -update", fixture)
-	want := strings.ReplaceAll(string(wantBytes), "\r\n", "\n")
-	if got == want {
-		return
-	}
-	gl, wl := strings.Split(got, "\n"), strings.Split(want, "\n")
-	for i := 0; i < len(gl) || i < len(wl); i++ {
-		var g, x string
-		if i < len(gl) {
-			g = gl[i]
-		}
-		if i < len(wl) {
-			x = wl[i]
-		}
-		if g != x {
-			w.t.Fatalf("%s differs from the golden at line %d\n  want: %s\n  got:  %s", path, i+1, x, g)
-		}
-	}
+	compareGolden(w.t, "combat-golden", fixture, w.out.String())
 }
 
 // A player kills an NPC.

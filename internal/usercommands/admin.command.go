@@ -31,7 +31,7 @@ func AdminCommand(rest string, actor *actors.Actor, room *rooms.Room, flags even
 	if len(args) < 2 {
 		// NPCs run the same commands as players, so the help lists none.
 		infoOutput, _ := templates.Process("admincommands/help/command.command", nil, user.UserId)
-		user.SendText(infoOutput)
+		Tell(actor, infoOutput)
 		return true, nil
 	}
 

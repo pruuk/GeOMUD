@@ -96,8 +96,10 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		})
 
 		container.Gold += goldAmt
-		Tell(actor, fmt.Sprintf(`You place <ansi fg="gold">%d gold</ansi> into the <ansi fg="container">%s</ansi>`, goldAmt, containerName))
-		room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> places some <ansi fg="gold">gold</ansi> into the <ansi fg="container">%s</ansi>`, NameColour(actor), actor.Character.Name, containerName), ExcludeId(actor))
+		itemRoomEvent(actor,
+			fmt.Sprintf(`You place <ansi fg="gold">%d gold</ansi> into the <ansi fg="container">%s</ansi>`, goldAmt, containerName),
+			fmt.Sprintf(`{actor} places some <ansi fg="gold">gold</ansi> into the <ansi fg="container">%s</ansi>`, containerName),
+		)
 	}
 
 	if itemFound {
@@ -111,8 +113,10 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			Gained:  false,
 		})
 
-		Tell(actor, fmt.Sprintf(`You place your <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, item.DisplayName(), containerName))
-		room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> places their <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, NameColour(actor), actor.Character.Name, item.DisplayName(), containerName), ExcludeId(actor))
+		itemRoomEvent(actor,
+			fmt.Sprintf(`You place your <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, item.DisplayName(), containerName),
+			fmt.Sprintf(`{actor} places their <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, item.DisplayName(), containerName),
+		)
 
 		// Enforce container size limits
 
@@ -131,7 +135,9 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			}
 
 			container.RemoveItem(oopsItem)
-			room.SendText(fmt.Sprintf(`The <ansi fg="container">%s</ansi> is too full and a <ansi fg="itemname">%s</ansi> falls out and onto the floor.`, containerName, oopsItem.DisplayName()))
+			// No exclude: the actor reads this line too, as every other line here.
+			overflow := fmt.Sprintf(`The <ansi fg="container">%s</ansi> is too full and a <ansi fg="itemname">%s</ansi> falls out and onto the floor.`, containerName, oopsItem.DisplayName())
+			itemRoomEvent(actor, overflow, overflow)
 			room.AddItem(oopsItem, false)
 		}
 	}

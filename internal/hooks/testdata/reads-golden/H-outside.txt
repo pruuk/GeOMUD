@@ -1,0 +1,86 @@
+seed 1108
+== NPC death: suicide on the rat after damage by Ann (tame and alignment lines)
+> rat: suicide
+Ann: <ansi fg="mobname">rat</ansi> has died.
+Bob: <ansi fg="mobname">rat</ansi> has died.
+Ann: You gained <ansi fg="yellow-bold">5 experience points</ansi>! <ansi fg="7">(combat)</ansi>
+Ann: <ansi fg="231">Your alignment has shifted from <ansi fg="neutral">neutral</ansi> to <ansi fg="lawful">lawful</ansi>!</ansi>
+Ann: <ansi fg="magenta">***</ansi> Your <ansi fg="mobname">rat</ansi> taming skills get a little better! <ansi fg="magenta">***</ansi>
+Ann: <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
+Bob: <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
+== cleanup module: bury rat
+> Ann: bury rat
+Ann: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.
+Bob: <ansi fg="username">Ann</ansi> buries the <ansi fg="mob-corpse">rat corpse</ansi>.
+== cleanup module: trash note
+> Ann: trash note
+Ann: You trash the <ansi fg="item">note</ansi> for good.
+Bob: <ansi fg="username">Ann</ansi> destroys <ansi fg="item">note</ansi>...
+Ann: You gained <ansi fg="yellow-bold">5 experience points</ansi>! <ansi fg="7">(trash cleanup)</ansi>
+== cleanup module: hidden, trash note
+> Ann: trash note
+Ann: You trash the <ansi fg="item">note</ansi> for good.
+Ann: You gained <ansi fg="yellow-bold">5 experience points</ansi>! <ansi fg="7">(trash cleanup)</ansi>
+== a corpse crumbles (a rat corpse placed in A)
+> UpdateCorpses far in the future
+Ann: A <ansi fg="mob-corpse">rat corpse</ansi> crumbles to dust.
+Bob: A <ansi fg="mob-corpse">rat corpse</ansi> crumbles to dust.
+== room idle message
+> RoomRoundTick x21
+Bob: A cold draught blows through Room A.
+Ann: A cold draught blows through Room A.
+== alignment decay
+> ActorUpkeep round 100
+Ann: <ansi fg="231">Your alignment has shifted from <ansi fg="lawful">lawful</ansi> to <ansi fg="neutral">neutral</ansi>!</ansi>
+== GrantXP (the level up has no text outside GMCP)
+> Ann GrantXP 5000
+Ann: You gained <ansi fg="yellow-bold">5000 experience points</ansi>! <ansi fg="7">(test)</ansi>
+== follow module: Bob follows Ann, Ann goes north
+> Bob: follow Ann
+Bob: You start following <ansi fg="username">Ann</ansi>.
+Ann: <ansi fg="username">Bob</ansi> is following you.
+> Ann: north
+Bob: <ansi fg="username">Ann</ansi> leaves towards the <ansi fg="exit">north</ansi> exit.
+Ann: You head towards the <ansi fg="exit">north</ansi> exit.
+Ann:
+Ann| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room B</ansi> <ansi fg="room-zone">[readszone]</ansi>
+Ann: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗
+Ann|                                                                          ║     ║
+Ann|                                                                          ║     ║
+Ann|                                                                          ║  <ansi fg="map-room">@</ansi>  ║
+Ann|                                                                          ║  │  ║
+Ann|                                                                          ║  <ansi fg="map-room">•</ansi>─<ansi fg="map-room">•</ansi>║
+Ann|                                                                          ╚═════╝</ansi>
+Ann: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">south</ansi>
+Ann|
+Input Bob: "north"
+== follow module: Bob stops following
+> Bob: follow stop
+Ann: <ansi fg="username">Bob</ansi> stopped following you.
+Bob: You are no longer following <ansi fg="username">Ann</ansi>.
+> Ann: south
+Ann: You head towards the <ansi fg="exit">south</ansi> exit.
+Bob: <ansi fg="username">Ann</ansi> enters from <ansi fg="exit">the <ansi fg="exit">north</ansi></ansi>.
+Ann:
+Ann| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room A</ansi> <ansi fg="room-zone">[readszone]</ansi>
+Ann: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗
+Ann|                                                                          ║  <ansi fg="map-room">•</ansi>  ║
+Ann|                                                                          ║  │  ║
+Ann|                                                                          ║  <ansi fg="map-room">@</ansi>─<ansi fg="map-room">•</ansi>║
+Ann|                                                                          ║     ║
+Ann|                                                                          ║     ║
+Ann|                                                                          ╚═════╝</ansi>
+Ann: <ansi fg="room-description-dark">Also here: </ansi><ansi fg="username">Bob</ansi>
+Ann|
+Ann: <ansi fg="room-description-dark">On the Ground: </ansi><ansi fg="item"><ansi fg="gold">25 gold</ansi></ansi>
+Ann|
+Ann: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">east</ansi>, <ansi fg="exit">north</ansi>
+Ann|
+== player death: Bob downed and suicide (recovery room: an instance of B)
+> Bob: suicide
+Ann: <ansi fg="username">Bob</ansi> has died.
+Ann: <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
+Bob: <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
+Cid: <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
+Bob: You drop <ansi fg="gold">25 gold</ansi> on the floor.
+Ann: <ansi fg="username">Bob</ansi> drops <ansi fg="gold">25 gold</ansi>.
