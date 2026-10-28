@@ -7,18 +7,14 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
 // Prints message to screen
 func Print(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	if user := actor.Controller().Account(); user != nil {
-		events.AddToQueue(events.Message{
-			UserId: user.UserId,
-			Text:   rest,
-		})
-	}
+	messaging.TellRaw(actor.Id, rest)
 
 	return true, nil
 }

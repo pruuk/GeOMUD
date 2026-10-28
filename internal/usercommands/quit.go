@@ -14,7 +14,7 @@ func Quit(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 	// Nobody escapes a fight except by fleeing (Decision 4); quitting is an escape.
 	if inFight(actor, room) {
-		user.SendText("You're too busy to quit right now!")
+		Tell(actor,"You're too busy to quit right now!")
 		return true, nil
 	}
 	user.AddBuff(0, `quitting`)

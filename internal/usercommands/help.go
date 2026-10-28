@@ -76,7 +76,7 @@ func Help(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		}
 
-		helpTxt, err = templates.Process("help/help", helpCommandList, ExcludeId(actor))
+		helpTxt, err = templates.Process("help/help", helpCommandList, UserIdOf(actor))
 		if err != nil {
 			helpTxt = err.Error()
 		}

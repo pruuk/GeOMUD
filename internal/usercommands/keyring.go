@@ -161,7 +161,7 @@ func KeyRing(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 	allFormatting = append(allFormatting, pickFormatting...)
 
 	keyRingTable := templates.GetTable(`Your Keyring:`, headers, rows, allFormatting...)
-	tplTxt, _ := templates.Process("tables/generic", keyRingTable, ExcludeId(actor))
+	tplTxt, _ := templates.Process("tables/generic", keyRingTable, UserIdOf(actor))
 	Tell(actor, tplTxt)
 
 	return true, nil

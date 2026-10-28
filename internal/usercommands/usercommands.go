@@ -310,8 +310,8 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 	}
 
 	if user != nil && user.HasPlaintextPassword() && cmd != `password` {
-		user.SendText(`<ansi fg="alert-5">You must change your password before doing anything else.</ansi>`)
-		user.SendText(`<ansi fg="yellow">Type <ansi fg="yellow-bold">password</ansi> to set a new password.</ansi>`)
+		Tell(actor, `<ansi fg="alert-5">You must change your password before doing anything else.</ansi>`)
+		Tell(actor, `<ansi fg="yellow">Type <ansi fg="yellow-bold">password</ansi> to set a new password.</ansi>`)
 		return true, nil
 	}
 
@@ -352,7 +352,7 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 				// Refused silently: an NPC is never told anything about admin commands.
 				return true, nil
 			}
-			user.SendText(fmt.Sprintf(`You don't have permission to use <ansi fg="command">%s</ansi>.`, cmd))
+			Tell(actor, fmt.Sprintf(`You don't have permission to use <ansi fg="command">%s</ansi>.`, cmd))
 			return true, nil
 		}
 	}

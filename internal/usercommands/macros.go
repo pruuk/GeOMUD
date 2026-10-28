@@ -17,7 +17,7 @@ func Macros(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 	}
 
 	if len(user.Macros) == 0 {
-		user.SendText("You have no macros set.")
+		Tell(actor,"You have no macros set.")
 		return true, nil
 	}
 
@@ -28,12 +28,12 @@ func Macros(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 	}
 	sort.Strings(sortedKeys)
 
-	user.SendText(`<ansi fg="226">Your macros:</ansi>`)
+	Tell(actor,`<ansi fg="226">Your macros:</ansi>`)
 	for _, macro := range sortedKeys {
 		macroCommand := user.Macros[macro]
-		user.SendText(``)
+		Tell(actor,``)
 
-		user.SendText(fmt.Sprintf(`  <ansi fg="228">%s</ansi>:`, macro))
+		Tell(actor,fmt.Sprintf(`  <ansi fg="228">%s</ansi>:`, macro))
 
 		commandParts := strings.Split(macroCommand, `;`)
 
@@ -46,12 +46,12 @@ func Macros(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 				cmdRest = strings.Join(cmdParts[1:], ` `)
 			}
 
-			user.SendText(fmt.Sprintf(`      %s) <ansi fg="command">%s</ansi> %s`, string(rune(97+i)), cmdAlone, cmdRest))
+			Tell(actor,fmt.Sprintf(`      %s) <ansi fg="command">%s</ansi> %s`, string(rune(97+i)), cmdAlone, cmdRest))
 		}
 	}
-	user.SendText(``)
-	user.SendText(`To use a macro, type <ansi fg="command">={num}</ansi>.`)
-	user.SendText(`Some terminals support pressing the associated F-Key (<ansi fg="228">F1</ansi>, <ansi fg="228">F2</ansi>, etc.)`)
+	Tell(actor,``)
+	Tell(actor,`To use a macro, type <ansi fg="command">={num}</ansi>.`)
+	Tell(actor,`Some terminals support pressing the associated F-Key (<ansi fg="228">F1</ansi>, <ansi fg="228">F2</ansi>, etc.)`)
 
 	return true, nil
 }

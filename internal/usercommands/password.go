@@ -23,7 +23,7 @@ func Password(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 		}
 
 		if !user.PasswordMatches(question.Response) {
-			user.SendText(`<ansi fg="alert-5">Sorry, your password was incorrect.</ansi>`)
+			Tell(actor,`<ansi fg="alert-5">Sorry, your password was incorrect.</ansi>`)
 			user.ClearPrompt()
 			return true, nil
 		}
@@ -44,20 +44,20 @@ func Password(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 	newPWConfirm := question.Response
 
 	if newPW != newPWConfirm {
-		user.SendText(`<ansi fg="alert-5">Sorry, your new password and the confirmation password did not match.</ansi>`)
+		Tell(actor,`<ansi fg="alert-5">Sorry, your new password and the confirmation password did not match.</ansi>`)
 		user.ClearPrompt()
 		return true, nil
 	}
 
 	if err := user.SetPassword(newPW); err != nil {
-		user.SendText(`<ansi fg="alert-5">` + err.Error() + `</ansi>`)
+		Tell(actor,`<ansi fg="alert-5">` + err.Error() + `</ansi>`)
 		user.ClearPrompt()
 		return true, nil
 	}
 
 	accounts.SaveUser(*user)
 
-	user.SendText(`<ansi fg="alert-1">Your password has been changed!</ansi>`)
+	Tell(actor,`<ansi fg="alert-1">Your password has been changed!</ansi>`)
 
 	return true, nil
 }
