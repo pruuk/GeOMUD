@@ -72,12 +72,9 @@ func Remove(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 			statDiff := formatStatChanges(statsBefore, captureStatSnapshot(actor.Character))
 
-			Tell(actor,
+			itemRoomEvent(actor,
 				fmt.Sprintf(`You remove your <ansi fg="item">%s</ansi> and return it to your backpack.%s`, matchItem.DisplayName(), statDiff),
-			)
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> removes their <ansi fg="item">%s</ansi> and stores it away.`, NameColour(actor), actor.Character.Name, matchItem.DisplayName()),
-				ExcludeId(actor),
+				fmt.Sprintf(`{actor} removes their <ansi fg="item">%s</ansi> and stores it away.`, matchItem.DisplayName()),
 			)
 
 			actor.Character.StoreItem(matchItem)

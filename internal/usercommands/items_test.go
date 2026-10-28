@@ -265,6 +265,7 @@ func TestReEquipWornItemIsSilentForAnyActor(t *testing.T) {
 }
 
 func TestEquipNewItemStillAnnouncesWithMobname(t *testing.T) {
+	t.Cleanup(rooms.AddTestDefaultBiome()) // messaging asks the room's light
 	npc, _, _ := setup(t)
 	room := rooms.LoadRoom(testRoomId)
 	npc.Character.Name = "Rat"

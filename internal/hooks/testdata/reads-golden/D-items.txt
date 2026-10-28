@@ -42,7 +42,7 @@ Bob: <ansi fg="username">Ann</ansi> uses a key to relock the <ansi fg="exit">eas
 > Ann: show stick Bob
 Ann: You show the <ansi fg="item">sharp stick</ansi> to <ansi fg="username">Bob</ansi>.
 Bob: <ansi fg="username">Ann</ansi> shows you their <ansi fg="item">sharp stick</ansi>.
-Bob:
+Bob|
 Bob| It looks kinda sticky.
 Bob| - It looks like a 1-Handed weapon.
 Bob|
@@ -108,7 +108,7 @@ Bob: <ansi fg="username">Ann</ansi> uses a key to relock the <ansi fg="exit">eas
 > Ann: show stick Bob
 Ann: You show the <ansi fg="item">sharp stick</ansi> to <ansi fg="username">Bob</ansi>.
 Bob: <ansi fg="username">Ann</ansi> shows you their <ansi fg="item">sharp stick</ansi>.
-Bob:
+Bob|
 Bob| It looks kinda sticky.
 Bob| - It looks like a 1-Handed weapon.
 Bob|

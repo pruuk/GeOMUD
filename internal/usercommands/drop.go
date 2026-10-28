@@ -69,12 +69,9 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			GoldChange: -dropAmt,
 		})
 
-		Tell(actor,
+		itemRoomEvent(actor,
 			fmt.Sprintf(`You drop <ansi fg="gold">%d gold</ansi> on the floor.`, dropAmt),
-		)
-		room.SendText(
-			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops <ansi fg="gold">%d gold</ansi>.`, NameColour(actor), actor.Character.Name, dropAmt),
-			ExcludeId(actor),
+			fmt.Sprintf(`{actor} drops <ansi fg="gold">%d gold</ansi>.`, dropAmt),
 		)
 
 		return true, nil
@@ -98,12 +95,9 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		// Check floor item limit before dropping
 		floorLimit := int(configs.GetGamePlayConfig().FloorItemCountMax)
 		if floorLimit > 0 && len(room.Items) >= floorLimit {
-			Tell(actor,
+			itemRoomEvent(actor,
 				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in your hands!`, matchItem.DisplayName()),
-			)
-			room.SendText(
-				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in <ansi fg="%s">%s</ansi>'s hands!`, matchItem.DisplayName(), NameColour(actor), actor.Character.Name),
-				ExcludeId(actor),
+				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in {actor}'s hands!`, matchItem.DisplayName()),
 			)
 			return true, nil
 		}
@@ -117,12 +111,9 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			Gained:  false,
 		})
 
-		Tell(actor,
+		itemRoomEvent(actor,
 			fmt.Sprintf(`You drop the <ansi fg="item">%s</ansi>.`, matchItem.DisplayName()),
-		)
-		room.SendText(
-			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops their <ansi fg="item">%s</ansi>...`, NameColour(actor), actor.Character.Name, matchItem.DisplayName()),
-			ExcludeId(actor),
+			fmt.Sprintf(`{actor} drops their <ansi fg="item">%s</ansi>...`, matchItem.DisplayName()),
 		)
 
 		// If grenades are dropped, they explode and affect everyone in the room!

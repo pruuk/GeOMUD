@@ -8,7 +8,9 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -50,25 +52,19 @@ func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		// Swap the item location
 		if showItem.ItemId > 0 {
 
-			// Tell the shower
-			Tell(actor,
-				fmt.Sprintf(`You show the <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, showItem.DisplayName(), targetUser.Character.Name),
-			)
-
-			// Tell the Showee
-			targetUser.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> shows you their <ansi fg="item">%s</ansi>.`, actor.Character.Name, showItem.DisplayName()),
-			)
-
-			targetUser.SendText(
-				"\n" + showItem.GetLongDescription() + "\n",
-			)
-
-			// Tell the rest of the room
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> shows their <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, actor.Character.Name, showItem.DisplayName(), targetUser.Character.Name),
-				targetUser.UserId,
-				ExcludeId(actor))
+			// The shower, the showee (with the long description that used to be
+			// a second send) and the rest of the room.
+			messaging.Send(perception.Message{
+				Kind:      perception.WorldEvent,
+				Actor:     actor.Id,
+				Target:    targetUser.Character.Id,
+				Senses:    perception.Sight | perception.Sound,
+				Range:     perception.Room,
+				ActorText: fmt.Sprintf(`You show the <ansi fg="item">%s</ansi> to {target}.`, showItem.DisplayName()),
+				TargetText: fmt.Sprintf(`{actor} shows you their <ansi fg="item">%s</ansi>.`, showItem.DisplayName()) +
+					"\n\n" + messaging.Literal(showItem.GetLongDescription()) + "\n",
+				ObserverText: fmt.Sprintf(`{actor} shows their <ansi fg="item">%s</ansi> to {target}.`, showItem.DisplayName()),
+			})
 
 		} else {
 			Tell(actor, "Something went wrong.")
@@ -91,14 +87,15 @@ func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 			if showItem.ItemId > 0 {
 
-				Tell(actor,
-					fmt.Sprintf(`You show the <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, showItem.DisplayName(), targetMob.Character.Name),
-				)
-
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> shows their <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, actor.Character.Name, showItem.DisplayName(), targetMob.Character.Name),
-					ExcludeId(actor),
-				)
+				messaging.Send(perception.Message{
+					Kind:         perception.WorldEvent,
+					Actor:        actor.Id,
+					Target:       mobId,
+					Senses:       perception.Sight | perception.Sound,
+					Range:        perception.Room,
+					ActorText:    fmt.Sprintf(`You show the <ansi fg="item">%s</ansi> to {target}.`, showItem.DisplayName()),
+					ObserverText: fmt.Sprintf(`{actor} shows their <ansi fg="item">%s</ansi> to {target}.`, showItem.DisplayName()),
+				})
 
 			} else {
 				Tell(actor, "Something went wrong.")
