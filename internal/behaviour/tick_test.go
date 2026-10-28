@@ -86,6 +86,17 @@ func TestTickAtHomeOverTheWanderLimitStartsAgain(t *testing.T) {
 	assert.Equal(t, 0, mob.WanderCount, "an NPC home again may wander again")
 }
 
+func TestTickDisplacedWithMaxWanderZeroHeadsHomeAndDoesNothingElse(t *testing.T) {
+	testRoom(t, 9261, testZone, map[string]int{"north": 9262})
+	testRoom(t, 9262, testZone, map[string]int{"south": 9261})
+	mob := busyMob(t, 9262, 9261, 0)
+
+	got := tickRounds(t, mob, 1)
+
+	assert.Empty(t, got, "it plans the way home; it does not idle that round")
+	assert.Equal(t, 1, mob.Path.Len())
+}
+
 func TestTickAwayAtTheWanderLimitPlansTheWayHome(t *testing.T) {
 	testRoom(t, 9207, testZone, map[string]int{"north": 9208})
 	testRoom(t, 9208, testZone, map[string]int{"south": 9207})

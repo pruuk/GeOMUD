@@ -144,6 +144,7 @@ func idle(mob *mobs.Mob) {
 	// tell them to path back home
 	if mob.MaxWander == 0 && mob.Character.RoomId != mob.HomeRoomId && !isCharmed {
 		PathTo(mob, "home")
+		return
 	}
 
 	if isCharmed {
