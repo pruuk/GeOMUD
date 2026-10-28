@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
@@ -32,28 +31,6 @@ type CommandAccess struct {
 // Command is one command any actor can run (Phase 4b slice 4): the rest of
 // the input line, the actor, its room and the input flags.
 type Command func(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error)
-
-// Signature of a command not yet converted to the actor signature (removed
-// when Task 4 ends).
-type UserCommand func(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error)
-
-// accountCommand adapts a command not yet converted to the actor signature:
-// it runs only for an actor with an account. Removed when Task 4 ends.
-func accountCommand(f UserCommand) Command {
-	return func(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
-		user := actor.Controller().Account()
-		if user == nil {
-			return false, nil
-		}
-		return f(rest, user, room, flags)
-	}
-}
-
-// AdaptUserCommand is accountCommand for callers outside the package (the
-// plugin registration path). Removed with accountCommand.
-func AdaptUserCommand(f UserCommand) Command {
-	return accountCommand(f)
-}
 
 // tell writes text to the actor: to its account when it has one, nowhere
 // otherwise (Decision 11; slice 7 points this at messaging).
@@ -87,6 +64,28 @@ func queue(actor *actors.Actor, text string, wait ...float64) {
 	})
 }
 
+// queueFlagged is queue with input flags. It does what Account.CommandFlagged
+// does: an account's input is blocked first when the flags ask for it.
+func queueFlagged(actor *actors.Actor, text string, flagData events.EventFlag, wait ...float64) {
+	readyTurn := util.GetTurnCount()
+	if len(wait) > 0 {
+		readyTurn += uint64(float64(configs.GetTimingConfig().SecondsToTurns(1)) * wait[0])
+	}
+
+	if flagData&events.CmdBlockInput == events.CmdBlockInput {
+		if user := actor.Controller().Account(); user != nil {
+			user.BlockInput()
+		}
+	}
+
+	events.AddToQueue(events.Input{
+		ActorId:   actor.Id,
+		InputText: text,
+		ReadyTurn: readyTurn,
+		Flags:     flagData,
+	})
+}
+
 type FunctionExporter interface {
 	GetExportedFunction(funcName string) (any, bool)
 }
@@ -112,19 +111,19 @@ var (
 		`attack`:      {Attack, false, false},
 		`badcommands`: {BadCommands, true, true}, // Admin only
 		`biome`:       {Biome, true, false},
-		`broadcast`:   {accountCommand(Broadcast), true, false},
+		`broadcast`:   {Broadcast, true, false},
 		`build`:       {Build, false, true},        // Admin only
 		`command`:     {AdminCommand, false, true}, // Admin only
 		`copyover`:    {Copyover, true, true},      // Admin only
 		`consider`:    {Consider, true, false},
 		`default`:     {Default, false, false},
-		`drop`:        {accountCommand(Drop), true, false},
-		`emote`:       {accountCommand(Emote), true, false},
-		`equip`:       {accountCommand(Equip), false, false},
+		`drop`:        {Drop, true, false},
+		`emote`:       {Emote, true, false},
+		`equip`:       {Equip, false, false},
 		`flee`:        {Flee, false, false},
-		`get`:         {accountCommand(Get), false, false},
-		`give`:        {accountCommand(Give), false, false},
-		`go`:          {accountCommand(Go), false, false},
+		`get`:         {Get, false, false},
+		`give`:        {Give, false, false},
+		`go`:          {Go, false, false},
 		`grant`:       {Grant, true, true}, // Admin only
 		`help`:        {Help, true, false},
 		`keyring`:     {KeyRing, true, false},
@@ -133,33 +132,33 @@ var (
 		`item`:        {Item, true, true},   // Admin only
 		`locate`:      {Locate, true, true}, // Admin only
 		`lock`:        {Lock, false, false},
-		`look`:        {accountCommand(Look), true, false},
+		`look`:        {Look, true, false},
 		`macros`:      {Macros, true, false},
 		`mob`:         {Mob, true, true},    // Admin only
 		`modify`:      {Modify, true, true}, // Admin only
 		`motd`:        {Motd, true, false},
 		`mute`:        {Mute, true, true},
-		`noop`:        {accountCommand(Noop), true, false},
+		`noop`:        {Noop, true, false},
 		`online`:      {Online, true, false},
 		`party`:       {Party, true, false},
 		`password`:    {Password, true, false},
 		`prepare`:     {Prepare, true, true}, // Admin only
 		`print`:       {Print, true, false},
 		`printline`:   {PrintLine, true, false},
-		`put`:         {accountCommand(Put), false, false},
+		`put`:         {Put, false, false},
 		`quit`:        {Quit, true, false},
 		`read`:        {Read, false, false},
 		`reload`:      {Reload, true, true}, // Admin only
-		`remove`:      {accountCommand(Remove), false, false},
+		`remove`:      {Remove, false, false},
 		`rename`:      {Rename, false, true},     // Admin only
 		`redescribe`:  {Redescribe, false, true}, // Admin only
 		`room`:        {Room, false, true},       // Admin only
 		`save`:        {Save, true, false},
-		`say`:         {accountCommand(Say), true, false},
+		`say`:         {Say, true, false},
 		`server`:      {Server, false, true}, // Admin only
 		`set`:         {Set, true, false},
 		`shoot`:       {Shoot, false, false},
-		`shout`:       {accountCommand(Shout), true, false},
+		`shout`:       {Shout, true, false},
 		`show`:        {Show, true, false},
 		`spawn`:       {Spawn, false, true}, // Admin only
 
@@ -328,7 +327,7 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 	}
 
 	if _, ok := emoteAliases[cmd]; ok {
-		handled, err := accountCommand(Emote)(cmd, actor, room, flags)
+		handled, err := Emote(cmd, actor, room, flags)
 		return handled, err
 	}
 
@@ -338,7 +337,7 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 		util.TrackTime(`usr-cmd[go]`, time.Since(start).Seconds())
 	}()
 
-	if handled, err := accountCommand(Go)(cmd, actor, room, flags); handled {
+	if handled, err := Go(cmd, actor, room, flags); handled {
 		return handled, err
 	}
 	// end "go" attempt

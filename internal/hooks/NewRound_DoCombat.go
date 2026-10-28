@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/configs"
@@ -156,7 +157,9 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 				newRoom := rooms.LoadRoom(exitRoomId)
 
-				usercommands.Look(``, user, newRoom, events.CmdSecretly)
+				if actor := actors.ByUserId(user.UserId); actor != nil {
+					usercommands.Look(``, actor, newRoom, events.CmdSecretly)
+				}
 
 			}
 

@@ -214,7 +214,7 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 				user.UserId,
 			)
 
-			accountCommand(Look)(``, actor, destRoom, events.CmdSecretly) // Do a secret look.
+			Look(``, actor, destRoom, events.CmdSecretly) // Do a secret look.
 
 			return true, nil
 		}
@@ -256,7 +256,7 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	rooms.MoveToRoom(user.Character.Id, ephemeralStartRoomId)
 
 	if lookRoom := rooms.LoadRoom(ephemeralStartRoomId); lookRoom != nil {
-		accountCommand(Look)(``, actor, lookRoom, events.CmdSecretly)
+		Look(``, actor, lookRoom, events.CmdSecretly)
 	}
 
 	return true, nil

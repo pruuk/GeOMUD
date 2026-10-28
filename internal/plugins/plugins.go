@@ -12,9 +12,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobcommands"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"gopkg.in/yaml.v2"
@@ -293,15 +297,31 @@ func (p *Plugin) ExportFunction(stringId string, f any) {
 	p.exportedFunctions[stringId] = f
 }
 
-// Registers a UserCommand and callback
-func (p *Plugin) AddUserCommand(command string, handlerFunc usercommands.UserCommand, allowWhenDowned bool, isAdminOnly bool) {
+// moduleUserCommand is the account signature the modules still use. Task 7
+// converts the modules to usercommands.Command and removes it with the
+// adapter below.
+type moduleUserCommand func(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error)
+
+// adaptModuleCommand runs a module command only for an actor with an account.
+func adaptModuleCommand(f moduleUserCommand) usercommands.Command {
+	return func(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+		user := actor.Controller().Account()
+		if user == nil {
+			return false, nil
+		}
+		return f(rest, user, room, flags)
+	}
+}
+
+// Registers a user command and callback
+func (p *Plugin) AddUserCommand(command string, handlerFunc moduleUserCommand, allowWhenDowned bool, isAdminOnly bool) {
 
 	if p.Callbacks.userCommands == nil {
 		p.Callbacks.userCommands = map[string]usercommands.CommandAccess{}
 	}
 
 	p.Callbacks.userCommands[command] = usercommands.CommandAccess{
-		Func:              usercommands.AdaptUserCommand(handlerFunc),
+		Func:              adaptModuleCommand(handlerFunc),
 		AllowedWhenDowned: allowWhenDowned,
 		AdminOnly:         isAdminOnly,
 	}

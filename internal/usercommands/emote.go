@@ -3,7 +3,7 @@ package usercommands
 import (
 	"fmt"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
@@ -93,13 +93,13 @@ var (
 	}
 )
 
-func Emote(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Emote(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if len(rest) == 0 {
-		user.SendText("You emote.")
+		tell(actor, "You emote.")
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="username">%s</ansi> emotes.`, user.Character.Name),
-			user.UserId,
+			fmt.Sprintf(`<ansi fg="username">%s</ansi> emotes.`, actor.Character.Name),
+			excludeId(actor),
 		)
 		return true, nil
 	}
@@ -107,28 +107,28 @@ func Emote(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 	// emoteAliases are sent without regard to Mute (Not marked as a communication)
 	// This is because they are pre-written.
 	if emoteText, ok := emoteAliases[rest]; ok {
-		user.SendText(fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, user.Character.Name, emoteText))
+		tell(actor, fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, emoteText))
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, user.Character.Name, emoteText),
-			user.UserId,
+			fmt.Sprintf(`<ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, emoteText),
+			excludeId(actor),
 		)
 		return true, nil
 	}
 
-	if user.Muted {
-		user.SendText(`You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
+	if user := actor.Controller().Account(); user != nil && user.Muted {
+		tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
 		return true, nil
 	}
 
 	if rest[0] == '@' && len(rest) > 1 {
 		rest = rest[1:]
 	} else {
-		user.SendText(fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, user.Character.Name, rest))
+		tell(actor, fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, rest))
 	}
 
 	room.SendTextCommunication(
-		fmt.Sprintf(`<ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, user.Character.Name, rest),
-		user.UserId,
+		fmt.Sprintf(`<ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, rest),
+		excludeId(actor),
 	)
 
 	return true, nil

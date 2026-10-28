@@ -129,10 +129,10 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 				if itm.IsRemoveLocked() {
 					continue
 				}
-				accountCommand(Remove)(itm.Name(), actor, room, flags)
+				Remove(itm.Name(), actor, room, flags)
 			}
 			// drop all items / gold
-			accountCommand(Drop)("all", actor, room, flags)
+			Drop("all", actor, room, flags)
 
 			// Reroll first, then move: the events MoveToRoom queues carry the body ID
 			// current at that moment, and only the new ID has an actor driving it.
@@ -178,7 +178,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 				}
 				if util.Rand(100) < chanceInt {
 
-					accountCommand(Remove)(itm.Name(), actor, room, flags)
+					Remove(itm.Name(), actor, room, flags)
 
 					if config.Death.CorpseItems && config.Death.CorpsesEnabled {
 						// Item was removed from equipment slot; grab it from backpack and hold for corpse
@@ -187,7 +187,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 							corpseItems = append(corpseItems, held)
 						}
 					} else {
-						accountCommand(Drop)(itm.Name(), actor, room, flags)
+						Drop(itm.Name(), actor, room, flags)
 					}
 
 				}
@@ -200,7 +200,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 				user.Character.Gold = 0
 			} else {
 				user.EventLog.Add(`death`, fmt.Sprintf(`Dropped <ansi fg="gold">%d gold</ansi> on death`, user.Character.Gold))
-				accountCommand(Drop)(fmt.Sprintf(`%d gold`, user.Character.Gold), actor, room, flags)
+				Drop(fmt.Sprintf(`%d gold`, user.Character.Gold), actor, room, flags)
 			}
 		}
 
@@ -211,7 +211,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 					corpseItems = append(corpseItems, itm)
 				}
 			} else {
-				accountCommand(Drop)("all", actor, room, flags)
+				Drop("all", actor, room, flags)
 				user.EventLog.Add(`death`, `Dropped <ansi fg="alert-3">everthing in your backpack</ansi> on death`)
 			}
 		} else if config.Death.EquipmentDropChance >= 0 {
@@ -222,7 +222,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 						user.Character.RemoveItem(itm)
 						corpseItems = append(corpseItems, itm)
 					} else {
-						accountCommand(Drop)(itm.Name(), actor, room, flags)
+						Drop(itm.Name(), actor, room, flags)
 						user.EventLog.Add(`death`, fmt.Sprintf(`Dropped your <ansi fg="itemname">%s</ansi> on death`, itm.Name()))
 					}
 				}

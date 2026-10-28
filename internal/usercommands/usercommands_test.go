@@ -115,21 +115,6 @@ func TestTryCommandUnknownActor(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestAccountCommandAdapterSkipsNPC(t *testing.T) {
-	npc, player, _ := setup(t)
-	calls := 0
-	f := accountCommand(func(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
-		calls++
-		return true, nil
-	})
-	handled, _ := f("", npc, nil, 0)
-	assert.False(t, handled)
-	assert.Equal(t, 0, calls)
-	handled, _ = f("", player, nil, 0)
-	assert.True(t, handled)
-	assert.Equal(t, 1, calls)
-}
-
 func TestTellAndExcludeId(t *testing.T) {
 	npc, player, _ := setup(t)
 	assert.NotPanics(t, func() { tell(npc, "nobody hears this") })

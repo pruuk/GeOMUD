@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -12,25 +12,25 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) == 0 {
-		user.SendText("Get what?")
+		tell(actor, "Get what?")
 		return true, nil
 	}
 
 	if args[0] == "all" {
 		if room.Gold > 0 {
-			Get(`gold`, user, room, flags)
+			Get(`gold`, actor, room, flags)
 		}
 
 		if len(room.Items) > 0 {
 			iCopies := append([]items.Item{}, room.Items...)
 
 			for _, item := range iCopies {
-				Get(item.Name(), user, room, flags)
+				Get(item.Name(), actor, room, flags)
 			}
 		}
 
@@ -99,57 +99,57 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 
 			if corpseRef.Gold > 0 {
 				goldAmt := corpseRef.Gold
-				user.Character.Gold += goldAmt
+				actor.Character.Gold += goldAmt
 				corpseRef.Gold = 0
 
 				events.AddToQueue(events.EquipmentChange{
-					ActorId:    user.Character.Id,
+					ActorId:    actor.Character.Id,
 					GoldChange: -goldAmt,
 				})
 
-				user.SendText(fmt.Sprintf(`You take <ansi fg="gold">%d gold</ansi> from the %s.`, goldAmt, corpseName))
-				room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes some <ansi fg="gold">gold</ansi> from the %s.`, user.Character.Name, corpseName), user.UserId)
+				tell(actor, fmt.Sprintf(`You take <ansi fg="gold">%d gold</ansi> from the %s.`, goldAmt, corpseName))
+				room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes some <ansi fg="gold">gold</ansi> from the %s.`, actor.Character.Name, corpseName), excludeId(actor))
 				tookSomething = true
 			}
 
 			// Backpack items on corpse
 			allCorpseItems := append([]items.Item{}, corpseRef.Items...)
 			for _, item := range allCorpseItems {
-				if user.Character.StoreItem(item) {
+				if actor.Character.StoreItem(item) {
 					corpseRef.RemoveItem(item)
 					events.AddToQueue(events.ItemOwnership{
-						ActorId: user.Character.Id,
+						ActorId: actor.Character.Id,
 						Item:    item,
 						Gained:  true,
 					})
-					user.SendText(fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName))
-					room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, user.Character.Name, item.DisplayName(), corpseName), user.UserId)
+					tell(actor, fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName))
+					room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, actor.Character.Name, item.DisplayName(), corpseName), excludeId(actor))
 					tookSomething = true
 				} else {
-					user.SendText(fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, item.DisplayName()))
+					tell(actor, fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, item.DisplayName()))
 				}
 			}
 
 			// Worn items on corpse character
 			allWorn := corpseRef.Character.GetAllWornItems()
 			for _, item := range allWorn {
-				if user.Character.StoreItem(item) {
+				if actor.Character.StoreItem(item) {
 					corpseRef.Character.RemoveFromBody(item)
 					events.AddToQueue(events.ItemOwnership{
-						ActorId: user.Character.Id,
+						ActorId: actor.Character.Id,
 						Item:    item,
 						Gained:  true,
 					})
-					user.SendText(fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName))
-					room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, user.Character.Name, item.DisplayName(), corpseName), user.UserId)
+					tell(actor, fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName))
+					room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, actor.Character.Name, item.DisplayName(), corpseName), excludeId(actor))
 					tookSomething = true
 				} else {
-					user.SendText(fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, item.DisplayName()))
+					tell(actor, fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, item.DisplayName()))
 				}
 			}
 
 			if !tookSomething {
-				user.SendText(fmt.Sprintf(`There is nothing to take from the %s.`, corpseName))
+				tell(actor, fmt.Sprintf(`There is nothing to take from the %s.`, corpseName))
 			}
 
 			return true, nil
@@ -159,21 +159,21 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		goldName := `gold`
 		if args[0] == goldName || (len(args[0]) >= 1 && len(args[0]) < 5 && goldName[0:len(args[0])] == args[0]) {
 			if corpseRef.Gold < 1 {
-				user.SendText(fmt.Sprintf(`There is no gold on the %s.`, corpseName))
+				tell(actor, fmt.Sprintf(`There is no gold on the %s.`, corpseName))
 			} else {
-				user.Character.CancelBuffsWithFlag("hidden")
+				actor.Character.CancelBuffsWithFlag("hidden")
 
 				goldAmt := corpseRef.Gold
-				user.Character.Gold += goldAmt
+				actor.Character.Gold += goldAmt
 				corpseRef.Gold = 0
 
 				events.AddToQueue(events.EquipmentChange{
-					ActorId:    user.Character.Id,
+					ActorId:    actor.Character.Id,
 					GoldChange: -goldAmt,
 				})
 
-				user.SendText(fmt.Sprintf(`You take <ansi fg="gold">%d gold</ansi> from the %s.`, goldAmt, corpseName))
-				room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes some <ansi fg="gold">gold</ansi> from the %s.`, user.Character.Name, corpseName), user.UserId)
+				tell(actor, fmt.Sprintf(`You take <ansi fg="gold">%d gold</ansi> from the %s.`, goldAmt, corpseName))
+				room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes some <ansi fg="gold">gold</ansi> from the %s.`, actor.Character.Name, corpseName), excludeId(actor))
 			}
 			return true, nil
 		}
@@ -194,19 +194,19 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		}
 
 		if !found {
-			user.SendText(fmt.Sprintf(`You don't see a %s on the %s.`, rest, corpseName))
+			tell(actor, fmt.Sprintf(`You don't see a %s on the %s.`, rest, corpseName))
 			return true, nil
 		}
 
-		user.Character.CancelBuffsWithFlag("hidden")
+		actor.Character.CancelBuffsWithFlag("hidden")
 
-		if !user.Character.StoreItem(matchItem) {
-			user.SendText(fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, matchItem.DisplayName()))
+		if !actor.Character.StoreItem(matchItem) {
+			tell(actor, fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, matchItem.DisplayName()))
 			return true, nil
 		}
 
 		events.AddToQueue(events.ItemOwnership{
-			ActorId: user.Character.Id,
+			ActorId: actor.Character.Id,
 			Item:    matchItem,
 			Gained:  true,
 		})
@@ -215,8 +215,8 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		corpseRef.RemoveItem(matchItem)
 		corpseRef.Character.RemoveFromBody(matchItem)
 
-		user.SendText(fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, matchItem.DisplayName(), corpseName))
-		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, user.Character.Name, matchItem.DisplayName(), corpseName), user.UserId)
+		tell(actor, fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, matchItem.DisplayName(), corpseName))
+		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, actor.Character.Name, matchItem.DisplayName(), corpseName), excludeId(actor))
 
 		return true, nil
 	}
@@ -228,27 +228,27 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		if args[0] == goldName || (len(args[0]) >= 1 && len(args[0]) < 5 && goldName[0:len(args[0])] == args[0]) {
 
 			if container.Gold < 1 {
-				user.SendText("There's no gold to grab.")
+				tell(actor, "There's no gold to grab.")
 			} else {
 
-				user.Character.CancelBuffsWithFlag("hidden") // No longer sneaking
+				actor.Character.CancelBuffsWithFlag("hidden") // No longer sneaking
 
 				goldAmt := container.Gold
-				user.Character.Gold += goldAmt
+				actor.Character.Gold += goldAmt
 				container.Gold -= goldAmt
 				room.Containers[containerName] = container
 
 				events.AddToQueue(events.EquipmentChange{
-					ActorId:    user.Character.Id,
+					ActorId:    actor.Character.Id,
 					GoldChange: -goldAmt,
 				})
 
-				user.SendText(
+				tell(actor,
 					fmt.Sprintf(`You pick up <ansi fg="gold">%d gold</ansi> from the <ansi fg="container">%s</ansi>.`, goldAmt, containerName),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up some <ansi fg="gold">gold</ansi> from the <ansi fg="container">%s</ansi>.`, user.Character.Name, containerName),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up some <ansi fg="gold">gold</ansi> from the <ansi fg="container">%s</ansi>.`, actor.Character.Name, containerName),
+					excludeId(actor),
 				)
 			}
 
@@ -258,16 +258,16 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		matchItem, found := container.FindItem(rest)
 
 		if !found {
-			user.SendText(fmt.Sprintf(`You don't see a %s in the <ansi fg="container">%s</ansi>.`, rest, containerName))
+			tell(actor, fmt.Sprintf(`You don't see a %s in the <ansi fg="container">%s</ansi>.`, rest, containerName))
 		} else {
 
-			user.Character.CancelBuffsWithFlag("hidden") // No longer sneaking
+			actor.Character.CancelBuffsWithFlag("hidden") // No longer sneaking
 
 			// Trigger onFound event
-			if user.Character.StoreItem(matchItem) {
+			if actor.Character.StoreItem(matchItem) {
 
 				events.AddToQueue(events.ItemOwnership{
-					ActorId: user.Character.Id,
+					ActorId: actor.Character.Id,
 					Item:    matchItem,
 					Gained:  true,
 				})
@@ -276,18 +276,18 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 				container.RemoveItem(matchItem)
 				room.Containers[containerName] = container
 
-				user.SendText(
+				tell(actor,
 					fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the <ansi fg="container">%s</ansi>.`, matchItem.DisplayName(), containerName),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up the <ansi fg="itemname">%s</ansi> from the <ansi fg="container">%s</ansi>...`, user.Character.Name, matchItem.DisplayName(), containerName),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up the <ansi fg="itemname">%s</ansi> from the <ansi fg="container">%s</ansi>...`, actor.Character.Name, matchItem.DisplayName(), containerName),
+					excludeId(actor),
 				)
 
 				return true, nil
 
 			} else {
-				user.SendText(
+				tell(actor,
 					fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, matchItem.DisplayName()),
 				)
 			}
@@ -300,26 +300,26 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		if args[0] == goldName || (len(args[0]) >= 1 && len(args[0]) < 5 && goldName[0:len(args[0])] == args[0]) {
 
 			if room.Gold < 1 {
-				user.SendText("There's no gold to grab.")
+				tell(actor, "There's no gold to grab.")
 			} else {
 
-				user.Character.CancelBuffsWithFlag("hidden") // No longer sneaking
+				actor.Character.CancelBuffsWithFlag("hidden") // No longer sneaking
 
 				goldAmt := room.Gold
-				user.Character.Gold += goldAmt
+				actor.Character.Gold += goldAmt
 				room.Gold -= goldAmt
 
 				events.AddToQueue(events.EquipmentChange{
-					ActorId:    user.Character.Id,
+					ActorId:    actor.Character.Id,
 					GoldChange: -goldAmt,
 				})
 
-				user.SendText(
+				tell(actor,
 					fmt.Sprintf(`You pick up <ansi fg="gold">%d gold</ansi>.`, goldAmt),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up some <ansi fg="gold">gold</ansi>.`, user.Character.Name),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up some <ansi fg="gold">gold</ansi>.`, actor.Character.Name),
+					excludeId(actor),
 				)
 			}
 
@@ -332,7 +332,8 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		// Check if user is specifying an item they stashed
 		if !found && !getFromStash {
 			stashItemMatch, stashFound := room.FindOnFloor(rest, true)
-			if stashFound && stashItemMatch.StashedBy == user.UserId {
+			// Stash recovery is keyed by account: an actor without one reclaims nothing.
+			if user := actor.Controller().Account(); stashFound && user != nil && stashItemMatch.StashedBy == user.UserId {
 				found = true
 				getFromStash = true
 				matchItem = stashItemMatch
@@ -342,48 +343,48 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		if found {
 
 			if matchItem.HasAdjective(`exploding`) {
-				user.SendText(`You can't pick that up, it's about to explode!`)
+				tell(actor, `You can't pick that up, it's about to explode!`)
 				return true, nil
 			}
 
-			user.Character.CancelBuffsWithFlag("hidden") // No longer sneaking
+			actor.Character.CancelBuffsWithFlag("hidden") // No longer sneaking
 
 			// If it was in the stash, remove the stash owner tag
 			if getFromStash {
 				matchItem.StashedBy = 0
 			}
 
-			if user.Character.StoreItem(matchItem) {
+			if actor.Character.StoreItem(matchItem) {
 
 				// Swap the item location
 				room.RemoveItem(matchItem, getFromStash)
 
 				events.AddToQueue(events.ItemOwnership{
-					ActorId: user.Character.Id,
+					ActorId: actor.Character.Id,
 					Item:    matchItem,
 					Gained:  true,
 				})
 
 				if getFromStash {
-					user.SendText(
+					tell(actor,
 						fmt.Sprintf(`You dig out the <ansi fg="itemname">%s</ansi> from where it was stashed.`, matchItem.DisplayName()),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> digs around in the area and picks something up...`, user.Character.Name),
-						user.UserId,
+						fmt.Sprintf(`<ansi fg="username">%s</ansi> digs around in the area and picks something up...`, actor.Character.Name),
+						excludeId(actor),
 					)
 				} else {
-					user.SendText(
+					tell(actor,
 						fmt.Sprintf(`You pick up the <ansi fg="itemname">%s</ansi>.`, matchItem.DisplayName()),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up the <ansi fg="itemname">%s</ansi>...`, user.Character.Name, matchItem.DisplayName()),
-						user.UserId,
+						fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up the <ansi fg="itemname">%s</ansi>...`, actor.Character.Name, matchItem.DisplayName()),
+						excludeId(actor),
 					)
 				}
 
 			} else {
-				user.SendText(
+				tell(actor,
 					fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, matchItem.DisplayName()),
 				)
 			}
@@ -397,8 +398,8 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 		foundNoun, _ := room.FindNoun(rest)
 		if len(foundNoun) > 0 {
 
-			user.SendText(fmt.Sprintf(`You can't get the <ansi fg="noun">%s</ansi>`, foundNoun))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is grasping at the air.`, user.Character.Name), user.UserId)
+			tell(actor, fmt.Sprintf(`You can't get the <ansi fg="noun">%s</ansi>`, foundNoun))
+			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is grasping at the air.`, actor.Character.Name), excludeId(actor))
 
 			return true, nil
 		}
@@ -406,15 +407,15 @@ func Get(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 	}
 
 	if _, corpseFound := room.FindCorpse(rest); corpseFound {
-		user.SendText(`You can't pick up corpses. What would people think?`)
+		tell(actor, `You can't pick up corpses. What would people think?`)
 		return true, nil
 	}
 
 	containerName = room.FindContainerByName(rest)
 	if containerName != `` {
-		user.SendText(fmt.Sprintf(`You can't pick up the <ansi fg="container">%s</ansi>. Try looking at it.`, containerName))
+		tell(actor, fmt.Sprintf(`You can't pick up the <ansi fg="container">%s</ansi>. Try looking at it.`, containerName))
 	} else {
-		user.SendText(fmt.Sprintf("You don't see a %s around.", rest))
+		tell(actor, fmt.Sprintf("You don't see a %s around.", rest))
 	}
 
 	return true, nil

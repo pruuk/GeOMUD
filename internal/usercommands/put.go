@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -13,12 +13,12 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Put(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) < 2 {
-		user.SendText("Place what where?")
+		tell(actor, "Place what where?")
 		return true, nil
 	}
 
@@ -38,21 +38,21 @@ func Put(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 	}
 
 	if containerName == `` {
-		user.SendText(`No container found by that name`)
+		tell(actor, `No container found by that name`)
 		return true, nil
 	}
 
 	container := room.Containers[containerName]
 
 	if container.Lock.IsLocked() {
-		user.SendText(``)
-		user.SendText(fmt.Sprintf(`The <ansi fg="container">%s</ansi> is locked.`, containerName))
-		user.SendText(``)
+		tell(actor, ``)
+		tell(actor, fmt.Sprintf(`The <ansi fg="container">%s</ansi> is locked.`, containerName))
+		tell(actor, ``)
 		return true, nil
 	}
 
 	if len(args) < 1 {
-		user.SendText("Place what where?")
+		tell(actor, "Place what where?")
 		return true, nil
 	}
 
@@ -70,49 +70,49 @@ func Put(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 
 	} else {
 
-		item, itemFound = user.Character.FindInBackpack(strings.Join(args, ` `))
+		item, itemFound = actor.Character.FindInBackpack(strings.Join(args, ` `))
 		if !itemFound && len(args) > 1 {
-			item, itemFound = user.Character.FindInBackpack(args[0])
+			item, itemFound = actor.Character.FindInBackpack(args[0])
 		}
 
 	}
 
 	if !itemFound && goldAmt == 0 {
-		user.SendText(`You don't seem to be carrying that.`)
+		tell(actor, `You don't seem to be carrying that.`)
 		return true, nil
 	}
 
-	if goldAmt > user.Character.Gold {
-		user.SendText(`You don't have that much gold.`)
+	if goldAmt > actor.Character.Gold {
+		tell(actor, `You don't have that much gold.`)
 		return true, nil
 	}
 
 	if goldAmt > 0 {
-		user.Character.Gold -= goldAmt
+		actor.Character.Gold -= goldAmt
 
 		events.AddToQueue(events.EquipmentChange{
-			ActorId:    user.Character.Id,
+			ActorId:    actor.Character.Id,
 			GoldChange: goldAmt,
 		})
 
 		container.Gold += goldAmt
-		user.SendText(fmt.Sprintf(`You place <ansi fg="gold">%d gold</ansi> into the <ansi fg="container">%s</ansi>`, goldAmt, containerName))
-		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> places some <ansi fg="gold">gold</ansi> into the <ansi fg="container">%s</ansi>`, user.Character.Name, containerName), user.UserId)
+		tell(actor, fmt.Sprintf(`You place <ansi fg="gold">%d gold</ansi> into the <ansi fg="container">%s</ansi>`, goldAmt, containerName))
+		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> places some <ansi fg="gold">gold</ansi> into the <ansi fg="container">%s</ansi>`, actor.Character.Name, containerName), excludeId(actor))
 	}
 
 	if itemFound {
 
 		container.AddItem(item)
-		user.Character.RemoveItem(item)
+		actor.Character.RemoveItem(item)
 
 		events.AddToQueue(events.ItemOwnership{
-			ActorId: user.Character.Id,
+			ActorId: actor.Character.Id,
 			Item:    item,
 			Gained:  false,
 		})
 
-		user.SendText(fmt.Sprintf(`You place your <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, item.DisplayName(), containerName))
-		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> places their <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, user.Character.Name, item.DisplayName(), containerName), user.UserId)
+		tell(actor, fmt.Sprintf(`You place your <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, item.DisplayName(), containerName))
+		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> places their <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, actor.Character.Name, item.DisplayName(), containerName), excludeId(actor))
 
 		// Enforce container size limits
 

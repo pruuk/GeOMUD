@@ -132,7 +132,9 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 							partyUser.SendText(fmt.Sprintf("Moved to room %d.", gotoRoomId))
 							room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> appears in a flash of light!`, partyUser.Character.Name), partyUser.UserId)
 
-							Look(``, partyUser, gotoRoom, flags)
+							if partyActor := actors.ByUserId(partyUser.UserId); partyActor != nil {
+								Look(``, partyActor, gotoRoom, flags)
+							}
 
 							for _, charmedMobId := range room.GetMobs(rooms.FindCharmed) {
 								if mob := mobs.GetInstance(charmedMobId); mob != nil {
@@ -149,7 +151,9 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 
 			}
 
-			Look(``, targetUser, gotoRoom, flags)
+			if targetActor := actors.ByUserId(targetUser.UserId); targetActor != nil {
+				Look(``, targetActor, gotoRoom, flags)
+			}
 
 		}
 	} else {

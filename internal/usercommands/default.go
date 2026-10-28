@@ -19,7 +19,7 @@ func Default(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 	}
 
 	// Default to "look"
-	accountCommand(Look)(``, actor, room, flags)
+	Look(``, actor, room, flags)
 
 	return true, nil
 }
