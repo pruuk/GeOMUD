@@ -258,3 +258,34 @@ Possession (`switch`), link-dead stand-in behaviours, named or composable behavi
 trees, the presentation package, the GMCP package rework, the comms-channel package, hearing and
 touch rules beyond `Faint`, light and darkness beyond today's visibility, the ruleset (Phase 5), and
 lasting NPC identity (geo work).
+
+## Notes for later slices (from reviews, 2026-10-27)
+
+Each slice plan reads these first; a note leaves once a slice settles it.
+
+- **Slices 4-5, reaching the mob behind an NPC actor.** Nothing outside `actors` can, without a
+  type assertion (which `internal/guards` forbids). Put the body on the `Actor` (for example
+  `Actor.Mob`, nil for players) rather than asking the controller.
+- **Possession (later).** Controller-keyed indexes break under possession: an account must remember
+  its own body's actor, and logout returns control to it instead of removing it. One
+  `MoveController(from, to)` under the registry lock is cleaner than two `SetController` calls.
+- **Actor fields and locks.** `Actor.Character` is read without the registry lock while a rebind can
+  write it from a login goroutine: lock it behind a getter, or move account hooks onto the world
+  loop. Login goroutines (`LoginUser`, `CopyoverReconnectUser`) change accounts without the world's
+  `util.LockMud`; web admin edits run under `RunWithMUDLocked`.
+- **Tests.** `accounts.SetTestUser` skips `OnActivate`, so tests that use it get no actor.
+- **Slices 5 and 7, text parity** against `cmd/smoke/testdata/pre-4b/bot0.txt`: mask the run tag
+  (`smk<tag>u0`), game-clock times, HP/MP prompts and wandering-NPC lines; strip `\r` or pin
+  `cmd/smoke/testdata/** text eol=lf` in `.gitattributes`.
+- **Slice 5 inherits** the combat bugs kept on purpose in slice 2 (`NewRound_DoCombat.go`, marked
+  in comments): the shadowed `userId` in the flee check, `affectedPlayerIds` getting 0 in a mob
+  fight, `user` dereferenced before its nil check, a spell fizzle clearing aggro without an event;
+  and `KilledBy` is zero for a PvP kill.
+- **Permadeath reroll** (`usercommands/suicide.go`): body re-keying and event order are unverified
+  live (permadeath is off in `empty`). Check with permadeath on and `LivesStart: 0`. A reroll
+  orphans the old body's charmed mobs until the charm expires.
+- **Slice 2b gaps:** a fresh spawn reaches disk only at its room's next save; a crash between a slot
+  settle's two writes leaves an unread ledger entry; NPCs live in a deleted room or zone are saved
+  nowhere (upstream behaviour); a room delete can lose an NPC in a crash if the deleted room held an
+  old copy of an NPC now in an ephemeral or unloaded room. The admin rooms page and mapper lost the
+  spawn "Permanent Buffs" picker (decision 17): passes JSHint, not checked in a browser.
