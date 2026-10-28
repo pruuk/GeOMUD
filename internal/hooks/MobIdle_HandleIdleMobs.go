@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"github.com/GoMudEngine/GoMud/internal/behaviour"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -26,7 +27,7 @@ func HandleIdleMobs(e events.Event) events.ListenerReturn {
 	// tell them to path back home
 	if mob.MaxWander == 0 && mob.Character.RoomId != mob.HomeRoomId {
 		if !isCharmed {
-			mob.Command("pathto home")
+			behaviour.PathTo(mob, "home")
 		}
 	}
 
@@ -37,14 +38,14 @@ func HandleIdleMobs(e events.Event) events.ListenerReturn {
 	if mob.MaxWander > -1 && mob.WanderCount > mob.MaxWander {
 		// Not charmed and far from home, and should never leave home.
 		// So go home.
-		mob.Command(`pathto home`)
+		behaviour.PathTo(mob, "home")
 		return events.Continue
 	}
 
 	// If they have idle commands, maybe do one of them?
 	if util.Rand(100) < mob.ActivityLevel {
 		if idleCmd := mob.GetIdleCommand(); idleCmd != `` {
-			mob.Command(idleCmd)
+			behaviour.RunIdle(mob, idleCmd)
 		}
 	}
 

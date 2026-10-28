@@ -2,13 +2,16 @@ package hooks
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +21,15 @@ import (
 func TestMain(m *testing.M) {
 	mudlog.SetupLogger(nil, "", "", false)
 	actors.Init()
+	// usercommands.TryCommand reads the keyword aliases, which need a data folder.
+	dataDir, err := filepath.Abs("../../_datafiles/world/empty")
+	if err != nil {
+		panic(err)
+	}
+	if err := configs.AddOverlayOverrides(map[string]any{"FilePaths.DataFiles": dataDir}); err != nil {
+		panic(err)
+	}
+	keywords.LoadAliases()
 	os.Exit(m.Run())
 }
 
