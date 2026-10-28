@@ -14,6 +14,7 @@ var signupMu sync.Mutex
 // bot is one player account the script creates and plays.
 type bot struct {
 	user, pass, char string
+	idx              int // 0 fights the rat, 1 watches it (fight.go)
 }
 
 // script runs steps in order and stops at the first failure: each method
@@ -129,7 +130,7 @@ func (s *script) quit(step string) {
 // rec, when not nil, records the bot's transcript across both connections.
 // co, when not nil, is the copyover step: the bot waits online for it after
 // the death block, and calls co.arrived.Done exactly once on every path.
-func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, rec *recorder, co *copyoverCheck) (map[string]int, error) {
+func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, rec *recorder, co *copyoverCheck, fc *fightCheck) (map[string]int, error) {
 	arrived := false
 	arrive := func() {
 		if co != nil && !arrived {
@@ -138,6 +139,16 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, 
 		}
 	}
 	defer arrive() // a bot that fails early, even at connect, must not hold up the copyover
+	// Likewise the other bot's wait on the fight: bot 0 owes done, bot 1 owes
+	// ready. fight and observe release them too; the Once makes this a no-op then.
+	if fc != nil {
+		switch b.idx {
+		case 0:
+			defer fc.markDone()
+		case 1:
+			defer fc.markReady()
+		}
+	}
 
 	c, err := dial(ctx, addr, timeout, rec)
 	if err != nil {
@@ -181,6 +192,14 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, 
 	s.do("walk: north", "north", "End of the Line")
 	s.do("walk: south", "south", startRoomTitle)
 	s.do("say", "say hello from "+b.char, `You say, "hello from `+b.char+`"`)
+	// The smoke fight: bot 0 attacks the rat in Town Square, bot 1 watches.
+	// Other bots do nothing here.
+	switch b.idx {
+	case 0:
+		s.fight(fc)
+	case 1:
+		s.observe(fc)
+	}
 	s.quit("quit")
 	if s.err != nil {
 		return s.gmcp, s.err

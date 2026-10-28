@@ -6,96 +6,95 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
-	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/statmods"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-type SourceTarget string
-
-const (
-	User SourceTarget = "user"
-	Mob  SourceTarget = "mob"
-)
-
-// Performs a combat round from a player to a mob
-func AttackPlayerVsMob(user *accounts.Account, mob *mobs.Mob) AttackResult {
-
-	attackResult := calculateCombat(*user.Character, mob.Character, User, Mob)
-
-	if attackResult.DamageToSource != 0 {
-		user.Character.ApplyHealthChange(attackResult.DamageToSource * -1)
-		user.WimpyCheck()
+// Attack performs one combat round of attacker's attacks on defender, for
+// any pair of actors. It applies the damage to the defender, credits the
+// attacker's account (or its charmer's) in the defender's PlayerDamage on
+// every attack, hit or miss (plan Decision 3), and runs the defender's
+// wimpy check when the defender has an account and took damage (Decision
+// 9). The result's Messages are the round's lines, one per swing, for the
+// caller to send in order.
+func Attack(attacker, defender *actors.Actor) AttackResult {
+	if attacker == nil || defender == nil {
+		return AttackResult{}
 	}
 
-	mob.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
+	attackResult := calculateCombat(*attacker.Character, *defender.Character)
+
+	defender.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
 
 	// Remember who has hit him
-	mob.Character.TrackPlayerDamage(user.UserId, attackResult.DamageToTarget)
-
-	return attackResult
-}
-
-// Performs a combat round from a player to a player
-func AttackPlayerVsPlayer(userAtk *accounts.Account, userDef *accounts.Account) AttackResult {
-
-	attackResult := calculateCombat(*userAtk.Character, *userDef.Character, User, User)
-
-	if attackResult.DamageToSource != 0 {
-		userAtk.Character.ApplyHealthChange(attackResult.DamageToSource * -1)
-		userAtk.WimpyCheck()
+	if acct := CreditAccount(attacker); acct != nil {
+		defender.Character.TrackPlayerDamage(acct.UserId, attackResult.DamageToTarget)
 	}
 
 	if attackResult.DamageToTarget != 0 {
-		userDef.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
-		userDef.WimpyCheck()
+		if acct := accountOf(defender); acct != nil {
+			acct.WimpyCheck()
+		}
 	}
 
 	return attackResult
 }
 
-// Performs a combat round from a mob to a player
-func AttackMobVsPlayer(mob *mobs.Mob, user *accounts.Account) AttackResult {
-
-	attackResult := calculateCombat(mob.Character, *user.Character, Mob, User)
-
-	mob.Character.ApplyHealthChange(attackResult.DamageToSource * -1)
-
-	if attackResult.DamageToTarget != 0 {
-		user.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
-		user.WimpyCheck()
+// accountOf is the account driving a, or nil for an NPC.
+func accountOf(a *actors.Actor) *accounts.Account {
+	if ctrl := a.Controller(); ctrl != nil {
+		return ctrl.Account()
 	}
-
-	return attackResult
+	return nil
 }
 
-// Performs a combat round from a mob to a mob
-func AttackMobVsMob(mobAtk *mobs.Mob, mobDef *mobs.Mob) AttackResult {
-
-	attackResult := calculateCombat(mobAtk.Character, mobDef.Character, Mob, Mob)
-
-	mobAtk.Character.ApplyHealthChange(attackResult.DamageToSource * -1)
-	mobDef.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
-
-	// If attacking mob was player charmed, attribute damage done to that player
-	if charmer := accounts.GetByBodyId(mobAtk.Character.GetCharmedBy()); charmer != nil {
-		// Remember who has hit him
-		mobDef.Character.TrackPlayerDamage(charmer.UserId, attackResult.DamageToTarget)
+// CreditAccount is the account a's attacks are credited to: its own, else
+// the account of whoever charmed it, else none. Kill credit and group
+// hatred both follow it (plan Decisions 3 and 8).
+func CreditAccount(a *actors.Actor) *accounts.Account {
+	if acct := accountOf(a); acct != nil {
+		return acct
 	}
-
-	return attackResult
+	if by := a.Character.GetCharmedBy(); !by.IsZero() {
+		return actors.AccountOf(by)
+	}
+	return nil
 }
 
-func GetWaitMessages(stepType items.Intensity, sourceChar *characters.Character, targetChar *characters.Character, sourceType SourceTarget, targetType SourceTarget) AttackResult {
+// combatMessage is one combat line set as a world event: seen or heard by
+// the source rooms (the attacker's, and the defender's when it differs).
+// Sound carries it too because combat lines have always reached players in
+// a dark room (room sends ignore light); in the dark, messaging renders the
+// unseen names as "someone".
+func combatMessage(attacker, defender ids.ID, actorText, targetText, observerText, targetRoomText string) perception.Message {
+	return perception.Message{
+		Kind:           perception.WorldEvent,
+		Actor:          attacker,
+		Target:         defender,
+		Senses:         perception.Sight | perception.Sound,
+		Range:          perception.Room,
+		ActorText:      actorText,
+		TargetText:     targetText,
+		ObserverText:   observerText,
+		TargetRoomText: targetRoomText,
+		// An empty defender-room line means nothing for a remote target's
+		// room; messaging only applies this when the rooms differ.
+		NoTargetRoomText: targetRoomText == ``,
+	}
+}
 
-	attackResult := AttackResult{}
+// GetWaitMessages returns the lines for a round the attacker spends waiting
+// (stepType items.Wait) or preparing, as at most one message.
+func GetWaitMessages(stepType items.Intensity, sourceChar *characters.Character, targetChar *characters.Character) []perception.Message {
 
 	msgs := items.GetPreAttackMessage(sourceChar.Equipment.Weapon.GetSpec().Subtype, stepType)
 
@@ -111,116 +110,82 @@ func GetWaitMessages(stepType items.Intensity, sourceChar *characters.Character,
 	}
 
 	toAttackerMsg, toDefenderMsg, toAttackerRoomMsg, toDefenderRoomMsg := buildCombatMessages(
-		sourceChar, targetChar, sourceType, targetType,
+		sourceChar, targetChar,
 		weaponName, `[Invalid]`, msgSeed,
 		msgs.Together.ToAttacker, msgs.Together.ToDefender, msgs.Together.ToRoom, items.MessageOptions(nil),
 		msgs.Separate.ToAttacker, msgs.Separate.ToDefender, msgs.Separate.ToAttackerRoom, msgs.Separate.ToDefenderRoom,
 	)
 
-	if string(toAttackerMsg) != `` {
-		attackResult.SendToSource(string(toAttackerMsg))
+	if toAttackerMsg == `` && toDefenderMsg == `` && toAttackerRoomMsg == `` && toDefenderRoomMsg == `` {
+		return nil
 	}
 
-	if !sourceChar.HasBuffFlag("hidden") {
-
-		if string(toDefenderMsg) != `` {
-			attackResult.SendToTarget(string(toDefenderMsg))
-		}
-
-		if string(toAttackerRoomMsg) != `` {
-			attackResult.SendToSourceRoom(string(toAttackerRoomMsg))
-		}
-
-		if sourceChar.RoomId != targetChar.RoomId {
-			if string(toDefenderRoomMsg) != `` {
-				attackResult.SendToTargetRoom(string(toDefenderRoomMsg))
-			}
-		}
-
+	return []perception.Message{
+		combatMessage(sourceChar.Id, targetChar.Id, toAttackerMsg, toDefenderMsg, toAttackerRoomMsg, toDefenderRoomMsg),
 	}
-
-	return attackResult
 }
 
-// buildCombatMessages resolves token replacements and selects the correct
-// together/separate message variants for a single combat message event.
-// It returns the four populated message strings ready to send.
+// buildCombatMessages selects the together/separate message variants for a
+// single combat message event and fills every token but the names. {actor}
+// and {target} are left for messaging, which resolves them per receiver.
 // Pass nil (or empty MessageOptions) for togetherToDefenderRoom to suppress that message slot.
 func buildCombatMessages(
 	sourceChar *characters.Character, targetChar *characters.Character,
-	sourceType SourceTarget, targetType SourceTarget,
 	weaponName string, damageStr string, msgSeed int,
 	togetherToAttacker, togetherToDefender, togetherToRoom, togetherToDefenderRoom items.MessageOptions,
 	separateToAttacker, separateToDefender, separateToAttackerRoom, separateToDefenderRoom items.MessageOptions,
-) (toAttackerMsg, toDefenderMsg, toAttackerRoomMsg, toDefenderRoomMsg items.ItemMessage) {
+) (toAttackerMsg, toDefenderMsg, toAttackerRoomMsg, toDefenderRoomMsg string) {
 
-	tokenReplacements := map[items.TokenName]string{
-		items.TokenItemName:     weaponName,
-		items.TokenSource:       sourceChar.Name,
-		items.TokenSourceType:   string(sourceType) + `name`,
-		items.TokenTarget:       targetChar.Name,
-		items.TokenTargetType:   string(targetType) + `name`,
-		items.TokenUsesLeft:     `[Invalid]`,
-		items.TokenDamage:       damageStr,
-		items.TokenEntranceName: `unknown`,
-		items.TokenExitName:     `unknown`,
-	}
+	exitName, entranceName := `unknown`, `unknown`
 
-	if sourceType == Mob {
-		tokenReplacements[items.TokenSource] = sourceChar.GetMobName(ids.ID{}).String()
-	}
-
-	if targetType == Mob {
-		tokenReplacements[items.TokenTarget] = targetChar.GetMobName(ids.ID{}).String()
-	}
+	var atk, def, atkRoom, defRoom items.ItemMessage
 
 	if sourceChar.RoomId == targetChar.RoomId {
 
-		toAttackerMsg = togetherToAttacker.Get(msgSeed)
-		toDefenderMsg = togetherToDefender.Get(msgSeed)
-		toAttackerRoomMsg = togetherToRoom.Get(msgSeed)
-		toDefenderRoomMsg = togetherToDefenderRoom.Get(msgSeed)
+		atk = togetherToAttacker.Get(msgSeed)
+		def = togetherToDefender.Get(msgSeed)
+		atkRoom = togetherToRoom.Get(msgSeed)
+		defRoom = togetherToDefenderRoom.Get(msgSeed)
 
 	} else {
 
-		toAttackerMsg = separateToAttacker.Get(msgSeed)
-		toDefenderMsg = separateToDefender.Get(msgSeed)
-		toAttackerRoomMsg = separateToAttackerRoom.Get(msgSeed)
-		toDefenderRoomMsg = separateToDefenderRoom.Get(msgSeed)
+		atk = separateToAttacker.Get(msgSeed)
+		def = separateToDefender.Get(msgSeed)
+		atkRoom = separateToAttackerRoom.Get(msgSeed)
+		defRoom = separateToDefenderRoom.Get(msgSeed)
 
 		// Find the exit that leads to the target from the source (if any)
-		if atkRoom := rooms.LoadRoom(sourceChar.RoomId); atkRoom != nil {
-			for exitName, exit := range atkRoom.Exits {
+		if r := rooms.LoadRoom(sourceChar.RoomId); r != nil {
+			for name, exit := range r.Exits {
 				if exit.RoomId == targetChar.RoomId {
-					tokenReplacements[items.TokenExitName] = exitName
+					exitName = name
 					break
 				}
 			}
 		}
 		// Find the exit that leads to the source from the target (if any)
-		if defRoom := rooms.LoadRoom(targetChar.RoomId); defRoom != nil {
-			for exitName, exit := range defRoom.Exits {
+		if r := rooms.LoadRoom(targetChar.RoomId); r != nil {
+			for name, exit := range r.Exits {
 				if exit.RoomId == sourceChar.RoomId {
-					tokenReplacements[items.TokenEntranceName] = exitName
+					entranceName = name
 					break
 				}
 			}
 		}
 	}
 
-	for tokenName, tokenValue := range tokenReplacements {
-		toAttackerMsg = toAttackerMsg.SetTokenValue(tokenName, tokenValue)
-		toDefenderMsg = toDefenderMsg.SetTokenValue(tokenName, tokenValue)
-		toAttackerRoomMsg = toAttackerRoomMsg.SetTokenValue(tokenName, tokenValue)
-		if len(string(toDefenderRoomMsg)) > 0 {
-			toDefenderRoomMsg = toDefenderRoomMsg.SetTokenValue(tokenName, tokenValue)
-		}
-	}
+	fill := strings.NewReplacer(
+		string(items.TokenItemName), weaponName,
+		string(items.TokenUsesLeft), `[Invalid]`,
+		string(items.TokenDamage), damageStr,
+		string(items.TokenEntranceName), entranceName,
+		string(items.TokenExitName), exitName,
+	)
 
-	return toAttackerMsg, toDefenderMsg, toAttackerRoomMsg, toDefenderRoomMsg
+	return fill.Replace(string(atk)), fill.Replace(string(def)), fill.Replace(string(atkRoom)), fill.Replace(string(defRoom))
 }
 
-func calculateCombat(sourceChar characters.Character, targetChar characters.Character, sourceType SourceTarget, targetType SourceTarget) AttackResult {
+func calculateCombat(sourceChar characters.Character, targetChar characters.Character) AttackResult {
 
 	attackResult := AttackResult{}
 
@@ -231,7 +196,7 @@ func calculateCombat(sourceChar characters.Character, targetChar characters.Char
 
 	for i := 0; i < atkCount; i++ {
 
-		mudlog.Debug(`calculateCombat`, `Atk`, fmt.Sprintf(`%d/%d`, i+1, atkCount), `Source`, fmt.Sprintf(`%s (%s)`, sourceChar.Name, sourceType), `Target`, fmt.Sprintf(`%s (%s)`, targetChar.Name, targetType))
+		mudlog.Debug(`calculateCombat`, `Atk`, fmt.Sprintf(`%d/%d`, i+1, atkCount), `Source`, sourceChar.Name, `Target`, targetChar.Name)
 
 		attackWeapons := resolveAttackWeapons(sourceChar)
 
@@ -308,8 +273,10 @@ func calculateCombat(sourceChar characters.Character, targetChar characters.Char
 				if Hits(sourceChar.Stats.Speed.ValueAdj, targetChar.Stats.Speed.ValueAdj, penalty) {
 					// Check dodge before applying damage.
 					if Dodges(targetChar.Stats.Perception.ValueAdj, sourceChar.Stats.Perception.ValueAdj) {
-						attackResult.SendToSource(fmt.Sprintf(`<ansi fg="cyan">%s dodges your attack!</ansi>`, targetChar.Name))
-						attackResult.SendToTarget(`<ansi fg="cyan">You dodge the attack!</ansi>`)
+						attackResult.Messages = append(attackResult.Messages, combatMessage(sourceChar.Id, targetChar.Id,
+							`<ansi fg="cyan">{target} dodges your attack!</ansi>`,
+							`<ansi fg="cyan">You dodge the attack!</ansi>`,
+							``, ``))
 						continue
 					}
 					attackResult.Hit = true
@@ -333,55 +300,41 @@ func calculateCombat(sourceChar characters.Character, targetChar characters.Char
 				msgs := items.GetAttackMessage(weaponSubType, pct)
 
 				toAttackerMsg, toDefenderMsg, toAttackerRoomMsg, toDefenderRoomMsg := buildCombatMessages(
-					&sourceChar, &targetChar, sourceType, targetType,
+					&sourceChar, &targetChar,
 					weaponName, strconv.Itoa(attackTargetDamage), msgSeed,
 					msgs.Together.ToAttacker, msgs.Together.ToDefender, msgs.Together.ToRoom, items.MessageOptions(nil),
 					msgs.Separate.ToAttacker, msgs.Separate.ToDefender, msgs.Separate.ToAttackerRoom, msgs.Separate.ToDefenderRoom,
 				)
 
 				if isCrit {
-					toAttackerMsg = items.ItemMessage(`<ansi fg="yellow-bold">***</ansi> ` + string(toAttackerMsg) + ` <ansi fg="yellow-bold">***</ansi>`)
-					toDefenderMsg = items.ItemMessage(`<ansi fg="yellow-bold">***</ansi> ` + string(toDefenderMsg) + ` <ansi fg="yellow-bold">***</ansi>`)
-					toAttackerRoomMsg = items.ItemMessage(`<ansi fg="yellow-bold">***</ansi> ` + string(toAttackerRoomMsg) + ` <ansi fg="yellow-bold">***</ansi>`)
-					if len(string(toDefenderRoomMsg)) > 0 {
-						toDefenderRoomMsg = items.ItemMessage(`<ansi fg="yellow-bold">***</ansi> ` + string(toDefenderRoomMsg) + ` <ansi fg="yellow-bold">***</ansi>`)
+					toAttackerMsg = `<ansi fg="yellow-bold">***</ansi> ` + toAttackerMsg + ` <ansi fg="yellow-bold">***</ansi>`
+					toDefenderMsg = `<ansi fg="yellow-bold">***</ansi> ` + toDefenderMsg + ` <ansi fg="yellow-bold">***</ansi>`
+					toAttackerRoomMsg = `<ansi fg="yellow-bold">***</ansi> ` + toAttackerRoomMsg + ` <ansi fg="yellow-bold">***</ansi>`
+					if len(toDefenderRoomMsg) > 0 {
+						toDefenderRoomMsg = `<ansi fg="yellow-bold">***</ansi> ` + toDefenderRoomMsg + ` <ansi fg="yellow-bold">***</ansi>`
 					}
 				}
 
 				if len(attackMessagePrefix) > 0 {
-					toAttackerMsg = items.ItemMessage(attackMessagePrefix + string(toAttackerMsg))
-					toDefenderMsg = items.ItemMessage(attackMessagePrefix + string(toDefenderMsg))
-					toAttackerRoomMsg = items.ItemMessage(attackMessagePrefix + string(toAttackerRoomMsg))
-					if len(string(toDefenderRoomMsg)) > 0 {
-						toDefenderRoomMsg = items.ItemMessage(attackMessagePrefix + string(toDefenderRoomMsg))
+					toAttackerMsg = attackMessagePrefix + toAttackerMsg
+					toDefenderMsg = attackMessagePrefix + toDefenderMsg
+					toAttackerRoomMsg = attackMessagePrefix + toAttackerRoomMsg
+					if len(toDefenderRoomMsg) > 0 {
+						toDefenderRoomMsg = attackMessagePrefix + toDefenderRoomMsg
 					}
 				}
 
-				attackResult.SendToSource(string(toAttackerMsg))
-
-				// Send to victim
-				defenderMsg := string(toDefenderMsg)
+				// The victim's line notes what their defense blocked.
 				if attackTargetDamage > 0 && attackTargetReduction > 0 {
-					defenderMsg += fmt.Sprintf(` <ansi fg="red">[you blocked %d]</ansi>`, attackTargetReduction)
+					toDefenderMsg += fmt.Sprintf(` <ansi fg="red">[you blocked %d]</ansi>`, attackTargetReduction)
 				}
 
-				attackResult.SendToTarget(defenderMsg)
-
-				// Send to room
-				attackResult.SendToSourceRoom(
-					string(toAttackerRoomMsg.SetTokenValue(items.TokenTarget, targetChar.Name).
-						SetTokenValue(items.TokenTargetType, string(targetType))),
-				)
-
-				// Send to defender room if separate
-				if len(string(toDefenderRoomMsg)) > 0 {
-					attackResult.SendToTargetRoom(
-						string(toDefenderRoomMsg.SetTokenValue(items.TokenTarget, targetChar.Name).SetTokenValue(items.TokenTargetType, string(targetType))),
-					)
-				}
+				// One message per swing: the attacker's line, the victim's, the
+				// attacker's room's, and the defender's room's when it is another room.
+				attackResult.Messages = append(attackResult.Messages, combatMessage(sourceChar.Id, targetChar.Id,
+					toAttackerMsg, toDefenderMsg, toAttackerRoomMsg, toDefenderRoomMsg))
 
 				attackResult.DamageToTarget += attackTargetDamage
-				attackResult.DamageToTargetReduction += attackTargetReduction
 			}
 
 		}

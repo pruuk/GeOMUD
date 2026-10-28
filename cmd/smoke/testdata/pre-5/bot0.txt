@@ -1,0 +1,431 @@
+
+================================================================================
+
+           _.-----._
+         .'  |   |  '.       ______        ____    __  ___  __  __  ____
+        /----+---+----\     / ____/ ___   / __ \  /  |/  / / / / / / __ \
+       |     |   |     |   / / __  / _ \ / / / / / /|_/ / / / / / / / / /
+       |-----+---+-----|  / /_/ / /  __// /_/ / / /  / / / /_/ / / /_/ /
+        \    |   |    /   \____/  \___/ \____/ /_/  /_/  \____/ /_____/
+         '.--+---+--.'
+           '-.___.-'
+
+.: Welcome to GeOMUD, a MUD engine for worlds built on real geography.
+
+                                            Find out more (or get the code) at:
+                                                        github.com/pruuk/GeOMUD
+
+================================================================================
+username (or "new"): 
+> new
+
+
+CAUTION: This will be your login username, NOT your character name!
+Whatever you use as your login name CANNOT be used as a character name.
+
+Choose your username: 
+> smk8c4940u0
+
+Choose your password: 
+> smoke8c4940
+
+Repeat your password: 
+> smoke8c4940
+
+Email Address (optional): 
+> 
+
+Are you using a screen reader? [y/n]: 
+> n
+
+Would you like to create a new user/login named smk8c4940u0? [y/n]: 
+> y
+
+Welcome to the Mud!
+.: 1 user online
+╒══════════════════╕═══════╕═══════════╕════════════╕════════╕══════╕
+│ Name             │ Level │ Alignment │ Profession │ Online │ Role │
+└──────────────────┘───────┘───────────┘────────────┘────────┘──────┘
+│ nameless-3100216 │ 1     │ neutral   │ scrub      │ 0s     │ user │
+└──────────────────┘───────┘───────────┘────────────┘────────┘──────┘
+
+inbox not recognized. Type help for commands.
+mudletmap not recognized. Type help for commands.
+
+.: [•] The Void [Shadow Realm]
+As your senses attune to the stillness around, you find yourself engulfed in an
+impenetrable void, a realm where darkness reigns supreme. The abyss seems to
+stretch infinitely in all directions, and you feel a chilling isolation seeping
+into your very bones. Despite the oppressive blackness, there's an almost
+palpable density to the void, as if the shadows themselves are a thick,
+suffocating shroud. There's an eerie silence that pervades, broken only by the
+faint, distant echo of your own breath that seems to bounce off the unseen
+boundaries of this desolate expanse. The ground beneath is neither cold nor warm
+to the touch, and it's unsettlingly intangible, as though you are suspended in a
+timeless, spaceless vacuum. Yet amidst the disconcerting calm, you sense an
+ancient, eerie awareness in the void, a watchful consciousness lurking within
+the velvety darkness. With each passing moment, the boundary between yourself
+and the infinite abyss seems to blur, leaving you with a haunting sensation of
+becoming one with the void.
+
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ Type start to begin playing.
+    └─────────────────────────────────────────────────────────────────────┘
+Exits: drift
+
+[☀️ 4:00AM HP:10/0 MP:10/0]:
+> start
+start
+.: Which race will you be? 
+You'll need to answer some questions.
+
+
+   1. human             - A basic human who gains ordinary stats.
+
+
+  Want to know more details? Type help {racename} or help {number}
+
+.: Which race will you be? 
+> human
+human
+.: What will your character be known as (name)? 
+  *** Your ghostly form materializes into that of a human ***
+
+.: What will your character be known as (name)? 
+> Smk8c4940c0
+Smk8c4940c0
+.: Choose the name Smk8c4940c0? [yes/no] 
+> yes
+yes
+[☀️ 4:00AM HP:6/6 MP:5/5]:You will be known as Smk8c4940c0!
+
+Suddenly, a vortex appears before you, drawing you in before you have any chance to react!
+
+
+.: [•] Town Square [Startland]
+You stand at the town square of startland. This is the first room you    ╔═════╗
+enter upon completing training and beginning the mud.                    ║  •  ║
+                                                                         ║  │  ║
+                                                                         ║  @  ║
+                                                                         ║     ║
+                                                                         ║     ║
+                                                                         ╚═════╝
+Also here: guard and rat
+
+On the Ground: copper ring and copper ring
+
+Exits: north
+
+[☀️ 4:00AM HP:6/6 MP:5/5]:    >>> Smk8c4940c1 enters from somewhere.
+
+[☀️ 4:00AM HP:6/6 MP:5/5]:
+> get copper ring
+get copper ring
+You pick up the copper ring.
+[☀️ 4:00AM HP:6/6 MP:5/5]:Smk8c4940c1 picks up the copper ring...
+[☀️ 4:00AM HP:6/6 MP:5/5]:
+> inventory
+inventory
+ ┌─ .:Equipment ──────────────────────────────────────────────────────────────┐
+ │ Weapon:   -nothing-                                                        │
+   Offhand:  -nothing-                                                         
+   Head:     -nothing-                                                         
+   Neck:     -nothing-                                                         
+   Body:     -nothing-                                                         
+   Belt:     -nothing-                                                         
+   Gloves:   -nothing-                                                         
+   Ring:     -nothing-                                                         
+   Legs:     -nothing-                                                         
+ │ Feet:     -nothing-                                                        │
+ └────────────────────────────────────────────────────────────────────────────┘
+ Carrying: copper ring
+
+[☀️ 4:00AM HP:6/6 MP:5/5]:
+> drop copper ring
+drop copper ring
+You drop the copper ring.
+[☀️ 4:00AM HP:6/6 MP:5/5]:Smk8c4940c1 drops their copper ring...
+[☀️ 4:00AM HP:6/6 MP:5/5]:
+> look
+look
+
+.: [•] Town Square [Startland]
+You stand at the town square of startland. This is the first room you    ╔═════╗
+enter upon completing training and beginning the mud.                    ║  •  ║
+                                                                         ║  │  ║
+                                                                         ║  @  ║
+                                                                         ║     ║
+                                                                         ║     ║
+                                                                         ╚═════╝
+Also here: Smk8c4940c1, guard and rat
+
+On the Ground: copper ring and copper ring
+
+Exits: north
+
+[☀️ 4:00AM HP:6/6 MP:5/5]:Smk8c4940c1 is looking around.
+[☀️ 4:00AM HP:6/6 MP:5/5]:
+> get copper ring
+get copper ring
+You pick up the copper ring.
+[☀️ 4:00AM HP:6/6 MP:5/5]:Smk8c4940c1 picks up the copper ring...
+[☀️ 4:00AM HP:6/6 MP:5/5]:
+> inventory
+inventory
+ ┌─ .:Equipment ──────────────────────────────────────────────────────────────┐
+ │ Weapon:   -nothing-                                                        │
+   Offhand:  -nothing-                                                         
+   Head:     -nothing-                                                         
+   Neck:     -nothing-                                                         
+   Body:     -nothing-                                                         
+   Belt:     -nothing-                                                         
+   Gloves:   -nothing-                                                         
+   Ring:     -nothing-                                                         
+   Legs:     -nothing-                                                         
+ │ Feet:     -nothing-                                                        │
+ └────────────────────────────────────────────────────────────────────────────┘
+ Carrying: copper ring
+
+[☀️ 4:00AM HP:6/6 MP:5/5]:
+> north
+north
+    >>> You head towards the north exit.
+
+
+.: [•] End of the Line [Startland]
+You've reached the end of the line in Startland. One day, perhaps more   ╔═════╗
+will be built.                                                           ║     ║
+                                                                         ║     ║
+                                                                         ║  @  ║
+                                                                         ║  │  ║
+                                                                         ║  T  ║
+                                                                         ╚═════╝
+Also here: rat, rat and rat
+
+Exits: south
+
+[☀️ 4:00AM HP:6/6 MP:5/5]:    >>> Smk8c4940c1 enters from the south.
+
+[☀️ 4:00AM HP:6/6 MP:5/5]:
+> south
+south
+    >>> You head towards the south exit.
+
+
+.: [•] Town Square [Startland]
+You stand at the town square of startland. This is the first room you    ╔═════╗
+enter upon completing training and beginning the mud.                    ║  •  ║
+                                                                         ║  │  ║
+                                                                         ║  @  ║
+                                                                         ║     ║
+                                                                         ║     ║
+                                                                         ╚═════╝
+Also here: guard and rat
+
+Exits: north
+
+[☀️ 4:00AM HP:6/6 MP:5/5]:    >>> Smk8c4940c1 enters from the north.
+
+[☀️ 4:00AM HP:6/6 MP:5/5]:guard says, "did you know there's a sign in the Townsquare with a map of the area?"
+[☀️ 4:01AM HP:6/6 MP:5/5]:
+> say hello from Smk8c4940c0
+say hello from Smk8c4940c0
+You say, "hello from Smk8c4940c0"
+[☀️ 4:01AM HP:6/6 MP:5/5]:Smk8c4940c1 says, "hello from Smk8c4940c1"
+[☀️ 4:01AM HP:6/6 MP:5/5]:Smk8c4940c1 is looking around.
+
+> attack rat
+attack rat
+[☀️ 4:01AM HP:6/6 MP:5/5]:You prepare to fight rat!
+[☀️ 4:01AM HP:6/6 MP:5/5]:You swing your fists, but miss completely!
+[☀️ 4:03AM HP:6/6 MP:5/5]:Your fists hits rat hard for 3 damage!
+rat has died.
+You gained 18 experience points! (combat)
+
+> quit
+quit
+[☀️ 4:04AM HP:6/6 MP:5/5]:
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠒⠒⠢⢄⡀⠀⠀⢠⡏⠉⠉⠉⠑⠒⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡞⠀⠀⠀⠀⠀⠙⢦⠀⡇⡇⠀⠀⠀⠀⠀⠀⠈⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠊⠉⠉⠙⠒⢤⡀⠀⣼⠀⠀⢀⣶⣤⠀⠀⠀⢣⡇⡇⠀⠀⢴⣶⣦⠀⠀⠀⢳⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢀⣠⠤⢄⠀⠀⢰⡇⠀⠀⣠⣀⠀⠀⠈⢦⡿⡀⠀⠈⡟⣟⡇⠀⠀⢸⡇⡆⠀⠀⡼⢻⣠⠀⠀⠀⣸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⢀⠖⠉⠀⠀⠀⣱⡀⡞⡇⠀⠀⣿⣿⢣⠀⠀⠈⣧⣣⠀⠀⠉⠋⠀⠀⠀⣸⡇⠇⠀⠀⠈⠉⠀⠀⠀⢀⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣠⠏⠀⠀⣴⢴⣿⣿⠗⢷⡹⡀⠀⠘⠾⠾⠀⠀⠀⣿⣿⣧⡀⠀⠀⠀⢀⣴⠇⣇⣆⣀⢀⣀⣀⣀⣀⣤⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⠀⠀⢸⢻⡞⠋⠀⠀⠀⢿⣷⣄⠀⠀⠀⠀⠀⣠⡇⠙⢿⣽⣷⣶⣶⣿⠋⢰⣿⣿⣿⣿⣿⣿⠿⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⡿⡄⠀⠈⢻⣝⣶⣶⠀⠀⠀⣿⣿⣱⣶⣶⣶⣾⡟⠀⠀⠀⢈⡉⠉⢩⡖⠒⠈⠉⡏⡴⡏⠉⠉⠉⠉⠉⠉⠉⠉⡇⠀⠀⢀⣴⠒⠢⠤⣀
+⢣⣸⣆⡀⠀⠈⠉⠁⠀⠀⣠⣷⠈⠙⠛⠛⠛⠉⢀⣴⡊⠉⠁⠈⢢⣿⠀⠀⠀⢸⠡⠀⠁⠀⠀⠀⣠⣀⣀⣀⣀⡇⠀⢰⢁⡇⠀⠀⠀⢠
+⠀⠻⣿⣟⢦⣤⡤⣤⣴⣾⡿⢃⡠⠔⠒⠉⠛⠢⣾⢿⣿⣦⡀⠀⠀⠉⠀⠀⢀⡇⢸⠀⠀⠀⠀⠀⠿⠿⠿⣿⡟⠀⢀⠇⢸⠀⠀⠀⠀⠘
+⠀⠀⠈⠙⠛⠿⠿⠿⠛⠋⢰⡋⠀⠀⢠⣤⡄⠀⠈⡆⠙⢿⣿⣦⣀⠀⠀⠀⣜⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⢀⠃⠀⡸⠀⠇⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⢣⠀⠀⠈⠛⠁⠀⢴⠥⡀⠀⠙⢿⡿⡆⠀⠀⢸⠀⢸⢰⠀⠀⠀⢀⣿⣶⣶⡾⠀⢀⠇⣸⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⡀⢇⠀⠀⠀⢀⡀⠀⠀⠈⢢⠀⠀⢃⢱⠀⠀⠀⡇⢸⢸⠀⠀⠀⠈⠉⠉⠉⢱⠀⠼⣾⣿⣿⣷⣦⠴⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢱⠘⡄⠀⠀⢹⣿⡇⠀⠀⠈⡆⠀⢸⠈⡇⢀⣀⣵⢨⣸⣦⣤⣤⣄⣀⣀⣀⡞⠀⣠⡞⠉⠈⠉⢣⡀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢃⠘⡄⠀⠀⠉⠀⠀⣠⣾⠁⠀⠀⣧⣿⣿⡿⠃⠸⠿⣿⣿⣿⣿⣿⣿⠟⠁⣼⣾⠀⠀⠀⠀⢠⠇⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡄⠹⣀⣀⣤⣶⣿⡿⠃⠀⠀⠀⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⢻⣿⣷⣦⣤⣤⠎⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣤⣿⡿⠟⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠀⠀⠀⠀⠀
+
+================================================================================
+
+           _.-----._
+         .'  |   |  '.       ______        ____    __  ___  __  __  ____
+        /----+---+----\     / ____/ ___   / __ \  /  |/  / / / / / / __ \
+       |     |   |     |   / / __  / _ \ / / / / / /|_/ / / / / / / / / /
+       |-----+---+-----|  / /_/ / /  __// /_/ / / /  / / / /_/ / / /_/ /
+        \    |   |    /   \____/  \___/ \____/ /_/  /_/  \____/ /_____/
+         '.--+---+--.'
+           '-.___.-'
+
+.: Welcome to GeOMUD, a MUD engine for worlds built on real geography.
+
+                                            Find out more (or get the code) at:
+                                                        github.com/pruuk/GeOMUD
+
+================================================================================
+username (or "new"): 
+> smk8c4940u0
+
+password: 
+> smoke8c4940
+
+Welcome to the Mud!
+.: 1 user online
+╒═════════════╕═══════╕═══════════╕════════════╕════════╕══════╕
+│ Name        │ Level │ Alignment │ Profession │ Online │ Role │
+└─────────────┘───────┘───────────┘────────────┘────────┘──────┘
+│ Smk8c4940c0 │ 1     │ neutral   │ scrub      │ 0s     │ user │
+└─────────────┘───────┘───────────┘────────────┘────────┘──────┘
+
+inbox not recognized. Type help for commands.
+mudletmap not recognized. Type help for commands.
+
+.: [•] Town Square [Startland]
+You stand at the town square of startland. This is the first room you    ╔═════╗
+enter upon completing training and beginning the mud.                    ║  •  ║
+                                                                         ║  │  ║
+                                                                         ║  @  ║
+                                                                         ║     ║
+                                                                         ║     ║
+                                                                         ╚═════╝
+Also here: guard
+
+On the Ground: rat corpse
+
+Exits: north
+
+[☀️ 4:09AM HP:6/6 MP:5/5]:Smk8c4940c1 appears before you in a flash of ⚡lightning⚡!
+[☀️ 4:09AM HP:6/6 MP:5/5]:Smk8c4940c1 looks a little confused
+[☀️ 4:09AM HP:6/6 MP:5/5]:Smk8c4940c1 looks a little confused
+[☀️ 4:09AM HP:6/6 MP:5/5]:
+> online
+online
+.: 2 users online
+╒═════════════╕═══════╕═══════════╕════════════╕════════╕══════╕
+│ Name        │ Level │ Alignment │ Profession │ Online │ Role │
+└─────────────┘───────┘───────────┘────────────┘────────┘──────┘
+│ Smk8c4940c0 │ 1     │ neutral   │ scrub      │ 0s     │ user │
+│ Smk8c4940c1 │ 1     │ neutral   │ scrub      │ 0s     │ user │
+└─────────────┘───────┘───────────┘────────────┘────────┘──────┘
+
+[☀️ 4:09AM HP:6/6 MP:5/5]:
+> inventory
+inventory
+ ┌─ .:Equipment ──────────────────────────────────────────────────────────────┐
+ │ Weapon:   -nothing-                                                        │
+   Offhand:  -nothing-                                                         
+   Head:     -nothing-                                                         
+   Neck:     -nothing-                                                         
+   Body:     -nothing-                                                         
+   Belt:     -nothing-                                                         
+   Gloves:   -nothing-                                                         
+   Ring:     -nothing-                                                         
+   Legs:     -nothing-                                                         
+ │ Feet:     -nothing-                                                        │
+ └────────────────────────────────────────────────────────────────────────────┘
+ Carrying: copper ring
+
+[☀️ 4:09AM HP:6/6 MP:5/5]:
+> suicide
+suicide
+*** Smk8c4940c0 has DIED! ***
+*** Smk8c4940c1 has DIED! ***
+[☀️ 4:09AM HP:1/6 MP:0/5]:
+> look
+look
+
+.: [•] Waiting room [Shadow Realm]
+You find yourself in the heart of the Shadow Realm, a place suspended    ╔═════╗
+between the corporeal and the ethereal. The air is heavy with a palpable ║     ║
+stillness, and the landscape is a haunting, ever-changing tapestry of    ║     ║
+shifting shadows and muted hues. As far as the eye can see, ghostly      ║  @  ║
+wisps of forgotten souls drift aimlessly, their spectral forms casting   ║     ║
+faint, flickering glows in the perpetual twilight. Eerie, winding paths  ║     ║
+of obsidian stone lead you deeper into this enigmatic realm, revealing   ╚═════╝
+strange, gravestone-like markers that bear inscriptions in a language
+only half-remembered by the departed. The hushed whispers of lost
+spirits echo through the obscurity, and the distant, mournful wails of
+phantom creatures send shivers down your spine. The Shadow Realm is a
+place of transition, where the boundary between life and the beyond
+blurs, and the mysteries of the afterlife begin to unravel.
+Exits: portal
+
+[☀️ 4:09AM HP:1/6 MP:0/5]:
+> portal
+portal
+    >>> You head towards the portal exit.
+
+
+.: [•] Town Square [Startland]
+You stand at the town square of startland. This is the first room you    ╔═════╗
+enter upon completing training and beginning the mud.                    ║  •  ║
+                                                                         ║  │  ║
+                                                                         ║  @  ║
+                                                                         ║     ║
+                                                                         ║     ║
+                                                                         ╚═════╝
+Also here: guard
+
+On the Ground: Smk8c4940c0 corpse, Smk8c4940c1 corpse and rat corpse
+
+Exits: north
+
+    >>> Smk8c4940c1 enters from somewhere.
+
+[☀️ 4:09AM HP:1/6 MP:0/5]:
+> inventory
+inventory
+ ┌─ .:Equipment ──────────────────────────────────────────────────────────────┐
+ │ Weapon:   -nothing-                                                        │
+   Offhand:  -nothing-                                                         
+   Head:     -nothing-                                                         
+   Neck:     -nothing-                                                         
+   Body:     -nothing-                                                         
+   Belt:     -nothing-                                                         
+   Gloves:   -nothing-                                                         
+   Ring:     -nothing-                                                         
+   Legs:     -nothing-                                                         
+ │ Feet:     -nothing-                                                        │
+ └────────────────────────────────────────────────────────────────────────────┘
+ Carrying: copper ring
+
+[☀️ 4:09AM HP:1/6 MP:0/5]:
+> quit
+quit
+    >>> rat enters from the north.
+
+[☀️ 4:14AM HP:2/6 MP:1/5]:
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡤⠒⠒⠢⢄⡀⠀⠀⢠⡏⠉⠉⠉⠑⠒⠤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡞⠀⠀⠀⠀⠀⠙⢦⠀⡇⡇⠀⠀⠀⠀⠀⠀⠈⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⠊⠉⠉⠙⠒⢤⡀⠀⣼⠀⠀⢀⣶⣤⠀⠀⠀⢣⡇⡇⠀⠀⢴⣶⣦⠀⠀⠀⢳⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢀⣠⠤⢄⠀⠀⢰⡇⠀⠀⣠⣀⠀⠀⠈⢦⡿⡀⠀⠈⡟⣟⡇⠀⠀⢸⡇⡆⠀⠀⡼⢻⣠⠀⠀⠀⣸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⢀⠖⠉⠀⠀⠀⣱⡀⡞⡇⠀⠀⣿⣿⢣⠀⠀⠈⣧⣣⠀⠀⠉⠋⠀⠀⠀⣸⡇⠇⠀⠀⠈⠉⠀⠀⠀⢀⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣠⠏⠀⠀⣴⢴⣿⣿⠗⢷⡹⡀⠀⠘⠾⠾⠀⠀⠀⣿⣿⣧⡀⠀⠀⠀⢀⣴⠇⣇⣆⣀⢀⣀⣀⣀⣀⣤⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣿⠀⠀⢸⢻⡞⠋⠀⠀⠀⢿⣷⣄⠀⠀⠀⠀⠀⣠⡇⠙⢿⣽⣷⣶⣶⣿⠋⢰⣿⣿⣿⣿⣿⣿⠿⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⡿⡄⠀⠈⢻⣝⣶⣶⠀⠀⠀⣿⣿⣱⣶⣶⣶⣾⡟⠀⠀⠀⢈⡉⠉⢩⡖⠒⠈⠉⡏⡴⡏⠉⠉⠉⠉⠉⠉⠉⠉⡇⠀⠀⢀⣴⠒⠢⠤⣀
+⢣⣸⣆⡀⠀⠈⠉⠁⠀⠀⣠⣷⠈⠙⠛⠛⠛⠉⢀⣴⡊⠉⠁⠈⢢⣿⠀⠀⠀⢸⠡⠀⠁⠀⠀⠀⣠⣀⣀⣀⣀⡇⠀⢰⢁⡇⠀⠀⠀⢠
+⠀⠻⣿⣟⢦⣤⡤⣤⣴⣾⡿⢃⡠⠔⠒⠉⠛⠢⣾⢿⣿⣦⡀⠀⠀⠉⠀⠀⢀⡇⢸⠀⠀⠀⠀⠀⠿⠿⠿⣿⡟⠀⢀⠇⢸⠀⠀⠀⠀⠘
+⠀⠀⠈⠙⠛⠿⠿⠿⠛⠋⢰⡋⠀⠀⢠⣤⡄⠀⠈⡆⠙⢿⣿⣦⣀⠀⠀⠀⣜⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⢀⠃⠀⡸⠀⠇⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⢣⠀⠀⠈⠛⠁⠀⢴⠥⡀⠀⠙⢿⡿⡆⠀⠀⢸⠀⢸⢰⠀⠀⠀⢀⣿⣶⣶⡾⠀⢀⠇⣸⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⡀⢇⠀⠀⠀⢀⡀⠀⠀⠈⢢⠀⠀⢃⢱⠀⠀⠀⡇⢸⢸⠀⠀⠀⠈⠉⠉⠉⢱⠀⠼⣾⣿⣿⣷⣦⠴⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢱⠘⡄⠀⠀⢹⣿⡇⠀⠀⠈⡆⠀⢸⠈⡇⢀⣀⣵⢨⣸⣦⣤⣤⣄⣀⣀⣀⡞⠀⣠⡞⠉⠈⠉⢣⡀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢃⠘⡄⠀⠀⠉⠀⠀⣠⣾⠁⠀⠀⣧⣿⣿⡿⠃⠸⠿⣿⣿⣿⣿⣿⣿⠟⠁⣼⣾⠀⠀⠀⠀⢠⠇⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡄⠹⣀⣀⣤⣶⣿⡿⠃⠀⠀⠀⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⢻⣿⣷⣦⣤⣤⠎⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣤⣿⡿⠟⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠀⠀⠀⠀⠀

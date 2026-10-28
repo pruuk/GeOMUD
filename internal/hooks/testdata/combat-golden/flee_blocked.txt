@@ -1,0 +1,34 @@
+seed 505
+== start
+-- state
+  Alice: room=93001 hp=30/30 aggro=[(none) Flee wait=0] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 1
+-- Alice reads
+  <ansi fg="red-bold"><ansi fg="mobname">guard</ansi> blocks you from fleeing!</ansi>
+  <ansi fg="yellow-bold">***</ansi> <ansi fg="mobname">guard</ansi>'s <ansi fg="item">fists</ansi> connects with you for <ansi fg="damage">2 damage</ansi>. <ansi fg="yellow-bold">***</ansi>
+-- events
+  AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=28/30 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 2
+-- Alice reads
+  <ansi fg="mobname">guard</ansi>'s <ansi fg="item">fists</ansi> connects with you for <ansi fg="damage">2 damage</ansi>.
+-- events
+  CharacterVitalsChanged Alice
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=26/30 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 3
+-- Alice reads
+  <ansi fg="mobname">guard</ansi> smashes you with their <ansi fg="item">fists</ansi>, dealing <ansi fg="damage">3 damage</ansi>!
+-- events
+  CharacterVitalsChanged Alice
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=23/30 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}

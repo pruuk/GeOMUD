@@ -121,6 +121,7 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 		go co.run(ctx, addr, adm, timeout, srv)
 	}
 
+	fc := newFightCheck(n, fmt.Sprintf("Smk%sc0", tag))
 	results := make([]result, n)
 	var wg sync.WaitGroup
 	for i := range n {
@@ -128,6 +129,7 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 			user: fmt.Sprintf("smk%su%d", tag, i),
 			pass: "smoke" + tag,
 			char: fmt.Sprintf("Smk%sc%d", tag, i),
+			idx:  i,
 		}
 		wg.Add(1)
 		go func() {
@@ -137,7 +139,7 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 			if transcriptDir != "" {
 				rec = &recorder{}
 			}
-			pkgs, err := play(ctx, addr, b, timeout, hold, rec, co)
+			pkgs, err := play(ctx, addr, b, timeout, hold, rec, co, fc)
 			if rec != nil {
 				name := filepath.Join(transcriptDir, fmt.Sprintf("bot%d.txt", i))
 				if werr := os.WriteFile(name, []byte(rec.String()), 0o644); werr != nil && err == nil {

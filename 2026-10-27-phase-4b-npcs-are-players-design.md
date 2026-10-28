@@ -237,7 +237,7 @@ code it replaces, so no slice leaves two live paths behind.
 | 7 | Output conversion | 3, 4 | Every remaining output site moves to `messaging`, split by command group across subagents | direct `SendText` and `connections.SendTo` outside `messaging` | Guard allowlist holds only the GMCP exception. Text parity holds. The Phase 4b Done-when line in `gomud_strip_plan.md` holds |
 
 Order: 1, 2, 2b, 3, 4, 5, 6, 7 (2c fits anywhere after 2; rooms take the ID format with the geo
-room key). Built so far: 1, 2, 2b, 2c, 3, 4. Slice 3 needs only slice 1, so its plan can be written while slice 2 is
+room key). Built so far: 1, 2, 2b, 2c, 3, 4, 5. Slice 3 needs only slice 1, so its plan can be written while slice 2 is
 in review.
 
 Plan files sit at the repo root as `<date>-phase-4b-<n>-<slug>-plan.md` (for example
@@ -284,6 +284,20 @@ Each slice plan reads these first; a note leaves once a slice settles it.
 - **Permadeath reroll** (`usercommands/suicide.go`): body re-keying and event order are unverified
   live (permadeath is off in `empty`). Check with permadeath on and `LivesStart: 0`. A reroll
   orphans the old body's charmed mobs until the charm expires.
+- **Slice 5 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-5-one-combat-path-plan.md`,
+  decisions 1-14; inventory beside it). Calabe's rulings: a hidden attacker reads "Someone"
+  everywhere; anyone fighting a fleer may block it and a blocked fleer resumes its pre-flee target
+  (one with none ends with no aggro); every swing earns credit. The parity tool for slice 7 is the
+  golden combat test (`internal/hooks/combat_golden_test.go`, `util.SeedRandForTest`): it records
+  what each player reads; the old pre-4b transcript has no combat (`cmd/smoke/testdata/pre-5/` is
+  the fight baseline for reading). Slice 7: the player-death `Broadcast` (screen-reader and refresh
+  fields), party XP and per-member sends still use the old path (`// slice 7:` comments). Phase 5:
+  turn order is still accounts first, then NPCs (initiative is a rule); NPCs still never start or
+  join fights; the `-10` suicide threshold in the round is unreachable (bleed-out death is in
+  AutoHeal); a pet's group-hatred duration uses the pet's Perception, and a pet that downs a player
+  is recorded as the killer. Messaging gained `Message.NoTargetRoomText` for a target-room line
+  that must be silent (remote wait lines). In a dark room combat lines carry by sound and every
+  name reads "someone" (slice 3's unseen rule), the attacker's view included.
 - **Slice 4 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-4-one-command-set-plan.md`,
   decisions 1-17; inventory beside it). The facts table above predates it: the mob registry had 21
   commands (`rest` came in slice 2b), plus 3 plugin mob commands, and `events.Input` already carried

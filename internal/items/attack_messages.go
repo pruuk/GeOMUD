@@ -2,7 +2,6 @@ package items
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -37,10 +36,6 @@ type SeparateMessages struct {
 }
 
 type MessageOptions []ItemMessage
-
-func (am ItemMessage) SetTokenValue(tokenName TokenName, tokenValue string) ItemMessage {
-	return ItemMessage(strings.Replace(string(am), string(tokenName), tokenValue, -1))
-}
 
 func (mo MessageOptions) Get(seedNum ...int) ItemMessage {
 

@@ -84,6 +84,10 @@ type Message struct {
 	// TargetRoomText is what observers in the target's room read when the
 	// target is in another room than the actor; ObserverText when empty.
 	TargetRoomText string
+	// NoTargetRoomText, with TargetRoomText empty, means observers in the
+	// target's room, when it differs from the actor's, get nothing: they do
+	// not fall back to ObserverText.
+	NoTargetRoomText bool
 }
 
 // Role is how a receiver stands to a message.

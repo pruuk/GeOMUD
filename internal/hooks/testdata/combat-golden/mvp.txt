@@ -1,0 +1,58 @@
+seed 303
+== start
+-- state
+  Alice: room=93001 hp=12/12 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 1
+-- Alice reads
+  <ansi fg="mobname">guard</ansi>'s attack goes wide.
+-- events
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=12/12 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 2
+-- Alice reads
+  You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">4 damage</ansi>.
+-- events
+  CharacterVitalsChanged Alice
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=8/12 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 3
+-- Alice reads
+  <ansi fg="mobname">guard</ansi> strikes you with their <ansi fg="item">fists</ansi>, causing <ansi fg="damage">5 damage</ansi>.
+-- events
+  CharacterVitalsChanged Alice
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=3/12 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 4
+-- Alice reads
+  <ansi fg="mobname">guard</ansi> missed you with their <ansi fg="item">fists</ansi>.
+-- events
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=3/12 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 5
+-- Alice reads
+  <ansi fg="mobname">guard</ansi> swings at you but misses!
+-- events
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=3/12 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 6
+-- Alice reads
+  You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">5 damage</ansi>.
+-- events
+  CharacterVitalsChanged Alice
+  AggroChanged guard room=93001
+  AggroChanged Alice room=93001
+  PlayerDrop Alice room=93001
+-- state
+  Alice: room=93001 hp=-2/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=false
+  guard: room=93001 hp=10/10 aggro=[none] playerdamage={}

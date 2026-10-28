@@ -1,0 +1,38 @@
+seed 404
+== start
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  dog: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93001 hp=12/12 aggro=[none] playerdamage={}
+== round 1
+-- Alice reads
+  <ansi fg="mobname">dog</ansi> attacks <ansi fg="mobname">rat</ansi> but fails to connect.
+-- events
+  AggroChanged dog room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  dog: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93001 hp=12/12 aggro=[none] playerdamage={Alice:0}
+  group golden-rats-mvm hates Alice
+== round 2
+-- Alice reads
+  <ansi fg="mobname">dog</ansi> delivers a heavy hit to <ansi fg="mobname">rat</ansi>!
+-- events
+  AggroChanged dog room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  dog: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93001 hp=5/12 aggro=[none] playerdamage={Alice:7}
+  group golden-rats-mvm hates Alice
+== round 3
+-- Alice reads
+  <ansi fg="yellow-bold">***</ansi> <ansi fg="mobname">dog</ansi> <ansi fg="cyan-bold">CRITICALLY HITS</ansi> <ansi fg="mobname">rat</ansi> with their <ansi fg="item">fists</ansi>! <ansi fg="yellow-bold">***</ansi>
+-- events
+  AggroChanged dog room=93001
+  AggroChanged rat room=93001
+  Input rat: "suicide"
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  dog: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  rat: room=93001 hp=-5/12 aggro=[none] playerdamage={Alice:21}
+  group golden-rats-mvm hates Alice

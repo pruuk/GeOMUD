@@ -34,6 +34,35 @@ func TestCharmRemembersTheCharmersBody(t *testing.T) {
 	assert.False(t, c.IsCharmed(ids.New(ids.NoCell)))
 }
 
+func TestRecoveringHealthClearsTheKiller(t *testing.T) {
+	type way struct{ partial, full func(c *Character) }
+	ways := map[string]way{
+		"Heal":              {func(c *Character) { c.Heal(0, 0) }, func(c *Character) { c.Heal(5, 0) }},
+		"ApplyHealthChange": {func(c *Character) { c.ApplyHealthChange(0) }, func(c *Character) { c.ApplyHealthChange(5) }},
+	}
+	for name, wy := range ways {
+		t.Run(name, func(t *testing.T) {
+			c := New()
+			c.HealthMax.Value = 10
+			c.Health = 0
+			c.KilledBy = ids.New(ids.NoCell)
+			c.KillerMobIsElite = true
+			c.KillerMobName = "wolf"
+			c.KillerMobId = 7
+
+			wy.partial(c)
+			assert.False(t, c.KilledBy.IsZero(), "still down at %d: the killer stays", c.Health)
+
+			wy.full(c)
+			assert.GreaterOrEqual(t, c.Health, 1)
+			assert.True(t, c.KilledBy.IsZero())
+			assert.False(t, c.KillerMobIsElite)
+			assert.Empty(t, c.KillerMobName)
+			assert.Zero(t, c.KillerMobId)
+		})
+	}
+}
+
 func TestMain(m *testing.M) {
 	// Seed the skills cache so skill-gated helpers (SetSkill/TrainSkill/GetSkillLevel)
 	// behave deterministically without loading datafiles from disk.

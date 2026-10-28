@@ -1,0 +1,57 @@
+seed 202
+== start
+-- state
+  Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101
+  Bob: room=93001 hp=15/15 aggro=[none] playerdamage={} offhand=93102
+== round 1
+-- Alice reads
+  Your <ansi fg="item">testsword</ansi> cuts into <ansi fg="username">Bob</ansi>, dealing <ansi fg="damage">5 damage</ansi>!
+-- Bob reads
+  You feel a sharp pain as <ansi fg="username">Alice</ansi> cuts you for <ansi fg="damage">5 damage</ansi>!
+-- events
+  CharacterVitalsChanged Bob
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101
+  Bob: room=93001 hp=10/15 aggro=[none] playerdamage={Alice:5} offhand=93102
+== round 2
+-- Alice reads
+  You wave your <ansi fg="item">testsword</ansi> at <ansi fg="username">Bob</ansi>, to no avail!
+-- Bob reads
+  <ansi fg="username">Alice</ansi> attempts to slash you but misses!
+-- events
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101
+  Bob: room=93001 hp=10/15 aggro=[none] playerdamage={Alice:5} offhand=93102
+== round 3
+-- Alice reads
+  You deliver a powerful blow to <ansi fg="username">Bob</ansi>, causing an impressive <ansi fg="damage">6 damage</ansi>!
+-- Bob reads
+  In a sweeping motion, <ansi fg="username">Alice</ansi> slashes you with their <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">6 damage</ansi>!
+-- events
+  CharacterVitalsChanged Bob
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101
+  Bob: room=93001 hp=4/15 aggro=[none] playerdamage={Alice:11} offhand=93102
+== round 4
+-- Alice reads
+  Your <ansi fg="item">testsword</ansi> cuts deeply into <ansi fg="username">Bob</ansi>, dealing significant damage of <ansi fg="damage">7</ansi>!
+  <ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">testshield</ansi> <ansi fg="username">Bob</ansi> was carrying breaks! <ansi fg="202">***</ansi></ansi>
+-- Bob reads
+  In a sweeping motion, <ansi fg="username">Alice</ansi> slashes you with their <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">7 damage</ansi>! <ansi fg="red">[you blocked 1]</ansi>
+  <ansi fg="202">***</ansi>
+  <ansi fg="214"><ansi fg="202">***</ansi> Your <ansi fg="item">testshield</ansi> breaks! <ansi fg="202">***</ansi></ansi>
+  <ansi fg="202">***</ansi>
+-- events
+  ItemOwnership Bob item=93102 gained=false
+  ItemOwnership Bob item=0 gained=true
+  CharacterVitalsChanged Bob
+  AggroChanged Alice room=93001
+  AggroChanged Bob room=93001
+  PlayerDrop Bob room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
+  Bob: room=93001 hp=-3/15 aggro=[none] playerdamage={Alice:18} killedby=Alice mob=0 elite=false
+  room 93001 floor: 0

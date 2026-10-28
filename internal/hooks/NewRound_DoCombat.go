@@ -13,909 +13,487 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
+// DoCombat runs one combat round: one turn for every actor with an aggro,
+// player or NPC, by the same rules, then the death checks for everyone the
+// round touched.
 func DoCombat(e events.Event) events.ListenerReturn {
 
-	evt := e.(events.NewRound)
+	tStart := time.Now()
 
-	//
-	// Combat rounds
-	//
-	affectedPlayers1, affectedMobs1 := handlePlayerCombat(evt)
-
-	affectedPlayers2, affectedMobs2 := handleMobCombat(evt)
+	var affected []ids.ID
+	for _, a := range fightersWithAccountsFirst() {
+		affected = append(affected, combatTurn(a)...)
+	}
 
 	// Do any resolution or extra checks based on everyone that has been involved in combat this round.
-	handleAffected(append(affectedPlayers1, affectedPlayers2...), append(affectedMobs1, affectedMobs2...))
+	handleAffected(affected)
+
+	util.TrackTime(`DoCombat()`, time.Since(tStart).Seconds())
 
 	return events.Continue
 }
 
-func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobIds []ids.ID) {
+// fightersWithAccountsFirst lists the actors that may take a combat turn:
+// those with an account first, then NPCs (plan Decision 5: a player still
+// swings before any NPC in the round). Each group comes from the same ID
+// source as before, so its order is map order, as it always was.
+func fightersWithAccountsFirst() []*actors.Actor {
+	fighters := []*actors.Actor{}
+	for _, userId := range accounts.GetOnlineUserIds() {
+		if a := actors.ByUserId(userId); a != nil {
+			fighters = append(fighters, a)
+		}
+	}
+	for _, mobId := range mobs.GetAllMobIds() {
+		if a := actors.Get(mobId); a != nil {
+			fighters = append(fighters, a)
+		}
+	}
+	return fighters
+}
+
+// accountOf is the account driving a, or nil for an NPC.
+func accountOf(a *actors.Actor) *accounts.Account {
+	if ctrl := a.Controller(); ctrl != nil {
+		return ctrl.Account()
+	}
+	return nil
+}
+
+// endAggro ends a's fight and says so.
+func endAggro(a *actors.Actor) {
+	a.Character.EndAggro()
+	events.AddToQueue(events.AggroChanged{ActorId: a.Id, RoomId: a.Character.RoomId})
+}
+
+// combatTurn is one actor's turn in the round. It returns the actors whose
+// health the round must check afterwards.
+func combatTurn(a *actors.Actor) (affected []ids.ID) {
+
+	if a == nil || a.Character == nil || a.Character.Aggro == nil {
+		return nil
+	}
+
+	// If has a buff that prevents combat, skip the actor
+	if a.Character.HasBuffFlag("no-combat") {
+		return nil
+	}
+
+	aRoom := rooms.LoadRoom(a.Character.RoomId)
+	if aRoom == nil {
+		endAggro(a)
+		return nil
+	}
+
+	// Disable any buffs that are cancelled by combat
+	a.Character.CancelBuffsWithFlag("cancel-on-combat")
+
+	// An NPC's combat commands (behaviour data on its template) may take its
+	// turn instead of the attack.
+	if mob := mobs.GetInstance(a.Id); mob != nil && a.Character.Aggro.Type == characters.DefaultAttack {
+		if combatCommand(mob) {
+			return nil
+		}
+	}
+
+	if a.Character.Aggro.Type == characters.Flee {
+		flee(a, aRoom)
+		return nil
+	}
+
+	affected = append(affected, a.Id)
+
+	/**************************
+	*
+	* START HANDLING PHYSICAL COMBAT
+	*
+	**************************/
+
+	d := actors.Get(a.Character.Aggro.Target)
+
+	// The target is in the room, or (plan Decision 6) through the exit the
+	// aggro names.
+	targetFound := d != nil && d.Character != nil
+	if targetFound && d.Character.RoomId != a.Character.RoomId {
+		if a.Character.Aggro.ExitName == `` {
+			targetFound = false
+		} else if _, exitRoomId := aRoom.FindExitByName(a.Character.Aggro.ExitName); exitRoomId != d.Character.RoomId {
+			targetFound = false
+		}
+	}
+
+	if !targetFound {
+		usercommands.Tell(a, `Your target can't be found.`)
+		endAggro(a)
+		return affected
+	}
+
+	defRoom := rooms.LoadRoom(d.Character.RoomId)
+	if defRoom == nil {
+		endAggro(a)
+		return affected
+	}
+
+	d.Character.CancelBuffsWithFlag("cancel-on-combat")
+
+	if d.Character.Health < 1 {
+		usercommands.Tell(a, `Your rage subsides.`)
+		endAggro(a)
+		return affected
+	}
+
+	affected = append(affected, d.Id)
+
+	// An NPC with no weapon but something in its pack may look for a weapon
+	// (especially useful when disarmed).
+	if mob := mobs.GetInstance(a.Id); mob != nil {
+		lookForWeapon(mob)
+	}
+
+	if a.Character.Aggro.RoundsWaiting > 0 {
+		mudlog.Debug(`RoundsWaiting`, `Actor`, a.Character.Name, `Rounds`, a.Character.Aggro.RoundsWaiting)
+
+		a.Character.Aggro.RoundsWaiting--
+
+		for _, m := range combat.GetWaitMessages(items.Wait, a.Character, d.Character) {
+			messaging.Send(m)
+		}
+
+		return affected
+	}
+
+	// Can't see them, can't fight them.
+	if d.Character.HasBuffFlag("hidden") {
+		usercommands.Tell(a, "You can't seem to find your target.")
+		return affected
+	}
+
+	healthBefore := d.Character.Health
+
+	roundResult := combat.Attack(a, d)
+
+	for _, buffId := range roundResult.BuffTarget {
+		events.AddToQueue(events.Buff{ActorId: d.Id, BuffId: buffId, Source: `combat`})
+	}
+
+	for _, m := range roundResult.Messages {
+		messaging.Send(m)
+	}
+
+	defAcct := accountOf(d)
+
+	// Combat damage downed a player: remember who did it (plan Decision 7),
+	// for the death that follows.
+	if defAcct != nil && healthBefore >= 1 && d.Character.Health < 1 {
+		d.Character.KilledBy = a.Id
+		d.Character.KillerMobIsElite = false
+		d.Character.KillerMobName = ``
+		d.Character.KillerMobId = 0
+		// Recorded now, so the death does not need the killer to exist still.
+		if killerMob := mobs.GetInstance(a.Id); killerMob != nil {
+			d.Character.KillerMobIsElite = killerMob.IsElite
+			d.Character.KillerMobName = killerMob.Character.Name
+			d.Character.KillerMobId = int(killerMob.MobId)
+		}
+	}
+
+	defMob := mobs.GetInstance(d.Id)
+
+	// Group hatred follows kill credit (plan Decision 8): the attacker's
+	// account, or its charmer's.
+	if defMob != nil {
+		if acct := combat.CreditAccount(a); acct != nil {
+			c := configs.GetConfig()
+			for _, groupName := range defMob.Groups {
+				mobs.MakeHostile(groupName, acct.UserId, c.Timing.MinutesToRounds(2)-a.Character.Stats.Perception.ValueAdj)
+			}
+		}
+	}
+
+	// If the attack connected, check for damage to equipment.
+	if roundResult.Hit {
+		offhandBreakCheck(d, defRoom, roundResult.Crit)
+	}
+
+	if defAcct != nil && roundResult.DamageToTarget != 0 {
+		events.AddToQueue(events.CharacterVitalsChanged{UserId: defAcct.UserId})
+	}
+
+	// An NPC that is attacked and not fighting stays put; attacked from
+	// another room, it heads that way.
+	if defMob != nil && d.Character.Aggro == nil {
+		defMob.PreventIdle = true
+		if a.Character.RoomId != d.Character.RoomId {
+			for exitName, exitInfo := range defRoom.Exits {
+				if exitInfo.RoomId == a.Character.RoomId {
+					defMob.Command(fmt.Sprintf(`go %s`, exitName))
+					if actionStr := defMob.GetAngryCommand(); actionStr != `` {
+						defMob.Command(actionStr)
+					}
+					break
+				}
+			}
+		}
+	}
+
+	if a.Character.Health <= 0 || d.Character.Health <= 0 {
+		endAggro(a)
+		endAggro(d)
+	} else {
+		a.Character.SetAggro(d.Id, characters.DefaultAttack)
+		events.AddToQueue(events.AggroChanged{ActorId: a.Id, RoomId: a.Character.RoomId})
+	}
+
+	/**************************
+	*
+	* END HANDLING PHYSICAL COMBAT
+	*
+	**************************/
+
+	return affected
+}
+
+// combatCommand may run one of an NPC's combat commands, in place of its
+// attack this round. It reports whether it took the turn.
+func combatCommand(mob *mobs.Mob) bool {
+	cmdCt := len(mob.CombatCommands)
+	if cmdCt == 0 {
+		return false
+	}
+
+	if util.Rand(100) >= mob.ActivityLevel {
+		return false
+	}
+
+	combatAction := mob.CombatCommands[util.Rand(cmdCt)]
+
+	if combatAction == `` { // blank is a no-op
+		return true
+	}
 
 	c := configs.GetConfig()
 
-	tStart := time.Now()
-
-	for _, userId := range accounts.GetOnlineUserIds() {
-
-		user := accounts.GetByUserId(userId)
-
-		// If has a buff that prevents combat, skip the player
-		if user.Character.HasBuffFlag("no-combat") {
-			continue
+	var waitTime float64 = 0.0
+	allCmds := strings.Split(combatAction, `;`)
+	if len(allCmds) >= c.Timing.TurnsPerRound() {
+		mob.Command(`say I have a CombatAction that is too long. Please notify an admin.`)
+	} else {
+		for _, action := range allCmds {
+			mob.Command(action, waitTime)
+			waitTime += 0.1
 		}
-
-		if user == nil || user.Character.Aggro == nil {
-			continue
-		}
-
-		// Disable any buffs that are cancelled by combat
-		user.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-		roomId := user.Character.RoomId
-
-		uRoom := rooms.LoadRoom(roomId)
-		if uRoom == nil {
-			continue
-		}
-
-		if user.Character.Aggro.Type == characters.Flee {
-
-			// Revert to Default combat regardless of outcome
-			user.Character.SetAggro(user.Character.Aggro.Target, characters.DefaultAttack)
-
-			blockedByMob := ``
-			for _, mobInstId := range uRoom.GetMobs(rooms.FindFighting) {
-				if mob := mobs.GetInstance(mobInstId); mob != nil {
-					if mob.Character.Aggro == nil || mob.Character.Aggro.Target != user.Character.Id {
-						continue
-					}
-
-					// Stat comparison accounts for up to 70% of chance to flee.
-					chanceIn100 := int(float64(user.Character.Stats.Speed.ValueAdj) / (float64(user.Character.Stats.Speed.ValueAdj) + float64(mob.Character.Stats.Speed.ValueAdj)) * 70)
-					chanceIn100 += 30
-
-					roll := util.Rand(100)
-
-					util.LogRoll(`Flee`, roll, chanceIn100)
-
-					if roll >= chanceIn100 {
-						blockedByMob = mob.Character.Name
-						break
-					}
-				}
-			}
-
-			blockedByPlayer := ``
-			blockedByPlayerId := 0
-			for _, userId := range uRoom.GetPlayers(rooms.FindFighting) {
-				if u := accounts.GetByUserId(userId); u != nil {
-					// Pre-existing bug E8c, kept for slice 5: the shadowed userId makes this compare u's target with u itself.
-					if u.Character.Aggro == nil || u.Character.Aggro.Target != u.Character.Id {
-						continue
-					}
-
-					// if equal, 25% chance of fleeing... at best, 50% chance. Then add 50% on top.
-					chanceIn100 := int(float64(user.Character.Stats.Speed.ValueAdj) / (float64(user.Character.Stats.Speed.ValueAdj) + float64(u.Character.Stats.Speed.ValueAdj)) * 70)
-					chanceIn100 += 30
-
-					roll := util.Rand(100)
-
-					util.LogRoll(`Flee`, roll, chanceIn100)
-
-					if roll >= chanceIn100 {
-						blockedByPlayer = u.Character.Name
-						blockedByPlayerId = u.UserId
-						break
-					}
-				}
-			}
-
-			if blockedByMob != `` {
-				user.SendText(fmt.Sprintf(`<ansi fg="red-bold"><ansi fg="mobname">%s</ansi> blocks you from fleeing!</ansi>`, blockedByMob))
-				uRoom.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is blocked from fleeing by <ansi fg="mobname">%s</ansi>!`, user.Character.Name, blockedByMob), user.UserId)
-				continue
-			}
-
-			if blockedByPlayer != `` {
-				user.SendText(fmt.Sprintf(`<ansi fg="red-bold"><ansi fg="username">%s</ansi> blocks you from fleeing!</ansi>`, blockedByPlayer))
-				uRoom.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is blocked from fleeing by <ansi fg="username">%s</ansi>!`, user.Character.Name, blockedByPlayer), user.UserId, blockedByPlayerId)
-				continue
-			}
-
-			// Success!
-			exitName, exitRoomId := uRoom.GetRandomExit()
-
-			if exitName == `` {
-				user.SendText(`You can't find an exit!`)
-				continue
-			}
-
-			user.SendText(fmt.Sprintf(`You flee to the <ansi fg="exit">%s</ansi> exit!`, exitName))
-			uRoom.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> flees to the <ansi fg="exit">%s</ansi> exit!`, user.Character.Name, exitName), user.UserId)
-
-			user.Character.Aggro = nil
-			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
-
-			if err := rooms.MoveToRoom(user.Character.Id, exitRoomId); err == nil {
-
-				for _, instId := range uRoom.GetMobs(rooms.FindCharmed) {
-					if mob := mobs.GetInstance(instId); mob != nil {
-						// A charmed mob fighting beside its master is in the
-						// fight too: it flees on its own roll (Decision 6).
-						if mob.Character.IsCharmed(user.Character.Id) {
-							mob.Command(`flee`)
-						}
-					}
-				}
-
-				newRoom := rooms.LoadRoom(exitRoomId)
-
-				if actor := actors.ByUserId(user.UserId); actor != nil {
-					usercommands.Look(``, actor, newRoom, events.CmdSecretly)
-				}
-
-			}
-
-			continue
-		}
-
-		/**************************
-		*
-		* START HANDLING PHYSICAL COMBAT
-		*
-		**************************/
-
-		// In combat with another player
-		if user.Character.Aggro != nil && accounts.GetByBodyId(user.Character.Aggro.Target) != nil {
-
-			defUser := accounts.GetByBodyId(user.Character.Aggro.Target)
-
-			uRoom := rooms.LoadRoom(roomId)
-
-			if uRoom == nil {
-				user.Character.Aggro = nil
-				continue
-			}
-
-			targetFound := true
-			if defUser == nil {
-				targetFound = false
-			} else if defUser.Character.RoomId != user.Character.RoomId {
-
-				if user.Character.Aggro.ExitName == `` {
-					targetFound = false
-				} else {
-					// If the exitId doesn't match the target room id, can't find em
-					if _, exitRoomId := uRoom.FindExitByName(user.Character.Aggro.ExitName); exitRoomId != defUser.Character.RoomId {
-						targetFound = false
-					}
-				}
-
-			}
-
-			if !targetFound {
-				user.SendText(`Your target can't be found.`)
-				user.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
-				continue
-			}
-
-			defRoom := rooms.LoadRoom(defUser.Character.RoomId)
-			if defRoom == nil {
-				user.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
-				continue
-			}
-
-			defUser.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-			if defUser.Character.Health < 1 {
-				user.SendText(`Your rage subsides.`)
-				user.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
-				continue
-			}
-
-			if user.Character.Aggro.RoundsWaiting > 0 {
-				mudlog.Debug(`RoundsWaiting`, `User`, user.Character.Name, `Rounds`, user.Character.Aggro.RoundsWaiting)
-
-				user.Character.Aggro.RoundsWaiting--
-
-				roundResult := combat.GetWaitMessages(items.Wait, user.Character, defUser.Character, combat.User, combat.User)
-
-				for _, msg := range roundResult.MessagesToSource {
-					user.SendText(msg)
-				}
-
-				for _, msg := range roundResult.MessagesToTarget {
-					defUser.SendText(msg)
-				}
-
-				if len(roundResult.MessagesToSourceRoom) > 0 {
-					for _, msg := range roundResult.MessagesToSourceRoom {
-						uRoom.SendText(msg, user.UserId, defUser.UserId)
-					}
-				}
-
-				if len(roundResult.MessagesToTargetRoom) > 0 {
-					for _, msg := range roundResult.MessagesToTargetRoom {
-						defRoom.SendText(msg, user.UserId, defUser.UserId)
-					}
-				}
-
-				continue
-			}
-
-			// Can't see them, can't fight them.
-			if defUser.Character.HasBuffFlag("hidden") {
-				user.SendText("You can't seem to find your target.")
-				continue
-			}
-
-			affectedPlayerIds = append(affectedPlayerIds, defUser.UserId)
-
-			roundResult := combat.AttackPlayerVsPlayer(user, defUser)
-
-			room := rooms.LoadRoom(roomId)
-
-			for _, buffId := range roundResult.BuffSource {
-				user.AddBuff(buffId, `combat`)
-			}
-
-			for _, buffId := range roundResult.BuffTarget {
-				defUser.AddBuff(buffId, `combat`)
-			}
-
-			for _, msg := range roundResult.MessagesToSource {
-				user.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToTarget {
-				defUser.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToSourceRoom {
-				uRoom.SendText(msg, user.UserId, defUser.UserId)
-			}
-
-			for _, msg := range roundResult.MessagesToTargetRoom {
-				defRoom.SendText(msg, user.UserId, defUser.UserId)
-			}
-
-			// If the attack connected, check for damage to equipment.
-			if roundResult.Hit {
-
-				defUser.Character.TrackPlayerDamage(user.UserId, roundResult.DamageToTarget)
-
-				// For now, only focus on offhand items.
-				if defUser.Character.Equipment.Offhand.ItemId > 0 {
-
-					modifier := 0
-					if roundResult.Crit { // Crits double the chance of breakage for offhand items.
-						modifier = int(defUser.Character.Equipment.Offhand.GetSpec().BreakChance)
-					}
-
-					if defUser.Character.Equipment.Offhand.BreakTest(modifier) {
-						// Send message about the break
-
-						defUser.SendText(`<ansi fg="202">***</ansi>`)
-						defUser.SendText(fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> Your <ansi fg="item">%s</ansi> breaks! <ansi fg="202">***</ansi></ansi>`, defUser.Character.Equipment.Offhand.NameSimple()))
-						defUser.SendText(`<ansi fg="202">***</ansi>`)
-
-						defRoom.SendText(fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">%s</ansi> <ansi fg="username">%s</ansi> was carrying breaks! <ansi fg="202">***</ansi></ansi>`, defUser.Character.Equipment.Offhand.NameSimple(), defUser.Character.Name), defUser.UserId)
-
-						events.AddToQueue(events.ItemOwnership{
-							ActorId: defUser.Character.Id,
-							Item:    defUser.Character.Equipment.Offhand,
-							Gained:  false,
-						})
-
-						defUser.Character.RemoveFromBody(defUser.Character.Equipment.Offhand)
-
-						itm := items.New(20) // Broken item
-						if !defUser.Character.StoreItem(itm) {
-							room.AddItem(itm, false)
-
-							events.AddToQueue(events.ItemOwnership{
-								ActorId: defUser.Character.Id,
-								Item:    itm,
-								Gained:  true,
-							})
-						}
-					}
-				}
-			}
-
-			if roundResult.DamageToSource != 0 {
-				events.AddToQueue(events.CharacterVitalsChanged{UserId: user.UserId})
-			}
-			if roundResult.DamageToTarget != 0 {
-				events.AddToQueue(events.CharacterVitalsChanged{UserId: defUser.UserId})
-			}
-
-			if user.Character.Health <= 0 || defUser.Character.Health <= 0 {
-				defUser.Character.EndAggro()
-				user.Character.EndAggro()
-			} else {
-				user.Character.SetAggro(defUser.Character.Id, characters.DefaultAttack)
-			}
-
-		}
-
-		// In combat with a mob
-		// (any target that is not a player, so a vanished target is cleared here)
-		if user.Character.Aggro != nil && !user.Character.Aggro.Target.IsZero() && accounts.GetByBodyId(user.Character.Aggro.Target) == nil {
-
-			affectedMobIds = append(affectedMobIds, user.Character.Aggro.Target)
-
-			defMob := mobs.GetInstance(user.Character.Aggro.Target)
-
-			targetFound := true
-			if defMob == nil {
-				targetFound = false
-			} else if defMob.Character.RoomId != user.Character.RoomId {
-
-				if user.Character.Aggro.ExitName == `` {
-					targetFound = false
-				} else {
-					// Make sure the target is still at the exit
-
-					uRoom := rooms.LoadRoom(roomId)
-					if uRoom == nil {
-						user.Character.Aggro = nil
-						continue
-					}
-
-					// If the exitId doesn't match the target room id, can't find em
-					if _, exitRoomId := uRoom.FindExitByName(user.Character.Aggro.ExitName); exitRoomId != defMob.Character.RoomId {
-						targetFound = false
-					}
-
-				}
-
-			}
-
-			if !targetFound {
-				user.SendText("Your target can't be found.")
-				user.Character.Aggro = nil
-				// A vanished target may be a player who logged out mid-fight, whose old
-				// path queued this event. Its kind is gone with it, so it fires for any
-				// vanished target.
-				if defMob == nil {
-					events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
-				}
-				continue
-			}
-
-			defRoom := rooms.LoadRoom(defMob.Character.RoomId)
-
-			defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-			if defMob.Character.Health < 1 {
-				user.SendText("Your rage subsides.")
-				user.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
-				continue
-			}
-
-			if user.Character.Aggro.RoundsWaiting > 0 {
-				mudlog.Debug(`RoundsWaiting`, `User`, user.Character.Name, `Rounds`, user.Character.Aggro.RoundsWaiting)
-
-				user.Character.Aggro.RoundsWaiting--
-
-				roundResult := combat.GetWaitMessages(items.Wait, user.Character, &defMob.Character, combat.User, combat.Mob)
-
-				for _, msg := range roundResult.MessagesToSource {
-					user.SendText(msg)
-				}
-
-				for _, msg := range roundResult.MessagesToSourceRoom {
-					uRoom.SendText(msg, user.UserId)
-				}
-
-				for _, msg := range roundResult.MessagesToTargetRoom {
-					defRoom.SendText(msg, user.UserId)
-				}
-
-				continue
-			}
-
-			// Can't see them, can't fight them.
-			if defMob.Character.HasBuffFlag("hidden") {
-				user.SendText("You can't seem to find your target.")
-				continue
-			}
-
-			// Pre-existing bug E8e, kept for slice 5: this appended the aggro target's user ID, always 0 in a mob fight.
-			affectedPlayerIds = append(affectedPlayerIds, 0)
-
-			var roundResult combat.AttackResult
-
-			roundResult = combat.AttackPlayerVsMob(user, defMob)
-
-			for _, buffId := range roundResult.BuffSource {
-				user.AddBuff(buffId, `combat`)
-			}
-
-			for _, buffId := range roundResult.BuffTarget {
-				defMob.AddBuff(buffId, `combat`)
-			}
-
-			for _, msg := range roundResult.MessagesToSource {
-				user.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToSourceRoom {
-				uRoom.SendText(msg, user.UserId)
-			}
-
-			for _, msg := range roundResult.MessagesToTargetRoom {
-				defRoom.SendText(msg, user.UserId)
-			}
-
-			//
-			// Special mob-only reaction/behavior
-			//
-			// Hostility default to 5 minutes
-			for _, groupName := range defMob.Groups {
-				mobs.MakeHostile(groupName, user.UserId, c.Timing.MinutesToRounds(2)-user.Character.Stats.Perception.ValueAdj)
-			}
-
-			// Mobs get aggro when attacked
-			if defMob.Character.Aggro == nil {
-				defMob.PreventIdle = true
-				// If not in the same room,
-				// find an exit to the room of the player to move to
-				if user.Character.RoomId != defMob.Character.RoomId {
-					if mobRoom := rooms.LoadRoom(defMob.Character.RoomId); mobRoom != nil {
-						for exitName, exitInfo := range mobRoom.Exits {
-							if exitInfo.RoomId == user.Character.RoomId {
-								defMob.Command(fmt.Sprintf(`go %s`, exitName))
-								if actionStr := defMob.GetAngryCommand(); actionStr != `` {
-									defMob.Command(actionStr)
-								}
-								break
-							}
-						}
-					}
-				}
-
-			}
-
-			if roundResult.DamageToSource != 0 {
-				events.AddToQueue(events.CharacterVitalsChanged{UserId: user.UserId})
-			}
-
-			if user.Character.Health <= 0 || defMob.Character.Health <= 0 {
-				defMob.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{ActorId: defMob.Character.Id, RoomId: defMob.Character.RoomId})
-				user.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
-			} else {
-				user.Character.SetAggro(defMob.Character.Id, characters.DefaultAttack)
-				events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
-			}
-
-		}
-
-		/**************************
-		*
-		* END HANDLING PHYSICAL COMBAT
-		*
-		**************************/
-
 	}
-
-	util.TrackTime(`DoCombat::handlePlayerCombat()`, time.Since(tStart).Seconds())
-
-	return affectedPlayerIds, affectedMobIds
+	return true
 }
 
-func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobIds []ids.ID) {
-
-	tStart := time.Now()
-
-	// Handle mob round of combat
-	for _, mobId := range mobs.GetAllMobIds() {
-
-		mob := mobs.GetInstance(mobId)
-
-		// Only handling combat functions here, so ditch out if not in combat
-		if mob == nil || mob.Character.Aggro == nil {
-			continue
-		}
-
-		// If has a buff that prevents combat, skip the player
-		if mob.Character.HasBuffFlag("no-combat") {
-			continue
-		}
-
-		mobRoom := rooms.LoadRoom(mob.Character.RoomId)
-
-		if mobRoom == nil {
-			mob.Character.Aggro = nil
-			events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-			continue
-		}
-
-		// A flee has no target and only the player half of the round resolves
-		// it. An NPC that flees stops fighting (it does not leave until slice 5);
-		// left set, the aggro would block the NPC for good.
-		if mob.Character.Aggro.Type == characters.Flee && mob.Character.Aggro.Target.IsZero() {
-			mob.Character.Aggro = nil
-			events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-			continue
-		}
-
-		// Disable any buffs that are cancelled by combat
-		mob.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-		/**************************
-		*
-		* START HANDLING PHYSICAL COMBAT
-		*
-		**************************/
-		c := configs.GetConfig()
-
-		// H2H is the base level combat, can do combat commands then
-		if mob.Character.Aggro.Type == characters.DefaultAttack {
-
-			// If they have idle commands, maybe do one of them?
-			cmdCt := len(mob.CombatCommands)
-			if cmdCt > 0 {
-
-				// Each mob has a 10% chance of doing an idle action.
-				if util.Rand(100) < mob.ActivityLevel {
-
-					combatAction := mob.CombatCommands[util.Rand(cmdCt)]
-
-					if combatAction == `` { // blank is a no-op
-						continue
-					}
-
-					var waitTime float64 = 0.0
-					allCmds := strings.Split(combatAction, `;`)
-					if len(allCmds) >= c.Timing.TurnsPerRound() {
-						mob.Command(`say I have a CombatAction that is too long. Please notify an admin.`)
-					} else {
-						for _, action := range strings.Split(combatAction, `;`) {
-							mob.Command(action, waitTime)
-							waitTime += 0.1
-						}
-					}
-					continue
-				}
-			}
-
-		}
-		roomId := mob.Character.RoomId
-
-		affectedMobIds = append(affectedMobIds, mob.Character.Id)
-
-		// mob attacks player
-		if mob.Character.Aggro != nil && accounts.GetByBodyId(mob.Character.Aggro.Target) != nil {
-
-			defUser := accounts.GetByBodyId(mob.Character.Aggro.Target)
-			if defUser == nil || mob.Character.RoomId != defUser.Character.RoomId {
-				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-				continue
-			}
-
-			defRoom := rooms.LoadRoom(defUser.Character.RoomId)
-			if defRoom == nil {
-				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-				continue
-			}
-
-			defUser.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-			if defUser.Character.Health < 1 {
-				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-				continue
-			}
-			if defUser.Character.HasBuffFlag("hidden") {
-				continue
-			}
-
-			affectedPlayerIds = append(affectedPlayerIds, defUser.UserId)
-
-			// If no weapon but has stuff in the backpack, look for a weapon
-			// Especially useful for when they get disarmed
-			if mob.Character.Equipment.Weapon.ItemId == 0 && len(mob.Character.Items) > 0 {
-
-				roll := util.Rand(100)
-
-				util.LogRoll(`Look for weapon`, roll, mob.Character.Stats.Perception.ValueAdj)
-
-				if roll < mob.Character.Stats.Perception.ValueAdj {
-					possibleWeapons := []string{}
-					for _, itm := range mob.Character.Items {
-						iSpec := itm.GetSpec()
-						if iSpec.Type == items.Weapon {
-							possibleWeapons = append(possibleWeapons, itm.DisplayName())
-						}
-					}
-
-					if len(possibleWeapons) > 0 {
-						mob.Command(fmt.Sprintf("equip %s", possibleWeapons[util.Rand(len(possibleWeapons))]))
-					}
-
-				}
-			}
-
-			if mob.Character.Aggro.RoundsWaiting > 0 {
-				mudlog.Debug(`RoundsWaiting`, `User`, mob.Character.Name, `Rounds`, mob.Character.Aggro.RoundsWaiting)
-
-				mob.Character.Aggro.RoundsWaiting--
-
-				roundResult := combat.GetWaitMessages(items.Wait, &mob.Character, defUser.Character, combat.Mob, combat.User)
-
-				for _, msg := range roundResult.MessagesToTarget {
-					defUser.SendText(msg)
-				}
-
-				for _, msg := range roundResult.MessagesToSourceRoom {
-					mobRoom.SendText(msg, defUser.UserId)
-				}
-
-				for _, msg := range roundResult.MessagesToTargetRoom {
-					defRoom.SendText(msg, defUser.UserId)
-				}
-
-				continue
-			}
-
-			var roundResult combat.AttackResult
-
-			roundResult = combat.AttackMobVsPlayer(mob, defUser)
-
-			room := rooms.LoadRoom(roomId)
-
-			for _, buffId := range roundResult.BuffSource {
-				mob.AddBuff(buffId, `combat`)
-			}
-
-			for _, buffId := range roundResult.BuffTarget {
-				defUser.AddBuff(buffId, `combat`)
-			}
-
-			for _, msg := range roundResult.MessagesToTarget {
-				defUser.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToSourceRoom {
-				mobRoom.SendText(msg, defUser.UserId)
-			}
-
-			for _, msg := range roundResult.MessagesToTargetRoom {
-				defRoom.SendText(msg, defUser.UserId)
-			}
-
-			// If the attack connected, check for damage to equipment.
-			if roundResult.Hit {
-
-				// For now, only focus on offhand items.
-				if defUser.Character.Equipment.Offhand.ItemId > 0 {
-
-					modifier := 0
-					if roundResult.Crit { // Crits double the chance of breakage for offhand items.
-						modifier = int(defUser.Character.Equipment.Offhand.GetSpec().BreakChance)
-					}
-
-					if defUser.Character.Equipment.Offhand.BreakTest(modifier) {
-						// Send message about the break
-
-						defUser.SendText(`<ansi fg="202">***</ansi>`)
-						defUser.SendText(fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> Your <ansi fg="item">%s</ansi> breaks! <ansi fg="202">***</ansi></ansi>`, defUser.Character.Equipment.Offhand.NameSimple()))
-						defUser.SendText(`<ansi fg="202">***</ansi>`)
-
-						defRoom.SendText(fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">%s</ansi> <ansi fg="username">%s</ansi> was carrying breaks! <ansi fg="202">***</ansi></ansi>`, defUser.Character.Equipment.Offhand.NameSimple(), defUser.Character.Name), defUser.UserId)
-
-						events.AddToQueue(events.ItemOwnership{
-							ActorId: defUser.Character.Id,
-							Item:    defUser.Character.Equipment.Offhand,
-							Gained:  false,
-						})
-
-						defUser.Character.RemoveFromBody(defUser.Character.Equipment.Offhand)
-
-						itm := items.New(20) // Broken item
-						if !defUser.Character.StoreItem(itm) {
-							room.AddItem(itm, false)
-
-							events.AddToQueue(events.ItemOwnership{
-								ActorId: defUser.Character.Id,
-								Item:    itm,
-								Gained:  true,
-							})
-
-						}
-					}
-				}
-			}
-
-			if roundResult.DamageToTarget != 0 {
-				events.AddToQueue(events.CharacterVitalsChanged{UserId: defUser.UserId})
-			}
-
-			if mob.Character.Health <= 0 || defUser.Character.Health <= 0 {
-				mob.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-				defUser.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{ActorId: defUser.Character.Id, RoomId: defUser.Character.RoomId})
-			} else {
-				mob.Character.SetAggro(defUser.Character.Id, characters.DefaultAttack)
-				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-			}
-		}
-
-		// mob attacks mob
-		// (any target that is not a player, so a vanished target is cleared here)
-		if mob.Character.Aggro != nil && !mob.Character.Aggro.Target.IsZero() && accounts.GetByBodyId(mob.Character.Aggro.Target) == nil {
-
-			affectedMobIds = append(affectedMobIds, mob.Character.Aggro.Target)
-
-			defMob := mobs.GetInstance(mob.Character.Aggro.Target)
-
-			if defMob == nil || mob.Character.RoomId != defMob.Character.RoomId {
-				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-				continue
-			}
-
-			defRoom := rooms.LoadRoom(defMob.Character.RoomId)
-
-			defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
-
-			if defMob.Character.Health < 1 {
-				mob.Character.Aggro = nil
-				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-				continue
-			}
-
-			if mob.Character.Aggro.RoundsWaiting > 0 {
-				mudlog.Debug(`RoundsWaiting`, `User`, mob.Character.Name, `Rounds`, mob.Character.Aggro.RoundsWaiting)
-
-				mob.Character.Aggro.RoundsWaiting--
-
-				roundResult := combat.GetWaitMessages(items.Wait, &mob.Character, &defMob.Character, combat.Mob, combat.Mob)
-
-				for _, msg := range roundResult.MessagesToSourceRoom {
-					mobRoom.SendText(msg)
-				}
-
-				for _, msg := range roundResult.MessagesToTargetRoom {
-					defRoom.SendText(msg)
-				}
-
-				continue
-			}
-
-			// Can't see them, can't fight them.
-			if defMob.Character.HasBuffFlag("hidden") {
-				continue
-			}
-
-			var roundResult combat.AttackResult
-
-			roundResult = combat.AttackMobVsMob(mob, defMob)
-
-			for _, buffId := range roundResult.BuffSource {
-				mob.AddBuff(buffId, `combat`)
-			}
-
-			for _, buffId := range roundResult.BuffTarget {
-				defMob.AddBuff(buffId, `combat`)
-			}
-
-			for _, msg := range roundResult.MessagesToSourceRoom {
-				mobRoom.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToTargetRoom {
-				defRoom.SendText(msg)
-			}
-
-			// Mobs get aggro when attacked
-			if defMob.Character.Aggro == nil {
-				defMob.PreventIdle = true
-			}
-
-			// If the attack connected, check for damage to equipment.
-			if roundResult.Hit {
-				// For now, only focus on offhand items.
-				if defMob.Character.Equipment.Offhand.ItemId > 0 {
-
-					modifier := 0
-					if roundResult.Crit { // Crits double the chance of breakage for offhand items.
-						modifier = int(defMob.Character.Equipment.Offhand.GetSpec().BreakChance)
-					}
-
-					if defMob.Character.Equipment.Offhand.BreakTest(modifier) {
-						// Send message about the break
-
-						if defRoom := rooms.LoadRoom(defMob.Character.RoomId); defRoom != nil {
-
-							defRoom.SendText(fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">%s</ansi> <ansi fg="mobname">%s</ansi> was carrying breaks! <ansi fg="202">***</ansi></ansi>`, defMob.Character.Equipment.Offhand.NameSimple(), defMob.Character.Name))
-
-							events.AddToQueue(events.ItemOwnership{
-								ActorId: defMob.Character.Id,
-								Item:    defMob.Character.Equipment.Offhand,
-								Gained:  false,
-							})
-
-							defMob.Character.RemoveFromBody(defMob.Character.Equipment.Offhand)
-							itm := items.New(20) // Broken item
-							if !defMob.Character.StoreItem(itm) {
-								defRoom.AddItem(itm, false)
-
-								events.AddToQueue(events.ItemOwnership{
-									ActorId: defMob.Character.Id,
-									Item:    itm,
-									Gained:  true,
-								})
-							}
-						}
-					}
-				}
-			}
-
-			if mob.Character.Health <= 0 || defMob.Character.Health <= 0 {
-				mob.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-				defMob.Character.EndAggro()
-				events.AddToQueue(events.AggroChanged{ActorId: defMob.Character.Id, RoomId: defMob.Character.RoomId})
-			} else {
-				mob.Character.SetAggro(defMob.Character.Id, characters.DefaultAttack)
-				events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-			}
-
-		}
-
-		/**************************
-		*
-		* END HANDLING PHYSICAL COMBAT
-		*
-		**************************/
-
+// lookForWeapon has an NPC with no weapon and a non-empty pack maybe equip a
+// weapon from it (queued, so it takes effect later).
+func lookForWeapon(mob *mobs.Mob) {
+	if mob.Character.Equipment.Weapon.ItemId != 0 || len(mob.Character.Items) == 0 {
+		return
 	}
 
-	util.TrackTime(`World::handleMobCombat()`, time.Since(tStart).Seconds())
+	roll := util.Rand(100)
 
-	return affectedPlayerIds, affectedMobIds
+	util.LogRoll(`Look for weapon`, roll, mob.Character.Stats.Perception.ValueAdj)
+
+	if roll < mob.Character.Stats.Perception.ValueAdj {
+		possibleWeapons := []string{}
+		for _, itm := range mob.Character.Items {
+			iSpec := itm.GetSpec()
+			if iSpec.Type == items.Weapon {
+				possibleWeapons = append(possibleWeapons, itm.DisplayName())
+			}
+		}
+
+		if len(possibleWeapons) > 0 {
+			mob.Command(fmt.Sprintf("equip %s", possibleWeapons[util.Rand(len(possibleWeapons))]))
+		}
+	}
 }
 
-func handleAffected(affectedPlayerIds []int, affectedMobIds []ids.ID) {
+// offhandBreakCheck may break the defender's offhand item after a hit. A
+// broken item it cannot carry lands in its own room.
+func offhandBreakCheck(d *actors.Actor, defRoom *rooms.Room, crit bool) {
 
-	playersHandled := map[int]struct{}{}
-	for _, userId := range affectedPlayerIds {
-		if _, ok := playersHandled[userId]; ok {
+	// For now, only focus on offhand items.
+	if d.Character.Equipment.Offhand.ItemId <= 0 {
+		return
+	}
+
+	modifier := 0
+	if crit { // Crits double the chance of breakage for offhand items.
+		modifier = int(d.Character.Equipment.Offhand.GetSpec().BreakChance)
+	}
+
+	if !d.Character.Equipment.Offhand.BreakTest(modifier) {
+		return
+	}
+
+	itemName := d.Character.Equipment.Offhand.NameSimple()
+
+	usercommands.Tell(d, `<ansi fg="202">***</ansi>`)
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        d.Id,
+		Senses:       perception.Sight | perception.Sound,
+		Range:        perception.Room,
+		ActorText:    fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> Your <ansi fg="item">%s</ansi> breaks! <ansi fg="202">***</ansi></ansi>`, itemName),
+		ObserverText: fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">%s</ansi> {actor} was carrying breaks! <ansi fg="202">***</ansi></ansi>`, itemName),
+	})
+	usercommands.Tell(d, `<ansi fg="202">***</ansi>`)
+
+	events.AddToQueue(events.ItemOwnership{
+		ActorId: d.Id,
+		Item:    d.Character.Equipment.Offhand,
+		Gained:  false,
+	})
+
+	d.Character.RemoveFromBody(d.Character.Equipment.Offhand)
+
+	itm := items.New(20) // Broken item
+	if !d.Character.StoreItem(itm) {
+		defRoom.AddItem(itm, false)
+
+		events.AddToQueue(events.ItemOwnership{
+			ActorId: d.Id,
+			Item:    itm,
+			Gained:  true,
+		})
+	}
+}
+
+// resumeAfterFlee puts a fleer whose flee failed back in the fight it tried
+// to leave (plan Decision 2), or out of combat if it fled no target.
+func resumeAfterFlee(a *actors.Actor, fleeFrom ids.ID) {
+	if fleeFrom.IsZero() {
+		a.Character.EndAggro()
+	} else {
+		a.Character.SetAggro(fleeFrom, characters.DefaultAttack)
+	}
+	events.AddToQueue(events.AggroChanged{ActorId: a.Id, RoomId: a.Character.RoomId})
+}
+
+// flee resolves a flee for any actor (plan Decisions 2 and 13). Anyone in
+// the room fighting the fleer may block it; a blocked or exitless fleer
+// resumes the fight it fled; a successful one leaves by a random exit.
+func flee(a *actors.Actor, aRoom *rooms.Room) {
+
+	fleeFrom := a.Character.Aggro.FleeFrom
+
+	// Revert to Default combat regardless of outcome
+	a.Character.SetAggro(a.Character.Aggro.Target, characters.DefaultAttack)
+
+	var blocker *actors.Actor
+	for _, bodyId := range aRoom.GetBodies() {
+		b := actors.Get(bodyId)
+		if b == nil || b.Id == a.Id || b.Character == nil {
 			continue
 		}
-		playersHandled[userId] = struct{}{}
+		if b.Character.Aggro == nil || b.Character.Aggro.Target != a.Id {
+			continue
+		}
 
-		if user := accounts.GetByUserId(userId); user != nil {
+		// Stat comparison accounts for up to 70% of chance to flee.
+		chanceIn100 := int(float64(a.Character.Stats.Speed.ValueAdj) / (float64(a.Character.Stats.Speed.ValueAdj) + float64(b.Character.Stats.Speed.ValueAdj)) * 70)
+		chanceIn100 += 30
+
+		roll := util.Rand(100)
+
+		util.LogRoll(`Flee`, roll, chanceIn100)
+
+		if roll >= chanceIn100 {
+			blocker = b
+			break
+		}
+	}
+
+	if blocker != nil {
+		messaging.Send(perception.Message{
+			Kind:         perception.WorldEvent,
+			Actor:        a.Id,
+			Target:       blocker.Id,
+			Senses:       perception.Sight | perception.Sound,
+			Range:        perception.Room,
+			ActorText:    `<ansi fg="red-bold">{target} blocks you from fleeing!</ansi>`,
+			TargetText:   `You block {actor} from fleeing!`,
+			ObserverText: `{actor} is blocked from fleeing by {target}!`,
+		})
+		resumeAfterFlee(a, fleeFrom)
+		return
+	}
+
+	exitName, exitRoomId := aRoom.GetRandomExit()
+
+	if exitName == `` {
+		usercommands.Tell(a, `You can't find an exit!`)
+		resumeAfterFlee(a, fleeFrom)
+		return
+	}
+
+	// Success!
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        a.Id,
+		Senses:       perception.Sight | perception.Sound,
+		Range:        perception.Room,
+		ActorText:    fmt.Sprintf(`You flee to the <ansi fg="exit">%s</ansi> exit!`, exitName),
+		ObserverText: fmt.Sprintf(`{actor} flees to the <ansi fg="exit">%s</ansi> exit!`, exitName),
+	})
+
+	endAggro(a)
+
+	if err := rooms.MoveToRoom(a.Id, exitRoomId); err != nil {
+		return
+	}
+
+	// A charmed NPC fighting beside the fleer is in the fight too: it flees
+	// on its own roll.
+	for _, instId := range aRoom.GetMobs(rooms.FindCharmed) {
+		if mob := mobs.GetInstance(instId); mob != nil {
+			if mob.Character.IsCharmed(a.Id) {
+				mob.Command(`flee`)
+			}
+		}
+	}
+
+	// Only a player sees where they fled to; an NPC's look prepares nothing.
+	if accountOf(a) != nil {
+		usercommands.Look(``, a, rooms.LoadRoom(exitRoomId), events.CmdSecretly)
+	}
+}
+
+// handleAffected queues the death or the drop of everyone the round left
+// below 1 health: actors with an account first, then NPCs, each once.
+func handleAffected(affected []ids.ID) {
+
+	handled := map[ids.ID]struct{}{}
+	npcs := []*mobs.Mob{}
+
+	for _, id := range affected {
+		if _, ok := handled[id]; ok {
+			continue
+		}
+		handled[id] = struct{}{}
+
+		a := actors.Get(id)
+		if a == nil {
+			continue
+		}
+
+		if user := accountOf(a); user != nil {
 
 			if user.Character.Health <= -10 {
 
-				if user.Character.Aggro != nil && !user.Character.Aggro.Target.IsZero() && accounts.GetByBodyId(user.Character.Aggro.Target) == nil {
-					user.Character.KilledBy = user.Character.Aggro.Target
-					if killerMob := mobs.GetInstance(user.Character.Aggro.Target); killerMob != nil {
-						user.Character.KillerMobIsElite = killerMob.IsElite
-						user.Character.KillerMobName = killerMob.Character.Name
-					}
-				}
 				user.Command(`suicide`) // suicide drops all money/items and transports to land of the dead.
 
 			} else if user.Character.Health < 1 {
@@ -924,24 +502,20 @@ func handleAffected(affectedPlayerIds []int, affectedMobIds []ids.ID) {
 
 			}
 
+			continue
+		}
+
+		if mob := mobs.GetInstance(id); mob != nil {
+			npcs = append(npcs, mob)
 		}
 	}
 
-	mobsHandled := map[ids.ID]struct{}{}
-	for _, mobId := range affectedMobIds {
-		if _, ok := mobsHandled[mobId]; ok {
-			continue
+	for _, mob := range npcs {
+		if mob.Character.Health < 1 {
+
+			mob.Command(`suicide`)
+
 		}
-		mobsHandled[mobId] = struct{}{}
-
-		if mob := mobs.GetInstance(mobId); mob != nil {
-			if mob.Character.Health < 1 {
-
-				mob.Command(`suicide`)
-
-			}
-		}
-
 	}
 
 }
