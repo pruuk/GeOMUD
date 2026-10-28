@@ -112,6 +112,30 @@ func TestNPCStore_BuildRestingIndex(t *testing.T) {
 	assert.Equal(t, slotState{Index: 0, MobId: 1, NPC: a}, got.Slots[0])
 }
 
+func TestNPCStore_RefusesPathsOutsideStore(t *testing.T) {
+	root := useTempNPCStore(t)
+	outside := filepath.Join(root, "..", "outside", "1.npcs.yaml")
+	outsideDir := filepath.Dir(filepath.Clean(outside))
+	full := roomNPCFile{Slots: []slotState{{Index: 0, MobId: 1, NPC: ids.New(0)}}}
+
+	assert.Error(t, writeNPCFileAt(outside, full))
+	assert.Error(t, writeNPCFileAt(outside, roomNPCFile{}))
+	_, err := os.Stat(outsideDir)
+	assert.True(t, os.IsNotExist(err), "nothing is created outside the store")
+
+	// a file already there is not read
+	require.NoError(t, os.MkdirAll(outsideDir, 0777))
+	data, err := yaml.Marshal(full)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(outside, data, 0666))
+	assert.Empty(t, readNPCFileAt(outside).Slots)
+
+	// a path inside the store still works
+	inside := filepath.Join(root, "z", "1.npcs.yaml")
+	require.NoError(t, writeNPCFileAt(inside, full))
+	assert.Len(t, readNPCFileAt(inside).Slots, 1)
+}
+
 func TestNPCStore_EmptyFileDeletes(t *testing.T) {
 	useTempNPCStore(t)
 	require.NoError(t, writeRoomNPCFile("Z", 5, roomNPCFile{Slots: []slotState{{Index: 0, MobId: 1, NPC: ids.New(0)}}}))

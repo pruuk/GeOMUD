@@ -89,6 +89,13 @@ func endingsPath() string {
 	return filepath.Join(npcStoreRoot(), npcEndingsFile)
 }
 
+// storeRootPrefix is the store root with a trailing separator. Every path the
+// store hands to the filesystem is cleaned and checked against it first, so a
+// zone name can never reach outside the store.
+func storeRootPrefix() string {
+	return filepath.Clean(npcStoreRoot()) + string(filepath.Separator)
+}
+
 // readRoomNPCFile reads the sidecar of the room with this zone and ID. A
 // missing or unparseable file reads as empty (the parse failure is logged).
 func readRoomNPCFile(zone string, roomId int) roomNPCFile {
@@ -97,7 +104,12 @@ func readRoomNPCFile(zone string, roomId int) roomNPCFile {
 
 func readNPCFileAt(path string) roomNPCFile {
 	var f roomNPCFile
-	data, err := os.ReadFile(path)
+	p := filepath.Clean(path)
+	if !strings.HasPrefix(p, storeRootPrefix()) {
+		mudlog.Error("readRoomNPCFile", "path", path, "error", "path is outside the npc store")
+		return f
+	}
+	data, err := os.ReadFile(p)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			mudlog.Error("readRoomNPCFile", "path", path, "error", err)
@@ -249,6 +261,9 @@ func restingIds(f roomNPCFile) []ids.ID {
 // forgets what it held.
 func deleteRoomNPCFile(zone string, roomId int) error {
 	path := filepath.Clean(roomNPCPath(zone, roomId))
+	if !strings.HasPrefix(path, storeRootPrefix()) {
+		return fmt.Errorf("npc store: %q is outside the store", path)
+	}
 	npcStoreMu.Lock()
 	defer npcStoreMu.Unlock()
 	if err := npcRemove(path); err != nil && !os.IsNotExist(err) {
@@ -263,6 +278,9 @@ func deleteRoomNPCFile(zone string, roomId int) error {
 func moveRoomNPCFile(oldZone, newZone string, roomId int) error {
 	oldPath := filepath.Clean(roomNPCPath(oldZone, roomId))
 	newPath := filepath.Clean(roomNPCPath(newZone, roomId))
+	if !strings.HasPrefix(oldPath, storeRootPrefix()) || !strings.HasPrefix(newPath, storeRootPrefix()) {
+		return fmt.Errorf("npc store: %q or %q is outside the store", oldPath, newPath)
+	}
 	npcStoreMu.Lock()
 	defer npcStoreMu.Unlock()
 	if err := os.MkdirAll(filepath.Dir(newPath), 0777); err != nil {
@@ -281,6 +299,9 @@ func moveRoomNPCFile(oldZone, newZone string, roomId int) error {
 func renameZoneNPCFiles(oldZone, newZone string) error {
 	oldDir := filepath.Clean(filepath.Join(npcStoreRoot(), filepath.FromSlash(ZoneToFolder(oldZone))))
 	newDir := filepath.Clean(filepath.Join(npcStoreRoot(), filepath.FromSlash(ZoneToFolder(newZone))))
+	if !strings.HasPrefix(oldDir, storeRootPrefix()) || !strings.HasPrefix(newDir, storeRootPrefix()) {
+		return fmt.Errorf("npc store: %q or %q is outside the store", oldDir, newDir)
+	}
 	npcStoreMu.Lock()
 	defer npcStoreMu.Unlock()
 	if err := os.Rename(oldDir, newDir); err != nil {
@@ -384,6 +405,10 @@ func endDeletedRoomNPCs(zone string, roomId int) {
 }
 
 func writeNPCFileAt(path string, f roomNPCFile) error {
+	path = filepath.Clean(path)
+	if !strings.HasPrefix(path, storeRootPrefix()) {
+		return fmt.Errorf("npc store: %q is outside the store", path)
+	}
 	if len(f.Resting) == 0 && len(f.Slots) == 0 {
 		if err := npcRemove(path); err != nil && !os.IsNotExist(err) {
 			return err
@@ -424,7 +449,12 @@ func BuildRestingIndex() error {
 			mudlog.Error("BuildRestingIndex", "path", path, "error", "file name is not a room ID")
 			return nil
 		}
-		data, readErr := os.ReadFile(path)
+		p := filepath.Clean(path)
+		if !strings.HasPrefix(p, storeRootPrefix()) {
+			mudlog.Error("BuildRestingIndex", "path", path, "error", "path is outside the npc store")
+			return nil
+		}
+		data, readErr := os.ReadFile(p)
 		if readErr != nil {
 			mudlog.Error("BuildRestingIndex", "path", path, "error", readErr)
 			return nil
@@ -739,7 +769,11 @@ func IsResting(id ids.ID) bool {
 
 // LoadEndings reads the endings ledger. A missing file is an empty ledger.
 func LoadEndings() error {
-	data, err := os.ReadFile(endingsPath())
+	p := filepath.Clean(endingsPath())
+	if !strings.HasPrefix(p, storeRootPrefix()) {
+		return fmt.Errorf("npc store: %q is outside the store", p)
+	}
+	data, err := os.ReadFile(p)
 	if err != nil {
 		if os.IsNotExist(err) {
 			npcStoreMu.Lock()
@@ -761,7 +795,10 @@ func LoadEndings() error {
 
 // saveEndings writes the ledger. The caller holds npcStoreMu.
 func saveEndingsLocked() error {
-	path := endingsPath()
+	path := filepath.Clean(endingsPath())
+	if !strings.HasPrefix(path, storeRootPrefix()) {
+		return fmt.Errorf("npc store: %q is outside the store", path)
+	}
 	if len(endingsLedger) == 0 {
 		if err := npcRemove(path); err != nil && !os.IsNotExist(err) {
 			return err
