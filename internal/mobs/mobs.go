@@ -197,6 +197,7 @@ func NewMobById(mobId MobId, homeRoomId int, forceLevel ...int) *Mob {
 		mob.Character.AutoTrain()
 		mob.Character.Health = mob.Character.HealthMax.Value
 		mob.Character.Mana = mob.Character.ManaMax.Value
+		mob.Character.ActionPoints = mob.Character.ActionPointsMax.Value // a new body starts rested
 
 		if mob.IsElite {
 			mob.Character.SetAdjective(`elite`, true)
