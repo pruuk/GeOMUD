@@ -9,11 +9,33 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	yaml "gopkg.in/yaml.v2"
 )
+
+func TestTemplateDataHasNoItemIds(t *testing.T) {
+	r := NewEmptyRoom()
+	r.Items = []items.Item{{ItemId: 1, Id: ids.New(ids.NoCell)}}
+	r.Stash = []items.Item{{ItemId: 2, Id: ids.New(ids.NoCell)}}
+	r.Containers = map[string]Container{"chest": {Items: []items.Item{{ItemId: 3, Id: ids.New(ids.NoCell)}}}}
+
+	tpl := r.templateData()
+	assert.True(t, tpl.Items[0].Id.IsZero())
+	assert.True(t, tpl.Stash[0].Id.IsZero())
+	assert.True(t, tpl.Containers["chest"].Items[0].Id.IsZero())
+
+	assert.False(t, r.Items[0].Id.IsZero(), "the live room keeps its item IDs")
+	assert.False(t, r.Stash[0].Id.IsZero())
+	assert.False(t, r.Containers["chest"].Items[0].Id.IsZero())
+
+	b, err := yaml.Marshal(&tpl)
+	require.NoError(t, err)
+	assert.NotContains(t, string(b), "id: 0x", "no item ID reaches the template file")
+}
 
 func TestMain(m *testing.M) {
 	mudlog.SetupLogger(nil, "", "", false)
@@ -91,6 +113,16 @@ func TestFindByNameSkipsBodyWithNoActor(t *testing.T) {
 		assert.Equal(t, 0, uId)
 		assert.True(t, mId.IsZero())
 	})
+}
+
+func TestFloorHasItemId(t *testing.T) {
+	r := NewEmptyRoom()
+	assert.False(t, r.floorHasItemId(10))
+	r.Items = append(r.Items, items.Item{ItemId: 10})
+	assert.True(t, r.floorHasItemId(10))
+	assert.False(t, r.floorHasItemId(11))
+	r.Stash = append(r.Stash, items.Item{ItemId: 11})
+	assert.False(t, r.floorHasItemId(11), "the stash is not the floor (as FindOnFloor(_, false))")
 }
 
 func TestRoom_AddCorpse(t *testing.T) {
@@ -349,4 +381,19 @@ func TestFindNoun(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInstanceItemIdsReplaceTheTemplates(t *testing.T) {
+	tpl := NewEmptyRoom()
+	tpl.Items = []items.Item{{ItemId: 1}} // a template item, no ID
+	live := NewEmptyRoom()
+	live.Items = []items.Item{{ItemId: 1, Id: ids.New(ids.NoCell)}, {ItemId: 2, Id: ids.New(ids.NoCell)}}
+
+	b, err := yaml.Marshal(map[string]any{"items": live.Items}) // as saveRoomInstanceData writes a changed field
+	require.NoError(t, err)
+	require.NoError(t, yaml.Unmarshal(b, tpl)) // as LoadRoomInstance applies it
+
+	require.Len(t, tpl.Items, 2)
+	assert.Equal(t, live.Items[0].Id, tpl.Items[0].Id)
+	assert.Equal(t, live.Items[1].Id, tpl.Items[1].Id)
 }

@@ -178,11 +178,9 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 				user.SendText(``)
 
-				finalItem := items.New(finalItemId)
-				user.SendText(fmt.Sprintf(`    <ansi fg="230">To receive 1 <ansi fg="itemname">%s</ansi>:</ansi> `, finalItem.DisplayName()))
+				user.SendText(fmt.Sprintf(`    <ansi fg="230">To receive 1 <ansi fg="itemname">%s</ansi>:</ansi> `, specDisplayName(finalItemId)))
 
 				for inputItemId, qtyNeeded := range neededItems {
-					tmpItem := items.New(inputItemId)
 					totalContained := container.Count(inputItemId)
 					colorClass := "8" // None fulfilled
 					if totalContained == qtyNeeded {
@@ -190,7 +188,7 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 					} else if totalContained > 0 {
 						colorClass = "3"
 					}
-					user.SendText(fmt.Sprintf(`        <ansi fg="%s">[%d/%d]</ansi> <ansi fg="itemname">%s</ansi>`, colorClass, totalContained, qtyNeeded, tmpItem.DisplayName()))
+					user.SendText(fmt.Sprintf(`        <ansi fg="%s">[%d/%d]</ansi> <ansi fg="itemname">%s</ansi>`, colorClass, totalContained, qtyNeeded, specDisplayName(inputItemId)))
 				}
 
 			}
@@ -393,6 +391,17 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 	return true, nil
 
+}
+
+// specDisplayName is the display name of an item kind, read from its spec so
+// no item (and no item ID) is made. An unknown ID reads as the empty slot,
+// as it did when a throwaway items.New was used for this.
+func specDisplayName(itemId int) string {
+	if items.GetItemSpec(itemId) == nil {
+		itemId = 0
+	}
+	itm := items.Item{ItemId: itemId}
+	return itm.DisplayName()
 }
 
 func lookRoom(user *accounts.Account, roomId int, secretLook bool) {

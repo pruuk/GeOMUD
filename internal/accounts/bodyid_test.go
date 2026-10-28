@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
@@ -64,4 +65,16 @@ func TestUpdateOnlineUserKeepsTheBodyId(t *testing.T) {
 	UpdateOnlineUser(edited)
 	assert.Equal(t, live.Character.Id, userManager.Users[83].Character.Id)
 	assert.NotEqual(t, attempted, userManager.Users[83].Character.Id)
+}
+
+func TestItemIdsSurviveTheUserFile(t *testing.T) {
+	u := NewAccount(88, 0)
+	u.Character.Items = []items.Item{{ItemId: 1, Id: ids.New(ids.NoCell)}}
+	u.Character.Equipment.Weapon = items.Item{ItemId: 2, Id: ids.New(ids.NoCell)}
+	b, err := yaml.Marshal(u)
+	require.NoError(t, err)
+	var back Account
+	require.NoError(t, yaml.Unmarshal(b, &back))
+	assert.Equal(t, u.Character.Items[0].Id, back.Character.Items[0].Id)
+	assert.Equal(t, u.Character.Equipment.Weapon.Id, back.Character.Equipment.Weapon.Id)
 }

@@ -316,7 +316,7 @@ func (g *GMCPRoomModule) GetRoomNode(user *accounts.Account, gmcpModule string) 
 		payload.Contents.Items = []GMCPRoomModule_Payload_Contents_Item{}
 		for _, itm := range room.Items {
 			payload.Contents.Items = append(payload.Contents.Items, GMCPRoomModule_Payload_Contents_Item{
-				Id:   itm.ShorthandId(),
+				Id:   itm.Id.String(),
 				Name: itm.Name(),
 			})
 		}

@@ -143,6 +143,23 @@ func LoadRoomTemplate(roomId int) *Room {
 	return retRoom
 }
 
+// templateData is r as written to its template file: an item in a template is
+// not a thing yet, so it has no ID (Phase 4b slice 2c). The item lists and the
+// container map are copies, so the live room keeps its item IDs.
+func (r Room) templateData() Room {
+	r.Items = items.WithoutIds(r.Items)
+	r.Stash = items.WithoutIds(r.Stash)
+	if r.Containers != nil {
+		containers := make(map[string]Container, len(r.Containers))
+		for name, c := range r.Containers {
+			c.Items = items.WithoutIds(c.Items)
+			containers[name] = c
+		}
+		r.Containers = containers
+	}
+	return r
+}
+
 // See C. UPDATING EXISTING ROOM TEMPLATES
 func SaveRoomTemplate(roomTpl Room) error {
 
@@ -160,7 +177,8 @@ func SaveRoomTemplate(roomTpl Room) error {
 	// It is assumed that `roomTpl` contains empty room data
 	// That means no players/mobs/items/gold/etc that aren't intended to be included in the default/empty room template
 	//
-	data, err := yaml.Marshal(&roomTpl)
+	fileData := roomTpl.templateData()
+	data, err := yaml.Marshal(&fileData)
 	if err != nil {
 		return err
 	}
@@ -211,14 +229,16 @@ func SaveRoomTemplate(roomTpl Room) error {
 		}
 	}
 
-	// Copy items and stashed items
-	for _, itm := range roomBeingReplaced.GetAllFloorItems(true) {
-		if itm.StashedBy > 0 {
-			roomTpl.AddItem(itm, true)
-		} else {
-			roomTpl.AddItem(itm, false)
-		}
-	}
+	// The room in play keeps its floor and stashed items, as they are. roomTpl
+	// is either the live room (mapper.go coordinate migration, and BuildRoom,
+	// which puts its template load in memory first) or a fresh template load
+	// (admin room commands on non-ephemeral rooms, the web room PATCH). A live
+	// room passed in would hold each item twice under one ID if the lists were
+	// appended; a template load would add the template's items to a room already
+	// in play. So the lists are replaced, as copies, and the replaced room and
+	// this one share no backing array.
+	roomTpl.Items = append([]items.Item(nil), roomBeingReplaced.Items...)
+	roomTpl.Stash = append([]items.Item(nil), roomBeingReplaced.Stash...)
 
 	// Copy gold on floor
 	roomTpl.Gold = roomBeingReplaced.Gold

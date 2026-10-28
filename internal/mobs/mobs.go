@@ -12,7 +12,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
-	"gopkg.in/yaml.v2"
 
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -155,7 +154,8 @@ func NewMobById(mobId MobId, homeRoomId int, forceLevel ...int) *Mob {
 
 	if m, ok := mobs[int(mobId)]; ok {
 
-		mob := *m // Make a copy of the mob
+		mob := *m                        // Make a copy of the mob
+		mob.Character.InstantiateItems() // a new NPC's items are new items (slice 2c)
 
 		mob.HomeRoomId = homeRoomId
 		mob.Character.RoomId = homeRoomId
@@ -388,17 +388,17 @@ func (m *Mob) GetSellPrice(item items.Item) int {
 			break
 		}
 
-		tmpItm := items.New(stockItm.ItemId)
-		if tmpItm.ItemId == 0 {
+		stockSpec := items.GetItemSpec(stockItm.ItemId)
+		if stockSpec == nil {
 			continue
 		}
 
-		if !likesType && tmpItm.GetSpec().Type == itemType {
+		if !likesType && stockSpec.Type == itemType {
 			likesType = true
 			priceScale += 0.5
 		}
 
-		if !likesSubtype && tmpItm.GetSpec().Subtype == itemSubtype {
+		if !likesSubtype && stockSpec.Subtype == itemSubtype {
 			likesSubtype = true
 			priceScale += 0.5
 		}
@@ -589,25 +589,6 @@ func (m *Mob) Filename() string {
 func (m *Mob) Filepath() string {
 	zone := ZoneNameSanitize(m.Zone)
 	return util.FilePath(zone, `/`, m.Filename())
-}
-
-func (r *Mob) Save() error {
-
-	fileName := r.Filename()
-
-	bytes, err := yaml.Marshal(r)
-	if err != nil {
-		return err
-	}
-
-	saveFilePath := util.FilePath(configs.GetFilePathsConfig().DataFiles.String(), `/`, `mobs`, `/`, fmt.Sprintf("%s.yaml", fileName))
-
-	err = util.WriteFile(saveFilePath, bytes, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func ReduceHostility() {

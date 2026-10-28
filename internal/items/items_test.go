@@ -3,15 +3,17 @@ package items
 import (
 	"testing"
 
-	"github.com/GoMudEngine/GoMud/internal/uuid"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 // makeItem builds a test Item with an inline Spec so no file loading is needed.
 func makeItem(id int, name string) Item {
 	return Item{
 		ItemId: id,
-		UUID:   uuid.New(UUIDItem),
+		Id:     ids.New(ids.NoCell),
 		Spec:   &ItemSpec{ItemId: id, Name: name, NameSimple: name},
 	}
 }
@@ -99,32 +101,33 @@ func TestFindMatchIn_NthMatch(t *testing.T) {
 	assert.Equal(t, sword3.ItemId, full.ItemId)
 }
 
-func TestFindMatchIn_ShorthandById(t *testing.T) {
-	sword := makeItem(10, "sword")
-
-	_, full := FindMatchIn("!10", sword)
-	assert.Equal(t, sword.ItemId, full.ItemId)
-}
-
-func TestFindMatchIn_ShorthandByUUID(t *testing.T) {
+func TestFindMatchIn_ByIdToken(t *testing.T) {
 	sword := makeItem(10, "sword")
 	shield := makeItem(20, "shield")
 
-	uuidStr := sword.UUID.String()
-	_, full := FindMatchIn("!10:"+uuidStr, sword, shield)
-	assert.Equal(t, sword.ItemId, full.ItemId)
-	assert.Equal(t, sword.UUID, full.UUID)
+	_, full := FindMatchIn(sword.Id.String(), shield, sword)
+	assert.Equal(t, sword.Id, full.Id)
 }
 
-func TestFindMatchIn_ShorthandByUUID_WrongUUID(t *testing.T) {
+func TestFindMatchIn_IdTokenOfAnItemNotInTheList(t *testing.T) {
 	sword := makeItem(10, "sword")
 	other := makeItem(10, "sword")
 
-	// other has a different UUID; searching for sword's UUID should not return other
-	uuidStr := sword.UUID.String()
-	partial, full := FindMatchIn("!10:"+uuidStr, other)
+	partial, full := FindMatchIn(sword.Id.String(), other)
 	assert.Equal(t, Item{}, partial)
 	assert.Equal(t, Item{}, full)
+}
+
+// The !N forms are gone (decision 10: people never type IDs). "!10" is not a
+// name, so it matches nothing.
+func TestFindMatchIn_BangFormsMatchNothing(t *testing.T) {
+	sword := makeItem(10, "sword")
+
+	for _, s := range []string{"!10", "!10:" + sword.Id.String()} {
+		partial, full := FindMatchIn(s, sword)
+		assert.Equal(t, Item{}, partial, s)
+		assert.Equal(t, Item{}, full, s)
+	}
 }
 
 func TestFindMatchIn_EmptyList(t *testing.T) {
@@ -173,8 +176,105 @@ func TestItem_Equals(t *testing.T) {
 	a := makeItem(1, "sword")
 	b := makeItem(1, "sword")
 
-	assert.False(t, a.Equals(b), "different UUIDs should not be equal")
+	assert.False(t, a.Equals(b), "different IDs should not be equal")
 	assert.True(t, a.Equals(a), "same item should equal itself")
+}
+
+func TestValidateGivesAnIdOnlyWhenMissing(t *testing.T) {
+	itm := makeItem(1, "sword")
+	itm.Id = ids.ID{}
+	itm.Validate()
+	first := itm.Id
+	assert.False(t, first.IsZero())
+	itm.Validate()
+	assert.Equal(t, first, itm.Id, "an existing ID is never replaced")
+
+	empty := Item{ItemId: 0}
+	empty.Validate()
+	assert.True(t, empty.Id.IsZero(), "an empty slot is not an item")
+}
+
+func TestIdSurvivesYAML(t *testing.T) {
+	itm := makeItem(1, "sword")
+	b, err := yaml.Marshal(itm)
+	require.NoError(t, err)
+	assert.Contains(t, string(b), "id: "+itm.Id.String())
+	var back Item
+	require.NoError(t, yaml.Unmarshal(b, &back))
+	assert.Equal(t, itm.Id, back.Id)
+}
+
+func TestFromTemplateMakesANewItem(t *testing.T) {
+	tpl := makeItem(1, "sword")
+	tpl.Adjectives = []string{"rusty"}
+	tpl.Uses = 3
+	tpl.SetTempData("k", 1)
+	tpl.Spec.StatMods = map[string]int{"strength": 1}
+	tpl.Spec.WornBuffIds = []int{7}
+	tpl.Spec.BuffIds = []int{8}
+	tpl.Spec.Damage.CritBuffIds = []int{9}
+
+	a, b := FromTemplate(tpl), FromTemplate(tpl)
+	assert.Nil(t, a.GetTempData("k"), "temp data is not carried over")
+
+	a.Spec.StatMods["strength"] = 99
+	a.Spec.StatMods["speed"] = 5
+	a.Spec.WornBuffIds[0] = 70
+	a.Spec.BuffIds[0] = 80
+	a.Spec.Damage.CritBuffIds[0] = 90
+	assert.Equal(t, map[string]int{"strength": 1}, map[string]int(tpl.Spec.StatMods))
+	assert.Equal(t, []int{7}, tpl.Spec.WornBuffIds)
+	assert.Equal(t, []int{8}, tpl.Spec.BuffIds)
+	assert.Equal(t, []int{9}, tpl.Spec.Damage.CritBuffIds)
+
+	a, b = FromTemplate(tpl), FromTemplate(tpl)
+	bare := makeItem(2, "dagger")
+	assert.Nil(t, FromTemplate(bare).Spec.StatMods, "nil stays nil")
+	assert.Nil(t, FromTemplate(bare).Spec.WornBuffIds, "nil stays nil")
+	assert.NotEqual(t, tpl.Id, a.Id)
+	assert.NotEqual(t, a.Id, b.Id)
+	assert.False(t, a.Id.IsZero())
+	assert.Equal(t, 3, a.Uses)
+	assert.Equal(t, []string{"rusty"}, a.Adjectives)
+
+	a.Adjectives[0] = "shiny"
+	a.Spec.Name = "changed"
+	assert.Equal(t, "rusty", tpl.Adjectives[0], "the template's adjectives are not shared")
+	assert.Equal(t, "sword", tpl.Spec.Name, "the template's overrides are not shared")
+
+	assert.Equal(t, Item{}, FromTemplate(Item{}), "an empty slot stays empty")
+	assert.Equal(t, ItemDisabledSlot, FromTemplate(ItemDisabledSlot))
+}
+
+// Enchant on an item with no override spec copies the global spec first.
+func TestEnchantDoesNotChangeTheSharedSpec(t *testing.T) {
+	const id = 987654
+	shared := &ItemSpec{ItemId: id, Name: "ring", NameSimple: "ring", StatMods: map[string]int{"strength": 1}, WornBuffIds: []int{7}}
+	old := items
+	items = map[int]*ItemSpec{id: shared}
+	defer func() { items = old }()
+
+	itm := Item{ItemId: id, Id: ids.New(ids.NoCell)}
+	itm.Enchant(0, 0, map[string]int{"strength": 2, "speed": 3}, false)
+
+	assert.Equal(t, map[string]int{"strength": 1}, map[string]int(shared.StatMods), "the shared spec is unchanged")
+	assert.Equal(t, 3, itm.Spec.StatMods["strength"])
+	assert.Equal(t, 3, itm.Spec.StatMods["speed"])
+
+	itm2 := Item{ItemId: id, Id: ids.New(ids.NoCell)}
+	itm2.AddWornBuff(8)
+	assert.Equal(t, []int{7}, shared.WornBuffIds, "the shared spec's buffs are unchanged")
+	assert.Equal(t, []int{7, 8}, itm2.Spec.WornBuffIds)
+}
+
+func TestWithoutIds(t *testing.T) {
+	list := []Item{makeItem(1, "sword"), makeItem(2, "shield")}
+	got := WithoutIds(list)
+	for _, itm := range got {
+		assert.True(t, itm.Id.IsZero())
+	}
+	assert.False(t, list[0].Id.IsZero(), "the given list is not changed")
+	assert.Nil(t, WithoutIds(nil))
 }
 
 func TestItem_TempData(t *testing.T) {

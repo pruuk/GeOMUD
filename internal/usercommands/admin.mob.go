@@ -8,6 +8,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/races"
@@ -178,6 +179,9 @@ func mob_Create(rest string, user *accounts.Account, room *rooms.Room, flags eve
 			}
 		}
 	}
+	// The new template gets its own item list: a copy of the spec shares its
+	// backing array, so a change to one template's items would reach the other.
+	newMob.Character.Items = append([]items.Item(nil), newMob.Character.Items...)
 
 	// Get if already exists, otherwise create new
 	cmdPrompt, isNew := user.StartPrompt(`mob create`, rest)

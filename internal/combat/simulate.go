@@ -43,6 +43,7 @@ func newSimMob(mobId mobs.MobId, forceLevel int) (*mobs.Mob, error) {
 	if mob == nil {
 		return nil, fmt.Errorf("mob %d not found", mobId)
 	}
+	mob.Character.InstantiateItems() // the copy must not share the template's items
 
 	if forceLevel > 0 {
 		mob.Character.Level = forceLevel

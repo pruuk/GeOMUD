@@ -928,13 +928,11 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 				recipeOptions := []templates.NameDescription{}
 				for productItemId, recipeItemList := range currentRecipes {
 
-					itm := items.New(productItemId)
-					productName := fmt.Sprintf(`%d (%s)`, productItemId, itm.DisplayName())
+					productName := fmt.Sprintf(`%d (%s)`, productItemId, specDisplayName(productItemId))
 
 					allRequiredItems := []string{}
 					for _, iId := range recipeItemList {
-						itm := items.New(iId)
-						allRequiredItems = append(allRequiredItems, fmt.Sprintf(`%d (%s)`, iId, itm.DisplayName()))
+						allRequiredItems = append(allRequiredItems, fmt.Sprintf(`%d (%s)`, iId, specDisplayName(iId)))
 					}
 
 					recipeOptions = append(recipeOptions,
@@ -1142,15 +1140,12 @@ func room_Edit_Containers(rest string, user *accounts.Account, room *rooms.Room,
 
 func room_Edit_Containers_SendRecipes(user *accounts.Account, recipeResultItemId int, recipeItems map[int]int) {
 
-	itm := items.New(recipeResultItemId)
-
 	user.SendText(``)
-	user.SendText(fmt.Sprintf(`    Current Recipe for %d (<ansi fg="itemname">%s</ansi>):`, recipeResultItemId, itm.DisplayName()))
+	user.SendText(fmt.Sprintf(`    Current Recipe for %d (<ansi fg="itemname">%s</ansi>):`, recipeResultItemId, specDisplayName(recipeResultItemId)))
 
 	itemsList := []string{}
 	for itemId, qty := range recipeItems {
-		itm := items.New(itemId)
-		itemsList = append(itemsList, fmt.Sprintf(`        <ansi fg="red">[x%d]</ansi> %d (<ansi fg="itemname">%s</ansi>)`, qty, itemId, itm.DisplayName()))
+		itemsList = append(itemsList, fmt.Sprintf(`        <ansi fg="red">[x%d]</ansi> %d (<ansi fg="itemname">%s</ansi>)`, qty, itemId, specDisplayName(itemId)))
 	}
 
 	// Must sort since maps will often change between iterations

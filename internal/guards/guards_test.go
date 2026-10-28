@@ -165,6 +165,7 @@ func TestIdsAreMadeOnlyAtCreation(t *testing.T) {
 		"internal/mobs/mobs.go":            "addInstance: a new NPC instantiation",
 		"internal/usercommands/suicide.go": "permadeath reroll: a new character",
 		"cmd/newid/main.go":                "a builder creating a thing by hand",
+		"internal/items/items.go":          "New: a new item; Validate: an item that has none (from a template file, or saved before item IDs existed); FromTemplate: an NPC's template item instantiated",
 	}
 	for path, f := range goFiles(t) {
 		ast.Inspect(f, func(n ast.Node) bool {
@@ -186,7 +187,70 @@ func TestIdsAreMadeOnlyAtCreation(t *testing.T) {
 	}
 }
 
-// TestNoNumericShorthandIds forbids actor shorthand IDs (#N and @N): people
+// TestItemsAreInstantiatedOnlyFromTemplates enforces decision 11 for template
+// items: items.FromTemplate makes new IDs, so only the NPC-from-template path
+// may use it, and only the places that make an NPC from its template may use
+// Character.InstantiateItems. Any use counts (a call or a method value, on any
+// receiver, and a bare FromTemplate inside package items). The allowlist is
+// keyed by file and enclosing function, and every entry must still match a
+// use, so a moved or renamed site fails rather than leaving a stale entry.
+func TestItemsAreInstantiatedOnlyFromTemplates(t *testing.T) {
+	allowed := map[string]string{
+		"internal/characters/itemids.go|InstantiateItems|FromTemplate": "an NPC's template items made new",
+		"internal/mobs/mobs.go|NewMobById|InstantiateItems":            "a new NPC instantiation",
+		"internal/combat/simulate.go|newSimMob|InstantiateItems":       "a simulated NPC instantiation",
+	}
+	matched := map[string]int{}
+	guarded := func(name string) bool { return name == "FromTemplate" || name == "InstantiateItems" }
+
+	for path, f := range goFiles(t) {
+		inItems := f.Name.Name == "items"
+		check := func(fn string, body ast.Node) {
+			selected := map[*ast.Ident]bool{}
+			ast.Inspect(body, func(n ast.Node) bool {
+				var use *ast.Ident
+				switch x := n.(type) {
+				case *ast.SelectorExpr:
+					selected[x.Sel] = true
+					if guarded(x.Sel.Name) {
+						use = x.Sel
+					}
+				case *ast.Ident:
+					if inItems && x.Name == "FromTemplate" && !selected[x] {
+						use = x
+					}
+				}
+				if use == nil {
+					return true
+				}
+				key := path + "|" + fn + "|" + use.Name
+				if _, ok := allowed[key]; ok {
+					matched[key]++
+				} else {
+					t.Errorf("%s: %s uses %s outside an NPC-from-template instantiation", path, fn, use.Name)
+				}
+				return true
+			})
+		}
+		for _, decl := range f.Decls {
+			switch d := decl.(type) {
+			case *ast.FuncDecl:
+				if d.Body != nil {
+					check(d.Name.Name, d.Body)
+				}
+			case *ast.GenDecl:
+				check("(package scope)", d)
+			}
+		}
+	}
+	for key := range allowed {
+		if matched[key] == 0 {
+			t.Errorf("allowlist entry %q matched no use; remove it or fix the key", key)
+		}
+	}
+}
+
+// TestNoNumericShorthandIds forbids shorthand IDs (#N, @N and the item form !N): people
 // name things by name; clients send ID tokens. The allowlist holds the
 // documented exceptions, keyed by file and the literal's Go source text, so a
 // new #%d elsewhere in the same file still fails.
@@ -198,11 +262,11 @@ func TestNoNumericShorthandIds(t *testing.T) {
 	for path, f := range goFiles(t) {
 		ast.Inspect(f, func(n ast.Node) bool {
 			if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING &&
-				(strings.Contains(lit.Value, "#%d") || strings.Contains(lit.Value, "@%d")) {
+				(strings.Contains(lit.Value, "#%d") || strings.Contains(lit.Value, "@%d") || strings.Contains(lit.Value, "!%d")) {
 				if allowed[path+"|"+lit.Value] != "" {
 					return true
 				}
-				t.Errorf("%s: formats a #N or @N id (%s)", path, lit.Value)
+				t.Errorf("%s: formats a #N, @N or !N id (%s)", path, lit.Value)
 			}
 			return true
 		})

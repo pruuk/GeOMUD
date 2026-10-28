@@ -637,7 +637,7 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 			// If no container specified, or the container specified exists, then spawn the item
 			if spawnInfo.Container == `` {
 
-				if _, alreadyExists := r.FindOnFloor(fmt.Sprintf(`!%d`, spawnInfo.ItemId), false); !alreadyExists {
+				if !r.floorHasItemId(spawnInfo.ItemId) {
 
 					if item := items.New(spawnInfo.ItemId); item.ItemId != 0 {
 						r.Items = append(r.Items, item) // just append to avoid a mutex double lock
@@ -660,7 +660,7 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 
 				container := r.Containers[containerName]
 
-				if _, alreadyExists := container.FindItem(fmt.Sprintf(`!%d`, spawnInfo.ItemId)); !alreadyExists {
+				if _, alreadyExists := container.FindItemById(spawnInfo.ItemId); !alreadyExists {
 					if item := items.New(spawnInfo.ItemId); item.ItemId != 0 {
 						container.AddItem(item)
 					}
@@ -1037,6 +1037,17 @@ func (r *Room) FindCorpseByRef(searchName string) (*Corpse, bool) {
 	}
 
 	return nil, false
+}
+
+// floorHasItemId reports whether an item made from itemId lies on the floor
+// (not in the stash).
+func (r *Room) floorHasItemId(itemId int) bool {
+	for _, itm := range r.Items {
+		if itm.ItemId == itemId {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Room) FindOnFloor(itemName string, stash bool) (items.Item, bool) {
@@ -2248,7 +2259,7 @@ func (r *Room) Validate() error {
 		}
 	}
 
-	// Make sure all items are validated (and have uids)
+	// Make sure all items are validated (Validate gives each item its ID)
 	for i := range r.Items {
 		r.Items[i].Validate()
 	}

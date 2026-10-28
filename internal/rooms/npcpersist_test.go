@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -325,4 +326,31 @@ func TestTemplateEditCarriesRestingAndSlots(t *testing.T) {
 	assert.Equal(t, id, tpl.SpawnInfo[0].InstanceId)
 	assert.True(t, tpl.SpawnInfo[1].InstanceId.IsZero(), "a changed slot starts fresh")
 	assert.Equal(t, uint64(42), tpl.SpawnInfo[2].DespawnedRound, "a slot waiting after a death keeps its wait")
+}
+
+func TestRestoredNPCKeepsItsItemIds(t *testing.T) {
+	persistSetup(t)
+	id := liveTestNPC(t, 5, 2, 13)
+	m := mobs.GetInstance(id)
+	held := items.Item{ItemId: 1, Id: ids.New(ids.NoCell)}
+	worn := items.Item{ItemId: 2, Id: ids.New(ids.NoCell)}
+	m.Character.Items = append(m.Character.Items, held)
+	m.Character.Equipment.Head = worn // not Weapon: Validate's weapon check needs a loaded race
+
+	r := memRoom(4100)
+	r.bodies = append(r.bodies, id)
+	removeRoomFromMemory(r)
+	require.Nil(t, mobs.GetInstance(id))
+
+	r2 := NewEmptyRoom()
+	r2.RoomId, r2.Zone = 4100, persistZone
+	loadRoomNPCs(r2)
+	addRoomToMemory(r2)
+	r2.Prepare(false)
+
+	back := mobs.GetInstance(id)
+	require.NotNil(t, back)
+	require.Len(t, back.Character.Items, 1)
+	assert.Equal(t, held.Id, back.Character.Items[0].Id)
+	assert.Equal(t, worn.Id, back.Character.Equipment.Head.Id)
 }

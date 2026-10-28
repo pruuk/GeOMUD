@@ -13,6 +13,17 @@ slices"). Remove a line when its fix lands (with a `PATCH_NOTES.md` line).
   `signupMu` (`cmd/smoke/script.go`) would prove it before that workaround goes.
 - A web-created account (`apiV1CreateUser`, connection 0) stays online with an actor, and that user
   then cannot log in by telnet ("already logged in").
+- With `CorpseItems: true` (off by default), looting a corpse duplicates items under one ID: a
+  player corpse keeps a copy of the character still wearing its items (`usercommands/suicide.go:265,280`,
+  `get.go:134-148,185-216`), and an NPC corpse lists dropped worn items without taking them off the
+  body (`mobcommands/suicide.go:349-366,407`). Phase 5's death rule owns corpses.
+- Admin room template saves can lose live items: `BuildRoom` and `ConnectRoom` put a plain template
+  load in memory (`roommanager.go:862-865, 925-926`); `SaveRoomTemplate` on a room not in memory
+  ignores its instance file; a template container with items replaces the live container's contents.
+  Live floor items also reach template files (without IDs) through `mapper.go:1397` and `BuildRoom`,
+  so later template loads copy them.
+- The web room PATCH (`web/api_v1_rooms.go:238-262`) and the raw room instance PUT accept item IDs
+  as sent, so a hand-written API call can give two items one ID. The rooms page never sends them.
 - Stale permission keys (`quests.write`, `pets.write` and others) in saved mod accounts load, but a
   full permission-list save that carries one is rejected with a 400.
 

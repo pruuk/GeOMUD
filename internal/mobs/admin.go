@@ -18,6 +18,21 @@ func GetAllMobSpecs() []Mob {
 	return result
 }
 
+// writeTemplateFile writes spec to its mob template file. A template's items
+// are not things, so the file holds a copy whose items have no IDs (Phase 4b
+// slice 2c); spec itself is untouched. Every mob template file write goes
+// through here.
+func writeTemplateFile(spec *Mob) error {
+	saveModes := []fileloader.SaveOption{}
+	if configs.GetFilePathsConfig().CarefulSaveFiles {
+		saveModes = append(saveModes, fileloader.SaveCareful)
+	}
+
+	fileSpec := *spec
+	fileSpec.Character.StripItemIds()
+	return fileloader.SaveFlatFile[*Mob](configs.GetFilePathsConfig().DataFiles.String()+`/mobs`, &fileSpec, saveModes...)
+}
+
 func SaveMobSpec(spec *Mob) error {
 	if spec.MobId < 1 {
 		return fmt.Errorf("cannot save mob spec with invalid MobId %d", spec.MobId)
@@ -27,12 +42,7 @@ func SaveMobSpec(spec *Mob) error {
 		return err
 	}
 
-	saveModes := []fileloader.SaveOption{}
-	if configs.GetFilePathsConfig().CarefulSaveFiles {
-		saveModes = append(saveModes, fileloader.SaveCareful)
-	}
-
-	if err := fileloader.SaveFlatFile[*Mob](configs.GetFilePathsConfig().DataFiles.String()+`/mobs`, spec, saveModes...); err != nil {
+	if err := writeTemplateFile(spec); err != nil {
 		return err
 	}
 
