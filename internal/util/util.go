@@ -170,11 +170,27 @@ func (t *Accumulator) Record(nextValue float64) {
 	}
 }
 
+var (
+	randMu  sync.Mutex
+	randSrc = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
+
+// SeedRandForTest makes Rand and every other helper in this file that draws
+// from the shared source repeatable. Tests only: production keeps the clock
+// seed.
+func SeedRandForTest(seed int64) {
+	randMu.Lock()
+	defer randMu.Unlock()
+	randSrc = rand.New(rand.NewSource(seed))
+}
+
 func Rand(maxInt int) int {
 	if maxInt < 1 {
 		return 0
 	}
-	return rand.Intn(maxInt)
+	randMu.Lock()
+	defer randMu.Unlock()
+	return randSrc.Intn(maxInt)
 }
 
 func LogRoll(name string, rollResult int, targetNumber int) {
