@@ -103,7 +103,7 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 	fmt.Printf("smoke: %d bot(s) against %s, run tag %s\n", n, addr, tag)
 
 	start := time.Now()
-	if err := prepareItems(ctx, addr, adm.user, adm.pass, n, timeout); err != nil {
+	if err := prepareItems(ctx, addr, adm.user, adm.pass, tag, n, timeout); err != nil {
 		fmt.Printf("smoke: FAIL admin could not spawn the items: %v\n", err)
 		return false
 	}

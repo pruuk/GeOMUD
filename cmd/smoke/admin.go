@@ -19,12 +19,13 @@ const startRoomTitle = "Town Square"
 const recoveryRoomTitle = "Waiting room"
 
 // prepareItems logs in as the admin and drops n copies of smokeItem on the
-// floor of the start room, then quits. The bots take them from there.
+// floor of the start room, has an NPC speak there (npcSpeaks), then quits.
+// The bots take the items from there.
 //
 // The stock admin account has a plaintext password, which GoMud makes the
 // player change before any other command works. The change is handled in
 // changePasswordIfForced.
-func prepareItems(ctx context.Context, addr, user, pass string, n int, timeout time.Duration) error {
+func prepareItems(ctx context.Context, addr, user, pass, tag string, n int, timeout time.Duration) error {
 	s, err := loginAdmin(ctx, addr, user, pass, timeout)
 	if err != nil {
 		return err
@@ -49,8 +50,24 @@ func prepareItems(ctx context.Context, addr, user, pass string, n int, timeout t
 		// Check it landed, not only that the spawn message printed.
 		s.field(step+": on the ground", "look", "On the Ground:", smokeItem)
 	}
+	npcSpeaks(s, tag)
 	s.quit("admin: quit")
 	return s.err
+}
+
+// smokeNPC is the mob the admin spawns to speak: the start room's own rat
+// template (mob 1 in the empty world).
+const smokeNPC = "rat"
+
+// npcSpeaks spawns a rat in the admin's room and makes it speak with
+// `command`. The NPC's line goes through the same input path and the same
+// say command a player's does, so the admin sees `rat says, "smoke-<tag>"`.
+// The rat is left in the start room: the empty world's own rat wanders there
+// too, and a rat in the room does not touch the bots' later steps.
+func npcSpeaks(s *script, tag string) {
+	s.do("admin: spawn an NPC", "mob spawn "+smokeNPC, "appears in the air")
+	line := "smoke-" + tag
+	s.do("admin: the NPC speaks", "command "+smokeNPC+" say "+line, fmt.Sprintf(`%s says, "%s"`, smokeNPC, line))
 }
 
 // loginAdmin logs in as the admin and answers a forced password change. The
