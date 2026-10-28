@@ -198,7 +198,7 @@ func Broadcast(colorizedText []byte, skipConnectionIds ...ConnectionId) []Connec
 		// Write the message to the connection
 		var err error
 
-		_, err = cd.Write(colorizedText)
+		_, err = cd.write(colorizedText)
 
 		if err != nil {
 			mudlog.Warn("Broadcast()", "connectionId", id, "remoteAddr", cd.RemoteAddr().String(), "error", err)
@@ -246,7 +246,7 @@ func SendTo(b []byte, ids ...ConnectionId) {
 
 		if cd, ok := netConnections[id]; ok {
 
-			if _, err := cd.Write(b); err != nil {
+			if _, err := cd.write(b); err != nil {
 				mudlog.Warn("SendTo()", "connectionId", id, "remoteAddr", cd.RemoteAddr().String(), "error", err)
 				// Remove from the connections
 				removeIds = append(removeIds, id)

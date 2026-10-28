@@ -22,10 +22,11 @@ func newPluginCallbacks() PluginCallbacks {
 	}
 }
 
+// NetConnection has no Write: output goes through internal/messaging
+// (slice 7 output rule), and GMCP through connections.SendTo.
 type NetConnection interface {
 	IsWebSocket() bool
 	Read(p []byte) (n int, err error)
-	Write(p []byte) (n int, err error)
 	Close()
 	RemoteAddr() net.Addr
 	ConnectionId() uint64

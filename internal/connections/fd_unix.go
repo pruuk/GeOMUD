@@ -29,13 +29,13 @@ func (c *connectionsCopyoverContributor) CopyoverSave(enc *copyover.Encoder) err
 		if cd.IsWebSocket() {
 			if IssueWebSocketReconnectToken != nil {
 				if token, err := IssueWebSocketReconnectToken(id); err == nil {
-					cd.Write([]byte("RELOGTKN:" + token))
+					cd.write([]byte("RELOGTKN:" + token))
 				} else {
 					mudlog.Warn("copyover: could not issue reconnect token", "connectionId", id, "error", err)
-					cd.Write([]byte("\r\nServer is rebooting. Please reconnect.\r\n"))
+					cd.write([]byte("\r\nServer is rebooting. Please reconnect.\r\n"))
 				}
 			} else {
-				cd.Write([]byte("\r\nServer is rebooting. Please reconnect.\r\n"))
+				cd.write([]byte("\r\nServer is rebooting. Please reconnect.\r\n"))
 			}
 			continue
 		}
