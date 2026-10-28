@@ -78,6 +78,35 @@ func TestKeepItemIdentity(t *testing.T) {
 	assert.True(t, edited.Equipment.Body.Id.IsZero(), "a swapped slot holds a new item")
 }
 
+func TestKeepItemIdentityClaimsExactIdsBeforeFallbacks(t *testing.T) {
+	was := New()
+	a := testItem(3)
+	a.Uses = 9
+	a.Adjectives = []string{"bk"}
+	was.Items = []items.Item{a}
+
+	// The weapon (no ID) names the same ItemId as the held item, which carries
+	// its ID. The held item must keep its ID; the weapon is new.
+	edited := New()
+	edited.Items = []items.Item{a}
+	edited.Equipment.Weapon = items.Item{ItemId: 3}
+
+	edited.KeepItemIdentity(was)
+
+	assert.Equal(t, a.Id, edited.Items[0].Id)
+	assert.Equal(t, 9, edited.Items[0].Uses)
+	assert.True(t, edited.Equipment.Weapon.Id.IsZero())
+	assert.Nil(t, edited.Equipment.Weapon.Adjectives)
+}
+
+func TestKeepItemIdentityBelowOneDropsPostedId(t *testing.T) {
+	was := New()
+	edited := New()
+	edited.Items = []items.Item{{ItemId: 0, Id: ids.New(ids.NoCell)}}
+	edited.KeepItemIdentity(was)
+	assert.True(t, edited.Items[0].Id.IsZero())
+}
+
 func TestKeepItemIdentityNeverCopiesAnId(t *testing.T) {
 	was := New()
 	was.Items = []items.Item{testItem(1)}

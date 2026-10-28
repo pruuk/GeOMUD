@@ -1,10 +1,14 @@
 package web
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
+	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
@@ -54,44 +58,106 @@ func apiV1GetUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// decodeUserPatch applies an admin PATCH body to a copy of u. The form sends
-// the complete desired skills, spellbook, items and equipment, and
-// json.Unmarshal merges into existing maps and slice elements, so those start
-// empty on the copy: a removed entry stays removed, an item never takes
-// another item's fields, and the live record is not touched. Items the form
-// kept keep their identity (characters.KeepItemIdentity). A body that leaves
-// out the items or the equipment leaves them as they were.
+// jsonAbsent reports whether a probed JSON value was left out of the body or
+// is a literal null. Both mean "leave as it was", never "clear".
+func jsonAbsent(raw json.RawMessage) bool {
+	t := bytes.TrimSpace(raw)
+	return len(t) == 0 || string(t) == "null"
+}
+
+// decodeUserPatch applies an admin PATCH body to a copy of u.
+//
+// Guaranteed: a malformed body (one that does not decode into an Account)
+// returns an error and changes nothing, the live record included. On success
+// the live record is never written to; the result is a copy.
+//
+// The form sends the complete desired skills, spellbook, items, equipment and
+// shop, so on success those lists have replace semantics: they start empty on
+// the copy, a removed entry stays removed, and an item never takes another
+// item's fields. A list, a single equipment slot, or the whole character that
+// the body leaves out, or sets to null, keeps its old value. Items the form
+// kept keep their identity (characters.KeepItemIdentity). Other maps on the
+// account (Macros, Aliases and so on) still merge into the existing entries
+// as json.Unmarshal does.
 func decodeUserPatch(u *accounts.Account, body []byte) (accounts.Account, error) {
-	updated := *u
-	if u.Character != nil {
-		charCopy := *u.Character
-		charCopy.Skills = nil
-		charCopy.SpellBook = nil
-		charCopy.Items = nil
-		charCopy.Equipment = characters.Worn{}
-		updated.Character = &charCopy
-	}
-	if err := json.Unmarshal(body, &updated); err != nil {
+	var probe accounts.Account
+	if err := json.Unmarshal(body, &probe); err != nil {
 		return accounts.Account{}, err
 	}
-	if u.Character == nil || updated.Character == nil {
+
+	updated := *u
+	if u.Character == nil {
+		if err := json.Unmarshal(body, &updated); err != nil {
+			return accounts.Account{}, err
+		}
 		return updated, nil
 	}
 
+	old := u.Character
+	charCopy := *old
+	charCopy.Skills = nil
+	charCopy.SpellBook = nil
+	charCopy.Items = nil
+	charCopy.Shop = nil
+	charCopy.Equipment = characters.Worn{}
+	updated.Character = &charCopy
+	if err := json.Unmarshal(body, &updated); err != nil {
+		return accounts.Account{}, err
+	}
+
 	var present struct {
-		Character *struct {
-			Items     json.RawMessage
-			Equipment json.RawMessage
-		}
+		Character json.RawMessage
 	}
 	_ = json.Unmarshal(body, &present) // the body already decoded above
-	if present.Character == nil || present.Character.Items == nil {
-		updated.Character.Items = append([]items.Item(nil), u.Character.Items...)
+	if jsonAbsent(present.Character) || updated.Character == nil {
+		// No character in the body: everything the form replaces stays.
+		updated.Character = &charCopy
+		present.Character = nil
 	}
-	if present.Character == nil || present.Character.Equipment == nil {
-		updated.Character.Equipment = u.Character.Equipment
+	var chars struct {
+		Skills, SpellBook, Items, Equipment, Shop json.RawMessage
 	}
-	updated.Character.KeepItemIdentity(u.Character)
+	_ = json.Unmarshal(present.Character, &chars)
+
+	c := updated.Character
+	if jsonAbsent(chars.Skills) {
+		c.Skills = maps.Clone(old.Skills)
+	}
+	if jsonAbsent(chars.SpellBook) {
+		c.SpellBook = maps.Clone(old.SpellBook)
+	}
+	if jsonAbsent(chars.Items) {
+		c.Items = append([]items.Item(nil), old.Items...)
+	}
+	if jsonAbsent(chars.Shop) {
+		c.Shop = append(characters.Shop(nil), old.Shop...)
+	}
+	if jsonAbsent(chars.Equipment) {
+		c.Equipment = old.Equipment
+	} else {
+		// Worn is decoded slot by slot by field name, so the slots are read by
+		// reflection over those same names: a slot the body leaves out (or sets
+		// to null) keeps the old item, so a partial or empty Equipment object
+		// does not strip the character.
+		var slots map[string]json.RawMessage
+		_ = json.Unmarshal(chars.Equipment, &slots)
+		newV := reflect.ValueOf(&c.Equipment).Elem()
+		oldV := reflect.ValueOf(&old.Equipment).Elem()
+		for i := 0; i < newV.NumField(); i++ {
+			name := newV.Type().Field(i).Name
+			given := false
+			for key, raw := range slots {
+				if strings.EqualFold(key, name) && !jsonAbsent(raw) {
+					given = true
+					break
+				}
+			}
+			if !given {
+				newV.Field(i).Set(oldV.Field(i))
+			}
+		}
+	}
+	c.KeepItemIdentity(old)
 	return updated, nil
 }
 
@@ -137,14 +203,16 @@ func apiV1PatchUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if updated.Character.Gold < 0 {
-		updated.Character.Gold = 0
-	}
-	if updated.Character.Bank < 0 {
-		updated.Character.Bank = 0
-	}
+	if updated.Character != nil {
+		if updated.Character.Gold < 0 {
+			updated.Character.Gold = 0
+		}
+		if updated.Character.Bank < 0 {
+			updated.Character.Bank = 0
+		}
 
-	updated.Character.Validate()
+		updated.Character.Validate()
+	}
 
 	if err := accounts.SaveUser(updated); err != nil {
 		writeAPIError(w, http.StatusInternalServerError, err.Error())
