@@ -17,6 +17,8 @@ GeOMUD is a hard fork of [GoMud](https://github.com/GoMudEngine/GoMud) by Dylan 
 | [`engine_proposal.md`](engine_proposal.md) | Why GoMud was chosen as the base |
 | [`world_model_notes.md`](world_model_notes.md) | World model: grid, dense layers, explore, encounters |
 | [`gomud_strip_plan.md`](gomud_strip_plan.md) | What we keep from GoMud, and the strip-down roadmap |
+| [`2026-10-27-phase-4b-npcs-are-players-design.md`](2026-10-27-phase-4b-npcs-are-players-design.md) | Phase 4b: one actor model, IDs, NPC persistence, messaging; its slices and rulings |
+| [`docs/known-issues.md`](docs/known-issues.md) | Engine and world issues found and not yet fixed |
 | [`status.md`](status.md) | What is in progress and what is next |
 | [`PATCH_NOTES.md`](PATCH_NOTES.md) | What has been completed |
 
