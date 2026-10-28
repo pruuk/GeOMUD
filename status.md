@@ -1,13 +1,10 @@
 # Status (updated 2026-10-28)
 
 ## Now
-- Phase 4b slice 2c (item IDs): PR #22 open, CI green
-  (plan `2026-10-28-phase-4b-2c-item-ids-plan.md`)
-- Phase 4b slice 3 (messaging core): built on `strip/phase-4b-3-messaging-core`, branched from the
-  2c branch (rebase onto master after #22 merges); awaiting Calabe's go to push and open the PR
+- Phase 4b slice 3 (messaging core): built on `strip/phase-4b-3-messaging-core`, PR open
   (plan `2026-10-28-phase-4b-3-messaging-core-plan.md`)
-- Strip Phases 0-4 and Phase 4b slices 1, 2 and 2b are merged (`gomud_strip_plan.md`; spec
-  `2026-10-27-phase-4b-npcs-are-players-design.md`)
+- Strip Phases 0-4 and Phase 4b slices 1, 2, 2b and 2c are merged (`gomud_strip_plan.md`; spec
+  `2026-10-27-phase-4b-npcs-are-players-design.md`; 2c plan in `docs/completed/`)
 
 ## Next
 1. Phase 4b slice 4 (one command set and input path); its plan reads the spec's "Notes for later
@@ -24,7 +21,7 @@
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
-- Merge PR #22 (slice 2c); push and PR for slice 3
+- Nothing
 
 ## Watch
 - 3 Go tests fail on Windows only (`geomud-verifying` lists them); Linux CI is the reference
