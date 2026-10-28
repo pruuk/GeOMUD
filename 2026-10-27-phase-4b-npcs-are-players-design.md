@@ -284,6 +284,20 @@ Each slice plan reads these first; a note leaves once a slice settles it.
 - **Permadeath reroll** (`usercommands/suicide.go`): body re-keying and event order are unverified
   live (permadeath is off in `empty`). Check with permadeath on and `LivesStart: 0`. A reroll
   orphans the old body's charmed mobs until the charm expires.
+- **Slice 6 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-6-one-tick-plan.md`,
+  decisions 1-12; inventory beside it). Calabe's rulings: boredom unload is deleted (dead since
+  Phase 2; NPC population limits are for the geo work); input ordering stays per kind on `Account()`
+  (no account: strict FIFO, because `mob.Command` chains an NPC's commands; account: a ready command
+  may overtake a delayed one). The round is `RoomRoundTick`, `ActorUpkeep` (before combat) and
+  `ActorTick` (after healing, `Controller.Tick` for every actor); NPC behaviour is `behaviour.Tick`
+  through `actors.OnBehaviourTick`, and modules veto idle through `behaviour.OnIdle`. For later: the
+  behaviour state (`WanderCount`, `Path`, `PreventIdle`) stays on the `Mob` (possession moves it to
+  the controller); no NPC reacts to perceptions yet, and a reaction must queue through `mob.Command`,
+  never send inside `OnBehaviourPerceive`; `Room.RoundTick` and room idle messages still run only in
+  rooms with players; wander state resets on copyover and restore; `GetRandomExit` and `findPath`
+  pick in map order, so a seed does not fix wandering where a room has two or more exits (the rat
+  test uses a ring of one-exit rooms); actors tick in ID order, so same-round lines may come in a
+  different order than before; alignment decay is accounts-only (Phase 5).
 - **Slice 5 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-5-one-combat-path-plan.md`,
   decisions 1-14; inventory beside it). Calabe's rulings: a hidden attacker reads "Someone"
   everywhere; anyone fighting a fleer may block it and a blocked fleer resumes its pre-flee target
@@ -306,10 +320,7 @@ Each slice plan reads these first; a note leaves once a slice settles it.
   no escaping a fight except by fleeing). Slice 5: the NPC half of the combat round only clears a
   fled NPC's aggro; resolving `flee` for NPCs (they leave) is slice 5's one round; NPC death is the
   `suicide` command's template branch (`usercommands/suicide_npc.go`) until the death rule; an
-  NPC's `attack` goes through `CanPvp` against players. Slice 6: input ordering is still per kind
-  (no account: strict FIFO; account: a ready command may overtake a delayed one), keyed on
-  `Account()`; the idle tick calls `behaviour.RunIdle`, `PathTo`, `Rest`; the waypoint `noop` delay
-  lives in the path walking. Slice 7: commands write through `usercommands.Tell` and exclude by
+  NPC's `attack` goes through `CanPvp` against players. Slice 7: commands write through `usercommands.Tell` and exclude by
   `ExcludeId` (point them at messaging); the cleanup and follow modules use the same helpers.
   NPCs now receive a room's mutator `PlayerBuffIds` through `MoveToRoom`; rooms are still prepared
   only for players (an NPC's move or look prepares nothing).
@@ -319,8 +330,8 @@ Each slice plan reads these first; a note leaves once a slice settles it.
   rules on a hidden attacker: today its target and room messages are suppressed (`combat.go:124`);
   through messaging they would read "someone". Under the Named audience a target that is not named
   gets nothing. Delivery is synchronous and re-entrant: a `Perceive` that calls `Send` nests, and
-  `util.Hook.Fire` holds its lock while handlers run, so slice 6 queues NPC reactions rather than
-  sending from inside `OnBehaviourPerceive` (two NPCs reacting to each other would recurse).
+  `util.Hook.Fire` holds its lock while handlers run, so NPC reactions, when added, are queued rather than
+  sent from inside `OnBehaviourPerceive` (two NPCs reacting to each other would recurse).
   Text that varies per receiver beyond the three tokens (adjectives from `GetPlayerName(viewer)`,
   language) has no form yet; slice 7 may need a per-receiver render hook. `Message.Room` is ignored
   when there is an actor. Slices 5 and 7 start a text with `{actor}` when today's line starts with
