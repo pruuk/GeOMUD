@@ -59,8 +59,6 @@ type Mob struct {
 	HomeRoomId      int      `yaml:"-"`
 	SpawnSlot       int      `yaml:"-"`                        // the home room's spawn slot this NPC fills, index plus one; zero for none. Saved in SavedNPC.
 	Hostile         bool     `yaml:"hostile,omitempty"`        // whether they attack on sight
-	LastIdleCommand uint8    `yaml:"-"`                        // Track what hte last used idlecommand was
-	BoredomCounter  uint8    `yaml:"-"`                        // how many rounds have passed since this mob has seen a player
 	Groups          []string `yaml:"groups,omitempty"`         // What group do they identify with? Helps with teamwork
 	Hates           []string `yaml:"hates,omitempty"`          // What NPC groups or races do they hate and probably fight if encountered?
 	IdleCommands    []string `yaml:"idlecommands,omitempty"`   // Commands they may do while idle (not in combat)

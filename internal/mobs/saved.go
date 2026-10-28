@@ -55,7 +55,7 @@ func (s SavedNPC) Mob() Mob {
 	m.Character.SetPermaBuffs(templatePermaBuffs(m.MobId, m.Character.Id))
 	m.Character.Aggro = s.Aggro
 	m.Character.Charmed = s.Charmed
-	m.WanderCount, m.BoredomCounter, m.LastIdleCommand = 0, 0, 0
+	m.WanderCount = 0
 	m.Path = PathQueue{}
 	m.PreventIdle = false
 	m.lastCommandTurn = 0

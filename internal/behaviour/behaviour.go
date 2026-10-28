@@ -120,7 +120,7 @@ func PathTo(mob *mobs.Mob, args string) {
 // Rest takes mob out of memory without ending it (slice 2b decision 15), as
 // the rest command did: an NPC in an ephemeral room ends there; any other
 // rests in its room. It comes back only when that room is next loaded from
-// disk. Boredom and charm expiry use it. In an ephemeral room, where nothing
+// disk. Charm expiry uses it. In an ephemeral room, where nothing
 // is saved, it cannot rest and ends as a death would: a slot that owns it
 // refills after its respawn rate.
 func Rest(mob *mobs.Mob, reason string) {

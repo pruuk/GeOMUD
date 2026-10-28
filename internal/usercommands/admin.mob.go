@@ -361,7 +361,7 @@ func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *
 	//
 	// Max Wander
 	//
-	question = cmdPrompt.Ask(`How far can this mob wander (-1 = none. 0 = unlimted)?`, []string{strconv.Itoa(newMob.MaxWander)}, strconv.Itoa(newMob.MaxWander))
+	question = cmdPrompt.Ask(`How far can this mob wander (-1 = unlimited. 0 = never)?`, []string{strconv.Itoa(newMob.MaxWander)}, strconv.Itoa(newMob.MaxWander))
 	if !question.Done {
 		return true, nil
 	}

@@ -1,22 +1,12 @@
 package configs
 
 type Memory struct {
-	// Mob/Room memory unload thresholds
-	MaxMobBoredom       ConfigInt `yaml:"MaxMobBoredom"`
-	MobUnloadThreshold  ConfigInt `yaml:"MobUnloadThreshold"`
+	// Room memory unload thresholds
 	RoomUnloadRounds    ConfigInt `yaml:"RoomUnloadRounds"`
 	RoomUnloadThreshold ConfigInt `yaml:"RoomUnloadThreshold"`
 }
 
 func (m *Memory) Validate() {
-
-	if m.MaxMobBoredom < 1 {
-		m.MaxMobBoredom = 150 // default
-	}
-
-	if m.MobUnloadThreshold < 0 {
-		m.MobUnloadThreshold = 0
-	}
 
 	if m.RoomUnloadRounds < 5 {
 		m.RoomUnloadRounds = 5

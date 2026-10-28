@@ -30,7 +30,7 @@ func withTemplate(t *testing.T, mobId int, buffIds []int) {
 func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
 	withTemplate(t, 7, []int{5, 6})
 	m := Mob{MobId: 7, HomeRoomId: 2, IsElite: true, MaxWander: 3, Hostile: true,
-		IdleCommands: []string{"emote sniffs"}, WanderCount: 5, BoredomCounter: 9, LastIdleCommand: 2}
+		IdleCommands: []string{"emote sniffs"}, WanderCount: 5}
 	m.Character = *characters.New()
 	m.Character.Id = ids.New(ids.NoCell)
 	m.Character.Name = "rat"
@@ -67,8 +67,6 @@ func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
 	assert.Equal(t, by, got.Character.Charmed.By)
 	// what it was doing resets
 	assert.Zero(t, got.WanderCount)
-	assert.Zero(t, got.BoredomCounter)
-	assert.Zero(t, got.LastIdleCommand)
 }
 
 func TestMobResetsWhatItWasDoingAsADiskRoundTripWould(t *testing.T) {
