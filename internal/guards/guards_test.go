@@ -187,7 +187,7 @@ func TestIdsAreMadeOnlyAtCreation(t *testing.T) {
 	}
 }
 
-// TestNoNumericShorthandIds forbids actor shorthand IDs (#N and @N): people
+// TestNoNumericShorthandIds forbids shorthand IDs (#N, @N and the item form !N): people
 // name things by name; clients send ID tokens. The allowlist holds the
 // documented exceptions, keyed by file and the literal's Go source text, so a
 // new #%d elsewhere in the same file still fails.
@@ -199,11 +199,11 @@ func TestNoNumericShorthandIds(t *testing.T) {
 	for path, f := range goFiles(t) {
 		ast.Inspect(f, func(n ast.Node) bool {
 			if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING &&
-				(strings.Contains(lit.Value, "#%d") || strings.Contains(lit.Value, "@%d")) {
+				(strings.Contains(lit.Value, "#%d") || strings.Contains(lit.Value, "@%d") || strings.Contains(lit.Value, "!%d")) {
 				if allowed[path+"|"+lit.Value] != "" {
 					return true
 				}
-				t.Errorf("%s: formats a #N or @N id (%s)", path, lit.Value)
+				t.Errorf("%s: formats a #N, @N or !N id (%s)", path, lit.Value)
 			}
 			return true
 		})

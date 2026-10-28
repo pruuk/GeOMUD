@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/stretchr/testify/assert"
@@ -91,6 +92,16 @@ func TestFindByNameSkipsBodyWithNoActor(t *testing.T) {
 		assert.Equal(t, 0, uId)
 		assert.True(t, mId.IsZero())
 	})
+}
+
+func TestFloorHasItemId(t *testing.T) {
+	r := NewEmptyRoom()
+	assert.False(t, r.floorHasItemId(10))
+	r.Items = append(r.Items, items.Item{ItemId: 10})
+	assert.True(t, r.floorHasItemId(10))
+	assert.False(t, r.floorHasItemId(11))
+	r.Stash = append(r.Stash, items.Item{ItemId: 11})
+	assert.False(t, r.floorHasItemId(11), "the stash is not the floor (as FindOnFloor(_, false))")
 }
 
 func TestRoom_AddCorpse(t *testing.T) {
