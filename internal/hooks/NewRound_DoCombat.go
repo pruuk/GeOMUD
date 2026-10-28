@@ -13,6 +13,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -229,26 +230,8 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 				user.Character.Aggro.RoundsWaiting--
 
-				roundResult := combat.GetWaitMessages(items.Wait, user.Character, defUser.Character, combat.User, combat.User)
-
-				for _, msg := range roundResult.MessagesToSource {
-					user.SendText(msg)
-				}
-
-				for _, msg := range roundResult.MessagesToTarget {
-					defUser.SendText(msg)
-				}
-
-				if len(roundResult.MessagesToSourceRoom) > 0 {
-					for _, msg := range roundResult.MessagesToSourceRoom {
-						uRoom.SendText(msg, user.UserId, defUser.UserId)
-					}
-				}
-
-				if len(roundResult.MessagesToTargetRoom) > 0 {
-					for _, msg := range roundResult.MessagesToTargetRoom {
-						defRoom.SendText(msg, user.UserId, defUser.UserId)
-					}
+				for _, m := range combat.GetWaitMessages(items.Wait, user.Character, defUser.Character) {
+					messaging.Send(m)
 				}
 
 				continue
@@ -262,38 +245,20 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 			affectedPlayerIds = append(affectedPlayerIds, defUser.UserId)
 
-			roundResult := combat.AttackPlayerVsPlayer(user, defUser)
+			roundResult := combat.Attack(actors.Get(user.Character.Id), actors.Get(defUser.Character.Id))
 
 			room := rooms.LoadRoom(roomId)
-
-			for _, buffId := range roundResult.BuffSource {
-				user.AddBuff(buffId, `combat`)
-			}
 
 			for _, buffId := range roundResult.BuffTarget {
 				defUser.AddBuff(buffId, `combat`)
 			}
 
-			for _, msg := range roundResult.MessagesToSource {
-				user.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToTarget {
-				defUser.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToSourceRoom {
-				uRoom.SendText(msg, user.UserId, defUser.UserId)
-			}
-
-			for _, msg := range roundResult.MessagesToTargetRoom {
-				defRoom.SendText(msg, user.UserId, defUser.UserId)
+			for _, m := range roundResult.Messages {
+				messaging.Send(m)
 			}
 
 			// If the attack connected, check for damage to equipment.
 			if roundResult.Hit {
-
-				defUser.Character.TrackPlayerDamage(user.UserId, roundResult.DamageToTarget)
 
 				// For now, only focus on offhand items.
 				if defUser.Character.Equipment.Offhand.ItemId > 0 {
@@ -334,9 +299,6 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				}
 			}
 
-			if roundResult.DamageToSource != 0 {
-				events.AddToQueue(events.CharacterVitalsChanged{UserId: user.UserId})
-			}
 			if roundResult.DamageToTarget != 0 {
 				events.AddToQueue(events.CharacterVitalsChanged{UserId: defUser.UserId})
 			}
@@ -395,8 +357,6 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 				continue
 			}
 
-			defRoom := rooms.LoadRoom(defMob.Character.RoomId)
-
 			defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
 
 			if defMob.Character.Health < 1 {
@@ -411,18 +371,8 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 				user.Character.Aggro.RoundsWaiting--
 
-				roundResult := combat.GetWaitMessages(items.Wait, user.Character, &defMob.Character, combat.User, combat.Mob)
-
-				for _, msg := range roundResult.MessagesToSource {
-					user.SendText(msg)
-				}
-
-				for _, msg := range roundResult.MessagesToSourceRoom {
-					uRoom.SendText(msg, user.UserId)
-				}
-
-				for _, msg := range roundResult.MessagesToTargetRoom {
-					defRoom.SendText(msg, user.UserId)
+				for _, m := range combat.GetWaitMessages(items.Wait, user.Character, &defMob.Character) {
+					messaging.Send(m)
 				}
 
 				continue
@@ -439,26 +389,14 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 
 			var roundResult combat.AttackResult
 
-			roundResult = combat.AttackPlayerVsMob(user, defMob)
-
-			for _, buffId := range roundResult.BuffSource {
-				user.AddBuff(buffId, `combat`)
-			}
+			roundResult = combat.Attack(actors.Get(user.Character.Id), actors.Get(defMob.Character.Id))
 
 			for _, buffId := range roundResult.BuffTarget {
 				defMob.AddBuff(buffId, `combat`)
 			}
 
-			for _, msg := range roundResult.MessagesToSource {
-				user.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToSourceRoom {
-				uRoom.SendText(msg, user.UserId)
-			}
-
-			for _, msg := range roundResult.MessagesToTargetRoom {
-				defRoom.SendText(msg, user.UserId)
+			for _, m := range roundResult.Messages {
+				messaging.Send(m)
 			}
 
 			//
@@ -488,10 +426,6 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 					}
 				}
 
-			}
-
-			if roundResult.DamageToSource != 0 {
-				events.AddToQueue(events.CharacterVitalsChanged{UserId: user.UserId})
 			}
 
 			if user.Character.Health <= 0 || defMob.Character.Health <= 0 {
@@ -659,18 +593,8 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 				mob.Character.Aggro.RoundsWaiting--
 
-				roundResult := combat.GetWaitMessages(items.Wait, &mob.Character, defUser.Character, combat.Mob, combat.User)
-
-				for _, msg := range roundResult.MessagesToTarget {
-					defUser.SendText(msg)
-				}
-
-				for _, msg := range roundResult.MessagesToSourceRoom {
-					mobRoom.SendText(msg, defUser.UserId)
-				}
-
-				for _, msg := range roundResult.MessagesToTargetRoom {
-					defRoom.SendText(msg, defUser.UserId)
+				for _, m := range combat.GetWaitMessages(items.Wait, &mob.Character, defUser.Character) {
+					messaging.Send(m)
 				}
 
 				continue
@@ -678,28 +602,16 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			var roundResult combat.AttackResult
 
-			roundResult = combat.AttackMobVsPlayer(mob, defUser)
+			roundResult = combat.Attack(actors.Get(mob.Character.Id), actors.Get(defUser.Character.Id))
 
 			room := rooms.LoadRoom(roomId)
-
-			for _, buffId := range roundResult.BuffSource {
-				mob.AddBuff(buffId, `combat`)
-			}
 
 			for _, buffId := range roundResult.BuffTarget {
 				defUser.AddBuff(buffId, `combat`)
 			}
 
-			for _, msg := range roundResult.MessagesToTarget {
-				defUser.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToSourceRoom {
-				mobRoom.SendText(msg, defUser.UserId)
-			}
-
-			for _, msg := range roundResult.MessagesToTargetRoom {
-				defRoom.SendText(msg, defUser.UserId)
+			for _, m := range roundResult.Messages {
+				messaging.Send(m)
 			}
 
 			// If the attack connected, check for damage to equipment.
@@ -774,8 +686,6 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 				continue
 			}
 
-			defRoom := rooms.LoadRoom(defMob.Character.RoomId)
-
 			defMob.Character.CancelBuffsWithFlag("cancel-on-combat")
 
 			if defMob.Character.Health < 1 {
@@ -789,14 +699,8 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 				mob.Character.Aggro.RoundsWaiting--
 
-				roundResult := combat.GetWaitMessages(items.Wait, &mob.Character, &defMob.Character, combat.Mob, combat.Mob)
-
-				for _, msg := range roundResult.MessagesToSourceRoom {
-					mobRoom.SendText(msg)
-				}
-
-				for _, msg := range roundResult.MessagesToTargetRoom {
-					defRoom.SendText(msg)
+				for _, m := range combat.GetWaitMessages(items.Wait, &mob.Character, &defMob.Character) {
+					messaging.Send(m)
 				}
 
 				continue
@@ -809,22 +713,14 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 
 			var roundResult combat.AttackResult
 
-			roundResult = combat.AttackMobVsMob(mob, defMob)
-
-			for _, buffId := range roundResult.BuffSource {
-				mob.AddBuff(buffId, `combat`)
-			}
+			roundResult = combat.Attack(actors.Get(mob.Character.Id), actors.Get(defMob.Character.Id))
 
 			for _, buffId := range roundResult.BuffTarget {
 				defMob.AddBuff(buffId, `combat`)
 			}
 
-			for _, msg := range roundResult.MessagesToSourceRoom {
-				mobRoom.SendText(msg)
-			}
-
-			for _, msg := range roundResult.MessagesToTargetRoom {
-				defRoom.SendText(msg)
+			for _, m := range roundResult.Messages {
+				messaging.Send(m)
 			}
 
 			// Mobs get aggro when attacked

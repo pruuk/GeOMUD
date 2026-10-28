@@ -129,12 +129,10 @@ func SimulateCombat(mobIdA, mobIdB mobs.MobId, levelA, levelB int, maxRounds int
 		roundDmgA, roundDmgB := 0, 0
 
 		// A attacks B
-		atkResult := calculateCombat(*charA, *charB, Mob, Mob)
+		atkResult := calculateCombat(*charA, *charB)
 		charB.ApplyHealthChange(atkResult.DamageToTarget * -1)
-		charA.ApplyHealthChange(atkResult.DamageToSource * -1)
 		result.DamageByA += atkResult.DamageToTarget
 		roundDmgA = atkResult.DamageToTarget
-		applySimBuffs(charA, atkResult.BuffSource)
 		applySimBuffs(charB, atkResult.BuffTarget)
 
 		if charB.Health <= 0 {
@@ -150,12 +148,10 @@ func SimulateCombat(mobIdA, mobIdB mobs.MobId, levelA, levelB int, maxRounds int
 		}
 
 		// B attacks A
-		defResult := calculateCombat(*charB, *charA, Mob, Mob)
+		defResult := calculateCombat(*charB, *charA)
 		charA.ApplyHealthChange(defResult.DamageToTarget * -1)
-		charB.ApplyHealthChange(defResult.DamageToSource * -1)
 		result.DamageByB += defResult.DamageToTarget
 		roundDmgB = defResult.DamageToTarget
-		applySimBuffs(charB, defResult.BuffSource)
 		applySimBuffs(charA, defResult.BuffTarget)
 
 		if charA.Health <= 0 {

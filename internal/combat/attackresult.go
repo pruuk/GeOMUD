@@ -1,37 +1,16 @@
 package combat
 
+import "github.com/GoMudEngine/GoMud/internal/perception"
+
+// AttackResult is what one Attack did.
 type AttackResult struct {
-	Hit                     bool  // defaults false
-	Crit                    bool  // defaults false
-	BuffSource              []int // defaults 0
-	BuffTarget              []int // defaults 0
-	DamageToTarget          int   // defaults 0
-	DamageToTargetReduction int   // defaults 0
-	DamageToSource          int   // defaults 0
-	DamageToSourceReduction int   // defaults 0
-	MessagesToSource        []string
-	MessagesToTarget        []string
-	MessagesToSourceRoom    []string
-	MessagesToTargetRoom    []string
-	MessagesToRoomOld       []string
-}
+	Hit            bool  // at least one attack connected
+	Crit           bool  // at least one attack was a critical hit
+	BuffTarget     []int // buffs a crit puts on the defender
+	DamageToTarget int   // total damage dealt to the defender
 
-func (a *AttackResult) SendToSource(msg string) {
-	a.MessagesToSource = append(a.MessagesToSource, msg)
-}
-
-func (a *AttackResult) SendToTarget(msg string) {
-	a.MessagesToTarget = append(a.MessagesToTarget, msg)
-}
-
-func (a *AttackResult) SendToSourceRoom(msg string) {
-	a.MessagesToSourceRoom = append(a.MessagesToSourceRoom, msg)
-}
-
-func (a *AttackResult) SendToTargetRoom(msg string) {
-	a.MessagesToTargetRoom = append(a.MessagesToTargetRoom, msg)
-}
-
-func (a *AttackResult) SendToRoomOld(msg string) {
-	a.MessagesToRoomOld = append(a.MessagesToRoomOld, msg)
+	// Messages are the round's lines, one per swing (a dodge included), in
+	// the order they happened; the caller sends them in order through
+	// messaging, which resolves {actor} and {target} per receiver.
+	Messages []perception.Message
 }
