@@ -43,7 +43,7 @@ func Say(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		Senses:  perception.Sound,
 		Faint:   true,
 		Range:   perception.Nearby,
-		FarText: `You hear someone talking.`,
+		FarText: `(From {direction}) You hear someone talking.`,
 	})
 
 	events.AddToQueue(events.Communication{

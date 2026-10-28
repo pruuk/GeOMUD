@@ -49,3 +49,8 @@ Ann: <ansi fg="magenta">(party)</ansi> You say, "<ansi fg="yellow">hi</ansi>"
 > Bob: party leave
 Bob: You left the party.
 Ann: <ansi fg="username">Bob</ansi> left the party.
+== say hi (Cid in C, superhearing, hears it from the next room)
+> Ann: say hi
+Ann: You say, "<ansi fg="saytext">hi</ansi>"
+Bob: <ansi fg="username">Ann</ansi> says, "<ansi fg="saytext">hi</ansi>"
+Cid: (From <ansi fg="exit">west</ansi>) You hear someone talking.

@@ -766,7 +766,7 @@ func TestReadsE_MoveLook(t *testing.T) {
 // F: speech, broadcast and parties.
 func TestReadsF_CommsParty(t *testing.T) {
 	w := newReadsWorld(t, 1106)
-	ann, _, _, _ := w.trio()
+	ann, _, cid, _ := w.trio()
 
 	w.section("say hi")
 	w.run("Ann", "say hi")
@@ -794,6 +794,11 @@ func TestReadsF_CommsParty(t *testing.T) {
 	w.run("Ann", "party chat hi")
 	w.section("party leave (Bob)")
 	w.run("Bob", "party leave")
+	// say's "You hear someone talking" goes quiet to the rooms next to the
+	// speaker: Cid in C hears it with superhearing, from the exit towards A.
+	w.section("say hi (Cid in C, superhearing, hears it from the next room)")
+	w.flag(cid.Character, readsHearBuf, "superhearing")
+	w.run("Ann", "say hi")
 	w.compare("F-comms-party")
 }
 
