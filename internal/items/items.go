@@ -2,6 +2,8 @@ package items
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -254,8 +256,7 @@ func (i *Item) GetSpec() ItemSpec {
 
 func (i *Item) AddWornBuff(buffId int) {
 	if i.Spec == nil {
-		specCopy := *GetItemSpec(i.ItemId)
-		i.Spec = &specCopy
+		i.Spec = cloneSpec(GetItemSpec(i.ItemId))
 	}
 
 	i.Spec.WornBuffIds = append(i.Spec.WornBuffIds, buffId)
@@ -304,10 +305,14 @@ func (i *Item) Enchant(damageBonus int, defenseBonus int, statBonus map[string]i
 	var newSpec ItemSpec
 
 	if i.Spec == nil {
-		specCopy := *GetItemSpec(i.ItemId)
-		newSpec = specCopy
+		// Copy, so the global spec's StatMods map is never written to.
+		newSpec = *cloneSpec(GetItemSpec(i.ItemId))
 	} else {
-		newSpec = *i.Spec
+		newSpec = *cloneSpec(i.Spec)
+	}
+
+	if newSpec.StatMods == nil && len(statBonus) > 0 {
+		newSpec.StatMods = make(map[string]int)
 	}
 
 	newSpec.Damage.BonusDamage += damageBonus
@@ -390,11 +395,22 @@ func FromTemplate(tpl Item) Item {
 	itm.Id = ids.New(ids.NoCell) // rooms carry no cell until the geo room key
 	itm.Adjectives = append([]string(nil), tpl.Adjectives...)
 	if tpl.Spec != nil {
-		spec := *tpl.Spec
-		itm.Spec = &spec
+		itm.Spec = cloneSpec(tpl.Spec)
 	}
 	itm.tempDataStore = nil
 	return itm
+}
+
+// cloneSpec copies s with its own map and slices (StatMods, BuffIds,
+// WornBuffIds, Damage.CritBuffIds), so writing to the copy never reaches s.
+// Nil stays nil.
+func cloneSpec(s *ItemSpec) *ItemSpec {
+	c := *s
+	c.StatMods = maps.Clone(s.StatMods)
+	c.BuffIds = slices.Clone(s.BuffIds)
+	c.WornBuffIds = slices.Clone(s.WornBuffIds)
+	c.Damage.CritBuffIds = slices.Clone(s.Damage.CritBuffIds)
+	return &c
 }
 
 // WithoutId is i as written to a template file: an item in a template is not

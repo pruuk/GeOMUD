@@ -1556,7 +1556,7 @@ func (c *Character) Validate(recalcPermaBuffs ...bool) error {
 	}
 
 	// Validate possessed/worn items
-	// This helps ensure all in-play items have a uid
+	// This helps ensure all in-play items have their IDs
 	for i := range c.Items {
 		c.Items[i].Validate()
 	}

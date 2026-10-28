@@ -208,8 +208,29 @@ func TestFromTemplateMakesANewItem(t *testing.T) {
 	tpl := makeItem(1, "sword")
 	tpl.Adjectives = []string{"rusty"}
 	tpl.Uses = 3
+	tpl.SetTempData("k", 1)
+	tpl.Spec.StatMods = map[string]int{"strength": 1}
+	tpl.Spec.WornBuffIds = []int{7}
+	tpl.Spec.BuffIds = []int{8}
+	tpl.Spec.Damage.CritBuffIds = []int{9}
 
 	a, b := FromTemplate(tpl), FromTemplate(tpl)
+	assert.Nil(t, a.GetTempData("k"), "temp data is not carried over")
+
+	a.Spec.StatMods["strength"] = 99
+	a.Spec.StatMods["speed"] = 5
+	a.Spec.WornBuffIds[0] = 70
+	a.Spec.BuffIds[0] = 80
+	a.Spec.Damage.CritBuffIds[0] = 90
+	assert.Equal(t, map[string]int{"strength": 1}, map[string]int(tpl.Spec.StatMods))
+	assert.Equal(t, []int{7}, tpl.Spec.WornBuffIds)
+	assert.Equal(t, []int{8}, tpl.Spec.BuffIds)
+	assert.Equal(t, []int{9}, tpl.Spec.Damage.CritBuffIds)
+
+	a, b = FromTemplate(tpl), FromTemplate(tpl)
+	bare := makeItem(2, "dagger")
+	assert.Nil(t, FromTemplate(bare).Spec.StatMods, "nil stays nil")
+	assert.Nil(t, FromTemplate(bare).Spec.WornBuffIds, "nil stays nil")
 	assert.NotEqual(t, tpl.Id, a.Id)
 	assert.NotEqual(t, a.Id, b.Id)
 	assert.False(t, a.Id.IsZero())
@@ -223,6 +244,27 @@ func TestFromTemplateMakesANewItem(t *testing.T) {
 
 	assert.Equal(t, Item{}, FromTemplate(Item{}), "an empty slot stays empty")
 	assert.Equal(t, ItemDisabledSlot, FromTemplate(ItemDisabledSlot))
+}
+
+// Enchant on an item with no override spec copies the global spec first.
+func TestEnchantDoesNotChangeTheSharedSpec(t *testing.T) {
+	const id = 987654
+	shared := &ItemSpec{ItemId: id, Name: "ring", NameSimple: "ring", StatMods: map[string]int{"strength": 1}, WornBuffIds: []int{7}}
+	old := items
+	items = map[int]*ItemSpec{id: shared}
+	defer func() { items = old }()
+
+	itm := Item{ItemId: id, Id: ids.New(ids.NoCell)}
+	itm.Enchant(0, 0, map[string]int{"strength": 2, "speed": 3}, false)
+
+	assert.Equal(t, map[string]int{"strength": 1}, map[string]int(shared.StatMods), "the shared spec is unchanged")
+	assert.Equal(t, 3, itm.Spec.StatMods["strength"])
+	assert.Equal(t, 3, itm.Spec.StatMods["speed"])
+
+	itm2 := Item{ItemId: id, Id: ids.New(ids.NoCell)}
+	itm2.AddWornBuff(8)
+	assert.Equal(t, []int{7}, shared.WornBuffIds, "the shared spec's buffs are unchanged")
+	assert.Equal(t, []int{7, 8}, itm2.Spec.WornBuffIds)
 }
 
 func TestWithoutIds(t *testing.T) {

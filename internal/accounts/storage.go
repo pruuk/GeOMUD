@@ -33,6 +33,7 @@ func (s *Storage) AddItem(i items.Item) bool {
 	if i.ItemId < 1 {
 		return false
 	}
+	i.Validate() // gives an item without an ID its ID
 	s.Items = append(s.Items, i)
 	return true
 }
