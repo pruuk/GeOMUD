@@ -86,6 +86,7 @@ const struggle = `emote @struggles with their gear for a while, then gives up.`
 
 func TestPermaGearStruggleEmoteHasNoSelfEcho(t *testing.T) {
 	_, player, _ := setup(t)
+	t.Cleanup(rooms.AddTestDefaultBiome()) // messaging asks the room's light
 	room := rooms.LoadRoom(testRoomId)
 	givePermaGear(t, player)
 

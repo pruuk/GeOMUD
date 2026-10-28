@@ -27,6 +27,7 @@ const (
 // deliver to it.
 func addReader(t *testing.T, userId int, roomId int) *accounts.Account {
 	t.Helper()
+	t.Cleanup(rooms.AddTestDefaultBiome()) // messaging asks the room's light
 	c := characters.New()
 	c.Id = ids.New(ids.NoCell)
 	c.Name = fmt.Sprintf("Reader%d", userId)

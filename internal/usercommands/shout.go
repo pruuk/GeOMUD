@@ -6,6 +6,8 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
@@ -16,7 +18,6 @@ func Shout(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		return true, nil
 	}
 
-	isSneaking := actor.Character.HasBuffFlag("hidden")
 	isDrunk := actor.Character.HasBuffFlag("drunk")
 
 	rest = strings.ToUpper(rest)
@@ -26,43 +27,19 @@ func Shout(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		rest = drunkify(rest)
 	}
 
-	if isSneaking {
-		room.SendTextCommunication(fmt.Sprintf(`someone shouts, "<ansi fg="yellow">%s</ansi>"`, rest), ExcludeId(actor))
-	} else {
-		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="%s">%s</ansi> shouts, "<ansi fg="yellow">%s</ansi>"`, NameColour(actor), actor.Character.Name, rest), ExcludeId(actor))
-	}
-
-	for _, roomInfo := range room.Exits {
-		if otherRoom := rooms.LoadRoom(roomInfo.RoomId); otherRoom != nil {
-			if sourceExit := otherRoom.FindExitTo(room.RoomId); sourceExit != `` {
-				otherRoom.SendTextCommunication(fmt.Sprintf(`Someone shouts from the <ansi fg="exit">%s</ansi> direction, "<ansi fg="yellow">%s</ansi>"`, sourceExit, rest), ExcludeId(actor))
-			}
-		}
-	}
-
-	for _, roomInfo := range room.ExitsTemp {
-		if otherRoom := rooms.LoadRoom(roomInfo.RoomId); otherRoom != nil {
-			if sourceExit := otherRoom.FindExitTo(room.RoomId); sourceExit != `` {
-				otherRoom.SendTextCommunication(fmt.Sprintf(`Someone shouts from the <ansi fg="exit">%s</ansi> direction, "<ansi fg="yellow">%s</ansi>"`, sourceExit, rest), ExcludeId(actor))
-			}
-		}
-	}
-
-	for mut := range room.ActiveMutators {
-		spec := mut.GetSpec()
-		if len(spec.Exits) == 0 {
-			continue
-		}
-		for _, exitInfo := range spec.Exits {
-			if otherRoom := rooms.LoadRoom(exitInfo.RoomId); otherRoom != nil {
-				if sourceExit := otherRoom.FindExitTo(room.RoomId); sourceExit != `` {
-					otherRoom.SendTextCommunication(fmt.Sprintf(`Someone shouts from the <ansi fg="exit">%s</ansi> direction, "<ansi fg="yellow">%s</ansi>"`, sourceExit, rest), ExcludeId(actor))
-				}
-			}
-		}
-	}
-
-	Tell(actor, fmt.Sprintf(`You shout, "<ansi fg="yellow">%s</ansi>"`, rest))
+	// {actor} reads "Someone" for a receiver who cannot see a hidden shouter.
+	// Rooms next to this one (exits, temporary exits, mutator exits) read the
+	// far text with the direction back toward this room.
+	typed := messaging.Literal(rest)
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        actor.Id,
+		Senses:       perception.Sound,
+		Range:        perception.Nearby,
+		ActorText:    fmt.Sprintf(`You shout, "<ansi fg="yellow">%s</ansi>"`, typed),
+		ObserverText: fmt.Sprintf(`{actor} shouts, "<ansi fg="yellow">%s</ansi>"`, typed),
+		FarText:      fmt.Sprintf(`Someone shouts from the {direction} direction, "<ansi fg="yellow">%s</ansi>"`, typed),
+	})
 
 	return true, nil
 }

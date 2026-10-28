@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
@@ -22,6 +23,7 @@ func charmTestNPC(t *testing.T) (*mobs.Mob, *rooms.Room) {
 	t.Helper()
 	actors.Reset()
 	t.Cleanup(actors.Reset)
+	t.Cleanup(rooms.AddTestDefaultBiome()) // messaging asks the room's light
 	r := rooms.NewEmptyRoom()
 	r.RoomId, r.Zone = charmTestRoomId, "Charm Zone"
 	rooms.AddTestRoom(r)
@@ -66,6 +68,18 @@ func collect(t *testing.T, mob *mobs.Mob, f func()) (messages []string, inputs [
 func TestCharmExpiredRestEmotesBeforeTheNPCLeaves(t *testing.T) {
 	mob, r := charmTestNPC(t)
 	id := mob.Character.Id
+
+	// The farewell is perceived, not written to the room: a player in the
+	// room reads it.
+	c := characters.New()
+	c.Id = ids.New(ids.NoCell)
+	c.Name = "Watcher"
+	c.RoomId = charmTestRoomId
+	u := &accounts.Account{UserId: 9101, Character: c, Password: "$2a$test"}
+	actors.Spawn(c, actors.NewConnectionController(u))
+	accounts.SetTestUser(u)
+	r.AddPlayer(u.UserId)
+	t.Cleanup(func() { accounts.RemoveTestUser(u.UserId) })
 
 	messages, inputs := collect(t, mob, func() {
 		runCharmExpiredCommand(mob, characters.CharmExpiredRest)

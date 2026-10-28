@@ -1,17 +1,17 @@
 seed 1106
 == say hi
 > Ann: say hi
-Bob: <ansi fg="username">Ann</ansi> says, "<ansi fg="saytext">hi</ansi>"
 Ann: You say, "<ansi fg="saytext">hi</ansi>"
+Bob: <ansi fg="username">Ann</ansi> says, "<ansi fg="saytext">hi</ansi>"
 == say {target} (literal braces)
 > Ann: say {target}
-Bob: <ansi fg="username">Ann</ansi> says, "<ansi fg="saytext">{target}</ansi>"
 Ann: You say, "<ansi fg="saytext">{target}</ansi>"
+Bob: <ansi fg="username">Ann</ansi> says, "<ansi fg="saytext">{target}</ansi>"
 == shout hi (far text in C)
 > Ann: shout hi
+Ann: You shout, "<ansi fg="yellow">HI</ansi>"
 Bob: <ansi fg="username">Ann</ansi> shouts, "<ansi fg="yellow">HI</ansi>"
 Cid: Someone shouts from the <ansi fg="exit">west</ansi> direction, "<ansi fg="yellow">HI</ansi>"
-Ann: You shout, "<ansi fg="yellow">HI</ansi>"
 == emote waves
 > Ann: emote waves
 Ann: You Emote: <ansi fg="username">Ann</ansi> <ansi fg="20">waves</ansi>
@@ -19,15 +19,15 @@ Bob: <ansi fg="username">Ann</ansi> <ansi fg="20">waves</ansi>
 == hidden: emote waves
 > Ann: emote waves
 Ann: You Emote: <ansi fg="username">Ann</ansi> <ansi fg="20">waves</ansi>
-Bob: <ansi fg="username">Ann</ansi> <ansi fg="20">waves</ansi>
+Bob: Someone <ansi fg="20">waves</ansi>
 == hidden: say hi
 > Ann: say hi
-Bob: someone says, "<ansi fg="saytext">hi</ansi>"
 Ann: You say, "<ansi fg="saytext">hi</ansi>"
+Bob: Someone says, "<ansi fg="saytext">hi</ansi>"
 == whisper Bob psst
 > Ann: whisper Bob psst
-Bob: <ansi fg="white">***</ansi> <ansi fg="black-bold"><ansi fg="username">Ann</ansi> whispers, "psst"</ansi> <ansi fg="white">***</ansi>
 Ann: You sent a <ansi fg="command">whisper</ansi> to <ansi fg="username">Bob</ansi>
+Bob: <ansi fg="white">***</ansi> <ansi fg="black-bold"><ansi fg="username">Ann</ansi> whispers, "psst"</ansi> <ansi fg="white">***</ansi>
 == broadcast hello
 > Ann: broadcast hello
 Ann: <ansi fg="broadcast-prefix">(broadcast)</ansi> <ansi fg="username">Ann</ansi>: <ansi fg="broadcast-body">hello</ansi>
