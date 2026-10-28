@@ -1022,7 +1022,7 @@ var MapperUI = (function() {
             '<div class="re-spawn-field" style="' + (isMob ? shown : hidden) + '">'+
                 '<label>Max Wander</label>'+
                 '<input type="number" class="re-spawn-maxwander" value="' + (s.MaxWander != null && s.MaxWander !== 0 ? s.MaxWander : '') + '" placeholder="blank = mob default">'+
-                '<div class="field-hint">Rooms mob can wander from spawn. 0 = stays put, -1 = unlimited.</div>'+
+                '<div class="field-hint">Wander moves before the mob heads home. 0 = stays put, -1 = unlimited.</div>'+
             '</div>'+
 
             // --- Force Level (mob) ---

@@ -65,7 +65,7 @@ type Mob struct {
 	AngryCommands   []string `yaml:"angrycommands,omitempty"`  // randomly chosen to queue when they are angry/entering combat.
 	CombatCommands  []string `yaml:"combatcommands,omitempty"` // Commands they may do while in combat
 	Character       characters.Character
-	MaxWander       int       `yaml:"maxwander,omitempty"`   // Max rooms to wander from home
+	MaxWander       int       `yaml:"maxwander,omitempty"`   // Max wander moves before heading home (-1 unlimited, 0 never)
 	WanderCount     int       `yaml:"-"`                     // How many times this mob has wandered
 	PreventIdle     bool      `yaml:"-"`                     // Whether they can't possibly be idle
 	BuffIds         []int     `yaml:"buffids,omitempty"`     // Buff Id's this mob always has upon spawn
