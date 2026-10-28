@@ -1,9 +1,8 @@
 # Status (updated 2026-10-28)
 
 ## Now
-- Phase 4b slice 6 (one tick and behaviour): built on `strip/phase-4b-6-one-tick`, PR open
-  (plan `2026-10-28-phase-4b-6-one-tick-plan.md`, inventory beside it)
-- Strip Phases 0-4 and Phase 4b slices 1, 2, 2b, 2c, 3, 4 and 5 are merged (`gomud_strip_plan.md`; spec
+- Phase 4b slice 7 (output conversion): planning on `strip/phase-4b-7-output`
+- Strip Phases 0-4 and Phase 4b slices 1-6 (with 2b and 2c) are merged (`gomud_strip_plan.md`; spec
   `2026-10-27-phase-4b-npcs-are-players-design.md`; slice plans in `docs/completed/`)
 
 ## Next
