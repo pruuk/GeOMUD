@@ -14,6 +14,18 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
+// othersOf is the body IDs without the actor's own: an NPC is among the mobs
+// of its room and must never pick itself as a target.
+func othersOf(actor *actors.Actor, bodyIds []ids.ID) []ids.ID {
+	out := make([]ids.ID, 0, len(bodyIds))
+	for _, id := range bodyIds {
+		if id != actor.Id {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
 func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	// Parties and party auto-attack belong to accounts; user is nil for an NPC.
@@ -100,7 +112,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 		if rest == `*` { // * ANYONE
 
-			allMobs := room.GetMobs()
+			allMobs := othersOf(actor, room.GetMobs())
 			allPlayers := []int{}
 			for _, userId := range room.GetPlayers() {
 				if userId == selfUserId {
@@ -125,7 +137,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 		} else if rest == `*mob` { // *mob ANY MOB
 
-			if allMobs := room.GetMobs(); len(allMobs) > 0 {
+			if allMobs := othersOf(actor, room.GetMobs()); len(allMobs) > 0 {
 				attackMobId = allMobs[util.Rand(len(allMobs))]
 			}
 
@@ -151,6 +163,9 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 	if attackPlayerId == selfUserId { // Can't attack self!
 		attackPlayerId = 0
+	}
+	if attackMobId == actor.Id { // An NPC can't attack itself either.
+		attackMobId = ids.ID{}
 	}
 
 	if attackMobId.IsZero() && attackPlayerId == 0 {
@@ -206,7 +221,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 			if !isSneaking {
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight <ansi fg="mobname">%s</ansi>.`, actor.Character.Name, m.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> prepares to fight <ansi fg="mobname">%s</ansi>.`, NameColour(actor), actor.Character.Name, m.Character.Name),
 					selfUserId,
 				)
 			}
@@ -255,11 +270,11 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 			if !isSneaking {
 
 				p.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight you!`, actor.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> prepares to fight you!`, NameColour(actor), actor.Character.Name),
 				)
 
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight <ansi fg="username">%s</ansi>.`, actor.Character.Name, p.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> prepares to fight <ansi fg="username">%s</ansi>.`, NameColour(actor), actor.Character.Name, p.Character.Name),
 					selfUserId, attackPlayerId)
 			}
 

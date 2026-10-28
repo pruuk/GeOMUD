@@ -416,8 +416,9 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 		return
 	}
 
-	// Make sure to prepare the room before anyone looks in if this is the first time someone has dealt with it in a while.
-	if room.PlayerCt() < 1 {
+	// Make sure to prepare the room before a player looks in if this is the first time someone has dealt with it in a while.
+	// Rooms are prepared only for players: an NPC's look prepares nothing.
+	if actor.Controller().Account() != nil && room.PlayerCt() < 1 {
 		room.Prepare(true)
 	}
 

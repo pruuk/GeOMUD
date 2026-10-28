@@ -627,7 +627,7 @@ func (m *MyModule) save() {
                 <tr>
                     <td><code>plug.AddUserCommand(command string, handler usercommands.Command, allowWhenDowned bool, adminOnly bool)</code></td>
                     <td>
-                        <code>command</code>: the keyword a player types, or a mob's idle, combat or scripted input names.<br>
+                        <code>command</code>: the keyword a player types, or a mob's idle or combat input names.<br>
                         <code>handler</code>: a <code>usercommands.Command</code>, the function <code>func(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error)</code>. <code>actor.Controller().Account()</code> returns the player's account, or nil for a mob; text for the actor goes to the account when there is one.<br>
                         <code>allowWhenDowned</code>: if <code>true</code>, the command works even when the actor is incapacitated.<br>
                         <code>adminOnly</code>: if <code>true</code>, only admin/mod accounts can use it (a mob never can).

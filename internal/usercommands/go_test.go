@@ -99,6 +99,31 @@ func TestNPCWithTooFewAPIsRefusedSilently(t *testing.T) {
 	_ = player
 }
 
+// A move prepares the destination only for a player: rooms are prepared only
+// for players (plan Decision 5).
+func TestNPCMoveDoesNotPrepareTheDestination(t *testing.T) {
+	npc, _, room := goSetup(t)
+	dest := rooms.LoadRoom(testNextRoomId)
+	dest.Containers = map[string]rooms.Container{"chest": {DespawnRound: 1}}
+
+	handled, err := Go("north", npc, room, 0)
+	require.NoError(t, err)
+	require.True(t, handled)
+	require.Equal(t, testNextRoomId, npc.Character.RoomId)
+	assert.Contains(t, dest.Containers, "chest", "an NPC arriving prepares nothing")
+}
+
+func TestPlayerMovePreparesTheDestination(t *testing.T) {
+	_, player, room := goSetup(t)
+	dest := rooms.LoadRoom(testNextRoomId)
+	dest.Containers = map[string]rooms.Container{"chest": {DespawnRound: 1}}
+
+	handled, err := Go("north", player, room, 0)
+	require.NoError(t, err)
+	require.True(t, handled)
+	assert.NotContains(t, dest.Containers, "chest", "a player arriving prepares the room")
+}
+
 func TestNPCWithAPMovesAndPaysTheCost(t *testing.T) {
 	npc, _, room := goSetup(t)
 

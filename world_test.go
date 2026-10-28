@@ -175,6 +175,23 @@ func TestNPCUnknownCommandIsLoggedAndShowsNothing(t *testing.T) {
 	assert.True(t, testLogs.has("WARN", "zzbogus"))
 }
 
+func TestNPCAccountOnlyCommandIsLoggedAsNeedingAnAccount(t *testing.T) {
+	npc, _ := setupInput(t)
+	w := newTestWorld()
+	// An account-only command, as the real ones are: it declines an NPC.
+	usercommands.RegisterCommand("zz_acct", func(rest string, a *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+		if a.Controller().Account() == nil {
+			return false, nil
+		}
+		return true, nil
+	}, true, false)
+
+	w.HandleInputEvents(input(npc, "zz_acct some words", 0))
+
+	assert.True(t, testLogs.has("WARN", "needs an account"))
+	assert.True(t, testLogs.has("WARN", "zz_acct"))
+}
+
 func TestNPCDelayedCommandHoldsBackTheNext(t *testing.T) {
 	npc, _ := setupInput(t)
 	w := newTestWorld()

@@ -2,6 +2,7 @@ package guards
 
 import (
 	"go/ast"
+	"go/token"
 	"strconv"
 	"strings"
 	"testing"
@@ -44,6 +45,66 @@ func TestNoAddMobCommand(t *testing.T) {
 			}
 			return true
 		})
+	}
+}
+
+// TestNoDroppedVerbsQueued enforces slice 4: the verbs mobcommands had that
+// the registry dropped (wander, pathto and rest became behaviour actions,
+// despawn went, sayto, saytoonly and replyto were not kept) are not queued as
+// commands. No non-test file passes a string starting with one of them as the
+// first argument of a .Command( call or a queue( / queueFlagged( call.
+func TestNoDroppedVerbsQueued(t *testing.T) {
+	dropped := map[string]bool{
+		"wander": true, "pathto": true, "rest": true, "despawn": true,
+		"sayto": true, "saytoonly": true, "replyto": true,
+	}
+	calls := 0
+	for path, f := range goFiles(t) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok || len(call.Args) == 0 {
+				return true
+			}
+			var name string
+			switch fn := call.Fun.(type) {
+			case *ast.SelectorExpr:
+				if fn.Sel.Name == "Command" || fn.Sel.Name == "CommandFlagged" {
+					name = "Command"
+				}
+			case *ast.Ident:
+				if fn.Name == "queue" || fn.Name == "queueFlagged" {
+					name = fn.Name
+				}
+			}
+			if name == "" {
+				return true
+			}
+			// queue and queueFlagged take the actor first; the text is second.
+			arg := call.Args[0]
+			if name != "Command" {
+				if len(call.Args) < 2 {
+					return true
+				}
+				arg = call.Args[1]
+			}
+			lit, ok := arg.(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING {
+				return true
+			}
+			text, err := strconv.Unquote(lit.Value)
+			if err != nil {
+				return true
+			}
+			calls++
+			fields := strings.Fields(text)
+			if len(fields) > 0 && dropped[fields[0]] {
+				t.Errorf("%s: queues %q: the verb %q was dropped from the command set", path, text, fields[0])
+			}
+			return true
+		})
+	}
+	if calls < 10 {
+		t.Fatalf("saw only %d literal-text Command/queue calls; the scan is not reaching them", calls)
 	}
 }
 

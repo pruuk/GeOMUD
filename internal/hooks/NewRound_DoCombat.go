@@ -546,6 +546,15 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 			continue
 		}
 
+		// A flee has no target and only the player half of the round resolves
+		// it. An NPC that flees stops fighting (it does not leave until slice 5);
+		// left set, the aggro would block the NPC for good.
+		if mob.Character.Aggro.Type == characters.Flee && mob.Character.Aggro.Target.IsZero() {
+			mob.Character.Aggro = nil
+			events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
+			continue
+		}
+
 		// Disable any buffs that are cancelled by combat
 		mob.Character.CancelBuffsWithFlag("cancel-on-combat")
 

@@ -184,7 +184,8 @@ var (
 		`show`:        {Show, true, false},
 		`spawn`:       {Spawn, false, true}, // Admin only
 
-		// Kept until Phase 5: NewRound_AutoHeal and NewRound_DoCombat dispatch it as player death.
+		// Kept until Phase 5: it is player and NPC death. NewRound_AutoHeal, NewRound_DoCombat
+		// (players and mobs), NewRound_MobRoundTick and Buff_ApplyBuffs dispatch it.
 		`suicide`:  {Suicide, true, false},
 		`syslogs`:  {SysLogs, true, true},  // Admin only
 		`teleport`: {Teleport, true, true}, // Admin only
@@ -367,11 +368,27 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 	return false, nil
 }
 
-// Register mob commands from outside of the package
-func RegisterCommand(command string, handlerFunc Command, disabledWhenDowned bool, isAdminOnly bool) {
+// IsCommand reports whether name is a registered command or emote, resolving
+// the global keyword aliases the way TryCommand does (a multi-word alias
+// counts by its first word). Personal aliases belong to accounts and are not
+// resolved. world.go uses it to tell a command that declined an actor (it needs
+// an account) from a word that is no command at all.
+func IsCommand(name string) bool {
+	if alias := keywords.TryCommandAlias(name); alias != name {
+		name = strings.Split(alias, ` `)[0]
+	}
+	if _, ok := userCommands[name]; ok {
+		return true
+	}
+	_, ok := emoteAliases[name]
+	return ok
+}
+
+// RegisterCommand adds a command to the one registry from outside of the package.
+func RegisterCommand(command string, handlerFunc Command, allowedWhenDowned bool, isAdminOnly bool) {
 	userCommands[command] = CommandAccess{
 		handlerFunc,
-		disabledWhenDowned,
+		allowedWhenDowned,
 		isAdminOnly,
 	}
 }

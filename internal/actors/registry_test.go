@@ -195,6 +195,22 @@ func TestBodyReplacedRekeysThePlayer(t *testing.T) {
 	assert.Len(t, All(), 1)
 }
 
+func TestEachVisitsEveryActorOnce(t *testing.T) {
+	Reset()
+	want := map[ActorId]bool{}
+	for i := 0; i < 5; i++ {
+		c := bodyChar()
+		Spawn(c, NewConnectionController(&accounts.Account{UserId: 200 + i}))
+		want[c.Id] = true
+	}
+	seen := map[ActorId]int{}
+	Each(func(a *Actor) { seen[a.Id]++ })
+	require.Len(t, seen, len(want))
+	for id := range want {
+		assert.Equal(t, 1, seen[id])
+	}
+}
+
 func TestSpawnRefusesABodyWithoutAnId(t *testing.T) {
 	Reset()
 	assert.Nil(t, Spawn(characters.New(), NewConnectionController(&accounts.Account{UserId: 93})))

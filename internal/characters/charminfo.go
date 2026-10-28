@@ -13,7 +13,7 @@ var ()
 type CharmInfo struct {
 	By              ids.ID // The charmer's body
 	RoundsRemaining int    // If -1, never expires
-	ExpiredCommand  string // Any valid mob commands such as `emote bows and waves farewell;despawn`
+	ExpiredCommand  string // Any valid mob commands such as `emote bows and waves farewell;say Farewell`
 }
 
 func NewCharm(by ids.ID, rounds int, expireCommand string) *CharmInfo {

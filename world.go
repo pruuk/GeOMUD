@@ -567,6 +567,11 @@ func (w *World) processInput(actor *actors.Actor, inputText string, flags events
 		if user == nil {
 			// Decision 3: an NPC's unknown command goes to the log; the room
 			// sees nothing.
+			if usercommands.IsCommand(command) {
+				// A real command that declines an actor without an account.
+				mudlog.Warn("input", "event", "needs an account", "actorId", actor.Id.String(), "name", actor.Character.Name, "command", command, "rest", remains)
+				return
+			}
 			mudlog.Warn("input", "event", "unknown command", "actorId", actor.Id.String(), "name", actor.Character.Name, "command", command, "rest", remains)
 			return
 		}
