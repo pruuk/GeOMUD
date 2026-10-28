@@ -297,7 +297,11 @@ Each slice plan reads these first; a note leaves once a slice settles it.
   rooms with players; wander state resets on copyover and restore; `GetRandomExit` and `findPath`
   pick in map order, so a seed does not fix wandering where a room has two or more exits (the rat
   test uses a ring of one-exit rooms); actors tick in ID order, so same-round lines may come in a
-  different order than before; alignment decay is accounts-only (Phase 5). `maxwander` counts
+  different order than before; alignment decay is accounts-only (Phase 5). NPC idle now runs
+  inline in `ActorTick` instead of a queued `MobIdle` event, so it reads state before the round's
+  queued events (buff triggers, combat events) apply, and its commands queue ahead of theirs. A
+  displaced NPC with `maxwander: 0` paths home and skips its idle roll that round (before, it rolled
+  when its wander count was 0 and skipped otherwise). `maxwander` counts
   wander moves since last home; Calabe (2026-10-28) would rather it meant rooms away from home, but
   not during the strip: revisit when behaviour is built back up.
 - **Slice 5 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-5-one-combat-path-plan.md`,
