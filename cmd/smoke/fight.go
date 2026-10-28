@@ -119,6 +119,19 @@ var ratWord = regexp.MustCompile(`\brat\b`)
 // promptPrefix matches the status prompt, e.g. "[☀️ 4:01AM HP:6/6 MP:5/5]:".
 var promptPrefix = regexp.MustCompile(`^\[[^\]]*\]:`)
 
+// stripCombatMarks removes the leading marks combat puts on a line (from
+// internal/combat/combat.go, ansi stripped): "*[BACKSTAB]* " on a backstab
+// and "*** " on a crit, in that order when both apply.
+func stripCombatMarks(line string) string {
+	for {
+		trimmed := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(line, "*[BACKSTAB]*"), "***"))
+		if trimmed == line {
+			return line
+		}
+		line = trimmed
+	}
+}
+
 // checkObserverText checks what a bystander read during bot fighter's fight:
 // at least one line naming the fighter and the rat besides the "prepares to
 // fight" line (the observer form of a round's swing line), and no attacker-only
@@ -128,6 +141,7 @@ func checkObserverText(got, fighter string) error {
 	for _, line := range strings.Split(got, "\n") {
 		// A line that arrives right after the status prompt starts with it.
 		line = strings.TrimSpace(promptPrefix.ReplaceAllString(strings.TrimSpace(line), ""))
+		line = stripCombatMarks(line)
 		// The name may be possessive: "Smk..c0's fists connects with rat."
 		if (strings.HasPrefix(line, fighter+" ") || strings.HasPrefix(line, fighter+"'")) && ratWord.MatchString(line) && !strings.Contains(line, "prepares to fight") {
 			swing = true

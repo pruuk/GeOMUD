@@ -139,6 +139,16 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, 
 		}
 	}
 	defer arrive() // a bot that fails early, even at connect, must not hold up the copyover
+	// Likewise the other bot's wait on the fight: bot 0 owes done, bot 1 owes
+	// ready. fight and observe release them too; the Once makes this a no-op then.
+	if fc != nil {
+		switch b.idx {
+		case 0:
+			defer fc.markDone()
+		case 1:
+			defer fc.markReady()
+		}
+	}
 
 	c, err := dial(ctx, addr, timeout, rec)
 	if err != nil {
