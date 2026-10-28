@@ -93,6 +93,7 @@ type Character struct {
 	KilledBy         ids.ID                         `yaml:"-"` // transient: the actor whose combat damage downed this player (NPC or player)
 	KillerMobIsElite bool                           `yaml:"-"` // transient: true if the killing mob was elite
 	KillerMobName    string                         `yaml:"-"` // transient: name of the mob that delivered the killing blow
+	KillerMobId      int                            `yaml:"-"` // transient: template id of the mob that delivered the killing blow, 0 if none
 	permaBuffIds     []int                          // Buff Id's that are always present for this character
 	userId           int                            // User ID of the character if any
 }
@@ -1001,7 +1002,24 @@ func (c *Character) ForgetTransient() {
 	c.KilledBy = ids.ID{}
 	c.KillerMobIsElite = false
 	c.KillerMobName = ""
+	c.KillerMobId = 0
 	c.roomHistory = nil
+}
+
+// forgetKillerIfUp drops the record of who downed this character once its
+// health is 1 or more, so a later death from another cause (poison, a
+// suicide) is not credited to a stale killer. Health is a plain field with
+// no single writer, so every Character method that raises it calls this:
+// Heal (the AutoHeal regeneration), ApplyHealthChange, and the full restore
+// on a level gain. suicide.go's revive clears the record itself.
+func (c *Character) forgetKillerIfUp() {
+	if c.Health < 1 {
+		return
+	}
+	c.KilledBy = ids.ID{}
+	c.KillerMobIsElite = false
+	c.KillerMobName = ""
+	c.KillerMobId = 0
 }
 
 // Remember visiting a room. This may cause to forget an older room if the memory is full.
@@ -1216,6 +1234,7 @@ func (c *Character) ApplyHealthChange(healthChange int) int {
 	}
 
 	c.Health = newHealth
+	c.forgetKillerIfUp()
 
 	return newHealth - oldHealth
 }
@@ -1304,6 +1323,7 @@ func (c *Character) LevelUp() (bool, stats.Statistics) {
 
 	c.Health = c.HealthMax.Value
 	c.Mana = c.ManaMax.Value
+	c.forgetKillerIfUp()
 
 	return true, statsDelta
 }
@@ -1320,6 +1340,7 @@ func (c *Character) Heal(hp int, mana int) (int, int) {
 	if c.Mana > c.ManaMax.Value {
 		c.Mana = c.ManaMax.Value
 	}
+	c.forgetKillerIfUp()
 
 	return c.Health - startHP, c.Mana - startMP
 }

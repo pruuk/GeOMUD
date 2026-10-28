@@ -101,15 +101,14 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 
 	killerMobId := 0
 	if !user.Character.KilledBy.IsZero() {
-		if killerMob := mobs.GetInstance(user.Character.KilledBy); killerMob != nil {
-			killerMobId = int(killerMob.MobId)
-		}
+		killerMobId = user.Character.KillerMobId
 		if user.Character.KillerMobIsElite {
 			user.Character.KD.AddEliteDeath(killerMobId, user.Character.KillerMobName)
 		}
 		user.Character.KilledBy = ids.ID{}
 		user.Character.KillerMobIsElite = false
 		user.Character.KillerMobName = ``
+		user.Character.KillerMobId = 0
 	}
 
 	events.AddToQueue(events.PlayerDeath{

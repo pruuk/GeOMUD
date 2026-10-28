@@ -54,5 +54,5 @@ seed 303
   AggroChanged Alice room=93001
   PlayerDrop Alice room=93001
 -- state
-  Alice: room=93001 hp=-2/12 aggro=[none] playerdamage={}
+  Alice: room=93001 hp=-2/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=false
   guard: room=93001 hp=10/10 aggro=[none] playerdamage={}

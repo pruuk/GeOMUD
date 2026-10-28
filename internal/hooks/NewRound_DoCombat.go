@@ -197,9 +197,12 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 		d.Character.KilledBy = a.Id
 		d.Character.KillerMobIsElite = false
 		d.Character.KillerMobName = ``
+		d.Character.KillerMobId = 0
+		// Recorded now, so the death does not need the killer to exist still.
 		if killerMob := mobs.GetInstance(a.Id); killerMob != nil {
 			d.Character.KillerMobIsElite = killerMob.IsElite
 			d.Character.KillerMobName = killerMob.Character.Name
+			d.Character.KillerMobId = int(killerMob.MobId)
 		}
 	}
 

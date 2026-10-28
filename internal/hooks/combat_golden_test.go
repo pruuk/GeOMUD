@@ -348,6 +348,9 @@ func (w *combatWorld) damage(c *characters.Character) string {
 
 func (w *combatWorld) state(c *characters.Character) string {
 	s := fmt.Sprintf("room=%d hp=%d/%d aggro=[%s] playerdamage=%s", c.RoomId, c.Health, c.HealthMax.Value, w.aggro(c), w.damage(c))
+	if !c.KilledBy.IsZero() {
+		s += fmt.Sprintf(" killedby=%s mob=%d elite=%t", w.name(c.KilledBy), c.KillerMobId, c.KillerMobIsElite)
+	}
 	if c.Equipment.Weapon.ItemId > 0 {
 		s += fmt.Sprintf(" weapon=%d", c.Equipment.Weapon.ItemId)
 	}
@@ -610,4 +613,25 @@ func TestShootWaitLineDoesNotReachTargetRoom(t *testing.T) {
 	w.rounds(1)
 	require.NotEmpty(t, w.reads[alice.UserId], "the shooter reads the wait line")
 	require.Empty(t, w.reads[carol.UserId], "observers in the target's room read nothing on the wait round")
+}
+
+// The killer is recorded when combat downs the player, so destroying the
+// killer before the death does not lose its MobId; healing clears it.
+func TestKilledByOutlivesTheKiller(t *testing.T) {
+	w := newCombatWorld(t, 303)
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
+	guard := w.addNPC(93202, "guard", 1, goldenRoomA, 30, 30, 20, 10)
+	guard.Character.SetAggro(alice.Character.Id, characters.DefaultAttack)
+	w.start()
+	w.rounds(20)
+	require.Less(t, alice.Character.Health, 1, "the fixture must reach Alice going down")
+
+	mobs.DestroyInstance(guard.Character.Id)
+	require.Nil(t, mobs.GetInstance(guard.Character.Id))
+	require.False(t, alice.Character.KilledBy.IsZero())
+	require.Equal(t, 93202, alice.Character.KillerMobId, "the MobId was recorded while the guard existed")
+
+	alice.Character.Heal(alice.Character.HealthMax.Value, 0)
+	require.True(t, alice.Character.KilledBy.IsZero(), "back on her feet: no stale killer")
+	require.Zero(t, alice.Character.KillerMobId)
 }

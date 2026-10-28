@@ -53,5 +53,5 @@ seed 202
   PlayerDrop Bob room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
-  Bob: room=93001 hp=-3/15 aggro=[none] playerdamage={Alice:18}
+  Bob: room=93001 hp=-3/15 aggro=[none] playerdamage={Alice:18} killedby=Alice mob=0 elite=false
   room 93001 floor: 0
