@@ -1207,8 +1207,8 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
         <table class="ref-table">
             <thead><tr><th>Event Type</th><th>Key Fields</th><th>Notes</th></tr></thead>
             <tbody>
-                <tr><td><span class="ev-badge">Broadcast</span></td><td><code>Text string</code>, <code>TextScreenReader string</code>, <code>IsCommunication bool</code>, <code>SourceIsMod bool</code></td><td>Message sent to all connected players.</td></tr>
-                <tr><td><span class="ev-badge">Message</span></td><td><code>UserId</code>, <code>RoomId</code>, <code>Text string</code>, <code>IsCommunication bool</code></td><td>Message sent to a room or specific user.</td></tr>
+                <tr><td><span class="ev-badge">Broadcast</span></td><td><code>Text string</code>, <code>TextScreenReader string</code></td><td>Message sent to all connected players.</td></tr>
+                <tr><td><span class="ev-badge">Message</span></td><td><code>UserId</code>, <code>RoomId</code>, <code>Text string</code></td><td>Message sent to a room or specific user.</td></tr>
                 <tr><td><span class="ev-badge">Communication</span></td><td><code>SourceActorId ids.ID</code>, <code>TargetUserId</code>, <code>CommType string</code>, <code>Name string</code>, <code>Message string</code></td><td>A say/party/whisper/shout communication.</td></tr>
                 <tr><td><span class="ev-badge">PartyUpdated</span></td><td><code>Action string</code>, <code>UserIds []int</code></td><td>Party was created, disbanded, or membership changed.</td></tr>
             </tbody>
