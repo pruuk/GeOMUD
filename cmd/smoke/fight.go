@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-// fightStepTimeout is how long bot 0 waits for the rat to die. The rat has
-// a few HP, the bot hits for about 1 a round and rounds are 4 s (measured
-// fights: see the smoke notes in the commit), so 2 minutes covers a long tail.
-const fightStepTimeout = 2 * time.Minute
+// fightStepTimeout is how long bot 0 waits for the rat to die. Rounds are 4 s
+// and `attack rat` may pick a tougher rat (measured: up to about 110 s, 27
+// rounds), so 4 minutes leaves room on a loaded CI runner.
+const fightStepTimeout = 4 * time.Minute
 
 // fightRetryGap is how long bot 0 waits before attacking again after the rat
 // was not there (it wandered off) or the target was lost.
