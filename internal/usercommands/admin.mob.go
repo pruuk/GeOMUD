@@ -49,7 +49,7 @@ func Mob(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			return true, nil
 		}
 
-		return mob_Create(strings.TrimSpace(rest[6:]), user, room, flags)
+		return mob_Create(strings.TrimSpace(rest[6:]), actor, user, room, flags)
 	}
 
 	// Spawn a mob instance
@@ -166,7 +166,7 @@ func mob_Spawn(rest string, user *accounts.Account, room *rooms.Room, flags even
 	return true, nil
 }
 
-func mob_Create(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	var newMob = mobs.Mob{}
 
@@ -266,10 +266,7 @@ func mob_Create(rest string, user *accounts.Account, room *rooms.Room, flags eve
 		}
 
 		question.RejectResponse()
-		if actor := actors.ByUserId(user.UserId); actor != nil {
-			return Help(helpCmd+` `+helpRest, actor, room, flags)
-		}
-		return false, nil
+		return Help(helpCmd+` `+helpRest, actor, room, flags)
 	}
 
 	raceNameSelection := question.Response

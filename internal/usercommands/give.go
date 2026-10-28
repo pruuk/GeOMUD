@@ -21,7 +21,7 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) < 2 {
-		tell(actor, `Give what? To whom? (<ansi fg="command">give {object-name} {receiver-name}</ansi>)`)
+		Tell(actor, `Give what? To whom? (<ansi fg="command">give {object-name} {receiver-name}</ansi>)`)
 		return true, nil
 	}
 
@@ -38,12 +38,12 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		giveGoldAmount = int(g)
 
 		if giveGoldAmount < 0 {
-			tell(actor, "You can't give a negative amount of gold.")
+			Tell(actor, "You can't give a negative amount of gold.")
 			return true, nil
 		}
 
 		if giveGoldAmount > actor.Character.Gold {
-			tell(actor, "You don't have that much gold to give.")
+			Tell(actor, "You don't have that much gold to give.")
 			return true, nil
 		}
 
@@ -55,7 +55,7 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		giveItem, found = actor.Character.FindInBackpack(giveWhat)
 
 		if !found {
-			tell(actor, fmt.Sprintf(`You don't have a %s to give. (<ansi fg="command">give {object-name} {receiver-name}</ansi>)`, giveWhat))
+			Tell(actor, fmt.Sprintf(`You don't have a %s to give. (<ansi fg="command">give {object-name} {receiver-name}</ansi>)`, giveWhat))
 			return true, nil
 		}
 
@@ -77,15 +77,15 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			targetUser.Character.StoreItem(giveItem)
 			actor.Character.RemoveItem(giveItem)
 
-			tell(actor,
+			Tell(actor,
 				fmt.Sprintf(`You give the <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, giveItem.DisplayName(), targetUser.Character.Name),
 			)
 			targetUser.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives you their <ansi fg="item">%s</ansi>.`, nameColour(actor), actor.Character.Name, giveItem.DisplayName()),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives you their <ansi fg="item">%s</ansi>.`, NameColour(actor), actor.Character.Name, giveItem.DisplayName()),
 			)
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives <ansi fg="username">%s</ansi> a <ansi fg="itemname">%s</ansi>.`, nameColour(actor), actor.Character.Name, targetUser.Character.Name, giveItem.NameSimple()),
-				excludeId(actor),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives <ansi fg="username">%s</ansi> a <ansi fg="itemname">%s</ansi>.`, NameColour(actor), actor.Character.Name, targetUser.Character.Name, giveItem.NameSimple()),
+				ExcludeId(actor),
 				targetUser.UserId)
 
 			events.AddToQueue(events.ItemOwnership{
@@ -102,14 +102,14 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		} else if giveGoldAmount > 0 {
 
-			if targetUser.UserId == excludeId(actor) {
+			if targetUser.UserId == ExcludeId(actor) {
 
-				tell(actor,
+				Tell(actor,
 					fmt.Sprintf(`You count out <ansi fg="gold">%d gold</ansi> and put it back in your pocket.`, giveGoldAmount),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> counts out some <ansi fg="gold">gold</ansi> and put it back in their pocket.`, nameColour(actor), actor.Character.Name),
-					excludeId(actor))
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> counts out some <ansi fg="gold">gold</ansi> and put it back in their pocket.`, NameColour(actor), actor.Character.Name),
+					ExcludeId(actor))
 
 			} else {
 				targetUser.Character.Gold += giveGoldAmount
@@ -125,19 +125,19 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 					GoldChange: -giveGoldAmount,
 				})
 
-				tell(actor,
+				Tell(actor,
 					fmt.Sprintf(`You give <ansi fg="gold">%d gold</ansi> to <ansi fg="username">%s</ansi>.`, giveGoldAmount, targetUser.Character.Name),
 				)
 				targetUser.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives you <ansi fg="gold">%d gold</ansi>.`, nameColour(actor), actor.Character.Name, giveGoldAmount),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives you <ansi fg="gold">%d gold</ansi>.`, NameColour(actor), actor.Character.Name, giveGoldAmount),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives <ansi fg="username">%s</ansi> some <ansi fg="gold">gold</ansi>.`, nameColour(actor), actor.Character.Name, targetUser.Character.Name),
-					excludeId(actor),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives <ansi fg="username">%s</ansi> some <ansi fg="gold">gold</ansi>.`, NameColour(actor), actor.Character.Name, targetUser.Character.Name),
+					ExcludeId(actor),
 					targetUser.UserId)
 			}
 		} else {
-			tell(actor, "Something went wrong.")
+			Tell(actor, "Something went wrong.")
 		}
 
 		return true, nil
@@ -167,24 +167,24 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 						GoldChange: -giveGoldAmount,
 					})
 
-					tell(actor,
+					Tell(actor,
 						fmt.Sprintf(`You give <ansi fg="gold">%d gold</ansi> to <ansi fg="username">%s</ansi>.`, giveGoldAmount, m.Character.Name),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> gave some gold to <ansi fg="mobname">%s</ansi>.`, nameColour(actor), actor.Character.Name, m.Character.Name),
-						excludeId(actor),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> gave some gold to <ansi fg="mobname">%s</ansi>.`, NameColour(actor), actor.Character.Name, m.Character.Name),
+						ExcludeId(actor),
 					)
 				} else {
 
 					m.Character.StoreItem(giveItem)
 					actor.Character.RemoveItem(giveItem)
 
-					tell(actor,
+					Tell(actor,
 						fmt.Sprintf(`You give the <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, giveItem.DisplayName(), m.Character.Name),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> gave their <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, nameColour(actor), actor.Character.Name, giveItem.DisplayName(), m.Character.Name),
-						excludeId(actor),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> gave their <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, NameColour(actor), actor.Character.Name, giveItem.DisplayName(), m.Character.Name),
+						ExcludeId(actor),
 					)
 
 					events.AddToQueue(events.ItemOwnership{
@@ -207,7 +207,7 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 					m.Command(fmt.Sprintf(`emote considers the <ansi fg="itemname">%s</ansi> for a moment.`, giveItem.DisplayName()))
 				}
 			} else {
-				tell(actor, "Something went wrong.")
+				Tell(actor, "Something went wrong.")
 			}
 
 		}
@@ -215,7 +215,7 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		return true, nil
 	}
 
-	tell(actor, `Who??? (<ansi fg="command">give {object-name} {receiver-name}</ansi>)`)
+	Tell(actor, `Who??? (<ansi fg="command">give {object-name} {receiver-name}</ansi>)`)
 
 	return true, nil
 }

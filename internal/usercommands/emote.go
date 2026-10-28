@@ -96,10 +96,10 @@ var (
 func Emote(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if len(rest) == 0 {
-		tell(actor, "You emote.")
+		Tell(actor, "You emote.")
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="%s">%s</ansi> emotes.`, nameColour(actor), actor.Character.Name),
-			excludeId(actor),
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> emotes.`, NameColour(actor), actor.Character.Name),
+			ExcludeId(actor),
 		)
 		return true, nil
 	}
@@ -107,28 +107,28 @@ func Emote(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	// emoteAliases are sent without regard to Mute (Not marked as a communication)
 	// This is because they are pre-written.
 	if emoteText, ok := emoteAliases[rest]; ok {
-		tell(actor, fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, emoteText))
+		Tell(actor, fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, emoteText))
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="%s">%s</ansi> <ansi fg="20">%s</ansi>`, nameColour(actor), actor.Character.Name, emoteText),
-			excludeId(actor),
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> <ansi fg="20">%s</ansi>`, NameColour(actor), actor.Character.Name, emoteText),
+			ExcludeId(actor),
 		)
 		return true, nil
 	}
 
 	if user := actor.Controller().Account(); user != nil && user.Muted {
-		tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
+		Tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
 		return true, nil
 	}
 
 	if rest[0] == '@' && len(rest) > 1 {
 		rest = rest[1:]
 	} else {
-		tell(actor, fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, rest))
+		Tell(actor, fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, rest))
 	}
 
 	room.SendTextCommunication(
-		fmt.Sprintf(`<ansi fg="%s">%s</ansi> <ansi fg="20">%s</ansi>`, nameColour(actor), actor.Character.Name, rest),
-		excludeId(actor),
+		fmt.Sprintf(`<ansi fg="%s">%s</ansi> <ansi fg="20">%s</ansi>`, NameColour(actor), actor.Character.Name, rest),
+		ExcludeId(actor),
 	)
 
 	return true, nil

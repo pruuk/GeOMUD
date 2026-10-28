@@ -13,11 +13,11 @@ func Biome(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	biome, ok := rooms.GetBiome(room.Biome)
 
 	if !ok {
-		tell(actor, `No biome information found about this area.`)
+		Tell(actor, `No biome information found about this area.`)
 		return false, fmt.Errorf(`biome %s not found`, room.Biome)
 	}
 
-	tell(actor, buildBiomePanel(biome))
+	Tell(actor, buildBiomePanel(biome))
 
 	return true, nil
 }

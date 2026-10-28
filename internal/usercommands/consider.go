@@ -23,15 +23,15 @@ func Consider(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 	lookAt := args[0]
 
 	playerId, mobId := room.FindByName(lookAt)
-	if playerId == excludeId(actor) {
+	if playerId == ExcludeId(actor) {
 		playerId = 0
 	}
 
 	if playerId == 0 && mobId.IsZero() {
 		if lookAt == `` {
-			tell(actor, `<ansi fg="command">consider</ansi> whom??`)
+			Tell(actor, `<ansi fg="command">consider</ansi> whom??`)
 		} else {
-			tell(actor, `<ansi fg="mobname">`+lookAt+`</ansi> can't be found.`)
+			Tell(actor, `<ansi fg="mobname">`+lookAt+`</ansi> can't be found.`)
 		}
 		return true, nil
 	}
@@ -73,10 +73,10 @@ func Consider(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 		prediction = `<ansi fg="red-bold">YOU WILL DIE</ansi>`
 	}
 
-	tell(actor,
+	Tell(actor,
 		fmt.Sprintf(`You consider <ansi fg="%sname">%s</ansi>...`, considerType, considerName),
 	)
-	tell(actor,
+	Tell(actor,
 		fmt.Sprintf(`It is estimated that your chances to kill <ansi fg="%sname">%s</ansi> are %s`, considerType, considerName, prediction),
 	)
 

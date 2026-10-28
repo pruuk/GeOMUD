@@ -76,7 +76,7 @@ func Help(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		}
 
-		helpTxt, err = templates.Process("help/help", helpCommandList, excludeId(actor))
+		helpTxt, err = templates.Process("help/help", helpCommandList, ExcludeId(actor))
 		if err != nil {
 			helpTxt = err.Error()
 		}
@@ -84,13 +84,13 @@ func Help(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		helpTxt, err = GetHelpContents(rest)
 		if err != nil {
-			tell(actor, fmt.Sprintf(`No help found for "%s"`, rest))
+			Tell(actor, fmt.Sprintf(`No help found for "%s"`, rest))
 			return true, err
 		}
 
 	}
 
-	tell(actor, helpTxt)
+	Tell(actor, helpTxt)
 
 	return true, nil
 }

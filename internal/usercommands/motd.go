@@ -16,7 +16,7 @@ func Motd(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		text = m
 	}
 
-	tell(actor, text)
+	Tell(actor, text)
 
 	return true, nil
 }

@@ -18,7 +18,7 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) < 2 {
-		tell(actor, "Place what where?")
+		Tell(actor, "Place what where?")
 		return true, nil
 	}
 
@@ -38,21 +38,21 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	}
 
 	if containerName == `` {
-		tell(actor, `No container found by that name`)
+		Tell(actor, `No container found by that name`)
 		return true, nil
 	}
 
 	container := room.Containers[containerName]
 
 	if container.Lock.IsLocked() {
-		tell(actor, ``)
-		tell(actor, fmt.Sprintf(`The <ansi fg="container">%s</ansi> is locked.`, containerName))
-		tell(actor, ``)
+		Tell(actor, ``)
+		Tell(actor, fmt.Sprintf(`The <ansi fg="container">%s</ansi> is locked.`, containerName))
+		Tell(actor, ``)
 		return true, nil
 	}
 
 	if len(args) < 1 {
-		tell(actor, "Place what where?")
+		Tell(actor, "Place what where?")
 		return true, nil
 	}
 
@@ -78,12 +78,12 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	}
 
 	if !itemFound && goldAmt == 0 {
-		tell(actor, `You don't seem to be carrying that.`)
+		Tell(actor, `You don't seem to be carrying that.`)
 		return true, nil
 	}
 
 	if goldAmt > actor.Character.Gold {
-		tell(actor, `You don't have that much gold.`)
+		Tell(actor, `You don't have that much gold.`)
 		return true, nil
 	}
 
@@ -96,8 +96,8 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		})
 
 		container.Gold += goldAmt
-		tell(actor, fmt.Sprintf(`You place <ansi fg="gold">%d gold</ansi> into the <ansi fg="container">%s</ansi>`, goldAmt, containerName))
-		room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> places some <ansi fg="gold">gold</ansi> into the <ansi fg="container">%s</ansi>`, nameColour(actor), actor.Character.Name, containerName), excludeId(actor))
+		Tell(actor, fmt.Sprintf(`You place <ansi fg="gold">%d gold</ansi> into the <ansi fg="container">%s</ansi>`, goldAmt, containerName))
+		room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> places some <ansi fg="gold">gold</ansi> into the <ansi fg="container">%s</ansi>`, NameColour(actor), actor.Character.Name, containerName), ExcludeId(actor))
 	}
 
 	if itemFound {
@@ -111,8 +111,8 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			Gained:  false,
 		})
 
-		tell(actor, fmt.Sprintf(`You place your <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, item.DisplayName(), containerName))
-		room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> places their <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, nameColour(actor), actor.Character.Name, item.DisplayName(), containerName), excludeId(actor))
+		Tell(actor, fmt.Sprintf(`You place your <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, item.DisplayName(), containerName))
+		room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> places their <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, NameColour(actor), actor.Character.Name, item.DisplayName(), containerName), ExcludeId(actor))
 
 		// Enforce container size limits
 

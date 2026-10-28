@@ -18,7 +18,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 	// Parties and party auto-attack belong to accounts; user is nil for an NPC.
 	user := actor.Controller().Account()
-	selfUserId := excludeId(actor)
+	selfUserId := ExcludeId(actor)
 
 	attackPlayerId := 0
 	attackMobId := ids.ID{}
@@ -154,7 +154,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 	}
 
 	if attackMobId.IsZero() && attackPlayerId == 0 {
-		tell(actor, "You attack the darkness!")
+		Tell(actor, "You attack the darkness!")
 		return true, nil
 	}
 
@@ -174,7 +174,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 		if m != nil {
 			if m.Character.IsCharmed(actor.Character.Id) {
-				tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
+				Tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
 				return true, nil
 			}
 
@@ -202,7 +202,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 			events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 
-			tell(actor, fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, m.Character.Name))
+			Tell(actor, fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, m.Character.Name))
 
 			if !isSneaking {
 				room.SendText(
@@ -218,14 +218,14 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		if p := accounts.GetByUserId(attackPlayerId); p != nil {
 
 			if pvpErr := room.CanPvp(actor.Character, p.Character); pvpErr != nil {
-				tell(actor, pvpErr.Error())
+				Tell(actor, pvpErr.Error())
 				return true, nil
 			}
 
 			if user != nil {
 				if partyInfo := parties.Get(user.UserId); partyInfo != nil {
 					if partyInfo.IsMember(attackPlayerId) {
-						tell(actor, fmt.Sprintf(`<ansi fg="username">%s</ansi> is in your party!`, p.Character.Name))
+						Tell(actor, fmt.Sprintf(`<ansi fg="username">%s</ansi> is in your party!`, p.Character.Name))
 						return true, nil
 					}
 				}
@@ -250,7 +250,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 			events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 
-			tell(actor, fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, p.Character.Name))
+			Tell(actor, fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, p.Character.Name))
 
 			if !isSneaking {
 

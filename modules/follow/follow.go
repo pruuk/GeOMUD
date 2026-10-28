@@ -14,6 +14,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -373,21 +374,6 @@ func (f *FollowModule) onPlayerDeath(e events.Event) events.ListenerReturn {
 // Commands
 //
 
-// tell writes text to the actor's account, if it has one.
-func tell(actor *actors.Actor, text string) {
-	if user := actor.Controller().Account(); user != nil {
-		user.SendText(text)
-	}
-}
-
-// nameColour is `username` for an actor with an account, `mobname` otherwise.
-func nameColour(actor *actors.Actor) string {
-	if actor.Controller().Account() != nil {
-		return "username"
-	}
-	return "mobname"
-}
-
 // followCommand is the one follow command for players and NPCs. A follow key
 // is the account's UserId for a player and the body's ID for an NPC.
 func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
@@ -395,13 +381,13 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 	user := actor.Controller().Account() // nil for an NPC
 
 	if rest == "" {
-		tell(actor, `Follow whom? Try <ansi fg="command">help command</ansi>`)
+		usercommands.Tell(actor, `Follow whom? Try <ansi fg="command">help command</ansi>`)
 		return true, nil
 	}
 
 	// Parties belong to accounts.
 	if user != nil && parties.Get(user.UserId) != nil {
-		tell(actor, `You can't use this command while in a party.`)
+		usercommands.Tell(actor, `You can't use this command while in a party.`)
 		return true, nil
 	}
 
@@ -442,7 +428,7 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 
 	if (user != nil && followCommandTarget.userId == followCommandSource.userId) ||
 		(user == nil && followCommandTarget.mobId == followCommandSource.mobId) {
-		tell(actor, `You can't target yourself.`)
+		usercommands.Tell(actor, `You can't target yourself.`)
 		return true, nil
 	}
 
@@ -458,13 +444,13 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 				}
 
 				if followerUser := accounts.GetByUserId(fId.userId); followerUser != nil {
-					followerUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="%s">%s</ansi>.`, nameColour(actor), actor.Character.Name))
+					followerUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="%s">%s</ansi>.`, usercommands.NameColour(actor), actor.Character.Name))
 				}
 			}
 
 		}
 
-		tell(actor, `Nobody is following you.`)
+		usercommands.Tell(actor, `Nobody is following you.`)
 
 		return true, nil
 	}
@@ -477,8 +463,8 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 		if wasFollowing.userId > 0 {
 
 			if followUser := accounts.GetByUserId(wasFollowing.userId); followUser != nil {
-				followUser.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> stopped following you.`, nameColour(actor), actor.Character.Name))
-				tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followUser.Character.Name))
+				followUser.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> stopped following you.`, usercommands.NameColour(actor), actor.Character.Name))
+				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followUser.Character.Name))
 				return true, nil
 			}
 
@@ -487,13 +473,13 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 		if !wasFollowing.mobId.IsZero() {
 
 			if followMob := mobs.GetInstance(wasFollowing.mobId); followMob != nil {
-				tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followMob.Character.Name))
+				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followMob.Character.Name))
 				return true, nil
 			}
 
 		}
 
-		tell(actor, `You aren't following anyone.`)
+		usercommands.Tell(actor, `You aren't following anyone.`)
 
 		return true, nil
 	}
@@ -511,9 +497,9 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 
 		targetUser := accounts.GetByUserId(followCommandTarget.userId)
 
-		tell(actor, fmt.Sprintf(`You start following <ansi fg="username">%s</ansi>.`, targetUser.Character.Name))
+		usercommands.Tell(actor, fmt.Sprintf(`You start following <ansi fg="username">%s</ansi>.`, targetUser.Character.Name))
 
-		targetUser.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> is following you.`, nameColour(actor), actor.Character.Name))
+		targetUser.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> is following you.`, usercommands.NameColour(actor), actor.Character.Name))
 
 		return true, nil
 	}
@@ -523,17 +509,17 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 		targetMob := mobs.GetInstance(followCommandTarget.mobId)
 
 		if targetMob.HatesAlignment(actor.Character.Alignment) {
-			tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> won't let you follow them.`, targetMob.Character.Name))
+			usercommands.Tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> won't let you follow them.`, targetMob.Character.Name))
 		} else {
 			f.startFollow(followCommandTarget, followCommandSource, followEndRound)
 
-			tell(actor, fmt.Sprintf(`You start following <ansi fg="mobname">%s</ansi>.`, targetMob.Character.Name))
+			usercommands.Tell(actor, fmt.Sprintf(`You start following <ansi fg="mobname">%s</ansi>.`, targetMob.Character.Name))
 		}
 
 		return true, nil
 	}
 
-	tell(actor, `Follow whom?`)
+	usercommands.Tell(actor, `Follow whom?`)
 
 	return true, nil
 }

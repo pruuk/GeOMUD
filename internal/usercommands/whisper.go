@@ -16,13 +16,13 @@ func Whisper(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 	args := util.SplitButRespectQuotes(rest)
 
 	if len(args) < 1 {
-		tell(actor, "Whisper to who?")
+		Tell(actor, "Whisper to who?")
 		return true, nil
 	}
 
 	whisperName := args[0]
 	if len(rest) < len(whisperName)+1 {
-		tell(actor, "You need to specify a message.")
+		Tell(actor, "You need to specify a message.")
 		return true, nil
 	}
 
@@ -30,20 +30,20 @@ func Whisper(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 
 	toUser := accounts.GetByCharacterName(whisperName)
 	if toUser == nil {
-		tell(actor, "You can't find anyone by that name.")
+		Tell(actor, "You can't find anyone by that name.")
 		return true, nil
 	}
 
 	targetIsMod := toUser.Role != accounts.RoleUser
 
 	if user := actor.Controller().Account(); user != nil && user.Muted && !targetIsMod {
-		tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
+		Tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
 		return true, nil
 	}
 
 	toUser.SendText(fmt.Sprintf(`<ansi fg="white">***</ansi> <ansi fg="black-bold"><ansi fg="username">%s</ansi> whispers, "%s"</ansi> <ansi fg="white">***</ansi>`, actor.Character.Name, rest))
 
-	tell(actor, fmt.Sprintf(`You sent a <ansi fg="command">whisper</ansi> to <ansi fg="username">%s</ansi>`, toUser.Character.Name))
+	Tell(actor, fmt.Sprintf(`You sent a <ansi fg="command">whisper</ansi> to <ansi fg="username">%s</ansi>`, toUser.Character.Name))
 
 	events.AddToQueue(events.Communication{
 		SourceActorId: actor.Character.Id,

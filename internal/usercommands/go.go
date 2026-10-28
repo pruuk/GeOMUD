@@ -21,13 +21,13 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 	// Nobody walks out of a fight; they flee (Decision 4).
 	if inFight(actor, room) {
-		tell(actor, "You can't do that! You are in combat!")
+		Tell(actor, "You can't do that! You are in combat!")
 		return true, nil
 	}
 
 	// If has a buff that prevents combat, skip the player
 	if actor.Character.HasBuffFlag("no-go") {
-		tell(actor, "You can't do that!")
+		Tell(actor, "You can't do that!")
 		return true, nil
 	}
 
@@ -42,7 +42,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 	if exitName != `` {
 
 		if actor.Character.IsDisabled() {
-			tell(actor, "You are unable to do that while downed.")
+			Tell(actor, "You are unable to do that while downed.")
 			return true, nil
 		}
 
@@ -56,9 +56,9 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 		if !actor.Character.DeductActionPoints(actionCost) {
 
 			if encumbered {
-				tell(actor, "You're too encumbered to move (<ansi fg=\"command\">help encumbrance</ansi>)!")
+				Tell(actor, "You're too encumbered to move (<ansi fg=\"command\">help encumbrance</ansi>)!")
 			} else {
-				tell(actor, "You're too tired to move (slow down)!")
+				Tell(actor, "You're too tired to move (slow down)!")
 				mudlog.Debug("No ActionPoints", "AP", actor.Character.ActionPoints, "Needed", actionCost)
 			}
 
@@ -88,19 +88,19 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 			if lockpickItm.ItemId > 0 && hasSequence {
 
-				tell(actor, `You know this lock well, you quickly pick it.`)
+				Tell(actor, `You know this lock well, you quickly pick it.`)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> quickly picks the lock on the <ansi fg="exit">%s</ansi> exit.`, nameColour(actor), actor.Character.Name, exitName),
-					excludeId(actor))
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> quickly picks the lock on the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
+					ExcludeId(actor))
 
 				exitInfo.Lock.SetUnlocked()
 				room.SetExitLock(exitName, false)
 
 			} else if hasKey {
-				tell(actor, fmt.Sprintf(`You use the key on your key ring to unlock the <ansi fg="exit">%s</ansi> exit.`, exitName))
+				Tell(actor, fmt.Sprintf(`You use the key on your key ring to unlock the <ansi fg="exit">%s</ansi> exit.`, exitName))
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, nameColour(actor), actor.Character.Name, exitName),
-					excludeId(actor))
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
+					ExcludeId(actor))
 
 				exitInfo.Lock.SetUnlocked()
 				room.SetExitLock(exitName, false)
@@ -112,10 +112,10 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 					itmSpec := backpackKeyItm.GetSpec()
 
-					tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
+					Tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, nameColour(actor), actor.Character.Name, exitName),
-						excludeId(actor))
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
+						ExcludeId(actor))
 
 					// Key entries look like:
 					// "key-<roomid>-<exitname>": "<itemid>"
@@ -133,7 +133,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 				}
 
 				if exitInfo.Lock.IsLocked() {
-					tell(actor, `There's a lock preventing you from going that way. You'll need a <ansi fg="item">Key</ansi> or to <ansi fg="command">pick</ansi> the lock with <ansi fg="item">lockpicks</ansi>.`)
+					Tell(actor, `There's a lock preventing you from going that way. You'll need a <ansi fg="item">Key</ansi> or to <ansi fg="command">pick</ansi> the lock with <ansi fg="item">lockpicks</ansi>.`)
 					// Send GMCP message
 					if user != nil {
 						if f, ok := GetExportedFunction(`SendGMCPEvent`); ok {
@@ -150,7 +150,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 		}
 
 		if exitInfo.ExitMessage != `` && !flags.Has(events.CmdIsRequeue) {
-			tell(actor, exitInfo.ExitMessage)
+			Tell(actor, exitInfo.ExitMessage)
 			queueFlagged(actor, rest, flags|events.CmdIsRequeue|events.CmdBlockInputUntilComplete, 1)
 			return true, nil
 		}
@@ -179,17 +179,17 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 		}
 
 		if err := rooms.MoveToRoom(actor.Character.Id, destRoom.RoomId); err != nil {
-			tell(actor, "Oops, couldn't move there!")
+			Tell(actor, "Oops, couldn't move there!")
 		} else {
 
 			// Tell the player they are moving
 			if isSneaking {
-				tell(actor,
+				Tell(actor,
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
 						fmt.Sprintf(`You <ansi fg="black-bold">sneak</ansi> towards the <ansi fg="exit">%s</ansi> exit.`, exitName),
 					))
 			} else {
-				tell(actor,
+				Tell(actor,
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
 						fmt.Sprintf(`You head towards the <ansi fg="exit">%s</ansi> exit.`, exitName),
 					))
@@ -197,16 +197,16 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 				// Tell the old room they are leaving
 				room.SendText(
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> leaves towards the <ansi fg="exit">%s</ansi> exit.`, nameColour(actor), actor.Character.Name, exitName),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> leaves towards the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
 					),
-					excludeId(actor))
+					ExcludeId(actor))
 
 				// Tell the new room they have arrived
 				destRoom.SendText(
 					fmt.Sprintf(string(c.EnterRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> enters from <ansi fg="exit">%s</ansi>.`, nameColour(actor), actor.Character.Name, enterFromExit),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> enters from <ansi fg="exit">%s</ansi>.`, NameColour(actor), actor.Character.Name, enterFromExit),
 					),
-					excludeId(actor))
+					ExcludeId(actor))
 
 				destRoom.SendTextToExits(`You hear someone moving around.`, true, room.GetPlayers(rooms.FindAll)...)
 			}
@@ -281,7 +281,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 						}
 					}
 
-					tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> notices you as you enter!`, mob.Character.Name))
+					Tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> notices you as you enter!`, mob.Character.Name))
 
 				}
 
@@ -298,7 +298,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 	if !handled {
 
 		if rest == "north" || rest == "south" || rest == "east" || rest == "west" || rest == "up" || rest == "down" || rest == "northwest" || rest == "northeast" || rest == "southwest" || rest == "southeast" {
-			tell(actor, "You're bumping into walls.")
+			Tell(actor, "You're bumping into walls.")
 
 			// Send GMCP message
 			if user != nil {
@@ -313,9 +313,9 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 				room.SendText(
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="%s">%s</ansi> is bumping into walls.`, nameColour(actor), actor.Character.Name),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> is bumping into walls.`, NameColour(actor), actor.Character.Name),
 					),
-					excludeId(actor))
+					ExcludeId(actor))
 			}
 			handled = true
 		}

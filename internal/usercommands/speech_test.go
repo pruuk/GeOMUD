@@ -59,8 +59,8 @@ func messagesFor(msgs []events.Message, roomId int) []string {
 
 func TestNameColour(t *testing.T) {
 	npc, player, _ := setup(t)
-	assert.Equal(t, "mobname", nameColour(npc))
-	assert.Equal(t, "username", nameColour(player))
+	assert.Equal(t, "mobname", NameColour(npc))
+	assert.Equal(t, "username", NameColour(player))
 }
 
 func TestNPCSayReachesTheRoomWithMobname(t *testing.T) {

@@ -20,7 +20,7 @@ func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) < 2 {
-		tell(actor, "Show what? To whom?")
+		Tell(actor, "Show what? To whom?")
 		return true, nil
 	}
 
@@ -35,7 +35,7 @@ func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	showItem, found = actor.Character.FindInBackpack(objectName)
 
 	if !found {
-		tell(actor, fmt.Sprintf("You don't have a %s to show.", objectName))
+		Tell(actor, fmt.Sprintf("You don't have a %s to show.", objectName))
 		return true, nil
 	}
 
@@ -51,7 +51,7 @@ func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		if showItem.ItemId > 0 {
 
 			// Tell the shower
-			tell(actor,
+			Tell(actor,
 				fmt.Sprintf(`You show the <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, showItem.DisplayName(), targetUser.Character.Name),
 			)
 
@@ -68,10 +68,10 @@ func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			room.SendText(
 				fmt.Sprintf(`<ansi fg="username">%s</ansi> shows their <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, actor.Character.Name, showItem.DisplayName(), targetUser.Character.Name),
 				targetUser.UserId,
-				excludeId(actor))
+				ExcludeId(actor))
 
 		} else {
-			tell(actor, "Something went wrong.")
+			Tell(actor, "Something went wrong.")
 		}
 
 		return true, nil
@@ -91,17 +91,17 @@ func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 			if showItem.ItemId > 0 {
 
-				tell(actor,
+				Tell(actor,
 					fmt.Sprintf(`You show the <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, showItem.DisplayName(), targetMob.Character.Name),
 				)
 
 				room.SendText(
 					fmt.Sprintf(`<ansi fg="username">%s</ansi> shows their <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, actor.Character.Name, showItem.DisplayName(), targetMob.Character.Name),
-					excludeId(actor),
+					ExcludeId(actor),
 				)
 
 			} else {
-				tell(actor, "Something went wrong.")
+				Tell(actor, "Something went wrong.")
 			}
 
 		}
@@ -109,7 +109,7 @@ func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		return true, nil
 	}
 
-	tell(actor, "Who???")
+	Tell(actor, "Who???")
 
 	return true, nil
 }

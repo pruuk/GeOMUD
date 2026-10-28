@@ -102,7 +102,7 @@ func Inventory(rest string, actor *actors.Actor, room *rooms.Room, flags events.
 
 	}
 
-	tell(actor, buildInventoryPanel(actor.Character, itemList, len(rest) > 0))
+	Tell(actor, buildInventoryPanel(actor.Character, itemList, len(rest) > 0))
 
 	return true, nil
 }

@@ -81,7 +81,40 @@ func countIn(list []items.Item, it items.Item) int {
 	return n
 }
 
-const struggle = `emote struggles with their gear for a while, then gives up.`
+// The @ prefix keeps Emote from echoing the line back to the actor.
+const struggle = `emote @struggles with their gear for a while, then gives up.`
+
+func TestPermaGearStruggleEmoteHasNoSelfEcho(t *testing.T) {
+	_, player, _ := setup(t)
+	room := rooms.LoadRoom(testRoomId)
+	givePermaGear(t, player)
+
+	var queued []events.Input
+	told := playerTexts(t, player, func() {
+		queued = capture[events.Input](t, func() {
+			require.True(t, permaGearRefused(player))
+		})
+	})
+	require.Equal(t, []string{struggle}, inputTexts(queued))
+	require.Len(t, told, 1)
+	assert.Contains(t, told[0], `Your gear won't budge.`)
+
+	// Run the queued line as the input path would.
+	rest := strings.TrimPrefix(queued[0].InputText, "emote ")
+	msgs := capture[events.Message](t, func() {
+		_, err := Emote(rest, player, room, 0)
+		require.NoError(t, err)
+	})
+	for _, m := range msgs {
+		if m.RoomId == 0 {
+			assert.NotContains(t, m.Text, "You Emote:")
+			assert.NotEqual(t, player.Controller().Account().UserId, m.UserId, "the player is told nothing")
+		}
+	}
+	room_ := messagesFor(msgs, testRoomId)
+	require.NotEmpty(t, room_, "the room still sees it")
+	assert.Contains(t, room_[0], "struggles with their gear")
+}
 
 func TestNPCGetWithFullBackpackKeepsTheItem(t *testing.T) {
 	npc, _, _ := setup(t)

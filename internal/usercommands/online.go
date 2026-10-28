@@ -99,8 +99,8 @@ func Online(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 	}
 
 	onlineResultsTable := templates.GetTable(tableTitle, headers, rows, allFormatting...)
-	tplTxt, _ := templates.Process("tables/generic", onlineResultsTable, excludeId(actor))
-	tell(actor, tplTxt)
+	tplTxt, _ := templates.Process("tables/generic", onlineResultsTable, ExcludeId(actor))
+	Tell(actor, tplTxt)
 
 	return true, nil
 }

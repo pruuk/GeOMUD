@@ -18,7 +18,7 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) == 0 {
-		tell(actor, `Drop what?`)
+		Tell(actor, `Drop what?`)
 
 		return true, nil
 	}
@@ -50,12 +50,12 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		g, _ := strconv.ParseInt(args[0], 10, 32)
 		dropAmt := int(g)
 		if dropAmt < 1 {
-			tell(actor, "Oops!")
+			Tell(actor, "Oops!")
 			return true, nil
 		}
 
 		if dropAmt > actor.Character.Gold {
-			tell(actor, fmt.Sprintf("You don't have a %d gold to drop.", dropAmt))
+			Tell(actor, fmt.Sprintf("You don't have a %d gold to drop.", dropAmt))
 			return true, nil
 		}
 
@@ -69,12 +69,12 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			GoldChange: -dropAmt,
 		})
 
-		tell(actor,
+		Tell(actor,
 			fmt.Sprintf(`You drop <ansi fg="gold">%d gold</ansi> on the floor.`, dropAmt),
 		)
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops <ansi fg="gold">%d gold</ansi>.`, nameColour(actor), actor.Character.Name, dropAmt),
-			excludeId(actor),
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops <ansi fg="gold">%d gold</ansi>.`, NameColour(actor), actor.Character.Name, dropAmt),
+			ExcludeId(actor),
 		)
 
 		return true, nil
@@ -88,7 +88,7 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	matchItem, found := actor.Character.FindInBackpack(rest)
 
 	if !found {
-		tell(actor, fmt.Sprintf("You don't have a %s to drop.", rest))
+		Tell(actor, fmt.Sprintf("You don't have a %s to drop.", rest))
 	} else {
 
 		actor.Character.CancelBuffsWithFlag("hidden")
@@ -98,12 +98,12 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		// Check floor item limit before dropping
 		floorLimit := int(configs.GetGamePlayConfig().FloorItemCountMax)
 		if floorLimit > 0 && len(room.Items) >= floorLimit {
-			tell(actor,
+			Tell(actor,
 				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in your hands!`, matchItem.DisplayName()),
 			)
 			room.SendText(
-				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in <ansi fg="%s">%s</ansi>'s hands!`, matchItem.DisplayName(), nameColour(actor), actor.Character.Name),
-				excludeId(actor),
+				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in <ansi fg="%s">%s</ansi>'s hands!`, matchItem.DisplayName(), NameColour(actor), actor.Character.Name),
+				ExcludeId(actor),
 			)
 			return true, nil
 		}
@@ -117,18 +117,18 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			Gained:  false,
 		})
 
-		tell(actor,
+		Tell(actor,
 			fmt.Sprintf(`You drop the <ansi fg="item">%s</ansi>.`, matchItem.DisplayName()),
 		)
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops their <ansi fg="item">%s</ansi>...`, nameColour(actor), actor.Character.Name, matchItem.DisplayName()),
-			excludeId(actor),
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops their <ansi fg="item">%s</ansi>...`, NameColour(actor), actor.Character.Name, matchItem.DisplayName()),
+			ExcludeId(actor),
 		)
 
 		// If grenades are dropped, they explode and affect everyone in the room!
 		if iSpec.Type == items.Grenade {
 
-			tell(actor, `Todo. Grenades disabled for now.`)
+			Tell(actor, `Todo. Grenades disabled for now.`)
 
 		}
 

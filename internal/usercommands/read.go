@@ -32,20 +32,20 @@ func Read(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	isSneaking := actor.Character.HasBuffFlag("hidden")
 
 	if len(foundItemName) == 0 {
-		tell(actor, fmt.Sprintf(`You don't have a "%s" that can be read.`, rest))
+		Tell(actor, fmt.Sprintf(`You don't have a "%s" that can be read.`, rest))
 	} else {
-		tell(actor,
+		Tell(actor,
 			fmt.Sprintf(`You look at <ansi fg="item">%s</ansi>...`, foundItemLongName),
 		)
 
 		if !isSneaking {
 			room.SendText(
 				fmt.Sprintf(`<ansi fg="username">%s</ansi> looks at their <ansi fg="item">%s</ansi>...`, actor.Character.Name, foundItemName),
-				excludeId(actor),
+				ExcludeId(actor),
 			)
 		}
 
-		tell(actor, foundItemDescription)
+		Tell(actor, foundItemDescription)
 	}
 
 	return true, nil

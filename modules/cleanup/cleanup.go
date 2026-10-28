@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -56,30 +57,6 @@ func init() {
 
 }
 
-// tell writes text to the actor's account, if it has one.
-func tell(actor *actors.Actor, text string) {
-	if user := actor.Controller().Account(); user != nil {
-		user.SendText(text)
-	}
-}
-
-// excludeId is the ID a room send excludes for the actor: its account's
-// UserId, or 0 for an NPC, which never receives room text.
-func excludeId(actor *actors.Actor) int {
-	if user := actor.Controller().Account(); user != nil {
-		return user.UserId
-	}
-	return 0
-}
-
-// nameColour is `username` for an actor with an account, `mobname` otherwise.
-func nameColour(actor *actors.Actor) string {
-	if actor.Controller().Account() != nil {
-		return "username"
-	}
-	return "mobname"
-}
-
 // Using a struct gives a way to store longer term data.
 type CleanupModule struct {
 	// Keep a reference to the plugin when we create it so that we can call ReadBytes() and WriteBytes() on it.
@@ -102,7 +79,7 @@ func (c *CleanupModule) trashCommand(rest string, actor *actors.Actor, room *roo
 	matchItem, found := actor.Character.FindInBackpack(rest)
 
 	if !found {
-		tell(actor, fmt.Sprintf(`You don't have a "%s" to trash.`, rest))
+		usercommands.Tell(actor, fmt.Sprintf(`You don't have a "%s" to trash.`, rest))
 	} else {
 
 		c.loadConfig()
@@ -117,13 +94,13 @@ func (c *CleanupModule) trashCommand(rest string, actor *actors.Actor, room *roo
 			Gained:  false,
 		})
 
-		tell(actor,
+		usercommands.Tell(actor,
 			fmt.Sprintf(`You trash the <ansi fg="item">%s</ansi> for good.`, matchItem.DisplayName()))
 
 		if !isSneaking {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> destroys <ansi fg="item">%s</ansi>...`, nameColour(actor), actor.Character.Name, matchItem.DisplayName()),
-				excludeId(actor))
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> destroys <ansi fg="item">%s</ansi>...`, usercommands.NameColour(actor), actor.Character.Name, matchItem.DisplayName()),
+				usercommands.ExcludeId(actor))
 		}
 
 		// Experience goes to an account.
@@ -150,7 +127,7 @@ func (c *CleanupModule) buryCommand(rest string, actor *actors.Actor, room *room
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) == 0 {
-		tell(actor, "Bury what?")
+		usercommands.Tell(actor, "Bury what?")
 		return true, nil
 	}
 
@@ -163,8 +140,8 @@ func (c *CleanupModule) buryCommand(rest string, actor *actors.Actor, room *room
 				corpseColor = `user-corpse`
 			}
 
-			tell(actor, fmt.Sprintf(`You bury the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name))
-			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> buries the <ansi fg="%s">%s corpse</ansi>.`, nameColour(actor), actor.Character.Name, corpseColor, corpse.Character.Name), excludeId(actor))
+			usercommands.Tell(actor, fmt.Sprintf(`You bury the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name))
+			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> buries the <ansi fg="%s">%s corpse</ansi>.`, usercommands.NameColour(actor), actor.Character.Name, corpseColor, corpse.Character.Name), usercommands.ExcludeId(actor))
 			return true, nil
 
 		}
@@ -172,7 +149,7 @@ func (c *CleanupModule) buryCommand(rest string, actor *actors.Actor, room *room
 		return true, nil
 	}
 
-	tell(actor, fmt.Sprintf("You don't see a %s around for burying.", rest))
+	usercommands.Tell(actor, fmt.Sprintf("You don't see a %s around for burying.", rest))
 
 	return true, nil
 }

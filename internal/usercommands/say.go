@@ -13,7 +13,7 @@ import (
 func Say(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	if user := actor.Controller().Account(); user != nil && user.Muted {
-		tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
+		Tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
 		return true, nil
 	}
 
@@ -26,12 +26,12 @@ func Say(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	}
 
 	if isSneaking {
-		room.SendTextCommunication(fmt.Sprintf(`someone says, "<ansi fg="saytext">%s</ansi>"`, rest), excludeId(actor))
+		room.SendTextCommunication(fmt.Sprintf(`someone says, "<ansi fg="saytext">%s</ansi>"`, rest), ExcludeId(actor))
 	} else {
-		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="%s">%s</ansi> says, "<ansi fg="saytext">%s</ansi>"`, nameColour(actor), actor.Character.Name, rest), excludeId(actor))
+		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="%s">%s</ansi> says, "<ansi fg="saytext">%s</ansi>"`, NameColour(actor), actor.Character.Name, rest), ExcludeId(actor))
 	}
 
-	tell(actor, fmt.Sprintf(`You say, "<ansi fg="saytext">%s</ansi>"`, rest))
+	Tell(actor, fmt.Sprintf(`You say, "<ansi fg="saytext">%s</ansi>"`, rest))
 
 	room.SendTextToExits(`You hear someone talking.`, true)
 

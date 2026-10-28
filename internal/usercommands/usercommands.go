@@ -32,26 +32,26 @@ type CommandAccess struct {
 // the input line, the actor, its room and the input flags.
 type Command func(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error)
 
-// tell writes text to the actor: to its account when it has one, nowhere
+// Tell writes text to the actor: to its account when it has one, nowhere
 // otherwise (Decision 11; slice 7 points this at messaging).
-func tell(actor *actors.Actor, text string) {
+func Tell(actor *actors.Actor, text string) {
 	if user := actor.Controller().Account(); user != nil {
 		user.SendText(text)
 	}
 }
 
-// excludeId is the ID a room send excludes for actor: its account's UserId,
+// ExcludeId is the ID a room send excludes for actor: its account's UserId,
 // or 0 for an NPC, which never receives room text (Decision 11).
-func excludeId(actor *actors.Actor) int {
+func ExcludeId(actor *actors.Actor) int {
 	if user := actor.Controller().Account(); user != nil {
 		return user.UserId
 	}
 	return 0
 }
 
-// nameColour is the ANSI alias an actor's name is written in: `username` for
+// NameColour is the ANSI alias an actor's name is written in: `username` for
 // an actor with an account, `mobname` otherwise.
-func nameColour(actor *actors.Actor) string {
+func NameColour(actor *actors.Actor) string {
 	if actor.Controller().Account() != nil {
 		return "username"
 	}
@@ -65,8 +65,9 @@ func permaGearRefused(actor *actors.Actor) bool {
 	if !actor.Character.HasBuffFlag("perma-gear") {
 		return false
 	}
-	tell(actor, `Your gear won't budge.`)
-	queue(actor, `emote struggles with their gear for a while, then gives up.`)
+	Tell(actor, `Your gear won't budge.`)
+	// The @ prefix keeps Emote from echoing "You Emote: ..." back to the actor.
+	queue(actor, `emote @struggles with their gear for a while, then gives up.`)
 	return true
 }
 
@@ -311,7 +312,7 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 
 			// If actually downed, prevent it (unless admin)
 			if userDisabled && !cmdInfo.AdminOnly {
-				tell(actor, "You are unable to do that while downed.")
+				Tell(actor, "You are unable to do that while downed.")
 				return true, nil
 			}
 

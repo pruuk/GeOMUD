@@ -56,7 +56,7 @@ func PrintLine(rest string, actor *actors.Actor, room *rooms.Room, flags events.
 		}
 
 		finalOutput = strings.ReplaceAll(finalOutput, `=`, `<ansi fg="8">=</ansi>`)
-		tell(actor, finalOutput)
+		Tell(actor, finalOutput)
 	}
 
 	return true, nil

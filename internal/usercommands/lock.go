@@ -16,7 +16,7 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) < 1 {
-		tell(actor, "Unlock what?")
+		Tell(actor, "Unlock what?")
 		return true, nil
 	}
 
@@ -28,7 +28,7 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		container := room.Containers[containerName]
 
 		if container.Lock.IsLocked() {
-			tell(actor, "That's already locked.")
+			Tell(actor, "That's already locked.")
 			return true, nil
 		}
 
@@ -45,8 +45,8 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			container.Lock.SetLocked()
 			room.Containers[containerName] = container
 
-			tell(actor, fmt.Sprintf(`You use a key to relock the <ansi fg="container">%s</ansi>.`, containerName))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to relock the <ansi fg="container">%s</ansi>.`, actor.Character.Name, containerName), excludeId(actor))
+			Tell(actor, fmt.Sprintf(`You use a key to relock the <ansi fg="container">%s</ansi>.`, containerName))
+			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to relock the <ansi fg="container">%s</ansi>.`, actor.Character.Name, containerName), ExcludeId(actor))
 		} else if hasBackpackKey {
 
 			itmSpec := backpackKeyItm.GetSpec()
@@ -65,12 +65,12 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 				Gained:  false,
 			})
 
-			tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="container">%s</ansi>, and add it to your key ring for the future.`, itmSpec.Name, containerName))
+			Tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="container">%s</ansi>, and add it to your key ring for the future.`, itmSpec.Name, containerName))
 			room.SendText(
 				fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to lock the <ansi fg="container">%s</ansi>.`, actor.Character.Name, containerName),
-				excludeId(actor))
+				ExcludeId(actor))
 		} else {
-			tell(actor, `You do not have the key for that.`)
+			Tell(actor, `You do not have the key for that.`)
 		}
 
 		return true, nil
@@ -80,7 +80,7 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		exitInfo, _ := room.GetExitInfo(exitName)
 
 		if exitInfo.Lock.IsLocked() {
-			tell(actor, "That's already locked.")
+			Tell(actor, "That's already locked.")
 			return true, nil
 		}
 
@@ -97,8 +97,8 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			exitInfo.Lock.SetLocked()
 			room.SetExitLock(exitName, true)
 
-			tell(actor, fmt.Sprintf(`You use a key to relock the <ansi fg="exit">%s</ansi> lock.`, exitName))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to relock the <ansi fg="exit">%s</ansi> lock`, actor.Character.Name, exitName), excludeId(actor))
+			Tell(actor, fmt.Sprintf(`You use a key to relock the <ansi fg="exit">%s</ansi> lock.`, exitName))
+			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to relock the <ansi fg="exit">%s</ansi> lock`, actor.Character.Name, exitName), ExcludeId(actor))
 		} else if hasBackpackKey {
 
 			itmSpec := backpackKeyItm.GetSpec()
@@ -117,19 +117,19 @@ func Lock(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 				Gained:  false,
 			})
 
-			tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
+			Tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to lock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
 			room.SendText(
 				fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to lock the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, exitName),
-				excludeId(actor))
+				ExcludeId(actor))
 		} else {
-			tell(actor, `You do not have the key for that.`)
+			Tell(actor, `You do not have the key for that.`)
 		}
 
 		return true, nil
 
 	}
 
-	tell(actor, "There is no such exit or container.")
+	Tell(actor, "There is no such exit or container.")
 	return true, nil
 
 }
