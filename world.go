@@ -16,6 +16,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/prompt"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -168,13 +169,13 @@ func (w *World) HandleSystemEvents(e events.Event) events.ListenerReturn {
 
 	if sys.Command == `reload` {
 
-		events.AddToQueue(events.Broadcast{
+		messaging.Notify(messaging.Notice{
 			Text: `Reloading flat files...`,
 		})
 
 		loadAllDataFiles(true)
 
-		events.AddToQueue(events.Broadcast{
+		messaging.Notify(messaging.Notice{
 			Text:            `Done.` + term.CRLFStr,
 			SkipLineRefresh: true,
 		})
@@ -560,7 +561,7 @@ func (w *World) processInput(actor *actors.Actor, inputText string, flags events
 
 	} else if user != nil {
 		connId := user.ConnectionId()
-		connections.SendTo([]byte(templates.AnsiParse(user.GetCommandPrompt())), connId)
+		messaging.Raw(connId, []byte(templates.AnsiParse(user.GetCommandPrompt())))
 	}
 
 	if !handled && len(command) > 0 {
@@ -578,7 +579,7 @@ func (w *World) processInput(actor *actors.Actor, inputText string, flags events
 
 		badinputtracker.TrackBadCommand(command, remains)
 
-		user.SendText(fmt.Sprintf(`<ansi fg="command">%s</ansi> not recognized. Type <ansi fg="command">help</ansi> for commands.`, command))
+		messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="command">%s</ansi> not recognized. Type <ansi fg="command">help</ansi> for commands.`, command))
 		user.Command(`emote @looks a little confused`)
 	}
 
@@ -589,12 +590,11 @@ func (w *World) processInput(actor *actors.Actor, inputText string, flags events
 	// If they had an input prompt, but now they don't, lets make sure to resend a status prompt
 	if hadPrompt || (!hadPrompt && user.GetPrompt() != nil) {
 		connId := user.ConnectionId()
-		connections.SendTo([]byte(templates.AnsiParse(user.GetCommandPrompt())), connId)
+		messaging.Raw(connId, []byte(templates.AnsiParse(user.GetCommandPrompt())))
 	}
 	// Removing this as possibly redundant.
 	// Leaving in case I need to remember that I did it...
 	//connId := user.ConnectionId()
-	//connections.SendTo([]byte(templates.AnsiParse(user.GetCommandPrompt(true))), connId)
 
 }
 

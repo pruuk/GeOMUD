@@ -8,6 +8,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
@@ -60,7 +61,7 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 	}
 
 	tplTxt, _ := templates.Process("goodbye", nil, evt.UserId)
-	connections.SendTo([]byte(templates.AnsiParse(tplTxt)), connId)
+	messaging.Raw(connId, []byte(templates.AnsiParse(tplTxt)))
 
 	if err := accounts.LogOutUserByConnectionId(connId); err != nil {
 		mudlog.Error("Log Out Error", "connectionId", connId, "error", err)

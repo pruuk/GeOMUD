@@ -6,6 +6,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/connections"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
@@ -232,12 +233,12 @@ func CreatePromptHandler(steps []*PromptStep, onComplete CompletionFunc) connect
 
 						// Send mask character(s)
 						for i := 0; i < len(clientInput.DataIn); i++ {
-							connections.SendTo([]byte(state.maskTemplate), clientInput.ConnectionId)
+							messaging.Raw(clientInput.ConnectionId, []byte(state.maskTemplate))
 						}
 
 					} else {
 						// Echo input directly
-						connections.SendTo(clientInput.DataIn, clientInput.ConnectionId)
+						messaging.Raw(clientInput.ConnectionId, clientInput.DataIn)
 					}
 				}
 
@@ -260,10 +261,10 @@ func CreatePromptHandler(steps []*PromptStep, onComplete CompletionFunc) connect
 					state.maskTemplate = "*"
 				}
 				for range clientInput.Buffer {
-					connections.SendTo([]byte(state.maskTemplate), clientInput.ConnectionId)
+					messaging.Raw(clientInput.ConnectionId, []byte(state.maskTemplate))
 				}
 			} else {
-				connections.SendTo(clientInput.Buffer, clientInput.ConnectionId)
+				messaging.Raw(clientInput.ConnectionId, clientInput.Buffer)
 			}
 		}
 
@@ -272,7 +273,7 @@ func CreatePromptHandler(steps []*PromptStep, onComplete CompletionFunc) connect
 		// server-sent CRLF here would produce a blank line. Raw telnet
 		// (server-side echo) and the web client still need it.
 		if !connections.GetClientSettings(clientInput.ConnectionId).IsMudlet {
-			connections.SendTo(term.CRLF, clientInput.ConnectionId) // Echo newline
+			messaging.Raw(clientInput.ConnectionId, term.CRLF) // Echo newline
 		}
 		submittedInput := strings.TrimSpace(string(clientInput.Buffer))
 		clientInput.Buffer = clientInput.Buffer[:0] // Clear buffer for next input
@@ -288,8 +289,8 @@ func CreatePromptHandler(steps []*PromptStep, onComplete CompletionFunc) connect
 			/////////////////////////////////////////////////////////////////
 
 			errMsg := err.Error() // Use the error message directly (could be from language.T)
-			connections.SendTo([]byte(errMsg), clientInput.ConnectionId)
-			connections.SendTo(term.CRLF, clientInput.ConnectionId)
+			messaging.Raw(clientInput.ConnectionId, []byte(errMsg))
+			messaging.Raw(clientInput.ConnectionId, term.CRLF)
 
 			if currentStep.ID == `password-new-verify` {
 				state.CurrentStepIndex -= 1
@@ -299,7 +300,7 @@ func CreatePromptHandler(steps []*PromptStep, onComplete CompletionFunc) connect
 			// Increment failure counter in case we want to disconnect the user
 			currentStep.FailureCount++
 			if currentStep.FailureCount >= 3 {
-				connections.SendTo([]byte(term.CRLFStr+`Too many mistakes.`+term.CRLFStr+term.CRLFStr), clientInput.ConnectionId)
+				messaging.Raw(clientInput.ConnectionId, []byte(term.CRLFStr+`Too many mistakes.`+term.CRLFStr+term.CRLFStr))
 				connections.Remove(clientInput.ConnectionId)
 				state.CurrentStepIndex += 99
 				return false
@@ -329,7 +330,7 @@ func CreatePromptHandler(steps []*PromptStep, onComplete CompletionFunc) connect
 		// re-asserts WILL ECHO; if this was the last step, this restores normal
 		// echo before gameplay begins.
 		if currentStep.MaskInput && connections.GetClientSettings(clientInput.ConnectionId).IsMudlet {
-			connections.SendTo(term.TelnetWONT(term.TELNET_OPT_ECHO), clientInput.ConnectionId)
+			messaging.Raw(clientInput.ConnectionId, term.TelnetWONT(term.TELNET_OPT_ECHO))
 		}
 
 		// Advance to Next Step or Complete
@@ -387,7 +388,7 @@ func sendPrompt(step *PromptStep, clientInput *connections.ClientInput, results 
 		if step.MaskInput {
 			maskCmd = "TEXTMASK:true"
 		}
-		connections.SendTo([]byte(maskCmd), clientInput.ConnectionId)
+		messaging.Raw(clientInput.ConnectionId, []byte(maskCmd))
 	}
 
 	// Mudlet reads telnet WILL ECHO as "mask this field". Assert it for masked
@@ -395,10 +396,10 @@ func sendPrompt(step *PromptStep, clientInput *connections.ClientInput, results 
 	// once the step validates. Sent before the prompt text so masking is active
 	// the moment the prompt appears.
 	if step.MaskInput && connections.GetClientSettings(clientInput.ConnectionId).IsMudlet {
-		connections.SendTo(term.TelnetWILL(term.TELNET_OPT_ECHO), clientInput.ConnectionId)
+		messaging.Raw(clientInput.ConnectionId, term.TelnetWILL(term.TELNET_OPT_ECHO))
 	}
 
-	connections.SendTo([]byte(parsedPrompt), clientInput.ConnectionId)
+	messaging.Raw(clientInput.ConnectionId, []byte(parsedPrompt))
 }
 
 // advanceAndSendPrompt finds the next valid step and sends its prompt.

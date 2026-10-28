@@ -5,6 +5,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 )
 
@@ -53,7 +54,10 @@ func FollowLogs(e events.Event) events.ListenerReturn {
 
 	if len(sendLists[logLevels[evt.Level]]) > 0 {
 		// Leaving timestamp out for now
-		connections.SendTo([]byte(fmt.Sprintln(evt.Data[1:]...)), sendLists[logLevels[evt.Level]]...)
+		line := []byte(fmt.Sprintln(evt.Data[1:]...))
+		for _, connId := range sendLists[logLevels[evt.Level]] {
+			messaging.Raw(connId, line)
+		}
 	}
 
 	pruneLogCounter++
