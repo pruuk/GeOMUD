@@ -580,7 +580,7 @@ func (w *World) processInput(userId int, inputText string, flags events.EventFla
 				command = inputText
 			}
 
-			handled, err = usercommands.TryCommand(command, remains, userId, flags)
+			handled, err = usercommands.TryCommand(command, remains, user.Character.Id, flags)
 			if err != nil {
 				mudlog.Warn("user-TryCommand", "command", command, "remains", remains, "error", err.Error())
 			}

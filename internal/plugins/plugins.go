@@ -301,7 +301,7 @@ func (p *Plugin) AddUserCommand(command string, handlerFunc usercommands.UserCom
 	}
 
 	p.Callbacks.userCommands[command] = usercommands.CommandAccess{
-		Func:              handlerFunc,
+		Func:              usercommands.AdaptUserCommand(handlerFunc),
 		AllowedWhenDowned: allowWhenDowned,
 		AdminOnly:         isAdminOnly,
 	}

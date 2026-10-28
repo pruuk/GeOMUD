@@ -16,7 +16,7 @@ import (
 * Role Permissions:
 * command 				(All)
  */
-func Command(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func AdminCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	// args should look like one of the following:
 	// target buffId - put buff on target if in the room
