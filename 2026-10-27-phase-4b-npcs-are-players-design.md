@@ -274,9 +274,25 @@ Each slice plan reads these first; a note leaves once a slice settles it.
   loop. Login goroutines (`LoginUser`, `CopyoverReconnectUser`) change accounts without the world's
   `util.LockMud`; web admin edits run under `RunWithMUDLocked`.
 - **Tests.** `accounts.SetTestUser` skips `OnActivate`, so tests that use it get no actor.
-- **Slices 5 and 7, text parity** against `cmd/smoke/testdata/pre-4b/bot0.txt`: mask the run tag
-  (`smk<tag>u0`), game-clock times, HP/MP prompts and wandering-NPC lines; strip `\r` or pin
-  `cmd/smoke/testdata/** text eol=lf` in `.gitattributes`.
+- **Slice 7 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-7-output-plan.md`,
+  decisions 1-15; inventory beside it). Calabe's ruling: converted lines follow the messaging rules
+  everywhere (a hidden or unseen actor reads "Someone" in every line others get; the looker no longer
+  reads its own "is looking at"; teleport's "appears" goes to the arrival room). Every byte but
+  GMCP's goes through `internal/messaging` (`Send`, `Tell`, `ToAccount`, `Notify`, `Raw`, `RawConn`,
+  `RawAll`, `WebClient`); writes stay queued through `events.Message`/`Broadcast`, written by
+  `messaging.Write*`; `Account.SendText` is the transport, called only by `ConnectionController.Perceive`
+  and messaging; guard `TestOutputGoesThroughMessaging`. Parity tool: the per-receiver reads goldens
+  (`internal/hooks/reads_golden_test.go`, `testdata/reads-golden/`), which replace the smoke
+  transcript diff (two runs of one commit differ by 33 masked lines). For later: room receivers are
+  resolved at send time, not drain time; packages below messaging (`rooms`, `accounts`) send through
+  `rooms.SendMessage` and `accounts.Tell`, set by `messaging.Init`; senses keep today's reach
+  (`Sight|Sound`; speech `Sound`) until Phase 5; no per-receiver render hook exists, so `look` keeps
+  baked names (`GetMobName` adjectives, the line into a room looked into); in a dark room the actor's
+  own give/show line names an unseen target "someone" (slice 5's dark-room rule); go's "leaves" line
+  goes before the move, so a failed move (actor gone) still announces it; a Nearby line reaches a
+  neighbour once, with the direction picked in map order when two exits lead back; party and admin
+  notices to other players use `ToAccount` (same delivery as `Tell`); `keywords.yaml` lists `online`
+  under two help categories, so bare `help` varies between runs; no golden covers the despawn line.
 - **Slice 5 inherits** the combat bugs kept on purpose in slice 2 (`NewRound_DoCombat.go`, marked
   in comments): the shadowed `userId` in the flee check, `affectedPlayerIds` getting 0 in a mob
   fight, `user` dereferenced before its nil check, a spell fizzle clearing aggro without an event;
@@ -307,11 +323,9 @@ Each slice plan reads these first; a note leaves once a slice settles it.
 - **Slice 5 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-5-one-combat-path-plan.md`,
   decisions 1-14; inventory beside it). Calabe's rulings: a hidden attacker reads "Someone"
   everywhere; anyone fighting a fleer may block it and a blocked fleer resumes its pre-flee target
-  (one with none ends with no aggro); every swing earns credit. The parity tool for slice 7 is the
-  golden combat test (`internal/hooks/combat_golden_test.go`, `util.SeedRandForTest`): it records
-  what each player reads; the old pre-4b transcript has no combat (`cmd/smoke/testdata/pre-5/` is
-  the fight baseline for reading). Slice 7: the player-death `Broadcast` (screen-reader and refresh
-  fields), party XP and per-member sends still use the old path (`// slice 7:` comments). Phase 5:
+  (one with none ends with no aggro); every swing earns credit. The golden combat test
+  (`internal/hooks/combat_golden_test.go`, `util.SeedRandForTest`) records what each player reads
+  (`cmd/smoke/testdata/pre-5/` is the fight baseline for reading). Phase 5:
   turn order is still accounts first, then NPCs (initiative is a rule); NPCs still never start or
   join fights; the `-10` suicide threshold in the round is unreachable (bleed-out death is in
   AutoHeal); a pet's group-hatred duration uses the pet's Perception, and a pet that downs a player
@@ -326,9 +340,7 @@ Each slice plan reads these first; a note leaves once a slice settles it.
   no escaping a fight except by fleeing). Slice 5: the NPC half of the combat round only clears a
   fled NPC's aggro; resolving `flee` for NPCs (they leave) is slice 5's one round; NPC death is the
   `suicide` command's template branch (`usercommands/suicide_npc.go`) until the death rule; an
-  NPC's `attack` goes through `CanPvp` against players. Slice 7: commands write through `usercommands.Tell` and exclude by
-  `ExcludeId` (point them at messaging); the cleanup and follow modules use the same helpers.
-  NPCs now receive a room's mutator `PlayerBuffIds` through `MoveToRoom`; rooms are still prepared
+  NPC's `attack` goes through `CanPvp` against players. NPCs now receive a room's mutator `PlayerBuffIds` through `MoveToRoom`; rooms are still prepared
   only for players (an NPC's move or look prepares nothing).
 - **Slice 3 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-3-messaging-core-plan.md`,
   decisions 1-11): `Message.TargetRoomText` was added after review so ranged combat can give the
@@ -339,12 +351,8 @@ Each slice plan reads these first; a note leaves once a slice settles it.
   `util.Hook.Fire` holds its lock while handlers run, so NPC reactions, when added, are queued rather than
   sent from inside `OnBehaviourPerceive` (two NPCs reacting to each other would recurse).
   Text that varies per receiver beyond the three tokens (adjectives from `GetPlayerName(viewer)`,
-  language) has no form yet; slice 7 may need a per-receiver render hook. `Message.Room` is ignored
-  when there is an actor. Slices 5 and 7 start a text with `{actor}` when today's line starts with
-  the name, so "Someone" capitalises. Slice 7 also moves `main.go`'s raw `net.Conn` "server full"
-  writes (the guard does not see them), decides whether telnet and terminal negotiation
-  (`term_iac.go`, `term_ansi.go`, `echo.go`) is a second named exception like GMCP, and adds
-  interface text before an actor exists.
+  language) has no form yet (no per-receiver render hook). `Message.Room` is ignored when there is
+  an actor. A "someone" that opens the visible text is capitalised.
 - **Slice 2c (built 2026-10-28) leaves for later:** item IDs now survive saves, so any path that
   puts one item in two saved places gives two items one ID. The whole-branch review found none on
   normal play paths; the known ones (corpse looting with `CorpseItems` on, admin room API calls) are
