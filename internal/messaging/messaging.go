@@ -54,6 +54,9 @@ func Send(m perception.Message) {
 		if m.Audience == perception.Named && !named(m, rc.actor.Id) {
 			continue
 		}
+		if role == perception.Observer && rc.inTargetRoom && !rc.far && m.TargetRoomText == `` && m.NoTargetRoomText {
+			continue
+		}
 		sense := perceivedBy(rc.actor, rc.room, m)
 		if sense == 0 {
 			continue

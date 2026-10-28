@@ -86,6 +86,9 @@ func combatMessage(attacker, defender ids.ID, actorText, targetText, observerTex
 		TargetText:     targetText,
 		ObserverText:   observerText,
 		TargetRoomText: targetRoomText,
+		// An empty defender-room line means nothing for a remote target's
+		// room; messaging only applies this when the rooms differ.
+		NoTargetRoomText: targetRoomText == ``,
 	}
 }
 

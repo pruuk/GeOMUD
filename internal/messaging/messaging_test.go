@@ -511,3 +511,27 @@ func roomOf(t *testing.T, id int) *rooms.Room {
 	require.NotNil(t, r)
 	return r
 }
+
+func TestNoTargetRoomTextSilencesTheTargetsRoom(t *testing.T) {
+	w := newWorld(t)
+	a := w.room(1, "town", map[string]int{"north": 2})
+	b := w.room(2, "town", map[string]int{"south": 1})
+	archer, _ := w.body(a, "Archer", true)
+	_, aRec := w.body(a, "Ann", true)
+	deer, deerRec := w.body(b, "deer", false)
+	_, bRec := w.body(b, "Bea", true)
+
+	m := perception.Message{Actor: archer, Target: deer, Senses: perception.Sight, Range: perception.Room,
+		ActorText: `You aim.`, TargetText: `You feel watched.`, ObserverText: `{actor} aims.`,
+		NoTargetRoomText: true}
+	Send(m)
+
+	assert.Equal(t, []string{`<ansi fg="username">Archer</ansi> aims.`}, texts(aRec), "the actor's room still reads the observer text")
+	assert.Empty(t, bRec.got, "the target's room reads nothing")
+	assert.Equal(t, []string{`You feel watched.`}, texts(deerRec), "the target keeps its own text")
+
+	// with a target-room text the option changes nothing
+	m.TargetRoomText = `An arrow flies in.`
+	Send(m)
+	assert.Equal(t, []string{`An arrow flies in.`}, texts(bRec))
+}

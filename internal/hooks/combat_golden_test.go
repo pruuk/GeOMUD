@@ -582,7 +582,8 @@ func TestCombatGoldenObserver(t *testing.T) {
 }
 
 // A hidden player attacks a player with a weapon that waits a round, a third
-// player watching: today only the wait lines are hidden.
+// player watching: the hidden attacker reads as "Someone" to both of them in
+// every line, waits and swings alike.
 func TestCombatGoldenHiddenAttacker(t *testing.T) {
 	w := newCombatWorld(t, 909)
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
@@ -594,4 +595,19 @@ func TestCombatGoldenHiddenAttacker(t *testing.T) {
 	w.start()
 	w.rounds(6)
 	w.check("hidden_attacker")
+}
+
+// A bow that waits a round, shot through an exit: the shooter's wait line
+// (empty defender-room text) must not reach the target's room.
+func TestShootWaitLineDoesNotReachTargetRoom(t *testing.T) {
+	w := newCombatWorld(t, 707)
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
+	alice.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 1)
+	carol := w.addPlayer(9303, "Carol", goldenRoomB, 10, 10, 10, 10)
+	rat := w.addNPC(93201, "rat", 10, goldenRoomB, 10, 5, 5, 12)
+	alice.Character.SetAggroRemote("north", rat.Character.Id, characters.Shooting)
+	w.start()
+	w.rounds(1)
+	require.NotEmpty(t, w.reads[alice.UserId], "the shooter reads the wait line")
+	require.Empty(t, w.reads[carol.UserId], "observers in the target's room read nothing on the wait round")
 }
