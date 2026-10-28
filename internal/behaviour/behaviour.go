@@ -27,13 +27,12 @@ func Wander(mob *mobs.Mob) {
 		return
 	}
 
-	// If they aren't home and need to go home, do it.
+	// If they aren't home and have used up their MaxWander moves, go home.
+	// -1 means they can wander forever and never go home. 0 means they never wander.
 	if mob.Character.RoomId != mob.HomeRoomId {
-		if mob.MaxWander > -1 { // -1 means they can wander forever and never go home. 0 means they never wander.
-			if mob.WanderCount > mob.MaxWander {
-				PathTo(mob, `home`)
-				return
-			}
+		if mob.MaxWander > 0 && mob.WanderCount >= mob.MaxWander {
+			PathTo(mob, `home`)
+			return
 		}
 	}
 
@@ -57,7 +56,7 @@ func Wander(mob *mobs.Mob) {
 }
 
 // PathTo plans mob's path to the listed rooms, or "home", as the pathto
-// command did. It does not move: the idle round tick walks the path.
+// command did. It does not move: Tick walks the path.
 // A path that cannot be found is logged (Decision 3) and marks the NPC lost,
 // as before.
 func PathTo(mob *mobs.Mob, args string) {
