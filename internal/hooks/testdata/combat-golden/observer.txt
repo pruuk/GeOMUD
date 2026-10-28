@@ -1,0 +1,74 @@
+seed 808
+== start
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=1] playerdamage={} weapon=93104
+  Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  rat: room=93001 hp=12/12 aggro=[none] playerdamage={}
+== round 1
+-- Alice reads
+  You circle around <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>, looking for an opening.
+-- Carol reads
+  <ansi fg="username">Alice</ansi> stalks around <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>, awaiting an opportunity.
+-- events
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93104
+  Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  rat: room=93001 hp=12/12 aggro=[none] playerdamage={}
+== round 2
+-- Alice reads
+  Your swing at <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi> misses completely!
+-- Carol reads
+  <ansi fg="username">Alice</ansi> swings their <ansi fg="item">testmace</ansi> at <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>, but misses!
+-- events
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=1] playerdamage={} weapon=93104
+  Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  rat: room=93001 hp=12/12 aggro=[none] playerdamage={Alice:0}
+  group golden-rats-observer hates Alice
+== round 3
+-- Alice reads
+  You circle around <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>, looking for an opening.
+-- Carol reads
+  <ansi fg="username">Alice</ansi> stalks around <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>, awaiting an opportunity.
+-- events
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93104
+  Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  rat: room=93001 hp=12/12 aggro=[none] playerdamage={Alice:0}
+  group golden-rats-observer hates Alice
+== round 4
+-- Alice reads
+  You deliver a powerful smash to <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>, causing <ansi fg="damage">6 damage</ansi>!
+-- Carol reads
+  <ansi fg="username">Alice</ansi> delivers a powerful smash to <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>!
+-- events
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=1] playerdamage={} weapon=93104
+  Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  rat: room=93001 hp=6/12 aggro=[none] playerdamage={Alice:6}
+  group golden-rats-observer hates Alice
+== round 5
+-- Alice reads
+  You aim carefully at <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>.
+-- Carol reads
+  <ansi fg="username">Alice</ansi> eyes <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi> warily, ready to strike.
+-- events
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93104
+  Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  rat: room=93001 hp=6/12 aggro=[none] playerdamage={Alice:6}
+  group golden-rats-observer hates Alice
+== round 6
+-- Alice reads
+  You deliver a powerful smash to <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>, causing <ansi fg="damage">5 damage</ansi>!
+-- Carol reads
+  <ansi fg="username">Alice</ansi> delivers a powerful smash to <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>!
+-- events
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=1] playerdamage={} weapon=93104
+  Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  rat: room=93001 hp=1/12 aggro=[none] playerdamage={Alice:11}
+  group golden-rats-observer hates Alice

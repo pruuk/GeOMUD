@@ -1,0 +1,43 @@
+seed 111
+== start
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=12/12 aggro=[none] playerdamage={}
+== round 1
+-- Alice reads
+  You slash at <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi> but fail to connect!
+-- events
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=12/12 aggro=[none] playerdamage={Alice:0}
+  group golden-rats-pvm hates Alice
+== round 2
+-- Alice reads
+  You wave your <ansi fg="item">testsword</ansi> at <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>, to no avail!
+-- events
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=12/12 aggro=[none] playerdamage={Alice:0}
+  group golden-rats-pvm hates Alice
+== round 3
+-- Alice reads
+  In a sweeping motion, you slash <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi> with your <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">7 damage</ansi>!
+-- events
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=5/12 aggro=[none] playerdamage={Alice:7}
+  group golden-rats-pvm hates Alice
+== round 4
+-- Alice reads
+  You slash <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi> with your <ansi fg="item">testsword</ansi>, causing <ansi fg="damage">5 damage</ansi>!
+-- events
+  AggroChanged rat room=93001
+  AggroChanged Alice room=93001
+  Input rat: "suicide"
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
+  rat: room=93001 hp=0/12 aggro=[none] playerdamage={Alice:12}
+  group golden-rats-pvm hates Alice
