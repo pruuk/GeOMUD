@@ -29,13 +29,21 @@ func resolveTokens(text, actorName, targetName, direction string) string {
 	if direction != `` {
 		direction = fmt.Sprintf(`<ansi fg="exit">%s</ansi>`, direction)
 	}
-	for _, tok := range []struct{ token, value string }{
+	tokens := []struct{ token, value string }{
 		{`{actor}`, actorName}, {`{target}`, targetName}, {`{direction}`, direction},
-	} {
+	}
+	// Capitalise an opening someone first, then replace every token in one
+	// pass so a value holding a token (a name like "{target}") is not
+	// substituted again.
+	for _, tok := range tokens {
 		if strings.HasPrefix(text, tok.token) && strings.HasPrefix(tok.value, `someone`) {
 			text = `Someone` + tok.value[len(`someone`):] + text[len(tok.token):]
+			break
 		}
-		text = strings.ReplaceAll(text, tok.token, tok.value)
 	}
-	return text
+	pairs := make([]string, 0, len(tokens)*2)
+	for _, tok := range tokens {
+		pairs = append(pairs, tok.token, tok.value)
+	}
+	return strings.NewReplacer(pairs...).Replace(text)
 }

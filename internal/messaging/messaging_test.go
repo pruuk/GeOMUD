@@ -8,6 +8,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/exit"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/stretchr/testify/assert"
@@ -331,6 +332,177 @@ func TestReceiversAreDeduplicated(t *testing.T) {
 	Send(perception.Message{Actor: fred, Senses: perception.Sound, Range: perception.World,
 		ActorText: `x`, ObserverText: `y`})
 	assert.Len(t, samRec.got, 1)
+}
+
+func TestTargetRoomTextForObserversInTheTargetsRoom(t *testing.T) {
+	w := newWorld(t)
+	a := w.room(1, "town", map[string]int{"north": 2})
+	b := w.room(2, "town", map[string]int{"south": 1})
+	archer, archerRec := w.body(a, "Archer", true)
+	_, aRec := w.body(a, "Ann", true)
+	deer, deerRec := w.body(b, "deer", false)
+	_, bRec := w.body(b, "Bea", true)
+
+	m := perception.Message{Actor: archer, Target: deer, Senses: perception.Sight, Range: perception.Room,
+		ActorText: `You shoot {target}.`, TargetText: `An arrow hits you.`,
+		ObserverText:   `{actor} shoots {target}.`,
+		TargetRoomText: `An arrow flies in and hits {target}.`}
+	Send(m)
+
+	assert.Equal(t, []string{`<ansi fg="username">Archer</ansi> shoots <ansi fg="mobname">deer</ansi>.`}, texts(aRec))
+	assert.Equal(t, []string{`An arrow flies in and hits <ansi fg="mobname">deer</ansi>.`}, texts(bRec))
+	assert.Equal(t, []string{`You shoot <ansi fg="mobname">deer</ansi>.`}, texts(archerRec))
+	assert.Equal(t, []string{`An arrow hits you.`}, texts(deerRec), "the target keeps its own text")
+}
+
+func TestTargetRoomTextNeedsADifferentRoom(t *testing.T) {
+	w := newWorld(t)
+	sq := w.room(1, "town", nil)
+	fred, _ := w.body(sq, "Fred", true)
+	steve, _ := w.body(sq, "Steve", true)
+	_, samRec := w.body(sq, "Sam", true)
+
+	m := say(fred)
+	m.Target = steve
+	m.TargetRoomText = `elsewhere`
+	Send(m)
+	assert.Equal(t, []string{`<ansi fg="username">Fred</ansi> says, "hi"`}, texts(samRec), "same room: observer text")
+}
+
+func TestActorOnlyWorldEventAndInRangeInterfaceReachOnlyTheActor(t *testing.T) {
+	w := newWorld(t)
+	sq := w.room(1, "town", nil)
+	fred, fredRec := w.body(sq, "Fred", true)
+	_, steveRec := w.body(sq, "Steve", true)
+
+	Send(perception.Message{Kind: perception.WorldEvent, Actor: fred, Audience: perception.ActorOnly,
+		Senses: perception.Sight | perception.Sound, Range: perception.Room,
+		ActorText: `You think.`, ObserverText: `{actor} thinks.`})
+	assert.Equal(t, []string{`You think.`}, texts(fredRec))
+	assert.Empty(t, steveRec.got)
+
+	Send(perception.Message{Kind: perception.Interface, Actor: fred, Audience: perception.InRange,
+		Senses: perception.Sight, Range: perception.World,
+		ActorText: `Prompt>`, ObserverText: `leak`})
+	assert.Equal(t, []string{`You think.`, `Prompt>`}, texts(fredRec))
+	assert.Empty(t, steveRec.got)
+}
+
+func TestUnseenTargetReadsAsSomeone(t *testing.T) {
+	w := newWorld(t)
+	sq := w.room(1, "town", nil)
+	fred, _ := w.body(sq, "Fred", true)
+	sneak, _ := w.body(sq, "Sneak", true)
+	w.flags[sneak]["hidden"] = true
+	_, bobRec := w.body(sq, "Bob", true)
+
+	m := say(fred)
+	m.Target = sneak
+	m.ObserverText = `{actor} eyes {target}.`
+	Send(m)
+	m.ObserverText = `{target} is eyed.`
+	Send(m)
+	assert.Equal(t, []string{
+		`<ansi fg="username">Fred</ansi> eyes someone.`,
+		`Someone is eyed.`}, texts(bobRec))
+	assert.False(t, bobRec.got[0].TargetSeen)
+
+	cave := w.room(2, "caves", nil)
+	w.light[2] = 0
+	cfred, _ := w.body(cave, "CFred", true)
+	cdeer, _ := w.body(cave, "deer", false)
+	_, steveRec := w.body(cave, "Steve", true)
+	m = say(cfred)
+	m.Target = cdeer
+	m.ObserverText = `You hear {target} stir.`
+	Send(m)
+	assert.Equal(t, []string{`You hear someone stir.`}, texts(steveRec), "a target in the dark is unseen")
+}
+
+func TestNearbyDedupesABodyReachedFromTwoSourceRooms(t *testing.T) {
+	w := newWorld(t)
+	a := w.room(1, "town", map[string]int{"north": 3})
+	b := w.room(2, "town", map[string]int{"north": 3})
+	c := w.room(3, "town", map[string]int{"south": 1, "east": 2})
+	archer, _ := w.body(a, "Archer", true)
+	deer, _ := w.body(b, "deer", false)
+	_, cRec := w.body(c, "Cy", true)
+
+	Send(perception.Message{Actor: archer, Target: deer, Senses: perception.Sound, Range: perception.Nearby,
+		ActorText: `x`, ObserverText: `y`, FarText: `z`})
+	assert.Len(t, cRec.got, 1)
+}
+
+func TestNearbyThroughATemporaryExit(t *testing.T) {
+	w := newWorld(t)
+	a := w.room(1, "town", nil)
+	b := w.room(2, "town", nil)
+	a.ExitsTemp = map[string]exit.TemporaryRoomExit{"portal": {RoomId: 2, Title: "portal"}}
+	b.ExitsTemp = map[string]exit.TemporaryRoomExit{"hole": {RoomId: 1, Title: "hole"}}
+	fred, _ := w.body(a, "Fred", true)
+	_, bRec := w.body(b, "Bea", true)
+
+	Send(perception.Message{Actor: fred, Senses: perception.Sound, Range: perception.Nearby,
+		ActorText: `x`, ObserverText: `y`, FarText: `from the {direction}`})
+	require.Len(t, bRec.got, 1)
+	assert.Equal(t, "hole", bRec.got[0].Direction)
+	assert.True(t, bRec.got[0].Far)
+}
+
+func TestBehaviourControllerEndToEnd(t *testing.T) {
+	w := newWorld(t)
+	sq := w.room(1, "town", nil)
+	fred, _ := w.body(sq, "Fred", true)
+
+	mob := &mobs.Mob{}
+	mob.Character.Id = ids.New(ids.NoCell)
+	mob.Character.Name = "rat"
+	mob.Character.RoomId = 1
+	require.NotNil(t, actors.Spawn(&mob.Character, actors.NewBehaviourController(mob)))
+	sq.AddTestBody(mob.Character.Id)
+
+	var got []actors.BehaviourPerception
+	actors.OnBehaviourPerceive.Register(func(bp actors.BehaviourPerception) actors.BehaviourPerception {
+		if bp.Mob == mob {
+			got = append(got, bp)
+		}
+		return bp
+	})
+
+	Send(say(fred))
+	require.Len(t, got, 1)
+	assert.Equal(t, perception.Observer, got[0].Perception.Role)
+	assert.Equal(t, fred, got[0].Perception.Message.Actor)
+
+	Send(perception.Message{Kind: perception.Interface, Actor: mob.Character.Id, ActorText: `help`})
+	assert.Len(t, got, 1, "interface text does not reach a behaviour")
+}
+
+func TestNameHoldingATokenIsNotSubstituted(t *testing.T) {
+	w := newWorld(t)
+	sq := w.room(1, "town", nil)
+	evil, _ := w.body(sq, "{target}", true)
+	steve, _ := w.body(sq, "Steve", true)
+	_, samRec := w.body(sq, "Sam", true)
+
+	m := say(evil)
+	m.Target = steve
+	m.ObserverText = `{actor} greets {target}.`
+	Send(m)
+	assert.Equal(t, []string{`<ansi fg="username">{target}</ansi> greets <ansi fg="username">Steve</ansi>.`}, texts(samRec))
+}
+
+func TestWorldEventWithNoSensesStillReachesTheActor(t *testing.T) {
+	w := newWorld(t)
+	sq := w.room(1, "town", nil)
+	fred, fredRec := w.body(sq, "Fred", true)
+	_, steveRec := w.body(sq, "Steve", true)
+
+	assert.NotPanics(t, func() {
+		Send(perception.Message{Actor: fred, Range: perception.Room, ActorText: `a`, ObserverText: `b`})
+	})
+	assert.Equal(t, []string{`a`}, texts(fredRec))
+	assert.Empty(t, steveRec.got)
 }
 
 func roomOf(t *testing.T, id int) *rooms.Room {

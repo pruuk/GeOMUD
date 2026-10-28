@@ -36,7 +36,7 @@ func (c *ConnectionController) Account() *accounts.Account { return c.account }
 // with everything else it is sent. A perception with no text for this
 // receiver writes nothing.
 func (c *ConnectionController) Perceive(p perception.Perception) {
-	if p.Text == "" {
+	if p.Text == "" || c.account == nil {
 		return
 	}
 	c.account.SendText(p.Text)

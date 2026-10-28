@@ -10,22 +10,30 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
 // receiver is one body a message reaches, with where it stands.
 type receiver struct {
-	actor     *actors.Actor
-	room      *rooms.Room
-	far       bool
-	direction string
+	actor        *actors.Actor
+	room         *rooms.Room
+	far          bool
+	direction    string
+	inTargetRoom bool // in the target's room, which is not the actor's room
 }
 
-// Send delivers m to everyone it reaches.
+// Send delivers m to everyone it reaches. It must run on the world
+// goroutine: room maps are not locked. Delivery is synchronous, so a
+// Perceive that calls Send re-enters it.
 func Send(m perception.Message) {
 	actor := actors.Get(m.Actor)
 	target := actors.Get(m.Target)
+
+	if m.Kind == perception.WorldEvent && m.Audience != perception.ActorOnly && m.Senses == 0 {
+		mudlog.Error("messaging", "error", "message has no senses", "actorId", m.Actor)
+	}
 
 	if m.Kind == perception.Interface || m.Audience == perception.ActorOnly {
 		if actor != nil {
@@ -64,7 +72,7 @@ func deliver(m perception.Message, actor, target *actors.Actor, rc receiver, rol
 		Far:        rc.far,
 		Direction:  rc.direction,
 	}
-	p.Text = resolveTokens(textFor(m, role, rc.far),
+	p.Text = resolveTokens(textFor(m, role, rc),
 		nameFor(actor, p.ActorSeen), nameFor(target, p.TargetSeen), rc.direction)
 	if ctrl := rc.actor.Controller(); ctrl != nil {
 		ctrl.Perceive(p)
@@ -72,13 +80,15 @@ func deliver(m perception.Message, actor, target *actors.Actor, rc receiver, rol
 }
 
 // textFor picks the text for a role (decision 6 of the slice 3 plan).
-func textFor(m perception.Message, role perception.Role, far bool) string {
+func textFor(m perception.Message, role perception.Role, rc receiver) string {
 	switch {
 	case role == perception.Actor:
 		return m.ActorText
 	case role == perception.Target && m.TargetText != ``:
 		return m.TargetText
-	case far && m.FarText != ``:
+	case role == perception.Observer && rc.inTargetRoom && !rc.far && m.TargetRoomText != ``:
+		return m.TargetRoomText
+	case rc.far && m.FarText != ``:
 		return m.FarText
 	}
 	return m.ObserverText
@@ -129,24 +139,27 @@ func sourceRooms(m perception.Message, actor, target *actors.Actor) []*rooms.Roo
 func receiversOf(m perception.Message, actor, target *actors.Actor) []receiver {
 	out := []receiver{}
 	seen := map[ids.ID]bool{}
-	add := func(a *actors.Actor, r *rooms.Room, far bool, direction string) {
+	add := func(a *actors.Actor, r *rooms.Room, far bool, direction string, inTargetRoom bool) {
 		if a == nil || seen[a.Id] {
 			return
 		}
 		seen[a.Id] = true
-		out = append(out, receiver{actor: a, room: r, far: far, direction: direction})
+		out = append(out, receiver{actor: a, room: r, far: far, direction: direction, inTargetRoom: inTargetRoom})
 	}
 
 	src := sourceRooms(m, actor, target)
 	inSource := map[int]bool{}
+	targetRoom := roomOfActor(target)
 	for _, r := range src {
 		inSource[r.RoomId] = true
+		// the first source room is the actor's (or the world event's)
+		inTarget := targetRoom != nil && r.RoomId == targetRoom.RoomId && r.RoomId != src[0].RoomId
 		for _, id := range r.GetBodies() {
-			add(actors.Get(id), r, false, ``)
+			add(actors.Get(id), r, false, ``, inTarget)
 		}
 	}
 	if actor != nil {
-		add(actor, roomOfActor(actor), false, ``)
+		add(actor, roomOfActor(actor), false, ``, false)
 	}
 
 	switch m.Range {
@@ -162,7 +175,7 @@ func receiversOf(m perception.Message, actor, target *actors.Actor) []receiver {
 					continue
 				}
 				for _, id := range n.GetBodies() {
-					add(actors.Get(id), n, true, back)
+					add(actors.Get(id), n, true, back, false)
 				}
 			}
 		}
@@ -179,7 +192,7 @@ func receiversOf(m perception.Message, actor, target *actors.Actor) []receiver {
 			if m.Range == perception.Zone && !zones[r.Zone] {
 				continue
 			}
-			add(a, r, true, ``)
+			add(a, r, true, ``, false)
 		}
 	}
 	return out

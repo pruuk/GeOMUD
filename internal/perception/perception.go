@@ -77,7 +77,13 @@ type Message struct {
 	ActorText    string // what the actor reads
 	TargetText   string // what the target reads; ObserverText when empty
 	ObserverText string // what everyone else in the source rooms reads
-	FarText      string // what receivers outside the source rooms read; ObserverText when empty
+	// FarText is what receivers outside the source rooms read; ObserverText
+	// when empty. Only a Nearby far receiver has a {direction}: Zone and
+	// World far receivers have none, so FarText for those ranges must not use it.
+	FarText string
+	// TargetRoomText is what observers in the target's room read when the
+	// target is in another room than the actor; ObserverText when empty.
+	TargetRoomText string
 }
 
 // Role is how a receiver stands to a message.

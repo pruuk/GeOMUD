@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,28 @@ func TestBehaviourControllerFiresTheStructuredPerception(t *testing.T) {
 
 	NewBehaviourController(m).Perceive(perception.Perception{Message: perception.Message{Kind: perception.Interface}})
 	assert.Len(t, got, 1, "a behaviour drops interface text")
+}
+
+func TestConnectionControllerQueuesTheTextForTheAccount(t *testing.T) {
+	var got []events.Message
+	id := events.RegisterListener(events.Message{}, func(e events.Event) events.ListenerReturn {
+		if m, ok := e.(events.Message); ok && m.UserId == 4242 {
+			got = append(got, m)
+		}
+		return events.Continue
+	})
+	defer events.UnregisterListener(events.Message{}, id)
+
+	NewConnectionController(&accounts.Account{UserId: 4242}).Perceive(perception.Perception{Text: "hello"})
+	events.ProcessEvents()
+	require.Len(t, got, 1)
+	assert.Equal(t, "hello\n", got[0].Text)
+}
+
+func TestConnectionControllerWithNoAccountDoesNotPanic(t *testing.T) {
+	assert.NotPanics(t, func() {
+		NewConnectionController(nil).Perceive(perception.Perception{Text: "hello"})
+	})
 }
 
 func TestConnectionControllerIgnoresEmptyText(t *testing.T) {

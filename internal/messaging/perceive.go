@@ -23,7 +23,8 @@ var CanPerceive = func(receiver *actors.Actor, room *rooms.Room, m perception.Me
 }
 
 // hasFlag and roomVisibility are seams for tests: buff flags need loaded buff
-// specs, and visibility reads the game clock and biome.
+// specs, and visibility reads the game clock and biome. They are package
+// globals, so a test that replaces them must not run in parallel.
 var (
 	hasFlag        = func(c *characters.Character, flag string) bool { return c.HasBuffFlag(flag) }
 	roomVisibility = func(r *rooms.Room) int { return r.GetVisibility() }
