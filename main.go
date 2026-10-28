@@ -30,6 +30,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/language"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/modmanager"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/gorilla/websocket"
@@ -105,6 +106,8 @@ func main() {
 
 	// Actors track every player and mob from here on (Phase 4b slice 1).
 	actors.Init()
+	// rooms and accounts send through messaging from here on (slice 7).
+	messaging.Init()
 	behaviour.Init()
 
 	// Register copyover contributors (must happen before Restore is called).

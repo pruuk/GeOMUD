@@ -331,6 +331,12 @@ func (u *Account) AddBuff(buffId int, source string) {
 
 }
 
+// Tell writes interface text to an account, with or without an actor: it is
+// messaging.ToAccount, set by messaging.Init at startup. This package cannot
+// import internal/messaging, which imports it, so account code sends
+// through this variable.
+var Tell func(u *Account, text string)
+
 func (u *Account) SendText(txt string) {
 
 	events.AddToQueue(events.Message{

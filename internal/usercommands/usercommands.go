@@ -10,6 +10,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -32,12 +33,19 @@ type CommandAccess struct {
 // the input line, the actor, its room and the input flags.
 type Command func(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error)
 
-// Tell writes text to the actor: to its account when it has one, nowhere
-// otherwise (Decision 11; slice 7 points this at messaging).
+// Tell writes interface text to the actor through messaging: to its account
+// when it has one, nowhere otherwise; empty text writes a blank line.
 func Tell(actor *actors.Actor, text string) {
+	messaging.Tell(actor.Id, text)
+}
+
+// UserIdOf is the actor's account UserId, or 0 for an NPC: the user ID
+// templates and the mapper take.
+func UserIdOf(actor *actors.Actor) int {
 	if user := actor.Controller().Account(); user != nil {
-		user.SendText(text)
+		return user.UserId
 	}
+	return 0
 }
 
 // ExcludeId is the ID a room send excludes for actor: its account's UserId,

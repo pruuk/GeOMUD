@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 )
 
 // Register hooks here...
@@ -41,17 +42,17 @@ func RegisterListeners() {
 	events.RegisterListener(events.PlayerDespawn{}, HandleLeave, events.Last) // This is a final listener, has to happen last
 
 	// Messages
-	events.RegisterListener(events.Message{}, Message_SendMessage)
+	events.RegisterListener(events.Message{}, messaging.WriteMessage)
 	// Prompt
-	events.RegisterListener(events.RedrawPrompt{}, RedrawPrompt_SendRedraw)
+	events.RegisterListener(events.RedrawPrompt{}, messaging.WritePrompt)
 
 	// User Settings change
 	events.RegisterListener(events.UserSettingChanged{}, ClearSettingCaches)
 
 	events.RegisterListener(events.PlayerDrop{}, HandlePlayerDrop)
-	events.RegisterListener(events.WebClientCommand{}, WebClientCommand_SendWebClientCommand)
+	events.RegisterListener(events.WebClientCommand{}, messaging.WriteWebClientCommand)
 
-	events.RegisterListener(events.Broadcast{}, Broadcast_SendToAll)
+	events.RegisterListener(events.Broadcast{}, messaging.WriteBroadcast)
 
 	events.RegisterListener(events.RebuildMap{}, HandleMapRebuild)
 

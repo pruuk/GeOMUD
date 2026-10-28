@@ -12,6 +12,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/stretchr/testify/assert"
@@ -21,6 +22,7 @@ import (
 func TestMain(m *testing.M) {
 	mudlog.SetupLogger(nil, "", "", false)
 	actors.Init()
+	messaging.Init()
 	// usercommands.TryCommand reads the keyword aliases, which need a data folder.
 	dataDir, err := filepath.Abs("../../_datafiles/world/empty")
 	if err != nil {

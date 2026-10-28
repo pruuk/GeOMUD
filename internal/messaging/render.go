@@ -23,8 +23,15 @@ func nameFor(subject *actors.Actor, seen bool) string {
 	return fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, style, subject.Character.Name)
 }
 
+// Literal escapes typed text for a world event's text: every "{" is
+// doubled, so the text prints as typed and is never read as a token.
+func Literal(s string) string {
+	return strings.ReplaceAll(s, `{`, `{{`)
+}
+
 // resolveTokens fills {actor}, {target} and {direction}. A "someone" that
-// opens the text is capitalised.
+// opens the text is capitalised. An escaped "{{" (Literal) becomes "{" and
+// is never read as the start of a token.
 func resolveTokens(text, actorName, targetName, direction string) string {
 	if direction != `` {
 		direction = fmt.Sprintf(`<ansi fg="exit">%s</ansi>`, direction)
@@ -41,7 +48,10 @@ func resolveTokens(text, actorName, targetName, direction string) string {
 			break
 		}
 	}
-	pairs := make([]string, 0, len(tokens)*2)
+	// The escape pair goes first: the replacer tries pairs in argument order
+	// at each position, so "{{target}" is "{" then plain "target}".
+	pairs := make([]string, 0, len(tokens)*2+2)
+	pairs = append(pairs, `{{`, `{`)
 	for _, tok := range tokens {
 		pairs = append(pairs, tok.token, tok.value)
 	}

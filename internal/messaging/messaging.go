@@ -36,13 +36,16 @@ func Send(m perception.Message) {
 	}
 
 	if m.Kind == perception.Interface || m.Audience == perception.ActorOnly {
-		if actor != nil {
+		if actor != nil && !excluded(m, actor.Id) {
 			deliver(m, actor, target, receiver{actor: actor, room: roomOfActor(actor)}, perception.Actor, 0)
 		}
 		return
 	}
 
 	for _, rc := range receiversOf(m, actor, target) {
+		if excluded(m, rc.actor.Id) {
+			continue
+		}
 		role := perception.Observer
 		switch {
 		case actor != nil && rc.actor.Id == actor.Id:
@@ -75,8 +78,14 @@ func deliver(m perception.Message, actor, target *actors.Actor, rc receiver, rol
 		Far:        rc.far,
 		Direction:  rc.direction,
 	}
-	p.Text = resolveTokens(textFor(m, role, rc),
-		nameFor(actor, p.ActorSeen), nameFor(target, p.TargetSeen), rc.direction)
+	if m.Kind == perception.Interface {
+		// Interface text is for the actor alone and is written as it is:
+		// admin help that shows "{{ .X }}" or a literal "{actor}" is untouched.
+		p.Text = textFor(m, role, rc)
+	} else {
+		p.Text = resolveTokens(textFor(m, role, rc),
+			nameFor(actor, p.ActorSeen), nameFor(target, p.TargetSeen), rc.direction)
+	}
 	if ctrl := rc.actor.Controller(); ctrl != nil {
 		ctrl.Perceive(p)
 	}
@@ -100,6 +109,16 @@ func textFor(m perception.Message, role perception.Role, rc receiver) string {
 func named(m perception.Message, id ids.ID) bool {
 	for _, n := range m.Named {
 		if n == id {
+			return true
+		}
+	}
+	return false
+}
+
+// excluded reports whether id is in m.Exclude.
+func excluded(m perception.Message, id ids.ID) bool {
+	for _, x := range m.Exclude {
+		if x == id {
 			return true
 		}
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -31,6 +32,11 @@ var (
 		//"•": "*",
 	}
 )
+
+// SendMessage delivers a message: it is messaging.Send, set by
+// messaging.Init at startup. This package cannot import internal/messaging,
+// which imports it, so room code sends through this variable.
+var SendMessage func(perception.Message)
 
 type FindFlag uint16
 

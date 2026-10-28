@@ -536,3 +536,33 @@ func TestNoTargetRoomTextSilencesTheTargetsRoom(t *testing.T) {
 	Send(m)
 	assert.Equal(t, []string{`An arrow flies in.`}, texts(bRec))
 }
+
+func TestExcludedBodiesReceiveNothing(t *testing.T) {
+	w := newWorld(t)
+	a := w.room(1, "town", map[string]int{"east": 2})
+	b := w.room(2, "town", map[string]int{"west": 1})
+	fred, fredRec := w.body(a, "Fred", true)
+	steve, steveRec := w.body(a, "Steve", true)
+	_, annRec := w.body(a, "Ann", true)
+	far, farRec := w.body(b, "Far", true)
+	_, bobRec := w.body(b, "Bob", true)
+
+	m := say(fred)
+	m.Range = perception.Nearby
+	m.FarText = `You hear voices to the {direction}.`
+	m.Exclude = []ids.ID{steve, far}
+	Send(m)
+
+	assert.Empty(t, steveRec.got, "an excluded observer")
+	assert.Empty(t, farRec.got, "an excluded far receiver")
+	assert.Equal(t, []string{`<ansi fg="username">Fred</ansi> says, "hi"`}, texts(annRec))
+	assert.Equal(t, []string{`You hear voices to the <ansi fg="exit">west</ansi>.`}, texts(bobRec))
+	assert.Equal(t, []string{`You say, "hi"`}, texts(fredRec))
+
+	// the actor included, in the world and in the actor-only branch
+	m.Exclude = []ids.ID{fred}
+	Send(m)
+	Send(perception.Message{Kind: perception.Interface, Actor: fred, Audience: perception.ActorOnly, ActorText: `help`, Exclude: []ids.ID{fred}})
+	assert.Len(t, fredRec.got, 1, "an excluded actor gets nothing")
+	assert.Len(t, annRec.got, 2, "the rest still read it")
+}

@@ -11,6 +11,12 @@ func TestTokensInANameAreNotSubstituted(t *testing.T) {
 	assert.Equal(t, `{direction} from <ansi fg="exit">north</ansi>`, resolveTokens(`{actor} from {direction}`, `{direction}`, ``, `north`))
 }
 
+func TestLiteralBracesPrintAsTyped(t *testing.T) {
+	text := "{actor} says, \"" + Literal("{target} {{x}") + "\""
+	assert.Equal(t, `Fred says, "{target} {{x}"`, resolveTokens(text, `Fred`, `Bob`, `north`))
+	assert.Equal(t, `no braces`, Literal(`no braces`))
+}
+
 func TestCapitalisedSomeoneOnlyAtTheStart(t *testing.T) {
 	assert.Equal(t, `Someone waves at someone.`, resolveTokens(`{actor} waves at {target}.`, `someone`, `someone`, ``))
 	assert.Equal(t, `<ansi fg="exit">north</ansi>`, resolveTokens(`{direction}`, ``, ``, `north`))

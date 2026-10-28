@@ -73,6 +73,9 @@ type Message struct {
 	Range    Range
 	Audience Audience
 	Named    []ids.ID // for Audience Named
+	// Exclude lists bodies that receive nothing, the actor included
+	// (go's "You hear someone moving around" skips the room left).
+	Exclude []ids.ID
 
 	ActorText    string // what the actor reads
 	TargetText   string // what the target reads; ObserverText when empty
