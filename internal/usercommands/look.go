@@ -53,7 +53,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		if !secretLook && !isSneaking {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking around.`, actor.Character.Name),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking around.`, nameColour(actor), actor.Character.Name),
 				excludeId(actor),
 			)
 
@@ -85,11 +85,11 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 			if !isSneaking {
 				u.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at you.`, actor.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at you.`, nameColour(actor), actor.Character.Name),
 				)
 
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at <ansi fg="username">%s</ansi>.`, actor.Character.Name, u.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at <ansi fg="username">%s</ansi>.`, nameColour(actor), actor.Character.Name, u.Character.Name),
 					u.UserId)
 			}
 
@@ -112,7 +112,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			if !isSneaking {
 				targetName := m.Character.GetMobName(ids.ID{}).String()
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at %s.`, actor.Character.Name, targetName),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at %s.`, nameColour(actor), actor.Character.Name, targetName),
 					excludeId(actor),
 				)
 			}
@@ -240,7 +240,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		tell(actor, fmt.Sprintf("You peer toward the %s.", exitName))
 		if !isSneaking {
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> peers toward the %s.`, actor.Character.Name, exitName), excludeId(actor))
+			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> peers toward the %s.`, nameColour(actor), actor.Character.Name, exitName), excludeId(actor))
 		}
 
 		lookRoom(actor, lookRoomId, secretLook || isSneaking)
@@ -272,7 +272,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		if !isSneaking {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is admiring their <ansi fg="item">%s</ansi>.`, actor.Character.Name, lookItem.DisplayName()),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is admiring their <ansi fg="item">%s</ansi>.`, nameColour(actor), actor.Character.Name, lookItem.DisplayName()),
 				excludeId(actor),
 			)
 		}
@@ -325,7 +325,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			}
 
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is examining the <ansi fg="noun">%s</ansi>.`, actor.Character.Name, foundNoun),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is examining the <ansi fg="noun">%s</ansi>.`, nameColour(actor), actor.Character.Name, foundNoun),
 				excludeId(actor),
 			)
 		}
@@ -376,7 +376,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			}
 
 			tell(actor, fmt.Sprintf(`You look at the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at the <ansi fg="%s">%s corpse</ansi>.`, actor.Character.Name, corpseColor, corpse.Character.Name), excludeId(actor))
+			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at the <ansi fg="%s">%s corpse</ansi>.`, nameColour(actor), actor.Character.Name, corpseColor, corpse.Character.Name), excludeId(actor))
 
 			tell(actor, buildCorpseDescriptionPanel(&corpse.Character))
 
@@ -426,12 +426,12 @@ func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 		lookFromName := room.FindExitTo(actor.Character.RoomId)
 		if lookFromName == "" {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking into the room from somewhere...`, actor.Character.Name),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking into the room from somewhere...`, nameColour(actor), actor.Character.Name),
 				excludeId(actor),
 			)
 		} else {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking into the room from the <ansi fg="exit">%s</ansi> exit`, actor.Character.Name, lookFromName),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking into the room from the <ansi fg="exit">%s</ansi> exit`, nameColour(actor), actor.Character.Name, lookFromName),
 				excludeId(actor),
 			)
 		}
