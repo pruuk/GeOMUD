@@ -92,7 +92,7 @@ var (
 	functionExporters = []FunctionExporter{}
 
 	userCommands map[string]CommandAccess = map[string]CommandAccess{
-		`alias`:       {accountCommand(Alias), true, false},
+		`alias`:       {Alias, true, false},
 		`attack`:      {accountCommand(Attack), false, false},
 		`badcommands`: {BadCommands, true, true}, // Admin only
 		`biome`:       {accountCommand(Biome), true, false},
@@ -112,43 +112,43 @@ var (
 		`grant`:       {Grant, true, true}, // Admin only
 		`help`:        {accountCommand(Help), true, false},
 		`keyring`:     {accountCommand(KeyRing), true, false},
-		`history`:     {accountCommand(History), true, false},
+		`history`:     {History, true, false},
 		`inventory`:   {accountCommand(Inventory), true, false},
 		`item`:        {Item, true, true},   // Admin only
 		`locate`:      {Locate, true, true}, // Admin only
 		`lock`:        {accountCommand(Lock), false, false},
 		`look`:        {accountCommand(Look), true, false},
-		`macros`:      {accountCommand(Macros), true, false},
+		`macros`:      {Macros, true, false},
 		`mob`:         {Mob, true, true},    // Admin only
 		`modify`:      {Modify, true, true}, // Admin only
 		`motd`:        {accountCommand(Motd), true, false},
 		`mute`:        {Mute, true, true},
 		`noop`:        {accountCommand(Noop), true, false},
 		`online`:      {accountCommand(Online), true, false},
-		`party`:       {accountCommand(Party), true, false},
-		`password`:    {accountCommand(Password), true, false},
+		`party`:       {Party, true, false},
+		`password`:    {Password, true, false},
 		`prepare`:     {Prepare, true, true}, // Admin only
 		`print`:       {accountCommand(Print), true, false},
 		`printline`:   {accountCommand(PrintLine), true, false},
 		`put`:         {accountCommand(Put), false, false},
-		`quit`:        {accountCommand(Quit), true, false},
+		`quit`:        {Quit, true, false},
 		`read`:        {accountCommand(Read), false, false},
 		`reload`:      {Reload, true, true}, // Admin only
 		`remove`:      {accountCommand(Remove), false, false},
 		`rename`:      {Rename, false, true},     // Admin only
 		`redescribe`:  {Redescribe, false, true}, // Admin only
 		`room`:        {Room, false, true},       // Admin only
-		`save`:        {accountCommand(Save), true, false},
+		`save`:        {Save, true, false},
 		`say`:         {accountCommand(Say), true, false},
 		`server`:      {Server, false, true}, // Admin only
-		`set`:         {accountCommand(Set), true, false},
+		`set`:         {Set, true, false},
 		`shoot`:       {accountCommand(Shoot), false, false},
 		`shout`:       {accountCommand(Shout), true, false},
 		`show`:        {accountCommand(Show), true, false},
 		`spawn`:       {Spawn, false, true}, // Admin only
 
 		// Kept until Phase 5: NewRound_AutoHeal and NewRound_DoCombat dispatch it as player death.
-		`suicide`:  {accountCommand(Suicide), true, false},
+		`suicide`:  {Suicide, true, false},
 		`syslogs`:  {SysLogs, true, true},  // Admin only
 		`teleport`: {Teleport, true, true}, // Admin only
 		`unlock`:   {accountCommand(Unlock), false, false},
@@ -159,7 +159,7 @@ var (
 		`visited`:  {accountCommand(Visited), true, false},
 		`zone`:     {Zone, false, true}, // Admin only
 		// Special command only used upon creating a new account
-		`start`: {accountCommand(Start), false, false},
+		`start`: {Start, false, false},
 	}
 
 	selfKeywords = []string{
