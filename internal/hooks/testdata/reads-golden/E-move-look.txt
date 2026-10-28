@@ -1,0 +1,171 @@
+seed 1105
+== north then south (leave, arrive; Cid in C, superhearing, hears the arrival in A)
+> Ann: north
+Ann: You head towards the <ansi fg="exit">north</ansi> exit.
+Bob: <ansi fg="username">Ann</ansi> leaves towards the <ansi fg="exit">north</ansi> exit.
+Ann:
+Ann| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room B</ansi> <ansi fg="room-zone">[readszone]</ansi>
+Ann: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗
+Ann|                                                                          ║     ║
+Ann|                                                                          ║     ║
+Ann|                                                                          ║  <ansi fg="map-room">@</ansi>  ║
+Ann|                                                                          ║  │  ║
+Ann|                                                                          ║  <ansi fg="map-room">•</ansi>─<ansi fg="map-room">•</ansi>║
+Ann|                                                                          ╚═════╝</ansi>
+Ann: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">south</ansi>
+Ann|
+> Ann: south
+Ann: You head towards the <ansi fg="exit">south</ansi> exit.
+Bob: <ansi fg="username">Ann</ansi> enters from <ansi fg="exit">the <ansi fg="exit">north</ansi></ansi>.
+Cid: (From <ansi fg="exit">west</ansi>) You hear someone moving around.
+Ann:
+Ann| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room A</ansi> <ansi fg="room-zone">[readszone]</ansi>
+Ann: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗
+Ann|                                                                          ║  <ansi fg="map-room">•</ansi>  ║
+Ann|                                                                          ║  │  ║
+Ann|                                                                          ║  <ansi fg="map-room">@</ansi>─<ansi fg="map-room">•</ansi>║
+Ann|                                                                          ║     ║
+Ann|                                                                          ║     ║
+Ann|                                                                          ╚═════╝</ansi>
+Ann: <ansi fg="room-description-dark">Also here: </ansi><ansi fg="username">Bob</ansi> and <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>
+Ann|
+Ann: <ansi fg="room-description-dark">On the Ground: </ansi><ansi fg="item">cotton shirt</ansi>
+Ann|
+Ann: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">east</ansi>, <ansi fg="exit">north</ansi>
+Ann|
+== look
+> Ann: look
+Bob: <ansi fg="username">Ann</ansi> is looking around.
+Ann:
+Ann| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room A</ansi> <ansi fg="room-zone">[readszone]</ansi>
+Ann: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗
+Ann|                                                                          ║  <ansi fg="map-room">•</ansi>  ║
+Ann|                                                                          ║  │  ║
+Ann|                                                                          ║  <ansi fg="map-room">@</ansi>─<ansi fg="map-room">•</ansi>║
+Ann|                                                                          ║     ║
+Ann|                                                                          ║     ║
+Ann|                                                                          ╚═════╝</ansi>
+Ann: <ansi fg="room-description-dark">Also here: </ansi><ansi fg="username">Bob</ansi> and <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>
+Ann|
+Ann: <ansi fg="room-description-dark">On the Ground: </ansi><ansi fg="item">cotton shirt</ansi>
+Ann|
+Ann: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">east</ansi>, <ansi fg="exit">north</ansi>
+Ann|
+== look Bob
+> Ann: look Bob
+Bob: <ansi fg="username">Ann</ansi> is looking at you.
+Ann: <ansi fg="username">Ann</ansi> is looking at <ansi fg="username">Bob</ansi>.
+Ann:  ┌─  <ansi fg="black-bold">.:</ansi><ansi fg="20">Description</ansi>  ──────────────────────────────────────────────────────────┐
+Ann|  │  They seem thoroughly uninteresting.                                       │
+Ann|  │  <ansi fg="username">Bob</ansi> is in <ansi fg="health-100">perfect health.</ansi>                                                 │
+Ann|  └────────────────────────────────────────────────────────────────────────────┘
+Ann|
+Ann:  ┌─  <ansi fg="black-bold">.:</ansi><ansi fg="20">Equipment</ansi>  ────────────────────────────────────────────────────────────┐
+Ann|  │ <ansi fg="yellow">Weapon</ansi>    <ansi fg="itemname">-nothing-</ansi>                                                        │
+Ann|    <ansi fg="yellow">Offhand</ansi>   <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Head</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Neck</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Body</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Belt</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Gloves</ansi>    <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Ring</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Legs</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|  │ <ansi fg="yellow">Feet</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                        │
+Ann|  └────────────────────────────────────────────────────────────────────────────┘
+Ann|  Carrying: no objects
+Ann|
+Ann:
+Ann:
+== look rat
+> Ann: look rat
+Bob: <ansi fg="username">Ann</ansi> is looking at <ansi fg="mobname">rat</ansi>.
+Ann:  ┌─  <ansi fg="black-bold">.:</ansi><ansi fg="20">Description</ansi>  ──────────────────────────────────────────────────────────┐
+Ann|  │  They seem thoroughly uninteresting.                                       │
+Ann|  │  <ansi fg="username">rat</ansi> is in <ansi fg="health-100">perfect health.</ansi>                                                 │
+Ann|  └────────────────────────────────────────────────────────────────────────────┘
+Ann|
+Ann:  ┌─  <ansi fg="black-bold">.:</ansi><ansi fg="20">Equipment</ansi>  ────────────────────────────────────────────────────────────┐
+Ann|  │ <ansi fg="yellow">Body</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                        │
+Ann|  └────────────────────────────────────────────────────────────────────────────┘
+Ann|  Carrying: no objects
+Ann|
+Ann:
+Ann:
+== look north (through an exit)
+> Ann: look north
+Ann: You peer toward the north.
+Bob: <ansi fg="username">Ann</ansi> peers toward the north.
+Ann:
+Ann| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room B</ansi> <ansi fg="room-zone">[readszone]</ansi>
+Ann: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗
+Ann|                                                                          ║     ║
+Ann|                                                                          ║     ║
+Ann|                                                                          ║  <ansi fg="map-room">@</ansi>  ║
+Ann|                                                                          ║  │  ║
+Ann|                                                                          ║  <ansi fg="map-room">•</ansi>─<ansi fg="map-room">•</ansi>║
+Ann|                                                                          ╚═════╝</ansi>
+Ann: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">south</ansi>
+Ann|
+== look at an item on the floor (look finds backpack and worn items only: the reply)
+> Ann: look shirt
+Ann: Look at what???
+== look at an item in the backpack (substituted for the floor item)
+> Ann: look stick
+Ann:
+Ann: You look at the <ansi fg="item">sharp stick</ansi> in your backpack:
+Ann:
+Bob: <ansi fg="username">Ann</ansi> is admiring their <ansi fg="item">sharp stick</ansi>.
+Ann: It looks kinda sticky.
+Ann| - It looks like a 1-Handed weapon.
+Ann:
+== consider rat
+> Ann: consider rat
+Ann: You consider <ansi fg="mobname">rat</ansi>...
+Ann: It is estimated that your chances to kill <ansi fg="mobname">rat</ansi> are <ansi fg="green">Favorable</ansi>
+== attack rat, one round
+> Ann: attack rat
+Ann: You prepare to fight <ansi fg="mobname">rat</ansi>!
+Bob: <ansi fg="username">Ann</ansi> prepares to fight <ansi fg="mobname">rat</ansi>.
+> DoCombat
+Bob: <ansi fg="username">Ann</ansi> attacks <ansi fg="mobname">rat</ansi> but fails to connect.
+Ann: You swing your <ansi fg="item">fists</ansi>, but miss completely!
+== flee (A's east exit taken away: the exit pick is in map order)
+> Ann: flee
+Ann: You attempt to flee...
+> DoCombat
+Bob: <ansi fg="username">Ann</ansi> flees to the <ansi fg="exit">north</ansi> exit!
+Ann: You flee to the <ansi fg="exit">north</ansi> exit!
+Ann:
+Ann| <ansi fg="black-bold">.:</ansi> <ansi fg="room-title">Room B</ansi> <ansi fg="room-zone">[readszone]</ansi>
+Ann: <ansi fg="room-description-dark">This is an empty room that was never given a description.                ╔═════╗
+Ann|                                                                          ║     ║
+Ann|                                                                          ║     ║
+Ann|                                                                          ║  <ansi fg="map-room">@</ansi>  ║
+Ann|                                                                          ║  │  ║
+Ann|                                                                          ║  <ansi fg="map-room">•</ansi>─<ansi fg="map-room">•</ansi>║
+Ann|                                                                          ╚═════╝</ansi>
+Ann: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">south</ansi>
+Ann|
+== hidden: look Bob
+> Ann: look Bob
+Ann:  ┌─  <ansi fg="black-bold">.:</ansi><ansi fg="20">Description</ansi>  ──────────────────────────────────────────────────────────┐
+Ann|  │  They seem thoroughly uninteresting.                                       │
+Ann|  │  <ansi fg="username">Bob</ansi> is in <ansi fg="health-100">perfect health.</ansi>                                                 │
+Ann|  └────────────────────────────────────────────────────────────────────────────┘
+Ann|
+Ann:  ┌─  <ansi fg="black-bold">.:</ansi><ansi fg="20">Equipment</ansi>  ────────────────────────────────────────────────────────────┐
+Ann|  │ <ansi fg="yellow">Weapon</ansi>    <ansi fg="itemname">-nothing-</ansi>                                                        │
+Ann|    <ansi fg="yellow">Offhand</ansi>   <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Head</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Neck</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Body</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Belt</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Gloves</ansi>    <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Ring</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|    <ansi fg="yellow">Legs</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                         
+Ann|  │ <ansi fg="yellow">Feet</ansi>      <ansi fg="itemname">-nothing-</ansi>                                                        │
+Ann|  └────────────────────────────────────────────────────────────────────────────┘
+Ann|  Carrying: no objects
+Ann|
+Ann:
+Ann:

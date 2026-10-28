@@ -1,0 +1,32 @@
+seed 1101
+mask: body IDs (0x...:0x..., random per run) read <id>
+mask: room info's Filepath separator reads / (it is \ on Windows)
+== room info
+> Ann: room info
+Ann:
+Ann| <ansi fg="yellow-bold">RoomId:</ansi>         <ansi fg="red">93101</ansi> <ansi fg="white">(This is the zone root)</ansi>
+Ann| <ansi fg="yellow-bold">Filepath:</ansi>       <ansi fg="129">readszone/93101.yaml</ansi>
+Ann| <ansi fg="yellow-bold">Zone:</ansi>           <ansi fg="room-zone">readszone</ansi>
+Ann| <ansi fg="yellow-bold">Coordinates:</ansi>    <ansi fg="red">unset</ansi>
+Ann| <ansi fg="yellow-bold">MapSymbol:</ansi>      <ansi fg="map-"></ansi>
+Ann| <ansi fg="yellow-bold">MapLegend:</ansi>      <ansi fg="map-"></ansi>
+Ann| <ansi fg="yellow-bold">Title:</ansi>          <ansi fg="room-title">Room A</ansi>
+Ann| <ansi fg="yellow-bold">Description:</ansi>    This is an empty room that was never given a description.
+Ann| <ansi fg="yellow-bold">Exits:</ansi>          [<ansi fg="exit">east</ansi> ⇒ <ansi fg="red">93103</ansi>] [<ansi fg="exit">north</ansi> ⇒ <ansi fg="red">93102</ansi>] 
+Ann| <ansi fg="yellow-bold">Temp Exits:</ansi>     None
+Ann| <ansi fg="yellow-bold">Training:</ansi>       None
+Ann| <ansi fg="yellow-bold">Room Mutators:</ansi>  
+Ann| <ansi fg="yellow-bold">Zone Mutators:</ansi>  
+Ann|
+Ann| <ansi fg="yellow-bold">Players here:</ansi>   <ansi fg="username">@9311-Ann</ansi>,<ansi fg="username">@9312-Bob</ansi>,
+Ann| <ansi fg="yellow-bold">Mobs here:</ansi>      <ansi fg="mobname">rat <id></ansi>,
+Ann|
+== room exits (no such subcommand: the reply)
+> Ann: room exits
+Ann: Invalid room command: <ansi fg="command">exits</ansi>
+== room exit south 93103 (the exit subcommand, substituted for room exits)
+> Ann: room exit south 93103
+Ann: Exit south added.
+== room set title
+> Ann: room set title The Test Hall
+Ann: Room title set to The Test Hall.

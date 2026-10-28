@@ -1,0 +1,133 @@
+seed 1104
+== visible: drop and get
+> Ann: drop note
+Ann: You drop the <ansi fg="item">note</ansi>.
+Bob: <ansi fg="username">Ann</ansi> drops their <ansi fg="item">note</ansi>...
+> Ann: get note
+Ann: You pick up the <ansi fg="itemname">note</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up the <ansi fg="itemname">note</ansi>...
+== visible: put into a container
+> Ann: put note chest
+Ann: You place your <ansi fg="itemname">note</ansi> into the <ansi fg="container">chest</ansi>
+Bob: <ansi fg="username">Ann</ansi> places their <ansi fg="itemname">note</ansi> into the <ansi fg="container">chest</ansi>
+== visible: give to Bob
+> Ann: give note Bob
+Ann: You give the <ansi fg="item">note</ansi> to <ansi fg="username">Bob</ansi>.
+Bob: <ansi fg="username">Ann</ansi> gives you their <ansi fg="item">note</ansi>.
+== visible: give to the rat
+> Ann: give note rat
+Ann: You give the <ansi fg="item">note</ansi> to <ansi fg="mobname">rat</ansi>.
+Bob: <ansi fg="username">Ann</ansi> gave their <ansi fg="item">note</ansi> to <ansi fg="mobname">rat</ansi>.
+Input rat: "emote considers the <ansi fg=\"itemname\">note</ansi> for a moment."
+== visible: equip and remove
+> Ann: equip shirt
+Ann: You wear your <ansi fg="item">cotton shirt</ansi>. ( <ansi fg="204">-19 health</ansi> )
+Bob: <ansi fg="username">Ann</ansi> puts on their <ansi fg="item">cotton shirt</ansi>.
+> Ann: remove shirt
+Ann: You remove your <ansi fg="item">cotton shirt</ansi> and return it to your backpack.
+Bob: <ansi fg="username">Ann</ansi> removes their <ansi fg="item">cotton shirt</ansi> and stores it away.
+== visible: read
+> Ann: read note
+Ann: You look at <ansi fg="item">note</ansi>...
+Bob: <ansi fg="username">Ann</ansi> looks at their <ansi fg="item">note</ansi>...
+Ann: The scribbling on the note has been worn away and can no longer be read.
+== visible: unlock and lock a door exit
+> Ann: unlock east
+Ann: You use a key to unlock the <ansi fg="exit">east</ansi> lock.
+Bob: <ansi fg="username">Ann</ansi> uses a key to unlock the <ansi fg="exit">east</ansi> lock
+> Ann: lock east
+Ann: You use a key to relock the <ansi fg="exit">east</ansi> lock.
+Bob: <ansi fg="username">Ann</ansi> uses a key to relock the <ansi fg="exit">east</ansi> lock
+== visible: show to Bob
+> Ann: show stick Bob
+Ann: You show the <ansi fg="item">sharp stick</ansi> to <ansi fg="username">Bob</ansi>.
+Bob: <ansi fg="username">Ann</ansi> shows you their <ansi fg="item">sharp stick</ansi>.
+Bob:
+Bob| It looks kinda sticky.
+Bob| - It looks like a 1-Handed weapon.
+Bob|
+== visible: drop all and get all
+> Ann: drop all
+Ann: You drop <ansi fg="gold">20 gold</ansi> on the floor.
+Bob: <ansi fg="username">Ann</ansi> drops <ansi fg="gold">20 gold</ansi>.
+Ann: You drop the <ansi fg="item">sharp stick</ansi>.
+Bob: <ansi fg="username">Ann</ansi> drops their <ansi fg="item">sharp stick</ansi>...
+Ann: You drop the <ansi fg="item">note</ansi>.
+Bob: <ansi fg="username">Ann</ansi> drops their <ansi fg="item">note</ansi>...
+Ann: You drop the <ansi fg="item">cotton shirt</ansi>.
+Bob: <ansi fg="username">Ann</ansi> drops their <ansi fg="item">cotton shirt</ansi>...
+> Ann: get all
+Ann: You pick up <ansi fg="gold">20 gold</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up some <ansi fg="gold">gold</ansi>.
+Ann: You pick up the <ansi fg="itemname">sharp stick</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up the <ansi fg="itemname">sharp stick</ansi>...
+Ann: You pick up the <ansi fg="itemname">note</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up the <ansi fg="itemname">note</ansi>...
+Ann: You pick up the <ansi fg="itemname">cotton shirt</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up the <ansi fg="itemname">cotton shirt</ansi>...
+== hidden: drop and get
+> Ann: drop note
+Ann: You drop the <ansi fg="item">note</ansi>.
+Bob: <ansi fg="username">Ann</ansi> drops their <ansi fg="item">note</ansi>...
+> Ann: get note
+Ann: You pick up the <ansi fg="itemname">note</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up the <ansi fg="itemname">note</ansi>...
+== hidden: put into a container
+> Ann: put note chest
+Ann: You place your <ansi fg="itemname">note</ansi> into the <ansi fg="container">chest</ansi>
+Bob: <ansi fg="username">Ann</ansi> places their <ansi fg="itemname">note</ansi> into the <ansi fg="container">chest</ansi>
+== hidden: give to Bob
+> Ann: give note Bob
+Ann: You give the <ansi fg="item">note</ansi> to <ansi fg="username">Bob</ansi>.
+Bob: <ansi fg="username">Ann</ansi> gives you their <ansi fg="item">note</ansi>.
+== hidden: give to the rat
+> Ann: give note rat
+Ann: You give the <ansi fg="item">note</ansi> to <ansi fg="mobname">rat</ansi>.
+Bob: <ansi fg="username">Ann</ansi> gave their <ansi fg="item">note</ansi> to <ansi fg="mobname">rat</ansi>.
+Input rat: "emote considers the <ansi fg=\"itemname\">note</ansi> for a moment."
+== hidden: equip and remove
+> Ann: equip shirt
+Ann: You wear your <ansi fg="item">cotton shirt</ansi>.
+Bob: <ansi fg="username">Ann</ansi> puts on their <ansi fg="item">cotton shirt</ansi>.
+> Ann: remove shirt
+Ann: You remove your <ansi fg="item">cotton shirt</ansi> and return it to your backpack.
+Bob: <ansi fg="username">Ann</ansi> removes their <ansi fg="item">cotton shirt</ansi> and stores it away.
+== hidden: read
+> Ann: read note
+Ann: You look at <ansi fg="item">note</ansi>...
+Bob: <ansi fg="username">Ann</ansi> looks at their <ansi fg="item">note</ansi>...
+Ann: The scribbling on the note has been worn away and can no longer be read.
+== hidden: unlock and lock a door exit
+> Ann: unlock east
+Ann: You use a key to unlock the <ansi fg="exit">east</ansi> lock.
+Bob: <ansi fg="username">Ann</ansi> uses a key to unlock the <ansi fg="exit">east</ansi> lock
+> Ann: lock east
+Ann: You use a key to relock the <ansi fg="exit">east</ansi> lock.
+Bob: <ansi fg="username">Ann</ansi> uses a key to relock the <ansi fg="exit">east</ansi> lock
+== hidden: show to Bob
+> Ann: show stick Bob
+Ann: You show the <ansi fg="item">sharp stick</ansi> to <ansi fg="username">Bob</ansi>.
+Bob: <ansi fg="username">Ann</ansi> shows you their <ansi fg="item">sharp stick</ansi>.
+Bob:
+Bob| It looks kinda sticky.
+Bob| - It looks like a 1-Handed weapon.
+Bob|
+== hidden: drop all and get all
+> Ann: drop all
+Ann: You drop <ansi fg="gold">20 gold</ansi> on the floor.
+Bob: <ansi fg="username">Ann</ansi> drops <ansi fg="gold">20 gold</ansi>.
+Ann: You drop the <ansi fg="item">sharp stick</ansi>.
+Bob: <ansi fg="username">Ann</ansi> drops their <ansi fg="item">sharp stick</ansi>...
+Ann: You drop the <ansi fg="item">note</ansi>.
+Bob: <ansi fg="username">Ann</ansi> drops their <ansi fg="item">note</ansi>...
+Ann: You drop the <ansi fg="item">cotton shirt</ansi>.
+Bob: <ansi fg="username">Ann</ansi> drops their <ansi fg="item">cotton shirt</ansi>...
+> Ann: get all
+Ann: You pick up <ansi fg="gold">20 gold</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up some <ansi fg="gold">gold</ansi>.
+Ann: You pick up the <ansi fg="itemname">sharp stick</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up the <ansi fg="itemname">sharp stick</ansi>...
+Ann: You pick up the <ansi fg="itemname">note</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up the <ansi fg="itemname">note</ansi>...
+Ann: You pick up the <ansi fg="itemname">cotton shirt</ansi>.
+Bob: <ansi fg="username">Ann</ansi> picks up the <ansi fg="itemname">cotton shirt</ansi>...

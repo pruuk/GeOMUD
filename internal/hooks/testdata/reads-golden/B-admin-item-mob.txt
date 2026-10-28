@@ -1,0 +1,38 @@
+seed 1102
+== item spawn
+> Ann: item spawn 10001
+Ann: You wave your hands around and <ansi fg="item">sharp stick</ansi> appears from thin air and falls to the ground.
+Bob: <ansi fg="username">Ann</ansi> waves their hands around and <ansi fg="item">sharp stick</ansi> appears from thin air and falls to the ground.
+== mob spawn rat
+> Ann: mob spawn rat
+Ann: You wave your hands around and <ansi fg="mobname">rat</ansi> appears in the air and falls to the ground.
+Bob: <ansi fg="username">Ann</ansi> waves their hands around and <ansi fg="mobname">rat</ansi> appears in the air and falls to the ground.
+== server with no args
+> Ann: server
+Ann:
+Ann|
+Ann| <ansi fg="6">  .--.      .-'.      .--.      .--.      .--.      .--.      .`-.      .--.
+Ann| <ansi fg="187">:::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187">::::::::.</ansi>\<ansi fg="187"></ansi>
+Ann| '      `--'      `.-'      `--'      `--'      `--'      `-.'      `--'      `</ansi>
+Ann|
+Ann| <ansi fg="md" bg="md-bg"><ansi fg="md-h1" bg="md-h1-bg"><ansi fg="md-h1-prefix" bg="md-h1-prefix-bg">.:</ansi> Help for <ansi fg="md-sp1" bg="md-sp1-bg">server</ansi> (admin command)</ansi>
+Ann|
+Ann| <ansi fg="md-p" bg="md-p-bg">The <ansi fg="md-sp1" bg="md-sp1-bg">server</ansi> command can be used in the following ways:</ansi>
+Ann|
+Ann| <ansi fg="md-h2" bg="md-h2-bg">Usage:</ansi>
+Ann|
+Ann| <ansi fg="md-p" bg="md-p-bg">  <ansi fg="md-sp1" bg="md-sp1-bg">server reload-ansi</ansi>
+Ann|   Reloads aliases from the ansi alias file</ansi>
+Ann|
+Ann| <ansi fg="md-p" bg="md-p-bg">  <ansi fg="md-sp1" bg="md-sp1-bg">server stats</ansi>
+Ann|   Get stats on the server</ansi>
+Ann|
+Ann| <ansi fg="md-p" bg="md-p-bg">  <ansi fg="md-sp1" bg="md-sp1-bg">server set</ansi>
+Ann|   Lists all server configuration settings</ansi>
+Ann|
+Ann| <ansi fg="md-p" bg="md-p-bg">  <ansi fg="md-sp1" bg="md-sp1-bg">server set [name] [value]</ansi>
+Ann|   Sets a configuration settings (and saves it)</ansi>
+Ann|
+Ann| <ansi fg="md-p" bg="md-p-bg">  <ansi fg="md-sp1" bg="md-sp1-bg">server config</ansi>
+Ann|   Initiates an interactive configuration editor</ansi></ansi>
+Ann|
