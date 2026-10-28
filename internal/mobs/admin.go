@@ -32,7 +32,9 @@ func SaveMobSpec(spec *Mob) error {
 		saveModes = append(saveModes, fileloader.SaveCareful)
 	}
 
-	if err := fileloader.SaveFlatFile[*Mob](configs.GetFilePathsConfig().DataFiles.String()+`/mobs`, spec, saveModes...); err != nil {
+	fileSpec := *spec
+	fileSpec.Character.StripItemIds() // a template's items have no IDs (slice 2c)
+	if err := fileloader.SaveFlatFile[*Mob](configs.GetFilePathsConfig().DataFiles.String()+`/mobs`, &fileSpec, saveModes...); err != nil {
 		return err
 	}
 

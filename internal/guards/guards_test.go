@@ -187,6 +187,43 @@ func TestIdsAreMadeOnlyAtCreation(t *testing.T) {
 	}
 }
 
+// TestItemsAreInstantiatedOnlyFromTemplates enforces decision 11 for template
+// items: items.FromTemplate makes new IDs, so only the NPC-from-template path
+// may call it, and only the places that make an NPC from its template may call
+// Character.InstantiateItems.
+func TestItemsAreInstantiatedOnlyFromTemplates(t *testing.T) {
+	fromTemplate := map[string]string{
+		"internal/characters/itemids.go": "InstantiateItems: an NPC's template items made new",
+	}
+	instantiate := map[string]string{
+		"internal/mobs/mobs.go":       "NewMobById: a new NPC instantiation",
+		"internal/combat/simulate.go": "newSimMob: a simulated NPC instantiation",
+	}
+	for path, f := range goFiles(t) {
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			if x, ok := sel.X.(*ast.Ident); ok && x.Name == "items" && sel.Sel.Name == "FromTemplate" {
+				if _, ok := fromTemplate[path]; !ok {
+					t.Errorf("%s: calls items.FromTemplate outside the NPC-from-template path", path)
+				}
+			}
+			if sel.Sel.Name == "InstantiateItems" {
+				if _, ok := instantiate[path]; !ok {
+					t.Errorf("%s: calls InstantiateItems outside an NPC instantiation", path)
+				}
+			}
+			return true
+		})
+	}
+}
+
 // TestNoNumericShorthandIds forbids shorthand IDs (#N, @N and the item form !N): people
 // name things by name; clients send ID tokens. The allowlist holds the
 // documented exceptions, keyed by file and the literal's Go source text, so a

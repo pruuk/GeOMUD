@@ -144,6 +144,23 @@ func LoadRoomTemplate(roomId int) *Room {
 }
 
 // See C. UPDATING EXISTING ROOM TEMPLATES
+// templateData is r as written to its template file: an item in a template is
+// not a thing yet, so it has no ID (Phase 4b slice 2c). The item lists and the
+// container map are copies, so the live room keeps its item IDs.
+func (r Room) templateData() Room {
+	r.Items = items.WithoutIds(r.Items)
+	r.Stash = items.WithoutIds(r.Stash)
+	if r.Containers != nil {
+		containers := make(map[string]Container, len(r.Containers))
+		for name, c := range r.Containers {
+			c.Items = items.WithoutIds(c.Items)
+			containers[name] = c
+		}
+		r.Containers = containers
+	}
+	return r
+}
+
 func SaveRoomTemplate(roomTpl Room) error {
 
 	if roomTpl.IsEphemeral() {
@@ -160,7 +177,8 @@ func SaveRoomTemplate(roomTpl Room) error {
 	// It is assumed that `roomTpl` contains empty room data
 	// That means no players/mobs/items/gold/etc that aren't intended to be included in the default/empty room template
 	//
-	data, err := yaml.Marshal(&roomTpl)
+	fileData := roomTpl.templateData()
+	data, err := yaml.Marshal(&fileData)
 	if err != nil {
 		return err
 	}
