@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
@@ -35,7 +36,7 @@ func Zone(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	if len(args) == 0 {
 		// send some sort of help info?
 		infoOutput, _ := templates.Process("admincommands/help/command.zone", nil, user.UserId)
-		user.SendText(infoOutput)
+		messaging.ToAccount(user, infoOutput)
 
 		return handled, nil
 	}
@@ -50,30 +51,30 @@ func Zone(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 	zoneConfig := rooms.GetZoneConfig(room.Zone)
 	if zoneConfig == nil {
-		user.SendText(fmt.Sprintf(`Couldn't find zone info for <ansi fg="red">%s</ansi>`, room.Zone))
+		messaging.ToAccount(user, fmt.Sprintf(`Couldn't find zone info for <ansi fg="red">%s</ansi>`, room.Zone))
 		return true, nil
 	}
 
 	if zoneCmd == `info` {
 
-		user.SendText(``)
-		user.SendText(fmt.Sprintf(`<ansi fg="yellow-bold">Zone Config for:    <ansi fg="red">%s</ansi></ansi>`, room.Zone))
-		user.SendText(fmt.Sprintf(`   <ansi fg="yellow-bold">Root Room Id:</ansi>    <ansi fg="red">%d</ansi>`, zoneConfig.RoomId))
+		messaging.ToAccount(user, ``)
+		messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="yellow-bold">Zone Config for:    <ansi fg="red">%s</ansi></ansi>`, room.Zone))
+		messaging.ToAccount(user, fmt.Sprintf(`   <ansi fg="yellow-bold">Root Room Id:</ansi>    <ansi fg="red">%d</ansi>`, zoneConfig.RoomId))
 
 		if zoneConfig.MobAutoScale.Maximum == 0 {
-			user.SendText(`  <ansi fg="yellow-bold">Mob AutoScale:</ansi>    <ansi fg="red">[disabled]</ansi>`)
+			messaging.ToAccount(user, `  <ansi fg="yellow-bold">Mob AutoScale:</ansi>    <ansi fg="red">[disabled]</ansi>`)
 		} else {
-			user.SendText(fmt.Sprintf(`  <ansi fg="yellow-bold">Mob AutoScale:</ansi>    <ansi fg="red">%d</ansi> - <ansi fg="red">%d</ansi>`, zoneConfig.MobAutoScale.Minimum, zoneConfig.MobAutoScale.Maximum))
+			messaging.ToAccount(user, fmt.Sprintf(`  <ansi fg="yellow-bold">Mob AutoScale:</ansi>    <ansi fg="red">%d</ansi> - <ansi fg="red">%d</ansi>`, zoneConfig.MobAutoScale.Minimum, zoneConfig.MobAutoScale.Maximum))
 		}
 
-		user.SendText(``)
+		messaging.ToAccount(user, ``)
 
 		return true, nil
 	}
 
 	// Everthing after this point requires additional args
 	if len(args) < 1 {
-		user.SendText(`Not enough arguments provided.`)
+		messaging.ToAccount(user, `Not enough arguments provided.`)
 		return true, nil
 	}
 
@@ -85,7 +86,7 @@ func Zone(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		if setWhat == `autoscale` {
 			if len(args) < 2 {
-				user.SendText(`Use <ansi fg="command">zone set autoscale 0 0</ansi> to clear autoscaling.`)
+				messaging.ToAccount(user, `Use <ansi fg="command">zone set autoscale 0 0</ansi> to clear autoscaling.`)
 				return true, nil
 			}
 
@@ -93,7 +94,7 @@ func Zone(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			max, _ := strconv.Atoi(args[1])
 
 			if min < 0 || max < 0 {
-				user.SendText(`Min/Max can't be less than zero.`)
+				messaging.ToAccount(user, `Min/Max can't be less than zero.`)
 				return true, nil
 			}
 
@@ -101,7 +102,7 @@ func Zone(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			zoneConfig.MobAutoScale.Maximum = max
 			zoneConfig.Validate()
 
-			user.SendText(`Done!`)
+			messaging.ToAccount(user, `Done!`)
 			return true, nil
 		}
 
@@ -111,16 +112,16 @@ func Zone(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 		newName := strings.TrimSpace(strings.Join(args, ` `))
 		if newName == `` {
-			user.SendText(`Usage: <ansi fg="command">zone rename <new zone name></ansi>`)
+			messaging.ToAccount(user, `Usage: <ansi fg="command">zone rename <new zone name></ansi>`)
 			return true, nil
 		}
 
 		if err := rooms.RenameZoneForAdmin(room.Zone, newName); err != nil {
-			user.SendText(fmt.Sprintf(`<ansi fg="red">Error:</ansi> %s`, err.Error()))
+			messaging.ToAccount(user, fmt.Sprintf(`<ansi fg="red">Error:</ansi> %s`, err.Error()))
 			return true, nil
 		}
 
-		user.SendText(fmt.Sprintf(`Zone renamed from <ansi fg="yellow">%s</ansi> to <ansi fg="yellow">%s</ansi>.`, room.Zone, newName))
+		messaging.ToAccount(user, fmt.Sprintf(`Zone renamed from <ansi fg="yellow">%s</ansi> to <ansi fg="yellow">%s</ansi>.`, room.Zone, newName))
 		return true, nil
 
 	}
@@ -132,7 +133,7 @@ func zone_Edit(rest string, user *accounts.Account, room *rooms.Room, flags even
 
 	originalZoneConfig := rooms.GetZoneConfig(room.Zone)
 	if originalZoneConfig == nil {
-		user.SendText(`Could not find zone config.`)
+		messaging.ToAccount(user, `Could not find zone config.`)
 		return true, nil
 	}
 
@@ -182,7 +183,7 @@ func zone_Edit(rest string, user *accounts.Account, room *rooms.Room, flags even
 	question := cmdPrompt.Ask(`Select a mutator to add/remove, or nothing to continue:`, []string{}, `0`)
 	if !question.Done {
 		tplTxt, _ := templates.Process("tables/numbered-list-doubled", mutatorOptions, user.UserId)
-		user.SendText(tplTxt)
+		messaging.ToAccount(user, tplTxt)
 		return true, nil
 	}
 
@@ -207,11 +208,11 @@ func zone_Edit(rest string, user *accounts.Account, room *rooms.Room, flags even
 
 		if mutatorSelected == `` {
 
-			user.SendText("Invalid selection.")
+			messaging.ToAccount(user, "Invalid selection.")
 			question.RejectResponse()
 
 			tplTxt, _ := templates.Process("tables/numbered-list-doubled", mutatorOptions, user.UserId)
-			user.SendText(tplTxt)
+			messaging.ToAccount(user, tplTxt)
 			return true, nil
 		}
 
@@ -242,7 +243,7 @@ func zone_Edit(rest string, user *accounts.Account, room *rooms.Room, flags even
 		}
 
 		tplTxt, _ := templates.Process("tables/numbered-list-doubled", mutatorOptions, user.UserId)
-		user.SendText(tplTxt)
+		messaging.ToAccount(user, tplTxt)
 		return true, nil
 
 	}
@@ -276,9 +277,9 @@ func zone_Edit(rest string, user *accounts.Account, room *rooms.Room, flags even
 
 	rooms.SaveZoneConfig(&editZoneConfig)
 
-	user.SendText(``)
-	user.SendText(`Changes saved.`)
-	user.SendText(``)
+	messaging.ToAccount(user, ``)
+	messaging.ToAccount(user, `Changes saved.`)
+	messaging.ToAccount(user, ``)
 
 	user.ClearPrompt()
 
