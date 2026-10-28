@@ -50,7 +50,7 @@ func reading(t *testing.T, u *accounts.Account) {
 
 // captureReads records what each player read while fn ran, by UserId. It
 // expands the queued text events the way the writers deliver them
-// (hooks.Message_SendMessage, hooks.Broadcast_SendToAll): a UserId message
+// (messaging.WriteMessage, messaging.WriteBroadcast): a UserId message
 // to that user; a RoomId message to the room's players at drain time minus
 // the UserId and ExcludeUserIds, honouring IsQuiet; a Broadcast to every
 // active account. After slice 7 every line arrives as a UserId message or a

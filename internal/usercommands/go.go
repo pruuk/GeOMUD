@@ -192,8 +192,9 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 			enterFromExit = fmt.Sprintf(`the <ansi fg="exit">%s</ansi>`, enterFromExit)
 		}
 
-		// Tell the old room they are leaving. This goes before the move: a
-		// message reaches the room its actor is in (Decision 1 of slice 7).
+		// Tell the old room they are leaving. This goes before the move, so
+		// the line reaches the room being left: a message reaches the room
+		// its actor is in (the slice 7 plan's conversion rules, group E note).
 		originBodies := room.GetBodies()
 		if !isSneaking {
 			messaging.Send(perception.Message{

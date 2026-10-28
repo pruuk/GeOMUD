@@ -139,7 +139,7 @@ func (r *readsRecorder) read(userId int, text string) {
 	r.log = append(r.log, readEntry{userId: userId, text: text})
 }
 
-// onMessage expands one message to its receivers as Message_SendMessage does.
+// onMessage expands one message to its receivers as messaging.WriteMessage does.
 func (r *readsRecorder) onMessage(e events.Event) events.ListenerReturn {
 	m := e.(events.Message)
 	if m.UserId > 0 {
@@ -180,7 +180,7 @@ func (r *readsRecorder) onMessage(e events.Event) events.ListenerReturn {
 }
 
 // onBroadcast expands one broadcast to every active account as
-// Broadcast_SendToAll does. The writer sends without adding a newline.
+// messaging.WriteBroadcast does. The writer sends without adding a newline.
 func (r *readsRecorder) onBroadcast(e events.Event) events.ListenerReturn {
 	b := e.(events.Broadcast)
 	all := accounts.GetAllActiveUsers()
