@@ -4,85 +4,97 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
-func Equip(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Equip(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+
+	if permaGearRefused(actor) {
+		return true, nil
+	}
 
 	if rest == "" {
-		user.SendText(`Wear WHAT?`)
+		Tell(actor, `Wear WHAT?`)
 		return true, nil
 	}
 
 	// Check whether the user has an item in their inventory that matches
-	matchItem, found := user.Character.FindInBackpack(rest)
+	matchItem, found := actor.Character.FindInBackpack(rest)
 
 	if !found {
-		user.SendText(fmt.Sprintf(`You don't have a "%s" to wear.`, rest))
+		Tell(actor, fmt.Sprintf(`You don't have a "%s" to wear.`, rest))
 	} else {
 
 		iSpec := matchItem.GetSpec()
 		if iSpec.Type != items.Weapon && iSpec.Subtype != items.Wearable {
-			user.SendText(
+			Tell(actor,
 				fmt.Sprintf(`Your <ansi fg="item">%s</ansi> doesn't look very fashionable.`, matchItem.DisplayName()),
 			)
 			return true, nil
 		}
 
 		// Snapshot stats before equipping
-		statsBefore := captureStatSnapshot(user.Character)
+		statsBefore := captureStatSnapshot(actor.Character)
 
 		// Swap the item location
-		oldItems, wearSuccess, failureReason := user.Character.Wear(matchItem)
+		oldItems, wearSuccess, failureReason := actor.Character.Wear(matchItem)
 
 		if wearSuccess {
 
-			user.Character.CancelBuffsWithFlag("hidden")
+			actor.Character.RemoveItem(matchItem)
 
-			user.Character.RemoveItem(matchItem)
+			// Wearing the item that is already worn changes nothing: put it back
+			// and say nothing. This stops blind retries (NPC combat re-equips at
+			// random) from spamming the room.
+			if len(oldItems) == 1 && matchItem.Equals(oldItems[0]) {
+				actor.Character.StoreItem(oldItems[0])
+				return true, nil
+			}
+
+			actor.Character.CancelBuffsWithFlag("hidden")
 
 			for _, oldItem := range oldItems {
 				if oldItem.ItemId != 0 {
-					user.SendText(
+					Tell(actor,
 						fmt.Sprintf(`You remove your <ansi fg="item">%s</ansi> and return it to your backpack.`, oldItem.DisplayName()),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> removes their <ansi fg="item">%s</ansi> and stores it away.`, user.Character.Name, oldItem.DisplayName()),
-						user.UserId,
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> removes their <ansi fg="item">%s</ansi> and stores it away.`, NameColour(actor), actor.Character.Name, oldItem.DisplayName()),
+						ExcludeId(actor),
 					)
 
-					user.Character.StoreItem(oldItem)
+					actor.Character.StoreItem(oldItem)
 				}
 			}
 
-			user.Character.Validate(true)
+			actor.Character.Validate(true)
 
-			statDiff := formatStatChanges(statsBefore, captureStatSnapshot(user.Character))
+			statDiff := formatStatChanges(statsBefore, captureStatSnapshot(actor.Character))
 
 			if iSpec.Subtype == items.Wearable {
-				user.SendText(
+				Tell(actor,
 					fmt.Sprintf(`You wear your <ansi fg="item">%s</ansi>.%s`, matchItem.DisplayName(), statDiff),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> puts on their <ansi fg="item">%s</ansi>.`, user.Character.Name, matchItem.DisplayName()),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> puts on their <ansi fg="item">%s</ansi>.`, NameColour(actor), actor.Character.Name, matchItem.DisplayName()),
+					ExcludeId(actor),
 				)
 			} else {
-				user.SendText(
+				Tell(actor,
 					fmt.Sprintf(`You wield your <ansi fg="item">%s</ansi>. You're feeling dangerous.%s`, matchItem.DisplayName(), statDiff),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> wields their <ansi fg="item">%s</ansi>.`, user.Character.Name, matchItem.DisplayName()),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> wields their <ansi fg="item">%s</ansi>.`, NameColour(actor), actor.Character.Name, matchItem.DisplayName()),
+					ExcludeId(actor),
 				)
 			}
 
 			events.AddToQueue(events.EquipmentChange{
-				ActorId:      user.Character.Id,
+				ActorId:      actor.Character.Id,
 				ItemsWorn:    []items.Item{matchItem},
 				ItemsRemoved: oldItems,
 			})
@@ -91,7 +103,7 @@ func Equip(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 			if len(failureReason) == 1 {
 				failureReason = fmt.Sprintf(`You can't figure out how to equip the <ansi fg="item">%s</ansi>.`, matchItem.DisplayName())
 			}
-			user.SendText(
+			Tell(actor,
 				failureReason,
 			)
 		}

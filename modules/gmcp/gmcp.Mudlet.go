@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -249,7 +250,12 @@ func (g *GMCPMudletModule) handleToggleCommand(user *accounts.Account, settingNa
 }
 
 // sendUICommand handles UI-related commands
-func (g *GMCPMudletModule) sendUICommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (g *GMCPMudletModule) sendUICommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil { // a client belongs to an account
+		return false, nil
+	}
+
 	// Only proceed if client is Mudlet
 	connId := user.ConnectionId()
 	if gmcpData, ok := gmcpModule.cache.Get(connId); !ok || !gmcpData.Client.IsMudlet {
@@ -319,7 +325,12 @@ func (g *GMCPMudletModule) sendUICommand(rest string, user *accounts.Account, ro
 }
 
 // sendMapCommand sends map configuration
-func (g *GMCPMudletModule) sendMapCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (g *GMCPMudletModule) sendMapCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil { // a client belongs to an account
+		return false, nil
+	}
+
 	// Only send if the client is Mudlet
 	connId := user.ConnectionId()
 	if gmcpData, ok := gmcpModule.cache.Get(connId); ok && gmcpData.Client.IsMudlet {
@@ -330,7 +341,12 @@ func (g *GMCPMudletModule) sendMapCommand(rest string, user *accounts.Account, r
 }
 
 // checkClientCommand checks if client is Mudlet and shows info
-func (g *GMCPMudletModule) checkClientCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (g *GMCPMudletModule) checkClientCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil { // a client belongs to an account
+		return false, nil
+	}
+
 	// Check if client is Mudlet
 	connId := user.ConnectionId()
 	if gmcpData, ok := gmcpModule.cache.Get(connId); ok && gmcpData.Client.IsMudlet {
@@ -341,7 +357,7 @@ func (g *GMCPMudletModule) checkClientCommand(rest string, user *accounts.Accoun
 
 		// Show Mudlet help
 		user.SendText("\n\n<ansi fg=\"cyan-bold\">We have detected you are using Mudlet as a client.</ansi>\n")
-		usercommands.Help("mudletui", user, room, flags)
+		usercommands.Help("mudletui", actor, room, flags)
 	}
 	return true, nil
 }

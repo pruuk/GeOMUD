@@ -16,7 +16,7 @@ slices"). Remove a line when its fix lands (with a `PATCH_NOTES.md` line).
 - With `CorpseItems: true` (off by default), looting a corpse duplicates items under one ID: a
   player corpse keeps a copy of the character still wearing its items (`usercommands/suicide.go:265,280`,
   `get.go:134-148,185-216`), and an NPC corpse lists dropped worn items without taking them off the
-  body (`mobcommands/suicide.go:349-366,407`). Phase 5's death rule owns corpses.
+  body (`usercommands/suicide_npc.go:321-340,407-411`). Phase 5's death rule owns corpses.
 - Admin room template saves can lose live items: `BuildRoom` and `ConnectRoom` put a plain template
   load in memory (`roommanager.go:862-865, 925-926`); `SaveRoomTemplate` on a room not in memory
   ignores its instance file; a template container with items replaces the live container's contents.

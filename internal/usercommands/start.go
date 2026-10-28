@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -17,7 +18,11 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/term"
 )
 
-func Start(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 	if user.Character.RoomId != -1 {
 		return false, errors.New(`only allowed in the void`)
 	}
@@ -72,7 +77,7 @@ func Start(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 			}
 
 			question.RejectResponse()
-			return Help(helpCmd+` `+helpRest, user, room, flags)
+			return Help(helpCmd+` `+helpRest, actor, room, flags)
 		}
 
 		raceNameSelection := question.Response
@@ -160,7 +165,7 @@ func Start(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 		if question.Response == `no` {
 			user.ClearPrompt()
-			return Start(rest, user, room, flags)
+			return Start(rest, actor, room, flags)
 		}
 
 		if err := user.SetCharacterName(usernameSelected); err != nil {
@@ -198,7 +203,7 @@ func Start(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 		if destRoom := rooms.LoadRoom(rooms.StartRoomIdAlias); destRoom != nil {
 
-			rooms.MoveToRoom(user.UserId, destRoom.RoomId)
+			rooms.MoveToRoom(user.Character.Id, destRoom.RoomId)
 
 			// Tell the new room they have arrived
 
@@ -209,7 +214,7 @@ func Start(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 				user.UserId,
 			)
 
-			Look(``, user, destRoom, events.CmdSecretly) // Do a secret look.
+			Look(``, actor, destRoom, events.CmdSecretly) // Do a secret look.
 
 			return true, nil
 		}
@@ -248,10 +253,10 @@ func Start(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 	user.SendText(fmt.Sprintf(`<ansi fg="magenta">Suddenly, a vortex appears before you, drawing you in before you have any chance to react!</ansi>%s`, term.CRLFStr))
 
-	rooms.MoveToRoom(user.UserId, ephemeralStartRoomId)
+	rooms.MoveToRoom(user.Character.Id, ephemeralStartRoomId)
 
 	if lookRoom := rooms.LoadRoom(ephemeralStartRoomId); lookRoom != nil {
-		Look(``, user, lookRoom, events.CmdSecretly)
+		Look(``, actor, lookRoom, events.CmdSecretly)
 	}
 
 	return true, nil

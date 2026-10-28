@@ -18,6 +18,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 )
 
 /*
@@ -26,7 +27,11 @@ import (
 * mob.create		(Create new mobs)
 * mob.spawn			(Spawn a mob in the room)
  */
-func Mob(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Mob(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	args := util.SplitButRespectQuotes(rest)
 
@@ -44,7 +49,7 @@ func Mob(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 			return true, nil
 		}
 
-		return mob_Create(strings.TrimSpace(rest[6:]), user, room, flags)
+		return mob_Create(strings.TrimSpace(rest[6:]), actor, user, room, flags)
 	}
 
 	// Spawn a mob instance
@@ -161,7 +166,7 @@ func mob_Spawn(rest string, user *accounts.Account, room *rooms.Room, flags even
 	return true, nil
 }
 
-func mob_Create(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func mob_Create(rest string, actor *actors.Actor, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	var newMob = mobs.Mob{}
 
@@ -261,7 +266,7 @@ func mob_Create(rest string, user *accounts.Account, room *rooms.Room, flags eve
 		}
 
 		question.RejectResponse()
-		return Help(helpCmd+` `+helpRest, user, room, flags)
+		return Help(helpCmd+` `+helpRest, actor, room, flags)
 	}
 
 	raceNameSelection := question.Response

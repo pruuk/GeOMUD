@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/races"
@@ -16,7 +16,10 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Help(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Help(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+
+	// Admin topics are listed by the account's role; an NPC has none.
+	user := actor.Controller().Account()
 
 	var helpTxt string
 	var err error = nil
@@ -53,7 +56,7 @@ func Help(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 			templateFile := `help/` + keywords.TryHelpAlias(command.Command)
 
 			if command.AdminOnly {
-				if user.HasRolePermission(command.Command, true) {
+				if user != nil && user.HasRolePermission(command.Command, true) {
 					helpCommandList.Admin[category] = append(
 						helpCommandList.Admin[category],
 						helpCommand{Command: command.Command, Type: "command-admin", Missing: false},
@@ -73,7 +76,7 @@ func Help(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 		}
 
-		helpTxt, err = templates.Process("help/help", helpCommandList, user.UserId)
+		helpTxt, err = templates.Process("help/help", helpCommandList, ExcludeId(actor))
 		if err != nil {
 			helpTxt = err.Error()
 		}
@@ -81,13 +84,13 @@ func Help(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 		helpTxt, err = GetHelpContents(rest)
 		if err != nil {
-			user.SendText(fmt.Sprintf(`No help found for "%s"`, rest))
+			Tell(actor, fmt.Sprintf(`No help found for "%s"`, rest))
 			return true, err
 		}
 
 	}
 
-	user.SendText(helpTxt)
+	Tell(actor, helpTxt)
 
 	return true, nil
 }

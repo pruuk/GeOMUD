@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Say(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Say(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	if user.Muted {
-		user.SendText(`You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
+	if user := actor.Controller().Account(); user != nil && user.Muted {
+		Tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
 		return true, nil
 	}
 
-	isSneaking := user.Character.HasBuffFlag("hidden")
-	isDrunk := user.Character.HasBuffFlag("drunk")
+	isSneaking := actor.Character.HasBuffFlag("hidden")
+	isDrunk := actor.Character.HasBuffFlag("drunk")
 
 	if isDrunk {
 		// modify the text to look like it's the speech of a drunk person
@@ -26,19 +26,19 @@ func Say(rest string, user *accounts.Account, room *rooms.Room, flags events.Eve
 	}
 
 	if isSneaking {
-		room.SendTextCommunication(fmt.Sprintf(`someone says, "<ansi fg="saytext">%s</ansi>"`, rest), user.UserId)
+		room.SendTextCommunication(fmt.Sprintf(`someone says, "<ansi fg="saytext">%s</ansi>"`, rest), ExcludeId(actor))
 	} else {
-		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="username">%s</ansi> says, "<ansi fg="saytext">%s</ansi>"`, user.Character.Name, rest), user.UserId)
+		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="%s">%s</ansi> says, "<ansi fg="saytext">%s</ansi>"`, NameColour(actor), actor.Character.Name, rest), ExcludeId(actor))
 	}
 
-	user.SendText(fmt.Sprintf(`You say, "<ansi fg="saytext">%s</ansi>"`, rest))
+	Tell(actor, fmt.Sprintf(`You say, "<ansi fg="saytext">%s</ansi>"`, rest))
 
 	room.SendTextToExits(`You hear someone talking.`, true)
 
 	events.AddToQueue(events.Communication{
-		SourceActorId: user.Character.Id,
+		SourceActorId: actor.Character.Id,
 		CommType:      `say`,
-		Name:          user.Character.Name,
+		Name:          actor.Character.Name,
 		Message:       rest,
 	})
 

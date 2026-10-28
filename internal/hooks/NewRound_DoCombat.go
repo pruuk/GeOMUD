@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/configs"
@@ -143,20 +144,23 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 			user.Character.Aggro = nil
 			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 
-			if err := rooms.MoveToRoom(user.UserId, exitRoomId); err == nil {
+			if err := rooms.MoveToRoom(user.Character.Id, exitRoomId); err == nil {
 
 				for _, instId := range uRoom.GetMobs(rooms.FindCharmed) {
 					if mob := mobs.GetInstance(instId); mob != nil {
-						// Charmed mobs assist
+						// A charmed mob fighting beside its master is in the
+						// fight too: it flees on its own roll (Decision 6).
 						if mob.Character.IsCharmed(user.Character.Id) {
-							mob.Command(exitName)
+							mob.Command(`flee`)
 						}
 					}
 				}
 
 				newRoom := rooms.LoadRoom(exitRoomId)
 
-				usercommands.Look(``, user, newRoom, events.CmdSecretly)
+				if actor := actors.ByUserId(user.UserId); actor != nil {
+					usercommands.Look(``, actor, newRoom, events.CmdSecretly)
+				}
 
 			}
 
@@ -537,6 +541,15 @@ func handleMobCombat(evt events.NewRound) (affectedPlayerIds []int, affectedMobI
 		mobRoom := rooms.LoadRoom(mob.Character.RoomId)
 
 		if mobRoom == nil {
+			mob.Character.Aggro = nil
+			events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
+			continue
+		}
+
+		// A flee has no target and only the player half of the round resolves
+		// it. An NPC that flees stops fighting (it does not leave until slice 5);
+		// left set, the aggro would block the NPC for good.
+		if mob.Character.Aggro.Type == characters.Flee && mob.Character.Aggro.Target.IsZero() {
 			mob.Character.Aggro = nil
 			events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
 			continue

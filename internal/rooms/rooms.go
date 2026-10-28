@@ -9,6 +9,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
+	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/exit"
@@ -2368,9 +2369,9 @@ func (r *Room) IsPvp() bool {
 }
 
 // Returns an error with a reason why they cannot PVP, or nil
-func (r *Room) CanPvp(attUser *accounts.Account, defUser *accounts.Account) error {
+func (r *Room) CanPvp(attChar *characters.Character, defChar *characters.Character) error {
 
-	if attUser.Character.RoomId == -1 || attUser.Character.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom) {
+	if attChar.RoomId == -1 || attChar.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom) {
 		return errors.New(`Fighting is not allowed here.`)
 	}
 
@@ -2384,7 +2385,7 @@ func (r *Room) CanPvp(attUser *accounts.Account, defUser *accounts.Account) erro
 		return errors.New(`PVP is disabled.`)
 	}
 
-	if attUser.Character.Level < minLevel || defUser.Character.Level < minLevel {
+	if attChar.Level < minLevel || defChar.Level < minLevel {
 		return fmt.Errorf(`Players must be at least level %d to PVP.`, minLevel)
 	}
 

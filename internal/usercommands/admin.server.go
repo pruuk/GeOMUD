@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
@@ -30,7 +31,11 @@ const (
 * Role Permissions:
 * server 				(All)
  */
-func Server(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Server(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.server", nil, user.UserId)

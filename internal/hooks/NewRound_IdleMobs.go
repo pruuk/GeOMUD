@@ -4,9 +4,11 @@ package hooks
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/behaviour"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -44,7 +46,7 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 		if allowedUnloadCt > 0 && mob.BoredomCounter >= maxBoredom {
 
 			if mob.Despawns() {
-				mob.Command(`rest` + fmt.Sprintf(` depression %d/%d`, mob.BoredomCounter, maxBoredom))
+				behaviour.Rest(mob, fmt.Sprintf(`depression %d/%d`, mob.BoredomCounter, maxBoredom))
 				allowedUnloadCt--
 
 			} else {
@@ -87,16 +89,16 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 
 					reDoWaypoints := mob.Path.Waypoints()
 					if len(reDoWaypoints) > 0 {
-						newCommand := `pathto`
+						newArgs := make([]string, 0, len(reDoWaypoints))
 						for _, wpInt := range reDoWaypoints {
-							newCommand += ` ` + strconv.Itoa(wpInt)
+							newArgs = append(newArgs, strconv.Itoa(wpInt))
 						}
-						mob.Command(newCommand)
+						behaviour.PathTo(mob, strings.Join(newArgs, ` `))
 						continue
 					}
 
 					// if we were unable to come up with a new path, send them home.
-					mob.Command(`pathto home`)
+					behaviour.PathTo(mob, "home")
 
 					continue
 				}
@@ -108,6 +110,11 @@ func IdleMobs(e events.Event) events.ListenerReturn {
 					if exitInfo, ok := room.Exits[nextStep.ExitName()]; ok {
 						if exitInfo.RoomId == nextStep.RoomId() {
 							mob.Command(nextStep.ExitName())
+							if nextStep.Waypoint() {
+								// Anytime a mob reaches a waypoint, introduce a 1 second delay before they can perform any additional commands.
+								// This gives a more natural feel to mob behavior, and gives those following a moment to catch up before the mob does something.
+								mob.Command("noop", 1)
+							}
 							continue
 						}
 					}

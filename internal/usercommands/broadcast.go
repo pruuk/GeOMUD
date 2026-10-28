@@ -4,31 +4,37 @@ import (
 	"fmt"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/term"
 )
 
 // Global chat room
-func Broadcast(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Broadcast(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	if user.Muted {
-		user.SendText(`You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
-		return true, nil
+	// An actor without an account is never muted and never a moderator.
+	sourceIsMod := false
+	if user := actor.Controller().Account(); user != nil {
+		if user.Muted {
+			Tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
+			return true, nil
+		}
+		sourceIsMod = user.Role != accounts.RoleUser
 	}
 
-	msg := fmt.Sprintf(`<ansi fg="broadcast-prefix">(broadcast)</ansi> <ansi fg="username">%s</ansi>: <ansi fg="broadcast-body">%s</ansi>`, user.Character.Name, rest)
+	msg := fmt.Sprintf(`<ansi fg="broadcast-prefix">(broadcast)</ansi> <ansi fg="%s">%s</ansi>: <ansi fg="broadcast-body">%s</ansi>`, NameColour(actor), actor.Character.Name, rest)
 
 	events.AddToQueue(events.Broadcast{
 		Text:            msg + term.CRLFStr,
 		IsCommunication: true,
-		SourceIsMod:     user.Role != accounts.RoleUser,
+		SourceIsMod:     sourceIsMod,
 	})
 
 	events.AddToQueue(events.Communication{
-		SourceActorId: user.Character.Id,
+		SourceActorId: actor.Character.Id,
 		CommType:      `broadcast`,
-		Name:          user.Character.Name,
+		Name:          actor.Character.Name,
 		Message:       rest,
 	})
 

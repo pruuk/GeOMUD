@@ -54,7 +54,7 @@ func HandleJoin(e events.Event) events.ListenerReturn {
 	if room == nil {
 		mudlog.Error("EnterWorld", "error", fmt.Sprintf(`room %d not found`, user.Character.RoomId))
 
-		if err := rooms.MoveToRoom(user.UserId, 0); err != nil {
+		if err := rooms.MoveToRoom(user.Character.Id, 0); err != nil {
 			mudlog.Error("EnterWorld", "msg", "could not move to room 0", "error", err)
 		}
 

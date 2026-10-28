@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/configs"
-	"github.com/GoMudEngine/GoMud/internal/mobcommands"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -293,8 +292,10 @@ func (p *Plugin) ExportFunction(stringId string, f any) {
 	p.exportedFunctions[stringId] = f
 }
 
-// Registers a UserCommand and callback
-func (p *Plugin) AddUserCommand(command string, handlerFunc usercommands.UserCommand, allowWhenDowned bool, isAdminOnly bool) {
+// Registers a command and its handler. Players and NPCs run the same
+// commands: the handler takes the actor and asks it for an account where it
+// needs one.
+func (p *Plugin) AddUserCommand(command string, handlerFunc usercommands.Command, allowWhenDowned bool, isAdminOnly bool) {
 
 	if p.Callbacks.userCommands == nil {
 		p.Callbacks.userCommands = map[string]usercommands.CommandAccess{}
@@ -305,20 +306,6 @@ func (p *Plugin) AddUserCommand(command string, handlerFunc usercommands.UserCom
 		AllowedWhenDowned: allowWhenDowned,
 		AdminOnly:         isAdminOnly,
 	}
-}
-
-// Registers a MobCommand and callback
-func (p *Plugin) AddMobCommand(command string, handlerFunc mobcommands.MobCommand, allowWhenDowned bool) {
-
-	if p.Callbacks.mobCommands == nil {
-		p.Callbacks.mobCommands = map[string]mobcommands.CommandAccess{}
-	}
-
-	p.Callbacks.mobCommands[command] = mobcommands.CommandAccess{
-		Func:              handlerFunc,
-		AllowedWhenDowned: allowWhenDowned,
-	}
-
 }
 
 // Adds an embedded file system to the plugin
@@ -480,10 +467,6 @@ func Load(dataFilesPath string) {
 
 		for cmd, info := range p.Callbacks.userCommands {
 			usercommands.RegisterCommand(cmd, info.Func, info.AllowedWhenDowned, info.AdminOnly)
-		}
-
-		for cmd, info := range p.Callbacks.mobCommands {
-			mobcommands.RegisterCommand(cmd, info.Func, info.AllowedWhenDowned)
 		}
 
 		// Check for config.yaml override and set missing values accordingly

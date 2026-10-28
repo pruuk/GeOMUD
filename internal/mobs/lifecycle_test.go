@@ -40,6 +40,23 @@ func TestNPCsFromOneTemplateHaveTheirOwnItems(t *testing.T) {
 	assert.Equal(t, weaponBefore, tpl.Character.Equipment.Weapon.Id)
 }
 
+func TestNewMobByIdStartsWithFullActionPoints(t *testing.T) {
+	tpl := &Mob{MobId: 9004}
+	tpl.Character = *characters.New()
+	// A bow, so no race data is needed (see the test above).
+	tpl.Character.Equipment.Weapon = items.Item{ItemId: 2, Spec: &items.ItemSpec{ItemId: 2, Name: "bow", Type: items.Weapon, Subtype: items.Shooting, Hands: 2}}
+	tpl.Validate()
+	mobs[9004] = tpl
+	t.Cleanup(func() { delete(mobs, 9004) })
+
+	m := NewMobById(9004, 1)
+	t.Cleanup(func() { DestroyInstance(m.Character.Id) })
+
+	assert.Greater(t, m.Character.ActionPointsMax.Value, 0)
+	assert.Greater(t, m.Character.ActionPoints, 0)
+	assert.Equal(t, m.Character.ActionPointsMax.Value, m.Character.ActionPoints)
+}
+
 func TestAddInstanceAssignsIdStoresAndFires(t *testing.T) {
 	var created []*Mob
 	OnInstanceCreated.Register(func(m *Mob) *Mob { created = append(created, m); return m })

@@ -237,7 +237,7 @@ code it replaces, so no slice leaves two live paths behind.
 | 7 | Output conversion | 3, 4 | Every remaining output site moves to `messaging`, split by command group across subagents | direct `SendText` and `connections.SendTo` outside `messaging` | Guard allowlist holds only the GMCP exception. Text parity holds. The Phase 4b Done-when line in `gomud_strip_plan.md` holds |
 
 Order: 1, 2, 2b, 3, 4, 5, 6, 7 (2c fits anywhere after 2; rooms take the ID format with the geo
-room key). Built so far: 1, 2, 2b, 2c, 3. Slice 3 needs only slice 1, so its plan can be written while slice 2 is
+room key). Built so far: 1, 2, 2b, 2c, 3, 4. Slice 3 needs only slice 1, so its plan can be written while slice 2 is
 in review.
 
 Plan files sit at the repo root as `<date>-phase-4b-<n>-<slug>-plan.md` (for example
@@ -284,6 +284,21 @@ Each slice plan reads these first; a note leaves once a slice settles it.
 - **Permadeath reroll** (`usercommands/suicide.go`): body re-keying and event order are unverified
   live (permadeath is off in `empty`). Check with permadeath on and `LivesStart: 0`. A reroll
   orphans the old body's charmed mobs until the charm expires.
+- **Slice 4 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-4-one-command-set-plan.md`,
+  decisions 1-17; inventory beside it). The facts table above predates it: the mob registry had 21
+  commands (`rest` came in slice 2b), plus 3 plugin mob commands, and `events.Input` already carried
+  `ActorId`. Calabe's rulings (2026-10-28): action points for every actor; NPCs use the player
+  wording; an NPC's unknown command is logged; nobody walks or quits out of a fight (the principle:
+  no escaping a fight except by fleeing). Slice 5: the NPC half of the combat round only clears a
+  fled NPC's aggro; resolving `flee` for NPCs (they leave) is slice 5's one round; NPC death is the
+  `suicide` command's template branch (`usercommands/suicide_npc.go`) until the death rule; an
+  NPC's `attack` goes through `CanPvp` against players. Slice 6: input ordering is still per kind
+  (no account: strict FIFO; account: a ready command may overtake a delayed one), keyed on
+  `Account()`; the idle tick calls `behaviour.RunIdle`, `PathTo`, `Rest`; the waypoint `noop` delay
+  lives in the path walking. Slice 7: commands write through `usercommands.Tell` and exclude by
+  `ExcludeId` (point them at messaging); the cleanup and follow modules use the same helpers.
+  NPCs now receive a room's mutator `PlayerBuffIds` through `MoveToRoom`; rooms are still prepared
+  only for players (an NPC's move or look prepares nothing).
 - **Slice 3 (built 2026-10-28) leaves for later** (plan `2026-10-28-phase-4b-3-messaging-core-plan.md`,
   decisions 1-11): `Message.TargetRoomText` was added after review so ranged combat can give the
   attacker's and the target's rooms different observer text, as `combat.go:113-137` does. Slice 5

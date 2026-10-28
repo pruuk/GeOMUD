@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/events"
-	"github.com/GoMudEngine/GoMud/internal/mobcommands"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 )
 
@@ -16,7 +16,11 @@ import (
 * Role Permissions:
 * command 				(All)
  */
-func Command(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func AdminCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	// args should look like one of the following:
 	// target buffId - put buff on target if in the room
@@ -25,10 +29,8 @@ func Command(rest string, user *accounts.Account, room *rooms.Room, flags events
 	args := util.SplitButRespectQuotes(rest)
 
 	if len(args) < 2 {
-		// send some sort of help info?
-		mobCommands := mobcommands.GetAllMobCommands()
-
-		infoOutput, _ := templates.Process("admincommands/help/command.command", mobCommands, user.UserId)
+		// NPCs run the same commands as players, so the help lists none.
+		infoOutput, _ := templates.Process("admincommands/help/command.command", nil, user.UserId)
 		user.SendText(infoOutput)
 		return true, nil
 	}

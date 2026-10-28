@@ -2,11 +2,16 @@ package usercommands
 
 import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
-func Password(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Password(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	// Get if already exists, otherwise create new
 	cmdPrompt, _ := user.StartPrompt(`password`, rest)

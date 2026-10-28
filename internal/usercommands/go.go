@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -11,25 +12,28 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	if user.Character.Aggro != nil {
-		user.SendText("You can't do that! You are in combat!")
+	// nil for an NPC; used only for the account parts (GMCP, party, hostility groups).
+	user := actor.Controller().Account()
+
+	// Nobody walks out of a fight; they flee (Decision 4).
+	if inFight(actor, room) {
+		Tell(actor, "You can't do that! You are in combat!")
 		return true, nil
 	}
 
 	// If has a buff that prevents combat, skip the player
-	if user.Character.HasBuffFlag("no-go") {
-		user.SendText("You can't do that!")
+	if actor.Character.HasBuffFlag("no-go") {
+		Tell(actor, "You can't do that!")
 		return true, nil
 	}
 
 	c := configs.GetTextFormatsConfig()
 
-	isSneaking := user.Character.HasBuffFlag("hidden")
+	isSneaking := actor.Character.HasBuffFlag("hidden")
 
 	handled := false
 
@@ -37,31 +41,31 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 
 	if exitName != `` {
 
-		if user.Character.IsDisabled() {
-			user.SendText("You are unable to do that while downed.")
+		if actor.Character.IsDisabled() {
+			Tell(actor, "You are unable to do that while downed.")
 			return true, nil
 		}
 
 		actionCost := 10
 		encumbered := false
-		if len(user.Character.Items) > user.Character.CarryCapacity() {
+		if len(actor.Character.Items) > actor.Character.CarryCapacity() {
 			actionCost = 50
 			encumbered = true
 		}
 
-		if !user.Character.DeductActionPoints(actionCost) {
+		if !actor.Character.DeductActionPoints(actionCost) {
 
 			if encumbered {
-				user.SendText("You're too encumbered to move (<ansi fg=\"command\">help encumbrance</ansi>)!")
+				Tell(actor, "You're too encumbered to move (<ansi fg=\"command\">help encumbrance</ansi>)!")
 			} else {
-				user.SendText("You're too tired to move (slow down)!")
-				mudlog.Debug("No ActionPoints", "AP", user.Character.ActionPoints, "Needed", actionCost)
+				Tell(actor, "You're too tired to move (slow down)!")
+				mudlog.Debug("No ActionPoints", "AP", actor.Character.ActionPoints, "Needed", actionCost)
 			}
 
 			return true, nil
 		}
 
-		originRoomId := user.Character.RoomId
+		originRoomId := actor.Character.RoomId
 
 		exitInfo, _ := room.GetExitInfo(exitName)
 
@@ -69,12 +73,12 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 
 			lockId := fmt.Sprintf(`%d-%s`, room.RoomId, exitName)
 
-			hasKey, hasSequence := user.Character.HasKey(lockId, int(room.Exits[exitName].Lock.Difficulty))
+			hasKey, hasSequence := actor.Character.HasKey(lockId, int(room.Exits[exitName].Lock.Difficulty))
 
 			lockpickItm := items.Item{}
 			// Only look for a lockpick kit if they know the sequence
 			if hasSequence {
-				for _, itm := range user.Character.GetAllBackpackItems() {
+				for _, itm := range actor.Character.GetAllBackpackItems() {
 					if itm.GetSpec().Type == items.Lockpicks {
 						lockpickItm = itm
 						break
@@ -84,19 +88,19 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 
 			if lockpickItm.ItemId > 0 && hasSequence {
 
-				user.SendText(`You know this lock well, you quickly pick it.`)
+				Tell(actor, `You know this lock well, you quickly pick it.`)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> quickly picks the lock on the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, exitName),
-					user.UserId)
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> quickly picks the lock on the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
+					ExcludeId(actor))
 
 				exitInfo.Lock.SetUnlocked()
 				room.SetExitLock(exitName, false)
 
 			} else if hasKey {
-				user.SendText(fmt.Sprintf(`You use the key on your key ring to unlock the <ansi fg="exit">%s</ansi> exit.`, exitName))
+				Tell(actor, fmt.Sprintf(`You use the key on your key ring to unlock the <ansi fg="exit">%s</ansi> exit.`, exitName))
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, exitName),
-					user.UserId)
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
+					ExcludeId(actor))
 
 				exitInfo.Lock.SetUnlocked()
 				room.SetExitLock(exitName, false)
@@ -104,22 +108,22 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 			} else {
 
 				// check for a key item on their person
-				if backpackKeyItm, hasBackpackKey := user.Character.FindKeyInBackpack(lockId); hasBackpackKey {
+				if backpackKeyItm, hasBackpackKey := actor.Character.FindKeyInBackpack(lockId); hasBackpackKey {
 
 					itmSpec := backpackKeyItm.GetSpec()
 
-					user.SendText(fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
+					Tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, exitName),
-						user.UserId)
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
+						ExcludeId(actor))
 
 					// Key entries look like:
 					// "key-<roomid>-<exitname>": "<itemid>"
-					user.Character.SetKey(`key-`+lockId, fmt.Sprintf(`%d`, backpackKeyItm.ItemId))
-					user.Character.RemoveItem(backpackKeyItm)
+					actor.Character.SetKey(`key-`+lockId, fmt.Sprintf(`%d`, backpackKeyItm.ItemId))
+					actor.Character.RemoveItem(backpackKeyItm)
 
 					events.AddToQueue(events.ItemOwnership{
-						ActorId: user.Character.Id,
+						ActorId: actor.Character.Id,
 						Item:    backpackKeyItm,
 						Gained:  false,
 					})
@@ -129,11 +133,13 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 				}
 
 				if exitInfo.Lock.IsLocked() {
-					user.SendText(`There's a lock preventing you from going that way. You'll need a <ansi fg="item">Key</ansi> or to <ansi fg="command">pick</ansi> the lock with <ansi fg="item">lockpicks</ansi>.`)
+					Tell(actor, `There's a lock preventing you from going that way. You'll need a <ansi fg="item">Key</ansi> or to <ansi fg="command">pick</ansi> the lock with <ansi fg="item">lockpicks</ansi>.`)
 					// Send GMCP message
-					if f, ok := GetExportedFunction(`SendGMCPEvent`); ok {
-						if gmcpSendFunc, ok := f.(func(int, string, any)); ok { // make sure the func definition is `func(int, string, any)`
-							gmcpSendFunc(user.UserId, `Room.WrongDir`, fmt.Sprintf(`"%s"`, exitName))
+					if user != nil {
+						if f, ok := GetExportedFunction(`SendGMCPEvent`); ok {
+							if gmcpSendFunc, ok := f.(func(int, string, any)); ok { // make sure the func definition is `func(int, string, any)`
+								gmcpSendFunc(user.UserId, `Room.WrongDir`, fmt.Sprintf(`"%s"`, exitName))
+							}
 						}
 					}
 
@@ -144,8 +150,8 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 		}
 
 		if exitInfo.ExitMessage != `` && !flags.Has(events.CmdIsRequeue) {
-			user.SendText(exitInfo.ExitMessage)
-			user.CommandFlagged(rest, flags|events.CmdIsRequeue|events.CmdBlockInputUntilComplete, 1)
+			Tell(actor, exitInfo.ExitMessage)
+			queueFlagged(actor, rest, flags|events.CmdIsRequeue|events.CmdBlockInputUntilComplete, 1)
 			return true, nil
 		}
 
@@ -172,18 +178,18 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 			enterFromExit = fmt.Sprintf(`the <ansi fg="exit">%s</ansi>`, enterFromExit)
 		}
 
-		if err := rooms.MoveToRoom(user.UserId, destRoom.RoomId); err != nil {
-			user.SendText("Oops, couldn't move there!")
+		if err := rooms.MoveToRoom(actor.Character.Id, destRoom.RoomId); err != nil {
+			Tell(actor, "Oops, couldn't move there!")
 		} else {
 
 			// Tell the player they are moving
 			if isSneaking {
-				user.SendText(
+				Tell(actor,
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
 						fmt.Sprintf(`You <ansi fg="black-bold">sneak</ansi> towards the <ansi fg="exit">%s</ansi> exit.`, exitName),
 					))
 			} else {
-				user.SendText(
+				Tell(actor,
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
 						fmt.Sprintf(`You head towards the <ansi fg="exit">%s</ansi> exit.`, exitName),
 					))
@@ -191,21 +197,25 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 				// Tell the old room they are leaving
 				room.SendText(
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> leaves towards the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, exitName),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> leaves towards the <ansi fg="exit">%s</ansi> exit.`, NameColour(actor), actor.Character.Name, exitName),
 					),
-					user.UserId)
+					ExcludeId(actor))
 
 				// Tell the new room they have arrived
 				destRoom.SendText(
 					fmt.Sprintf(string(c.EnterRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> enters from <ansi fg="exit">%s</ansi>.`, user.Character.Name, enterFromExit),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> enters from <ansi fg="exit">%s</ansi>.`, NameColour(actor), actor.Character.Name, enterFromExit),
 					),
-					user.UserId)
+					ExcludeId(actor))
 
 				destRoom.SendTextToExits(`You hear someone moving around.`, true, room.GetPlayers(rooms.FindAll)...)
 			}
 
-			if currentParty := parties.Get(user.UserId); currentParty != nil {
+			var currentParty *parties.Party
+			if user != nil {
+				currentParty = parties.Get(user.UserId)
+			}
+			if currentParty != nil {
 
 				if currentParty.IsLeader(user.UserId) {
 
@@ -233,50 +243,19 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 				if mob.Character.RoomId != originRoomId {
 					continue
 				}
-				if mob.Character.IsCharmed(user.Character.Id) { // Charmed mobs follow
+				if mob.Character.IsCharmed(actor.Character.Id) { // Charmed mobs follow
 					mob.Command(rest)
 				}
 			}
 
 			if !isSneaking {
-				//
-				// When leaving a room, mobs who were attacking may follow
-				//
-				mobIds := room.GetMobs(rooms.FindFightingPlayer)
-				for _, mobId := range mobIds {
-					mob := mobs.GetInstance(mobId)
-					if mob == nil {
-						continue
-					}
-
-					if mob.Character.Aggro == nil || mob.Character.Aggro.Target != user.Character.Id {
-						continue
-					}
-
-					speedDelta := mob.Character.Stats.Speed.ValueAdj - user.Character.Stats.Speed.ValueAdj
-					if speedDelta < 1 {
-						speedDelta = 1
-					}
-
-					// Chance that a mob follows the player
-					targetVal := 20 + mob.Character.Stats.Perception.ValueAdj + speedDelta
-
-					roll := util.Rand(100)
-
-					util.LogRoll(`Mob Follow`, roll, targetVal)
-
-					if roll >= targetVal {
-						continue
-					}
-
-					mob.Command(rest)
-
-				}
+				// No pursuit on a walk: nobody who is fighting the actor lets it
+				// walk away (inFight), and fleeing escapes pursuers (Decision 6).
 
 				//
 				// When entering a room, mobs might be waiting to attack
 				//
-				mobIds = destRoom.GetMobs(rooms.FindAll)
+				mobIds := destRoom.GetMobs(rooms.FindAll)
 				for _, mobId := range mobIds {
 					mob := mobs.GetInstance(mobId)
 					if mob == nil {
@@ -292,7 +271,7 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 					isHostile := mob.Hostile // Is it automatically hostile?
 					if !isHostile {
 						for _, groupName := range mob.Groups {
-							if mobs.IsHostile(groupName, user.UserId) {
+							if user != nil && mobs.IsHostile(groupName, user.UserId) {
 								isHostile = true
 								break
 							}
@@ -302,7 +281,7 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 						}
 					}
 
-					user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> notices you as you enter!`, mob.Character.Name))
+					Tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> notices you as you enter!`, mob.Character.Name))
 
 				}
 
@@ -310,7 +289,7 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 
 			handled = true
 
-			Look(``, user, destRoom, events.CmdSecretly)
+			Look(``, actor, destRoom, events.CmdSecretly)
 
 		}
 
@@ -319,22 +298,24 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 	if !handled {
 
 		if rest == "north" || rest == "south" || rest == "east" || rest == "west" || rest == "up" || rest == "down" || rest == "northwest" || rest == "northeast" || rest == "southwest" || rest == "southeast" {
-			user.SendText("You're bumping into walls.")
+			Tell(actor, "You're bumping into walls.")
 
 			// Send GMCP message
-			if f, ok := GetExportedFunction(`SendGMCPEvent`); ok {
-				if gmcpSendFunc, ok := f.(func(int, string, any)); ok { // make sure the func definition is `func(int, string, any)`
-					gmcpSendFunc(user.UserId, `Room.WrongDir`, fmt.Sprintf(`"%s"`, rest))
+			if user != nil {
+				if f, ok := GetExportedFunction(`SendGMCPEvent`); ok {
+					if gmcpSendFunc, ok := f.(func(int, string, any)); ok { // make sure the func definition is `func(int, string, any)`
+						gmcpSendFunc(user.UserId, `Room.WrongDir`, fmt.Sprintf(`"%s"`, rest))
+					}
 				}
 			}
 
-			if !user.Character.HasBuffFlag("hidden") {
+			if !actor.Character.HasBuffFlag("hidden") {
 
 				room.SendText(
 					fmt.Sprintf(string(c.ExitRoomMessageWrapper),
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> is bumping into walls.`, user.Character.Name),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> is bumping into walls.`, NameColour(actor), actor.Character.Name),
 					),
-					user.UserId)
+					ExcludeId(actor))
 			}
 			handled = true
 		}
@@ -342,4 +323,26 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 	}
 
 	return handled, nil
+}
+
+// inFight reports whether the actor is in a fight: it has an aggro target, or
+// another body in its room has the actor as its aggro target (Decision 4).
+// Being attacked from another room does not count.
+func inFight(actor *actors.Actor, room *rooms.Room) bool {
+	if actor.Character.Aggro != nil {
+		return true
+	}
+	for _, bodyId := range room.GetBodies() {
+		if bodyId == actor.Id {
+			continue
+		}
+		other := actors.Get(bodyId)
+		if other == nil {
+			continue
+		}
+		if aggro := other.Character.Aggro; aggro != nil && aggro.Target == actor.Id {
+			return true
+		}
+	}
+	return false
 }

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -13,12 +13,12 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func KeyRing(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func KeyRing(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	headers := []string{`Type`, `Location`, `Where`, `Sequence`}
 	allFormatting := [][]string{}
 
-	for lockId, _ := range user.Character.KeyRing {
+	for lockId, _ := range actor.Character.KeyRing {
 		if !strings.HasPrefix(lockId, `key-`) {
 			break
 		}
@@ -60,7 +60,7 @@ func KeyRing(rest string, user *accounts.Account, room *rooms.Room, flags events
 
 	cfgSeed := string(configs.GetServerConfig().Seed)
 
-	for lockId, seq := range user.Character.KeyRing {
+	for lockId, seq := range actor.Character.KeyRing {
 
 		complete := true
 
@@ -161,8 +161,8 @@ func KeyRing(rest string, user *accounts.Account, room *rooms.Room, flags events
 	allFormatting = append(allFormatting, pickFormatting...)
 
 	keyRingTable := templates.GetTable(`Your Keyring:`, headers, rows, allFormatting...)
-	tplTxt, _ := templates.Process("tables/generic", keyRingTable, user.UserId)
-	user.SendText(tplTxt)
+	tplTxt, _ := templates.Process("tables/generic", keyRingTable, ExcludeId(actor))
+	Tell(actor, tplTxt)
 
 	return true, nil
 }

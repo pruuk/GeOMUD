@@ -1,25 +1,25 @@
 # usercommands
 
-The `usercommands` package defines a function type and contains all of the commands a user can enter.
+The `usercommands` package defines a function type and contains all of the commands any actor, player or NPC, can run.
 
 ```
-type UserCommand func(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error)
+type Command func(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error)
 ```
 
 All commands follow that definition, where
-* `rest` contains everything except the initial command the user entered (if user entered `glarble some text`, `rest` would contain `some text`)
-* `user` is the user object executing the command
-* `room` is the room object for the room the user is in while executing the command
+* `rest` contains everything except the initial command that was entered (for `glarble some text`, `rest` would contain `some text`)
+* `actor` is the actor running the command. It has an account when a player drives it; `actor.Controller().Account()` is nil for an NPC
+* `room` is the room object for the room the actor is in while executing the command
 
 ```
 
-func Glarble(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
-    
+func Glarble(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+
     room.SendText(`This glarble text goes out to all players in room`)
 
-    room.SendText(`This glarble text goes out to all players in room except the user who typed the command`, user.UserId)
+    room.SendText(`This glarble text goes out to all players in room except the actor`, ExcludeId(actor))
 
-    user.SendText(`This glarble text goes out to the user`)
+    Tell(actor, `This glarble text goes out to the actor (nowhere for an NPC)`)
 
     // we handled this command in this function, so return true
     return true, nil
@@ -29,7 +29,7 @@ func Glarble(rest string, user *users.UserRecord, room *rooms.Room, flags events
 Then the command must be entered into the `userCommands` map in [usercommands.go](/internal/usercommands/usercommands.go)
 
 Each entry into `userCommands` defines:
-* `UserCommand` - the function for the command
+* `Command` - the function for the command
 * `AllowedWhenDowned` - can users execute this command when downed?
 * `AdminOnly` - is this a command only admins can use?
 

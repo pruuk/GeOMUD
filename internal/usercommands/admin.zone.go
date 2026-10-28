@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mutators"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -18,7 +19,11 @@ import (
 * Role Permissions:
 * zone 				(All)
  */
-func Zone(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Zone(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	handled := true
 

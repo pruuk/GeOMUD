@@ -1,31 +1,23 @@
 package hooks
 
 import (
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 )
 
-//
-// Update movement points for each player
-// TODO: Optimize this to avoid re-loops through users
-//
-
+// ActionPoints gives every live body one action point per turn, up to its
+// maximum (Phase 4b slice 4 decision 1: one mechanism for players and NPCs).
 func ActionPoints(e events.Event) events.ListenerReturn {
-
-	/*
-		evt, typeOk := e.(events.NewTurn)
-		if !typeOk {
-			mudlog.Error("Event", "Expected Type", "NewTurn", "Actual Type", e.Type())
-			return events.Cancel
+	actors.Each(func(a *actors.Actor) {
+		c := a.Character
+		if c == nil {
+			return
 		}
-	*/
-
-	for _, user := range accounts.GetAllActiveUsers() {
-		user.Character.ActionPoints += 1
-		if user.Character.ActionPoints > user.Character.ActionPointsMax.Value {
-			user.Character.ActionPoints = user.Character.ActionPointsMax.Value
+		c.ActionPoints += 1
+		if c.ActionPoints > c.ActionPointsMax.Value {
+			c.ActionPoints = c.ActionPointsMax.Value
 		}
-	}
+	})
 
 	return events.Continue
 }

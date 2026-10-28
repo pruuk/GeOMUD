@@ -1,10 +1,11 @@
-package mobcommands
+package usercommands
 
 import (
 	"fmt"
 	"math"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
@@ -16,12 +17,16 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
+// npcDeath is the death of a body that returns from a template (Decision 10):
+// today's mob death, moved as is. Slice 5 replaces it with the death rule.
+// The vanish form, the MobId 38 case and the recent-death tracking are gone
+// (Decision 8, Decision 14).
+func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 
 	currentRound := util.GetRoundCount()
 	config := configs.GetGamePlayConfig()
 
-	if rest != `vanish` && mob.Character.HasBuffFlag("revive-on-death") {
+	if mob.Character.HasBuffFlag("revive-on-death") {
 
 		mob.Character.Health = mob.Character.HealthMax.Value
 
@@ -32,10 +37,7 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		return true, nil
 	}
 
-	// Useful to know sometimes
-	mobs.TrackRecentDeath(mob.Character.Id)
-
-	mudlog.Debug(`Mob Death`, `name`, mob.Character.Name, `rest`, rest)
+	mudlog.Debug(`Mob Death`, `name`, mob.Character.Name)
 
 	// Make sure to clean up any charm stuff if it's being removed
 	if charmedBy := mob.Character.RemoveCharm(); !charmedBy.IsZero() {
@@ -44,40 +46,10 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 		}
 	}
 
-	// vanish is meant to remove the mob without any rewards/drops/etc.
-	if rest == `vanish` {
-
-		// The NPC ends (decision 15): a death waits its slot's respawn rate, a vanish does not.
-		rooms.NPCEnded(mob, rest == `vanish`)
-
-		// Destroy any record of this mob.
-		mobs.DestroyInstance(mob.Character.Id)
-
-		// Clean up mob from room...
-		if r := rooms.LoadRoom(mob.HomeRoomId); r != nil {
-			r.CleanupMobSpawns()
-		}
-
-		// Remove from current room
-		room.RemoveMob(mob.Character.Id)
-
-		return true, nil
-	}
-
 	// Send a death msg to everyone in the room.
 	room.SendText(
 		fmt.Sprintf(`<ansi fg="mobname">%s</ansi> has died.`, mob.Character.Name),
 	)
-
-	// Special handling of "The Guide"
-	// Mark this moment to prevent an immediate respawn
-	if mob.MobId == 38 {
-		if mob.Character.Charmed != nil {
-			if tmpU := accounts.GetByBodyId(mob.Character.Charmed.By); tmpU != nil {
-				tmpU.SetTempData(`lastGuideRound`, currentRound)
-			}
-		}
-	}
 
 	mobXP := mob.Character.XPTL(mob.Character.Level - 1)
 
@@ -387,8 +359,8 @@ func Suicide(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
 			}
 		}
 
-		// The NPC ends (decision 15): a death waits its slot's respawn rate, a vanish does not.
-		rooms.NPCEnded(mob, rest == `vanish`)
+		// The NPC ends (decision 15): a death waits its slot's respawn rate.
+		rooms.NPCEnded(mob, false)
 
 		// Destroy any record of this mob.
 		mobs.DestroyInstance(mob.Character.Id)

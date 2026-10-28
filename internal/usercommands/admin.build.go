@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -17,7 +17,11 @@ import (
 * Role Permissions:
 * build 				(All)
  */
-func Build(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Build(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	// args should look like one of the following:
 	// info <optional room id>
@@ -40,7 +44,7 @@ func Build(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 			} else {
 				user.SendText(fmt.Sprintf("Zone %s created.", zoneName))
 
-				if err := rooms.MoveToRoom(user.UserId, roomId); err != nil {
+				if err := rooms.MoveToRoom(user.Character.Id, roomId); err != nil {
 					user.SendText(err.Error())
 				} else {
 					user.SendText(fmt.Sprintf("Moved to room %d.", roomId))
@@ -143,7 +147,7 @@ func Build(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 				}
 			}
 
-			if err := rooms.MoveToRoom(user.UserId, destinationRoom.RoomId); err != nil {
+			if err := rooms.MoveToRoom(user.Character.Id, destinationRoom.RoomId); err != nil {
 				user.SendText(err.Error())
 			} else {
 				user.SendText(fmt.Sprintf("Moved to room %d.", destinationRoom.RoomId))

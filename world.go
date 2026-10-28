@@ -16,8 +16,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
-	"github.com/GoMudEngine/GoMud/internal/mobcommands"
-	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/prompt"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -31,7 +29,6 @@ import (
 type WorldInput struct {
 	FromId    int
 	InputText string
-	ReadyTurn uint64
 }
 
 func (wi WorldInput) Id() int {
@@ -40,30 +37,28 @@ func (wi WorldInput) Id() int {
 
 type World struct {
 	worldInput         chan WorldInput
-	ignoreInput        map[int]uint64 // userid->turn set to ignore
+	ignoreInput        map[ids.ID]uint64 // actor ID -> turn its input was blocked
 	enterWorldUserId   chan [2]int
 	leaveWorldUserId   chan int
 	logoutConnectionId chan connections.ConnectionId
 	linkDeadFlag       chan [2]int
 	//
-	eventRequeue          []events.Event
-	userInputEventTracker map[int]struct{}
-	mobInputEventTracker  map[ids.ID]struct{}
+	// inputTracker holds the actors that ran (or, without an account, hold)
+	// a queued command in this event-loop pass. EventLoop clears it.
+	inputTracker map[ids.ID]struct{}
 }
 
 func NewWorld(osSignalChan chan os.Signal) *World {
 
 	w := &World{
 		worldInput:         make(chan WorldInput),
-		ignoreInput:        make(map[int]uint64),
+		ignoreInput:        make(map[ids.ID]uint64),
 		enterWorldUserId:   make(chan [2]int),
 		leaveWorldUserId:   make(chan int),
 		logoutConnectionId: make(chan connections.ConnectionId),
 		linkDeadFlag:       make(chan [2]int),
 		//
-		eventRequeue:          []events.Event{},
-		userInputEventTracker: map[int]struct{}{},
-		mobInputEventTracker:  map[ids.ID]struct{}{},
+		inputTracker: map[ids.ID]struct{}{},
 	}
 
 	// System commands
@@ -83,110 +78,83 @@ func (w *World) HandleInputEvents(e events.Event) events.ListenerReturn {
 		return events.Continue
 	}
 
-	var turnCt uint64 = util.GetTurnCount()
+	actor := actors.Get(input.ActorId)
+	if actor == nil {
+		// A body with no live actor: a player who logged out, an NPC that
+		// died, a rerolled body (Decision 14).
+		mudlog.Debug("input", "event", "dropped", "actorId", input.ActorId.String(), "reason", "no live actor")
+		return events.Continue
+	}
+	turnCt := util.GetTurnCount()
 
-	//mudlog.Debug(`Event`, `type`, input.Type(), `ActorId`, input.ActorId, `WaitTurns`, input.WaitTurns, `InputText`, input.InputText)
-
-	// An account drives the body: the player path, keyed by the account's
-	// UserId. Otherwise the mob path, keyed by the body's ID. A body with no
-	// live actor (a mob that just died) takes the mob path, which drops it.
-	inputUser := actors.AccountOf(input.ActorId)
-
-	// If it's a mob
-	if inputUser == nil {
-
-		// If an event was already processed for this user this turn, skip
-		// We put this first, so that any delayed command for a mob will block
-		// the command pipeline for the mob until executed.
-		if _, ok := w.mobInputEventTracker[input.ActorId]; ok {
+	// Decision 13: an actor without an account runs its commands strictly in
+	// order, so a delayed command holds back the ones after it; an actor with
+	// one keeps the player rules. The limit is one queued command per actor
+	// per event-loop pass, not per turn.
+	user := actor.Controller().Account()
+	if user == nil {
+		// Checked first, so a pending delayed command holds back even an
+		// immediate one.
+		if _, ok := w.inputTracker[actor.Id]; ok {
 			return events.CancelAndRequeue
 		}
-
-		// 0 and below, process immediately and don't count towards limit
-		if input.ReadyTurn <= 0 {
-			w.processMobInput(input.ActorId, input.InputText)
+		// Ready turn 0 runs at once and does not count towards the limit.
+		if input.ReadyTurn == 0 {
+			w.processInput(actor, input.InputText, input.Flags)
 			return events.Continue
 		}
-
-		// This will cause any pending command to block all further pending commands
-		// This is important, otherwise we issue a command with a delay, but other commands
-		// Get executed while we wait.
-		w.mobInputEventTracker[input.ActorId] = struct{}{}
-
+		// Set before the ready check: a command still waiting holds back every
+		// later command for this actor.
+		w.inputTracker[actor.Id] = struct{}{}
 		if input.ReadyTurn > turnCt {
 			return events.CancelAndRequeue
 		}
-
-		w.processMobInput(input.ActorId, input.InputText)
-
+		w.processInput(actor, input.InputText, input.Flags)
 		return events.Continue
 	}
 
-	userId := inputUser.UserId
-
-	// 0 and below, process immediately and don't count towards limit
-	if input.ReadyTurn <= 0 {
-
-		// If this command was potentially blocking input, unblock it now.
-		if input.Flags.Has(events.CmdUnBlockInput) {
-
-			if _, ok := w.ignoreInput[userId]; ok {
-				delete(w.ignoreInput, userId)
-				if user := accounts.GetByUserId(userId); user != nil {
-					user.UnblockInput()
-				}
-			}
-
-		}
-
-		w.processInput(userId, input.InputText, input.Flags)
-
+	// Ready turn 0 runs at once, bypasses the limit and does not count towards it.
+	if input.ReadyTurn == 0 {
+		w.unblockIfDone(actor.Id, user, input.Flags)
+		w.processInput(actor, input.InputText, input.Flags)
 		return events.Continue
 	}
 
-	// If an event was already processed for this user this turn, skip
-	if _, ok := w.userInputEventTracker[userId]; ok {
+	// One queued command per actor per event-loop pass.
+	if _, ok := w.inputTracker[actor.Id]; ok {
 		return events.CancelAndRequeue
 	}
 
-	// 0 means process immediately
-	// however, process no further events from this user until next turn
+	// Not ready yet. The tracker is not set, so a later command that is ready
+	// may run first: an actor with an account is not strictly in order.
 	if input.ReadyTurn > turnCt {
-
-		// If this is a multi-turn wait, block further input if flagged to do so
+		// A multi-turn wait flagged to block input records when it began.
 		if input.Flags.Has(events.CmdBlockInput) {
-
-			if _, ok := w.ignoreInput[userId]; !ok {
-				w.ignoreInput[userId] = turnCt
+			if _, ok := w.ignoreInput[actor.Id]; !ok {
+				w.ignoreInput[actor.Id] = turnCt
 			}
-
-			input.Flags.Remove(events.CmdBlockInput)
 		}
-
 		return events.CancelAndRequeue
 	}
 
-	//
-	// Event ready to be processed
-	//
-
-	// If this command was potentially blocking input, unblock it now.
-	if input.Flags.Has(events.CmdUnBlockInput) {
-
-		if _, ok := w.ignoreInput[userId]; ok {
-			delete(w.ignoreInput, userId)
-			if user := accounts.GetByUserId(userId); user != nil {
-				user.UnblockInput()
-			}
-		}
-
-	}
-
-	w.processInput(userId, input.InputText, events.EventFlag(input.Flags))
-
-	w.userInputEventTracker[userId] = struct{}{}
+	// Ready to run.
+	w.unblockIfDone(actor.Id, user, input.Flags)
+	w.processInput(actor, input.InputText, input.Flags)
+	w.inputTracker[actor.Id] = struct{}{}
 
 	return events.Continue
+}
+
+// unblockIfDone unblocks the account's input when a command flagged to
+// unblock it runs and its blocking wait was recorded.
+func (w *World) unblockIfDone(actorId ids.ID, user *accounts.Account, flags events.EventFlag) {
+	if !flags.Has(events.CmdUnBlockInput) {
+		return
+	}
+	if _, ok := w.ignoreInput[actorId]; ok {
+		delete(w.ignoreInput, actorId)
+		user.UnblockInput()
+	}
 }
 
 // Checks whether their level is too high for a guide
@@ -290,7 +258,8 @@ func (w *World) logOutUserByConnectionId(connectionId connections.ConnectionId) 
 
 func (w *World) enterWorld(userId int, roomId int) {
 
-	if userInfo := accounts.GetByUserId(userId); userInfo != nil {
+	userInfo := accounts.GetByUserId(userId)
+	if userInfo != nil {
 		events.AddToQueue(events.PlayerSpawn{
 			UserId:        userInfo.UserId,
 			ConnectionId:  userInfo.ConnectionId(),
@@ -303,7 +272,9 @@ func (w *World) enterWorld(userId int, roomId int) {
 	w.UpdateStats()
 
 	// Put htme in the room
-	rooms.MoveToRoom(userId, roomId, true)
+	if userInfo != nil {
+		rooms.MoveToRoom(userInfo.Character.Id, roomId, true)
+	}
 }
 
 /*
@@ -499,32 +470,34 @@ loop:
 	}
 }
 
-func (w *World) processInput(userId int, inputText string, flags events.EventFlag) {
+// processInput runs one line of input for any actor. The steps that only make
+// sense with an account (prompts, macros, the last-input round, bad-input
+// tracking, the "not recognized" text and the prompt redraw) run when the
+// actor has one (Decision 14).
+func (w *World) processInput(actor *actors.Actor, inputText string, flags events.EventFlag) {
 
-	user := accounts.GetByUserId(userId)
-	if user == nil { // Something went wrong. User not found.
-		mudlog.Error("User not found", "userId", userId)
-		return
-	}
+	user := actor.Controller().Account() // nil for an NPC
 
 	var activeQuestion *prompt.Question = nil
 	hadPrompt := false
-	if cmdPrompt := user.GetPrompt(); cmdPrompt != nil {
-		hadPrompt = true
-		if activeQuestion = cmdPrompt.GetNextQuestion(); activeQuestion != nil {
+	if user != nil {
+		if cmdPrompt := user.GetPrompt(); cmdPrompt != nil {
+			hadPrompt = true
+			if activeQuestion = cmdPrompt.GetNextQuestion(); activeQuestion != nil {
 
-			activeQuestion.Answer(string(inputText))
-			inputText = ``
+				activeQuestion.Answer(string(inputText))
+				inputText = ``
 
-			// set the input buffer to invoke the command prompt it was relevant to
-			if cmdPrompt.Command != `` {
-				inputText = cmdPrompt.Command + " " + cmdPrompt.Rest
+				// set the input buffer to invoke the command prompt it was relevant to
+				if cmdPrompt.Command != `` {
+					inputText = cmdPrompt.Command + " " + cmdPrompt.Rest
+				}
+			} else {
+				// If a prompt was found, but no pending questions, clear it.
+				user.ClearPrompt()
 			}
-		} else {
-			// If a prompt was found, but no pending questions, clear it.
-			user.ClearPrompt()
-		}
 
+		}
 	}
 
 	command := ``
@@ -537,12 +510,14 @@ func (w *World) processInput(userId int, inputText string, flags events.EventFla
 
 	if len(inputText) > 0 {
 
-		// Update their last input
-		// Must be actual text, blank space doesn't count.
-		user.SetLastInputRound(util.GetRoundCount())
+		if user != nil {
+			// Update their last input
+			// Must be actual text, blank space doesn't count.
+			user.SetLastInputRound(util.GetRoundCount())
+		}
 
 		// Check for macros
-		if user.Macros != nil && len(inputText) == 2 {
+		if user != nil && user.Macros != nil && len(inputText) == 2 {
 			if macro, ok := user.Macros[inputText]; ok {
 				handled = true
 				readyTurn := util.GetTurnCount()
@@ -577,25 +552,38 @@ func (w *World) processInput(userId int, inputText string, flags events.EventFla
 				command = inputText
 			}
 
-			handled, err = usercommands.TryCommand(command, remains, userId, flags)
+			handled, err = usercommands.TryCommand(command, remains, actor.Id, flags)
 			if err != nil {
 				mudlog.Warn("user-TryCommand", "command", command, "remains", remains, "error", err.Error())
 			}
 		}
 
-	} else {
+	} else if user != nil {
 		connId := user.ConnectionId()
 		connections.SendTo([]byte(templates.AnsiParse(user.GetCommandPrompt())), connId)
 	}
 
-	if !handled {
-		if len(command) > 0 {
-
-			badinputtracker.TrackBadCommand(command, remains)
-
-			user.SendText(fmt.Sprintf(`<ansi fg="command">%s</ansi> not recognized. Type <ansi fg="command">help</ansi> for commands.`, command))
-			user.Command(`emote @looks a little confused`)
+	if !handled && len(command) > 0 {
+		if user == nil {
+			// Decision 3: an NPC's unknown command goes to the log; the room
+			// sees nothing.
+			if usercommands.IsCommand(command) {
+				// A real command that declines an actor without an account.
+				mudlog.Warn("input", "event", "needs an account", "actorId", actor.Id.String(), "name", actor.Character.Name, "command", command, "rest", remains)
+				return
+			}
+			mudlog.Warn("input", "event", "unknown command", "actorId", actor.Id.String(), "name", actor.Character.Name, "command", command, "rest", remains)
+			return
 		}
+
+		badinputtracker.TrackBadCommand(command, remains)
+
+		user.SendText(fmt.Sprintf(`<ansi fg="command">%s</ansi> not recognized. Type <ansi fg="command">help</ansi> for commands.`, command))
+		user.Command(`emote @looks a little confused`)
+	}
+
+	if user == nil {
+		return
 	}
 
 	// If they had an input prompt, but now they don't, lets make sure to resend a status prompt
@@ -607,48 +595,6 @@ func (w *World) processInput(userId int, inputText string, flags events.EventFla
 	// Leaving in case I need to remember that I did it...
 	//connId := user.ConnectionId()
 	//connections.SendTo([]byte(templates.AnsiParse(user.GetCommandPrompt(true))), connId)
-
-}
-
-func (w *World) processMobInput(mobId ids.ID, inputText string) {
-	// No need to select the channel this way
-
-	mob := mobs.GetInstance(mobId)
-	if mob == nil { // Something went wrong. User not found.
-		if !mobs.RecentlyDied(mobId) {
-			mudlog.Error("Mob not found", "mobId", mobId, "where", "processMobInput()")
-		}
-		return
-	}
-
-	command := ""
-	remains := ""
-
-	handled := false
-	var err error
-
-	if len(inputText) > 0 {
-
-		if index := strings.Index(inputText, " "); index != -1 {
-			command, remains = strings.ToLower(inputText[0:index]), inputText[index+1:]
-		} else {
-			command = inputText
-		}
-
-		//mudlog.Info("World received mob input", "InputText", (inputText))
-
-		handled, err = mobcommands.TryCommand(command, remains, mobId)
-		if err != nil {
-			mudlog.Warn("mob-TryCommand", "command", command, "remains", remains, "error", err.Error())
-		}
-
-	}
-
-	if !handled {
-		if len(command) > 0 {
-			mob.Command(fmt.Sprintf(`emote looks a little confused (%s %s).`, command, remains))
-		}
-	}
 
 }
 
@@ -711,14 +657,7 @@ func (w *World) Kick(userId int, reason string) {
 // Should only handle sending messages out to users
 func (w *World) EventLoop() {
 
-	w.eventRequeue = w.eventRequeue[:0]
-
 	events.ProcessEvents()
 
-	for _, e := range w.eventRequeue {
-		events.AddToQueue(e)
-	}
-
-	clear(w.userInputEventTracker)
-	clear(w.mobInputEventTracker)
+	clear(w.inputTracker)
 }

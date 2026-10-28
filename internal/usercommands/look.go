@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
@@ -18,20 +19,20 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/templates"
 )
 
-func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	secretLook := flags.Has(events.CmdSecretly)
 
 	visibility := room.GetVisibility()
 
 	if visibility < 1 {
-		if !user.Character.HasBuffFlag("nightvision") {
-			user.SendText(`You can't see anything!`)
+		if !actor.Character.HasBuffFlag("nightvision") {
+			Tell(actor, `You can't see anything!`)
 			return true, nil
 		}
 	}
 
-	isSneaking := user.Character.HasBuffFlag("hidden")
+	isSneaking := actor.Character.HasBuffFlag("hidden")
 
 	// trim off some fluff
 	if len(rest) > 2 {
@@ -52,14 +53,14 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 		if !secretLook && !isSneaking {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking around.`, user.Character.Name),
-				user.UserId,
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking around.`, NameColour(actor), actor.Character.Name),
+				ExcludeId(actor),
 			)
 
 			// Make it a "secret looks" now because we don't want another look message sent out by the lookRoom() func
 			secretLook = true
 		}
-		lookRoom(user, room.RoomId, secretLook || isSneaking)
+		lookRoom(actor, room.RoomId, secretLook || isSneaking)
 		return true, nil
 	}
 
@@ -84,22 +85,22 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 			if !isSneaking {
 				u.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at you.`, user.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at you.`, NameColour(actor), actor.Character.Name),
 				)
 
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at <ansi fg="username">%s</ansi>.`, user.Character.Name, u.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at <ansi fg="username">%s</ansi>.`, NameColour(actor), actor.Character.Name, u.Character.Name),
 					u.UserId)
 			}
 
-			user.SendText(buildDescriptionPanel(u.Character))
+			Tell(actor, buildDescriptionPanel(u.Character))
 
 			itemNames := []string{}
 			for _, item := range u.Character.Items {
 				itemNames = append(itemNames, item.DisplayName())
 			}
 
-			user.SendText(buildInventoryLookPanel(&u.Character.Equipment, itemNames))
+			Tell(actor, buildInventoryLookPanel(&u.Character.Equipment, itemNames))
 
 		} else if !mobId.IsZero() {
 
@@ -111,23 +112,23 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 			if !isSneaking {
 				targetName := m.Character.GetMobName(ids.ID{}).String()
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at %s.`, user.Character.Name, targetName),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at %s.`, NameColour(actor), actor.Character.Name, targetName),
+					ExcludeId(actor),
 				)
 			}
 
-			user.SendText(buildDescriptionPanel(&m.Character))
+			Tell(actor, buildDescriptionPanel(&m.Character))
 
 			itemNames := []string{}
 			for _, item := range m.Character.Items {
 				itemNames = append(itemNames, item.DisplayName())
 			}
 
-			user.SendText(buildInventoryLookPanel(&m.Character.Equipment, itemNames))
+			Tell(actor, buildInventoryLookPanel(&m.Character.Equipment, itemNames))
 		}
 
-		user.SendText(statusTxt)
-		user.SendText(invTxt)
+		Tell(actor, statusTxt)
+		Tell(actor, invTxt)
 
 		return true, nil
 
@@ -142,9 +143,9 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 		container := room.Containers[containerName]
 
 		if container.Lock.IsLocked() {
-			user.SendText(``)
-			user.SendText(fmt.Sprintf(`The <ansi fg="container">%s</ansi> is locked.`, containerName))
-			user.SendText(``)
+			Tell(actor, ``)
+			Tell(actor, fmt.Sprintf(`The <ansi fg="container">%s</ansi> is locked.`, containerName))
+			Tell(actor, ``)
 			return true, nil
 		}
 
@@ -165,8 +166,8 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 		if len(container.Recipes) > 0 {
 
-			user.SendText(``)
-			user.SendText(fmt.Sprintf(`You can <ansi fg="command">use</ansi> the <ansi fg="container">%s</ansi> if you put the following objects inside:`, containerName))
+			Tell(actor, ``)
+			Tell(actor, fmt.Sprintf(`You can <ansi fg="command">use</ansi> the <ansi fg="container">%s</ansi> if you put the following objects inside:`, containerName))
 
 			for finalItemId, recipeList := range container.Recipes {
 
@@ -176,9 +177,9 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 					neededItems[inputItemId] += 1
 				}
 
-				user.SendText(``)
+				Tell(actor, ``)
 
-				user.SendText(fmt.Sprintf(`    <ansi fg="230">To receive 1 <ansi fg="itemname">%s</ansi>:</ansi> `, specDisplayName(finalItemId)))
+				Tell(actor, fmt.Sprintf(`    <ansi fg="230">To receive 1 <ansi fg="itemname">%s</ansi>:</ansi> `, specDisplayName(finalItemId)))
 
 				for inputItemId, qtyNeeded := range neededItems {
 					totalContained := container.Count(inputItemId)
@@ -188,16 +189,16 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 					} else if totalContained > 0 {
 						colorClass = "3"
 					}
-					user.SendText(fmt.Sprintf(`        <ansi fg="%s">[%d/%d]</ansi> <ansi fg="itemname">%s</ansi>`, colorClass, totalContained, qtyNeeded, specDisplayName(inputItemId)))
+					Tell(actor, fmt.Sprintf(`        <ansi fg="%s">[%d/%d]</ansi> <ansi fg="itemname">%s</ansi>`, colorClass, totalContained, qtyNeeded, specDisplayName(inputItemId)))
 				}
 
 			}
 
 		}
 
-		user.SendText(``)
-		user.SendText(buildInsideContainerPanel(itemNames, itemNamesFormatted))
-		user.SendText(``)
+		Tell(actor, ``)
+		Tell(actor, buildInsideContainerPanel(itemNames, itemNamesFormatted))
+		Tell(actor, ``)
 
 		return true, nil
 	}
@@ -221,10 +222,10 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 		if visibility < 2 {
 
-			if !user.Character.HasBuffFlag("nightvision") {
+			if !actor.Character.HasBuffFlag("nightvision") {
 				biome := room.GetBiome()
 				if !biome.IsLit() {
-					user.SendText(`It's too dark to see anything in that direction.`)
+					Tell(actor, `It's too dark to see anything in that direction.`)
 					return true, nil
 				}
 			}
@@ -233,16 +234,16 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 		exitInfo, _ := room.GetExitInfo(exitName)
 		if exitInfo.Lock.IsLocked() {
-			user.SendText(fmt.Sprintf("The %s exit is locked.", exitName))
+			Tell(actor, fmt.Sprintf("The %s exit is locked.", exitName))
 			return true, nil
 		}
 
-		user.SendText(fmt.Sprintf("You peer toward the %s.", exitName))
+		Tell(actor, fmt.Sprintf("You peer toward the %s.", exitName))
 		if !isSneaking {
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> peers toward the %s.`, user.Character.Name, exitName), user.UserId)
+			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> peers toward the %s.`, NameColour(actor), actor.Character.Name, exitName), ExcludeId(actor))
 		}
 
-		lookRoom(user, lookRoomId, secretLook || isSneaking)
+		lookRoom(actor, lookRoomId, secretLook || isSneaking)
 
 		return true, nil
 
@@ -251,36 +252,36 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 	//
 	// Check for anything in their backpack they might want to look at
 	//
-	lookItem, foundItem := user.Character.FindInBackpack(lookAt)
+	lookItem, foundItem := actor.Character.FindInBackpack(lookAt)
 	lookDestination := `in your backpack`
 	if !foundItem {
 		// Check for any equipment they are wearing they might want to look at
-		lookItem, foundItem = user.Character.FindOnBody(lookAt)
+		lookItem, foundItem = actor.Character.FindOnBody(lookAt)
 		lookDestination = `you are wearing`
 	}
 
 	if foundItem {
 
-		user.SendText(``)
+		Tell(actor, ``)
 
-		user.SendText(
+		Tell(actor,
 			fmt.Sprintf(`You look at the <ansi fg="item">%s</ansi> %s:`, lookItem.DisplayName(), lookDestination),
 		)
 
-		user.SendText(``)
+		Tell(actor, ``)
 
 		if !isSneaking {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is admiring their <ansi fg="item">%s</ansi>.`, user.Character.Name, lookItem.DisplayName()),
-				user.UserId,
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is admiring their <ansi fg="item">%s</ansi>.`, NameColour(actor), actor.Character.Name, lookItem.DisplayName()),
+				ExcludeId(actor),
 			)
 		}
 
-		user.SendText(
+		Tell(actor,
 			lookItem.GetLongDescription(),
 		)
 
-		user.SendText(``)
+		Tell(actor, ``)
 
 		return true, nil
 	}
@@ -297,18 +298,21 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 			finalNounDesc = append(finalNounDesc, descLine)
 		}
 
-		user.SendText(``)
+		Tell(actor, ``)
 
-		user.SendText(
+		Tell(actor,
 			fmt.Sprintf(`You look at the <ansi fg="noun">%s</ansi>:`, foundNoun),
 		)
 
-		user.SendText(``)
+		Tell(actor, ``)
 
 		if !isSneaking {
 
-			renderNouns := user.HasRolePermission(`room.nouns`)
-			if user.Character.HasBuffFlag("see-nouns") {
+			renderNouns := false
+			if user := actor.Controller().Account(); user != nil {
+				renderNouns = user.HasRolePermission(`room.nouns`)
+			}
+			if actor.Character.HasBuffFlag("see-nouns") {
 				renderNouns = true
 			}
 
@@ -321,16 +325,16 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 			}
 
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is examining the <ansi fg="noun">%s</ansi>.`, user.Character.Name, foundNoun),
-				user.UserId,
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is examining the <ansi fg="noun">%s</ansi>.`, NameColour(actor), actor.Character.Name, foundNoun),
+				ExcludeId(actor),
 			)
 		}
 
 		for _, outLine := range finalNounDesc {
-			user.SendText(outLine)
+			Tell(actor, outLine)
 		}
 
-		user.SendText(``)
+		Tell(actor, ``)
 
 		return true, nil
 	}
@@ -371,13 +375,13 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 				corpseColor = `user-corpse`
 			}
 
-			user.SendText(fmt.Sprintf(`You look at the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking at the <ansi fg="%s">%s corpse</ansi>.`, user.Character.Name, corpseColor, corpse.Character.Name), user.UserId)
+			Tell(actor, fmt.Sprintf(`You look at the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name))
+			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking at the <ansi fg="%s">%s corpse</ansi>.`, NameColour(actor), actor.Character.Name, corpseColor, corpse.Character.Name), ExcludeId(actor))
 
-			user.SendText(buildCorpseDescriptionPanel(&corpse.Character))
+			Tell(actor, buildCorpseDescriptionPanel(&corpse.Character))
 
 			if configs.GetGamePlayConfig().Death.CorpseItems {
-				user.SendText(buildCorpseInventoryPanel(&corpse))
+				Tell(actor, buildCorpseInventoryPanel(&corpse))
 			}
 
 			return true, nil
@@ -387,7 +391,7 @@ func Look(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 	}
 
 	// Nothing found
-	user.SendText("Look at what???")
+	Tell(actor, "Look at what???")
 
 	return true, nil
 
@@ -404,7 +408,7 @@ func specDisplayName(itemId int) string {
 	return itm.DisplayName()
 }
 
-func lookRoom(user *accounts.Account, roomId int, secretLook bool) {
+func lookRoom(actor *actors.Actor, roomId int, secretLook bool) {
 
 	room := rooms.LoadRoom(roomId)
 
@@ -412,25 +416,33 @@ func lookRoom(user *accounts.Account, roomId int, secretLook bool) {
 		return
 	}
 
-	// Make sure to prepare the room before anyone looks in if this is the first time someone has dealt with it in a while.
-	if room.PlayerCt() < 1 {
+	// Make sure to prepare the room before a player looks in if this is the first time someone has dealt with it in a while.
+	// Rooms are prepared only for players: an NPC's look prepares nothing.
+	if actor.Controller().Account() != nil && room.PlayerCt() < 1 {
 		room.Prepare(true)
 	}
 
 	if !secretLook {
 		// Find the exit back
-		lookFromName := room.FindExitTo(user.Character.RoomId)
+		lookFromName := room.FindExitTo(actor.Character.RoomId)
 		if lookFromName == "" {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking into the room from somewhere...`, user.Character.Name),
-				user.UserId,
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking into the room from somewhere...`, NameColour(actor), actor.Character.Name),
+				ExcludeId(actor),
 			)
 		} else {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> is looking into the room from the <ansi fg="exit">%s</ansi> exit`, user.Character.Name, lookFromName),
-				user.UserId,
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> is looking into the room from the <ansi fg="exit">%s</ansi> exit`, NameColour(actor), actor.Character.Name, lookFromName),
+				ExcludeId(actor),
 			)
 		}
+	}
+
+	// The room view reads account settings and is text for the caller only:
+	// an actor without an account gets none.
+	user := actor.Controller().Account()
+	if user == nil {
+		return
 	}
 
 	var details rooms.RoomTemplateDetails
@@ -459,7 +471,7 @@ func lookRoom(user *accounts.Account, roomId int, secretLook bool) {
 				ZoomLevel: 1,
 				Width:     5,
 				Height:    5,
-				UserId:    user.UserId,
+				UserId:    ExcludeId(actor),
 			}
 
 			c.OverrideSymbol(roomId, '@', `You`)
@@ -513,35 +525,35 @@ func lookRoom(user *accounts.Account, roomId int, secretLook bool) {
 		details = rooms.GetDetails(room, user)
 	}
 
-	textOut, _ := templates.Process("descriptions/room-title", details, user.UserId)
-	user.SendText(textOut)
+	textOut, _ := templates.Process("descriptions/room-title", details, ExcludeId(actor))
+	Tell(actor, textOut)
 
-	user.SendText(buildRoomDescPanel(details))
+	Tell(actor, buildRoomDescPanel(details))
 
 	signCt := 0
 	privateSigns := room.GetPrivateSigns()
 	for _, sign := range privateSigns {
-		if sign.VisibleUserId == user.UserId {
+		if sign.VisibleUserId == ExcludeId(actor) {
 			signCt++
-			textOut, _ = templates.Process("descriptions/rune", sign, user.UserId)
-			user.SendText(textOut)
+			textOut, _ = templates.Process("descriptions/rune", sign, ExcludeId(actor))
+			Tell(actor, textOut)
 		}
 	}
 
 	publicSigns := room.GetPublicSigns()
 	for _, sign := range publicSigns {
 		signCt++
-		textOut, _ = templates.Process("descriptions/sign", sign, user.UserId)
-		user.SendText(textOut)
+		textOut, _ = templates.Process("descriptions/sign", sign, ExcludeId(actor))
+		Tell(actor, textOut)
 	}
 
 	if signCt > 0 {
-		user.SendText("")
+		Tell(actor, "")
 	}
 
-	textOut, _ = templates.Process("descriptions/who", details, user.UserId)
+	textOut, _ = templates.Process("descriptions/who", details, ExcludeId(actor))
 	if len(textOut) > 0 {
-		user.SendText(textOut)
+		Tell(actor, textOut)
 	}
 
 	groundStuff := []string{}
@@ -578,7 +590,7 @@ func lookRoom(user *accounts.Account, roomId int, secretLook bool) {
 		if !item.IsValid() {
 			room.RemoveItem(item, true)
 		}
-		if item.StashedBy != user.UserId {
+		if item.StashedBy != ExcludeId(actor) {
 			continue
 		}
 		name := item.DisplayName() + ` <ansi fg="item-stashed">(stashed)</ansi>`
@@ -592,12 +604,12 @@ func lookRoom(user *accounts.Account, roomId int, secretLook bool) {
 		`IsDark`:      room.GetBiome().IsDark(),
 		`IsNight`:     gametime.IsNight(),
 	}
-	textOut, _ = templates.Process("descriptions/ontheground", groundDetails, user.UserId)
+	textOut, _ = templates.Process("descriptions/ontheground", groundDetails, ExcludeId(actor))
 	if len(textOut) > 0 {
-		user.SendText(textOut)
+		Tell(actor, textOut)
 	}
 
-	textOut, _ = templates.Process("descriptions/exits", details, user.UserId)
-	user.SendText(textOut)
+	textOut, _ = templates.Process("descriptions/exits", details, ExcludeId(actor))
+	Tell(actor, textOut)
 
 }

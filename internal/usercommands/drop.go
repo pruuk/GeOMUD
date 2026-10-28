@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -13,12 +13,12 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Drop(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) == 0 {
-		user.SendText(`Drop what?`)
+		Tell(actor, `Drop what?`)
 
 		return true, nil
 	}
@@ -27,14 +27,19 @@ func Drop(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 		iCopies := []items.Item{}
 
-		if user.Character.Gold > 0 {
-			Drop(fmt.Sprintf("%d gold", user.Character.Gold), user, room, flags)
+		if actor.Character.Gold > 0 {
+			Drop(fmt.Sprintf("%d gold", actor.Character.Gold), actor, room, flags)
 		}
 
-		iCopies = append(iCopies, user.Character.Items...)
+		// Gold has dropped; stuck gear refuses the items once, not per item.
+		if permaGearRefused(actor) {
+			return true, nil
+		}
+
+		iCopies = append(iCopies, actor.Character.Items...)
 
 		for _, item := range iCopies {
-			Drop(item.Name(), user, room, flags)
+			Drop(item.Name(), actor, room, flags)
 		}
 
 		return true, nil
@@ -45,81 +50,85 @@ func Drop(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 		g, _ := strconv.ParseInt(args[0], 10, 32)
 		dropAmt := int(g)
 		if dropAmt < 1 {
-			user.SendText("Oops!")
+			Tell(actor, "Oops!")
 			return true, nil
 		}
 
-		if dropAmt > user.Character.Gold {
-			user.SendText(fmt.Sprintf("You don't have a %d gold to drop.", dropAmt))
+		if dropAmt > actor.Character.Gold {
+			Tell(actor, fmt.Sprintf("You don't have a %d gold to drop.", dropAmt))
 			return true, nil
 		}
 
-		user.Character.CancelBuffsWithFlag("hidden")
+		actor.Character.CancelBuffsWithFlag("hidden")
 
 		room.Gold += dropAmt
-		user.Character.Gold -= dropAmt
+		actor.Character.Gold -= dropAmt
 
 		events.AddToQueue(events.EquipmentChange{
-			ActorId:    user.Character.Id,
+			ActorId:    actor.Character.Id,
 			GoldChange: -dropAmt,
 		})
 
-		user.SendText(
+		Tell(actor,
 			fmt.Sprintf(`You drop <ansi fg="gold">%d gold</ansi> on the floor.`, dropAmt),
 		)
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="username">%s</ansi> drops <ansi fg="gold">%d gold</ansi>.`, user.Character.Name, dropAmt),
-			user.UserId,
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops <ansi fg="gold">%d gold</ansi>.`, NameColour(actor), actor.Character.Name, dropAmt),
+			ExcludeId(actor),
 		)
 
 		return true, nil
 	}
 
+	if permaGearRefused(actor) {
+		return true, nil
+	}
+
 	// Check whether the user has an item in their inventory that matches
-	matchItem, found := user.Character.FindInBackpack(rest)
+	matchItem, found := actor.Character.FindInBackpack(rest)
 
 	if !found {
-		user.SendText(fmt.Sprintf("You don't have a %s to drop.", rest))
+		Tell(actor, fmt.Sprintf("You don't have a %s to drop.", rest))
 	} else {
 
-		user.Character.CancelBuffsWithFlag("hidden")
+		actor.Character.CancelBuffsWithFlag("hidden")
 
 		iSpec := matchItem.GetSpec()
 
 		// Check floor item limit before dropping
 		floorLimit := int(configs.GetGamePlayConfig().FloorItemCountMax)
 		if floorLimit > 0 && len(room.Items) >= floorLimit {
-			user.SendText(
+			Tell(actor,
 				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in your hands!`, matchItem.DisplayName()),
 			)
 			room.SendText(
-				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in <ansi fg="username">%s</ansi>'s hands!`, matchItem.DisplayName(), user.Character.Name),
-				user.UserId,
+				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in <ansi fg="%s">%s</ansi>'s hands!`, matchItem.DisplayName(), NameColour(actor), actor.Character.Name),
+				ExcludeId(actor),
 			)
 			return true, nil
 		}
 
 		// Swap the item location
-		user.Character.RemoveItem(matchItem)
+		actor.Character.RemoveItem(matchItem)
 
 		events.AddToQueue(events.ItemOwnership{
-			ActorId: user.Character.Id,
+			ActorId: actor.Character.Id,
 			Item:    matchItem,
 			Gained:  false,
 		})
 
-		user.SendText(
+		Tell(actor,
 			fmt.Sprintf(`You drop the <ansi fg="item">%s</ansi>.`, matchItem.DisplayName()),
 		)
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="username">%s</ansi> drops their <ansi fg="item">%s</ansi>...`, user.Character.Name, matchItem.DisplayName()),
-			user.UserId,
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops their <ansi fg="item">%s</ansi>...`, NameColour(actor), actor.Character.Name, matchItem.DisplayName()),
+			ExcludeId(actor),
 		)
 
 		// If grenades are dropped, they explode and affect everyone in the room!
 		if iSpec.Type == items.Grenade {
 
-			user.SendText(`Todo. Grenades disabled for now.`)
+			Tell(actor, `Todo. Grenades disabled for now.`)
 
 		}
 

@@ -27,7 +27,7 @@ var allPermissions = []PermissionDef{
 	{Key: "badcommands", Category: "Commands", Description: "View bad/unrecognised command statistics"},
 	{Key: "buff", Category: "Commands", Description: "Apply buffs to players or mobs"},
 	{Key: "build", Category: "Commands", Description: "Build and link rooms"},
-	{Key: "command", Category: "Commands", Description: "Execute mob commands directly"},
+	{Key: "command", Category: "Commands", Description: "Execute NPC commands directly"},
 	{Key: "copyover", Category: "Commands", Description: "Perform a live server restart (copyover)"},
 	{Key: "formset", Category: "Commands", Description: "Set form/transformation data"},
 	{Key: "grant", Category: "Commands", Description: "Grant experience or other rewards to players"},

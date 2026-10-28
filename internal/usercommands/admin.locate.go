@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -17,7 +18,11 @@ import (
 * Role Permissions:
 * locate 				(All)
  */
-func Locate(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Locate(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	user := actor.Controller().Account()
+	if user == nil {
+		return false, nil
+	}
 
 	if rest == "" {
 		infoOutput, _ := templates.Process("admincommands/help/command.locate", nil, user.UserId)

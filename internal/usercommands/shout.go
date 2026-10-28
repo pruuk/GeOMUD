@@ -4,20 +4,20 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
-func Shout(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Shout(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	if user.Muted {
-		user.SendText(`You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
+	if user := actor.Controller().Account(); user != nil && user.Muted {
+		Tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
 		return true, nil
 	}
 
-	isSneaking := user.Character.HasBuffFlag("hidden")
-	isDrunk := user.Character.HasBuffFlag("drunk")
+	isSneaking := actor.Character.HasBuffFlag("hidden")
+	isDrunk := actor.Character.HasBuffFlag("drunk")
 
 	rest = strings.ToUpper(rest)
 
@@ -27,15 +27,15 @@ func Shout(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 	}
 
 	if isSneaking {
-		room.SendTextCommunication(fmt.Sprintf(`someone shouts, "<ansi fg="yellow">%s</ansi>"`, rest), user.UserId)
+		room.SendTextCommunication(fmt.Sprintf(`someone shouts, "<ansi fg="yellow">%s</ansi>"`, rest), ExcludeId(actor))
 	} else {
-		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="username">%s</ansi> shouts, "<ansi fg="yellow">%s</ansi>"`, user.Character.Name, rest), user.UserId)
+		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="%s">%s</ansi> shouts, "<ansi fg="yellow">%s</ansi>"`, NameColour(actor), actor.Character.Name, rest), ExcludeId(actor))
 	}
 
 	for _, roomInfo := range room.Exits {
 		if otherRoom := rooms.LoadRoom(roomInfo.RoomId); otherRoom != nil {
 			if sourceExit := otherRoom.FindExitTo(room.RoomId); sourceExit != `` {
-				otherRoom.SendTextCommunication(fmt.Sprintf(`Someone shouts from the <ansi fg="exit">%s</ansi> direction, "<ansi fg="yellow">%s</ansi>"`, sourceExit, rest), user.UserId)
+				otherRoom.SendTextCommunication(fmt.Sprintf(`Someone shouts from the <ansi fg="exit">%s</ansi> direction, "<ansi fg="yellow">%s</ansi>"`, sourceExit, rest), ExcludeId(actor))
 			}
 		}
 	}
@@ -43,7 +43,7 @@ func Shout(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 	for _, roomInfo := range room.ExitsTemp {
 		if otherRoom := rooms.LoadRoom(roomInfo.RoomId); otherRoom != nil {
 			if sourceExit := otherRoom.FindExitTo(room.RoomId); sourceExit != `` {
-				otherRoom.SendTextCommunication(fmt.Sprintf(`Someone shouts from the <ansi fg="exit">%s</ansi> direction, "<ansi fg="yellow">%s</ansi>"`, sourceExit, rest), user.UserId)
+				otherRoom.SendTextCommunication(fmt.Sprintf(`Someone shouts from the <ansi fg="exit">%s</ansi> direction, "<ansi fg="yellow">%s</ansi>"`, sourceExit, rest), ExcludeId(actor))
 			}
 		}
 	}
@@ -56,13 +56,13 @@ func Shout(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 		for _, exitInfo := range spec.Exits {
 			if otherRoom := rooms.LoadRoom(exitInfo.RoomId); otherRoom != nil {
 				if sourceExit := otherRoom.FindExitTo(room.RoomId); sourceExit != `` {
-					otherRoom.SendTextCommunication(fmt.Sprintf(`Someone shouts from the <ansi fg="exit">%s</ansi> direction, "<ansi fg="yellow">%s</ansi>"`, sourceExit, rest), user.UserId)
+					otherRoom.SendTextCommunication(fmt.Sprintf(`Someone shouts from the <ansi fg="exit">%s</ansi> direction, "<ansi fg="yellow">%s</ansi>"`, sourceExit, rest), ExcludeId(actor))
 				}
 			}
 		}
 	}
 
-	user.SendText(fmt.Sprintf(`You shout, "<ansi fg="yellow">%s</ansi>"`, rest))
+	Tell(actor, fmt.Sprintf(`You shout, "<ansi fg="yellow">%s</ansi>"`, rest))
 
 	return true, nil
 }

@@ -102,6 +102,18 @@ func All() []*Actor {
 	return out
 }
 
+// Each calls fn for every live actor, in no particular order, under the
+// registry's read lock: no copy and no sort, for per-turn loops. fn must not
+// call back into the registry's write paths (Spawn, Remove, SetController,
+// Reset or a bind), which would deadlock.
+func Each(fn func(*Actor)) {
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, a := range byId {
+		fn(a)
+	}
+}
+
 // Remove drops the actor. Removing an unknown id does nothing.
 func Remove(id ActorId) {
 	mu.Lock()
