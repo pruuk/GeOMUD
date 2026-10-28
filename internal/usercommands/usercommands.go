@@ -49,6 +49,15 @@ func excludeId(actor *actors.Actor) int {
 	return 0
 }
 
+// nameColour is the ANSI alias an actor's name is written in: `username` for
+// an actor with an account, `mobname` otherwise.
+func nameColour(actor *actors.Actor) string {
+	if actor.Controller().Account() != nil {
+		return "username"
+	}
+	return "mobname"
+}
+
 // queue queues input text for the actor's body, ready after the optional wait
 // in seconds. It queues what Account.Command queues (Decision 11).
 func queue(actor *actors.Actor, text string, wait ...float64) {

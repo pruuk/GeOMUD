@@ -98,7 +98,7 @@ func Emote(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if len(rest) == 0 {
 		tell(actor, "You emote.")
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="username">%s</ansi> emotes.`, actor.Character.Name),
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> emotes.`, nameColour(actor), actor.Character.Name),
 			excludeId(actor),
 		)
 		return true, nil
@@ -109,7 +109,7 @@ func Emote(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if emoteText, ok := emoteAliases[rest]; ok {
 		tell(actor, fmt.Sprintf(`You Emote: <ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, emoteText))
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, emoteText),
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> <ansi fg="20">%s</ansi>`, nameColour(actor), actor.Character.Name, emoteText),
 			excludeId(actor),
 		)
 		return true, nil
@@ -127,7 +127,7 @@ func Emote(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	}
 
 	room.SendTextCommunication(
-		fmt.Sprintf(`<ansi fg="username">%s</ansi> <ansi fg="20">%s</ansi>`, actor.Character.Name, rest),
+		fmt.Sprintf(`<ansi fg="%s">%s</ansi> <ansi fg="20">%s</ansi>`, nameColour(actor), actor.Character.Name, rest),
 		excludeId(actor),
 	)
 

@@ -29,7 +29,7 @@ func Shout(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if isSneaking {
 		room.SendTextCommunication(fmt.Sprintf(`someone shouts, "<ansi fg="yellow">%s</ansi>"`, rest), excludeId(actor))
 	} else {
-		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="username">%s</ansi> shouts, "<ansi fg="yellow">%s</ansi>"`, actor.Character.Name, rest), excludeId(actor))
+		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="%s">%s</ansi> shouts, "<ansi fg="yellow">%s</ansi>"`, nameColour(actor), actor.Character.Name, rest), excludeId(actor))
 	}
 
 	for _, roomInfo := range room.Exits {

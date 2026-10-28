@@ -28,7 +28,7 @@ func Say(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	if isSneaking {
 		room.SendTextCommunication(fmt.Sprintf(`someone says, "<ansi fg="saytext">%s</ansi>"`, rest), excludeId(actor))
 	} else {
-		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="username">%s</ansi> says, "<ansi fg="saytext">%s</ansi>"`, actor.Character.Name, rest), excludeId(actor))
+		room.SendTextCommunication(fmt.Sprintf(`<ansi fg="%s">%s</ansi> says, "<ansi fg="saytext">%s</ansi>"`, nameColour(actor), actor.Character.Name, rest), excludeId(actor))
 	}
 
 	tell(actor, fmt.Sprintf(`You say, "<ansi fg="saytext">%s</ansi>"`, rest))

@@ -23,7 +23,7 @@ func Broadcast(rest string, actor *actors.Actor, room *rooms.Room, flags events.
 		sourceIsMod = user.Role != accounts.RoleUser
 	}
 
-	msg := fmt.Sprintf(`<ansi fg="broadcast-prefix">(broadcast)</ansi> <ansi fg="username">%s</ansi>: <ansi fg="broadcast-body">%s</ansi>`, actor.Character.Name, rest)
+	msg := fmt.Sprintf(`<ansi fg="broadcast-prefix">(broadcast)</ansi> <ansi fg="%s">%s</ansi>: <ansi fg="broadcast-body">%s</ansi>`, nameColour(actor), actor.Character.Name, rest)
 
 	events.AddToQueue(events.Broadcast{
 		Text:            msg + term.CRLFStr,
