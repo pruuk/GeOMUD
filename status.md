@@ -1,8 +1,8 @@
 # Status (updated 2026-10-28)
 
 ## Now
-- Phase 4b slice 4 (one command set and input path): inventory and plan in progress on
-  `strip/phase-4b-4-one-command-set`
+- Phase 4b slice 4 (one command set and input path): built on `strip/phase-4b-4-one-command-set`,
+  PR open (plan `2026-10-28-phase-4b-4-one-command-set-plan.md`, inventory beside it)
 - Strip Phases 0-4 and Phase 4b slices 1, 2, 2b, 2c and 3 are merged (`gomud_strip_plan.md`; spec
   `2026-10-27-phase-4b-npcs-are-players-design.md`; slice plans in `docs/completed/`)
 
