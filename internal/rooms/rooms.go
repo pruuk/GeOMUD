@@ -93,6 +93,8 @@ type Room struct {
 	mobVisitors   map[ids.ID]uint64 // body IDs of mobs that have visited this room, and the turn their trail goes cold
 	lastVisited   uint64            // last round a visitor was in the room
 	tempDataStore map[string]any    // Temporary data store for the room
+	resting       []mobs.SavedNPC   // NPCs saved to disk and out of memory that belong to this room (Phase 4b decision 12). Saved in the sidecar, not the instance diff.
+	restoreDue    map[ids.ID]bool   // resting NPCs read from disk when the room loaded; its first Prepare restores them, and only them (decision 16)
 }
 
 type TrainingRange struct {
@@ -534,18 +536,18 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 		}
 	}
 
+	// On the first prepare after the room loaded from disk, the NPCs resting
+	// here come back before any slot is considered (decision 16)
+	r.restoreResting()
+
 	// First ensure any mobs that should be here are spawned
+	var settling slotSettling
 	for idx, spawnInfo := range r.SpawnInfo {
 
-		// Make sure to clean up any instances that may be dead
+		// A slot keeps its NPC until it ends (decision 14). A freed slot
+		// waits for the next prepare to spawn, as before.
 		if !spawnInfo.InstanceId.IsZero() {
-			// Mob gone missing. Reset the spawn info.
-			if mob := mobs.GetInstance(spawnInfo.InstanceId); mob == nil {
-				spawnInfo.InstanceId = ids.ID{}
-				spawnInfo.DespawnedRound = roundNow
-				r.SpawnInfo[idx] = spawnInfo
-				continue
-			}
+			settling.settle(r, idx, roundNow)
 			continue
 		}
 
@@ -594,10 +596,6 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 					mob.Character.Shop.Restock()
 				}
 
-				if len(spawnInfo.BuffIds) > 0 {
-					mob.Character.SetPermaBuffs(spawnInfo.BuffIds)
-				}
-
 				// If there are idle commands for this spawn, overwrite.
 				if len(spawnInfo.IdleCommands) > 0 {
 					mob.IdleCommands = append([]string{}, spawnInfo.IdleCommands...)
@@ -617,6 +615,7 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 				}
 
 				mob.Character.Zone = r.Zone
+				mob.SpawnSlot = idx + 1 // the NPC knows its slot, so only slot NPCs leave an ending
 				mob.Validate()
 
 				r.bodies = append(r.bodies, mob.Character.Id)
@@ -683,6 +682,8 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 
 	}
 
+	settling.save(r)
+
 	// Reach out one more room to prepare those exit rooms
 	if !checkAdjacentRooms {
 		return
@@ -709,29 +710,16 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 
 }
 
-func (r *Room) CleanupMobSpawns(noCooldown bool) {
+// CleanupMobSpawns frees the slots whose NPC ended (its ending says whether
+// at once or after the respawn rate) or is lost.
+func (r *Room) CleanupMobSpawns() {
 
 	roundNow := util.GetRoundCount()
-	// First ensure any mobs that should be here are spawned
-	for idx, spawnInfo := range r.SpawnInfo {
-
-		// Make sure to clean up any instances that may be dead
-		if !spawnInfo.InstanceId.IsZero() {
-
-			if mob := mobs.GetInstance(spawnInfo.InstanceId); mob == nil {
-
-				spawnInfo.InstanceId = ids.ID{}
-				if noCooldown {
-					spawnInfo.DespawnedRound = 0
-				} else {
-					spawnInfo.DespawnedRound = roundNow
-				}
-
-			}
-		}
-
-		r.SpawnInfo[idx] = spawnInfo
+	var settling slotSettling
+	for idx := range r.SpawnInfo {
+		settling.settle(r, idx, roundNow)
 	}
+	settling.save(r)
 }
 
 func (r *Room) AddMob(mobId ids.ID) {
@@ -2056,18 +2044,12 @@ func (r *Room) RoundTick() {
 	// Done adding mutator buffs
 	//
 
-	for idx, spawnInfo := range r.SpawnInfo {
-
-		// Make sure to clean up any instances that may be dead
-		if !spawnInfo.InstanceId.IsZero() {
-			if mob := mobs.GetInstance(spawnInfo.InstanceId); mob == nil {
-				spawnInfo.InstanceId = ids.ID{}
-				spawnInfo.DespawnedRound = roundNow
-				r.SpawnInfo[idx] = spawnInfo
-			}
-		}
-
+	// A slot keeps its NPC until it ends (decision 14)
+	var settling slotSettling
+	for idx := range r.SpawnInfo {
+		settling.settle(r, idx, roundNow)
 	}
+	settling.save(r)
 
 	// If any players are in the room
 	// Update all mobs in the room that they've seen a player

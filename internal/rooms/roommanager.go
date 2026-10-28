@@ -54,6 +54,11 @@ type RoomManager struct {
 
 // Deletes any knowledge of a room in memory.
 // Loading this room after the fact will trigger full re-loading and caching of room data.
+// ClearRoomCache drops a room from memory without saving it or resting its
+// NPCs. Its callers replace the room (addRoomToMemory with force, which
+// SaveRoomTemplate follows with the same bodies and resting NPCs) or delete
+// it (DeleteRoomForAdmin, which ends its resting NPCs first). To take a room
+// out of memory and keep its NPCs, use removeRoomFromMemory.
 func ClearRoomCache(roomId int) error {
 
 	room := roomManager.rooms[roomId]
@@ -498,23 +503,48 @@ func removeRoomFromMemory(r *Room) {
 		return
 	}
 
-	for _, mobId := range room.mobIds() {
-		mobs.DestroyInstance(mobId)
+	// Ephemeral rooms are not saved: their NPCs end with them, as a death
+	// (a slot elsewhere that owns one refills after its respawn rate).
+	if room.IsEphemeral() {
+		for _, mobId := range room.mobIds() {
+			if m := mobs.GetInstance(mobId); m != nil {
+				room.EndEphemeralNPC(m)
+			}
+		}
+
+		for _, spawnDetails := range room.SpawnInfo {
+			if !spawnDetails.InstanceId.IsZero() {
+
+				if m := mobs.GetInstance(spawnDetails.InstanceId); m != nil {
+					if m.Character.RoomId == room.RoomId {
+						room.EndEphemeralNPC(m)
+					}
+				}
+
+			}
+		}
+
+		delete(roomManager.rooms, r.RoomId)
+		return
 	}
 
-	for _, spawnDetails := range room.SpawnInfo {
-		if !spawnDetails.InstanceId.IsZero() {
+	// Leaving memory is never an ending (decision 15): every live NPC in the
+	// room rests here. Save first (the save writes each live NPC); only then
+	// take them out of memory.
+	if err := saveRoomNPCs(room); err != nil {
+		mudlog.Error("npc store: room kept in memory, its NPCs could not be saved", "room", room.RoomId, "error", err)
+		return
+	}
 
-			if m := mobs.GetInstance(spawnDetails.InstanceId); m != nil {
-				if m.Character.RoomId == room.RoomId {
-					mobs.DestroyInstance(spawnDetails.InstanceId)
-				}
-			}
+	saveRoomInstanceData(*room)
 
+	for _, mobId := range room.mobIds() {
+		if m := mobs.GetInstance(mobId); m != nil {
+			room.resting = append(room.resting, mobs.Snapshot(m))
+			mobs.Rest(mobId)
+			indexResting(mobId, room.RoomId)
 		}
 	}
-
-	SaveRoomInstance(*room)
 
 	delete(roomManager.rooms, r.RoomId)
 }
@@ -696,6 +726,11 @@ func MoveToZone(roomId int, newZoneName string) error {
 	}
 
 	os.Rename(oldInstanceFilePath, newInstanceFilePath)
+
+	// The room's resting NPCs and slot state move with it
+	if err := moveRoomNPCFile(oldZoneName, newZoneName, roomId); err != nil {
+		mudlog.Error("MoveToZone", "roomId", roomId, "error", fmt.Sprintf("npc sidecar not moved: %v", err))
+	}
 
 	delete(oldZoneInfo.RoomIds, roomId)
 	roomManager.zones[oldZoneName] = oldZoneInfo

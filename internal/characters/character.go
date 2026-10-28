@@ -67,7 +67,7 @@ type Character struct {
 	Shop             Shop                           `yaml:"shop,omitempty"`           // Definition of shop services/items this character stocks (or just has at the moment)
 	SpellBook        map[string]int                 `yaml:"spellbook,omitempty"`      // The spells the character has learned
 	Charmed          *CharmInfo                     `yaml:"-"`                        // If they are charmed, this is the info
-	CharmedMobs      []ids.ID                       `yaml:"-"`                        // If they have charmed anyone, this is the list of their body IDs
+	CharmedMobs      []ids.ID                       `yaml:"charmedmobs,omitempty"`    // If they have charmed anyone, this is the list of their body IDs
 	Items            []items.Item                   `yaml:"items,omitempty"`          // The items the character is holding
 	Buffs            buffs.Buffs                    `yaml:"buffs,omitempty"`          // The buffs the character has active
 	Equipment        Worn                           `yaml:"equipment,omitempty"`      // The equipment the character is wearing
@@ -989,6 +989,19 @@ func (c *Character) GetMapSprawlCapacity() int {
 		sprawlCap = 0
 	}
 	return sprawlCap
+}
+
+// ForgetTransient clears what the character was doing that is never saved
+// (yaml:"-" or unexported and not recalculated): who damaged it and by how
+// much, who killed it, and its room history. A rested NPC comes back without
+// them, whether it went through disk or not.
+func (c *Character) ForgetTransient() {
+	c.PlayerDamage = nil
+	c.LastPlayerDamage = 0
+	c.KilledBy = ids.ID{}
+	c.KillerMobIsElite = false
+	c.KillerMobName = ""
+	c.roomHistory = nil
 }
 
 // Remember visiting a room. This may cause to forget an older room if the memory is full.
@@ -2016,10 +2029,14 @@ func (c *Character) RemoveFromBody(i items.Item) bool {
 	return false
 }
 
-// Used with SpawnInfo to gift spawning mobs with permabuffs
+// SetPermaBuffs sets a mob's permanent buff list from its template (Phase 4b
+// decision 17: a spawn slot adds none). Validate(true) applies it.
 func (c *Character) SetPermaBuffs(buffIds []int) {
 	c.permaBuffIds = buffIds
 }
+
+// PermaBuffIds is the template permabuff list SetPermaBuffs set.
+func (c *Character) PermaBuffIds() []int { return append([]int{}, c.permaBuffIds...) }
 
 func (c *Character) reapplyPermabuffs(removedItems ...items.Item) {
 

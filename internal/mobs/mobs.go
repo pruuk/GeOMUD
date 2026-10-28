@@ -60,6 +60,7 @@ type Mob struct {
 	ItemDropChance  int      `yaml:"itemdropchance,omitempty"` // chance in 100
 	ActivityLevel   int      `yaml:"activitylevel,omitempty"`  // 1-100%
 	HomeRoomId      int      `yaml:"-"`
+	SpawnSlot       int      `yaml:"-"`                        // the home room's spawn slot this NPC fills, index plus one; zero for none. Saved in SavedNPC.
 	Hostile         bool     `yaml:"hostile,omitempty"`        // whether they attack on sight
 	LastIdleCommand uint8    `yaml:"-"`                        // Track what hte last used idlecommand was
 	BoredomCounter  uint8    `yaml:"-"`                        // how many rounds have passed since this mob has seen a player

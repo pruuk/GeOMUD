@@ -1586,15 +1586,6 @@
         return parts.join('  -  ');
     }
 
-    function renderSpawnBuffChips(buffIds) {
-        return (buffIds || []).map(id => {
-            const spec = allBuffs[id];
-            const label = spec ? spec.Name : 'buff #' + id;
-            return '<span class="buff-chip" data-buff-id="' + id + '">' + esc(label) +
-                ' <button onclick="this.closest(\'.buff-chip\').remove()" title="Remove">&times;</button></span>';
-        }).join('');
-    }
-
     function appendSpawnCard(list, s, openOnAdd) {
         s = s || {};
         const type = s._type || spawnCardType(s);
@@ -1717,14 +1708,6 @@
                 '<div class="field-hint">Added to the mob\'s resolved level after zone auto-scale. Can be negative.</div>' +
             '</div>' +
 
-            // Buff IDs (mob only)
-            '<div class="spawn-field span2" style="' + (isMob ? shown : hidden) + '">' +
-                '<label>Permanent Buffs</label>' +
-                '<div class="buff-ids-wrap spawn-buffids">' + renderSpawnBuffChips(s.BuffIds || []) + '</div>' +
-                '<button class="btn-add-sm" style="margin-top:0.3rem" onclick="pickSpawnBuff(this)">+ Pick Buffs&hellip;</button>' +
-                '<div class="field-hint">Buffs always active on this mob instance.</div>' +
-            '</div>' +
-
             // Idle Commands (mob only)
             '<div class="spawn-field span2" style="' + (isMob ? shown : hidden) + '">' +
                 '<label>Idle Commands</label>' +
@@ -1811,20 +1794,6 @@
         updateSpawnHeader(card);
     };
 
-    window.pickSpawnBuff = function (btn) {
-        const card = btn.closest('.spawn-card');
-        const wrap = card.querySelector('.spawn-buffids');
-        const existing = Array.from(wrap.querySelectorAll('.buff-chip')).map(c => parseInt(c.dataset.buffId, 10));
-        Picker.open({
-            ...PickerConfigs.buffs,
-            multi:    true,
-            selected: existing,
-            onSelect: (buffs) => {
-                wrap.innerHTML = renderSpawnBuffChips(buffs.map(b => b.BuffId));
-            },
-        });
-    };
-
     window.updateSpawnHeader = function (card) {
         const type = card.dataset.spawnType;
         const s = {};
@@ -1871,10 +1840,6 @@
 
                 const levelMod = parseInt(card.querySelector('.spawn-levelmod').value, 10);
                 if (levelMod) s.LevelMod = levelMod;
-
-                const buffIds = Array.from(card.querySelectorAll('.spawn-buffids .buff-chip'))
-                    .map(c => parseInt(c.dataset.buffId, 10)).filter(n => !isNaN(n));
-                if (buffIds.length) s.BuffIds = buffIds;
 
                 const idleCmds = card.querySelector('.spawn-idlecommands').value
                     .split('\n').map(l => l.trim()).filter(Boolean);

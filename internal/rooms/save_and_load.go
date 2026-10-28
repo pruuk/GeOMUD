@@ -90,6 +90,7 @@ func LoadRoom(roomId int) *Room {
 	}
 
 	if room := LoadRoomInstance(roomId); room != nil {
+		loadRoomNPCs(room)
 		addRoomToMemory(room)
 		return room
 	}
@@ -187,7 +188,9 @@ func SaveRoomTemplate(roomTpl Room) error {
 
 	// Copy container contents (if new vs. old room container names match)
 	if roomBeingReplaced == nil {
-		// Room not in memory (new room or cache cleared) - skip container copy
+		// Room not in memory (new room or cache cleared) - skip container copy,
+		// but bring in its resting NPCs and slot state as LoadRoom would
+		loadRoomNPCs(&roomTpl)
 		roomManager.rooms[roomTpl.RoomId] = &roomTpl
 		return nil
 	}
@@ -228,6 +231,9 @@ func SaveRoomTemplate(roomTpl Room) error {
 	roomTpl.bodies = make([]ids.ID, len(roomBeingReplaced.bodies))
 	copy(roomTpl.bodies, roomBeingReplaced.bodies)
 
+	// Copy resting NPCs and which NPC each spawn slot owns
+	carryNPCState(roomBeingReplaced, &roomTpl)
+
 	// Add to memory with the force flag true
 	// This will clear out the old data and force write the new data.
 	addRoomToMemory(&roomTpl, true)
@@ -244,6 +250,21 @@ func SaveRoomInstance(r Room) error {
 	if r.IsEphemeral() {
 		return errors.New(`ephemeral rooms are not saved`)
 	}
+
+	// The room's NPCs (resting and live) and slot state go to its sidecar
+	npcErr := saveRoomNPCs(&r)
+	if npcErr != nil {
+		mudlog.Error("SaveRoomInstance", "room", r.RoomId, "error", npcErr)
+	}
+
+	if err := saveRoomInstanceData(r); err != nil {
+		return err
+	}
+	return npcErr
+}
+
+// saveRoomInstanceData writes the instance diff (see D. SAVING ROOMS INSTANCES).
+func saveRoomInstanceData(r Room) error {
 
 	rTpl := LoadRoomTemplate(r.RoomId) // This is also a Room{}
 	if rTpl == nil {
