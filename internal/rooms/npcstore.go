@@ -852,7 +852,7 @@ func NPCEnded(m *mobs.Mob, immediate bool) {
 	}
 }
 
-// RestNPC rests one live NPC in this room (decision 15: boredom and charm
+// RestNPC rests one live NPC in this room (decision 15: charm
 // expiry): saved into the room's sidecar, out of the room and out of memory,
 // listed in the resting index. No ending. It stays resting while the room
 // stays in memory, written by each of its saves, and comes back on the first

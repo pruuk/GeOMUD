@@ -459,10 +459,6 @@ func (u *Account) GetConnectTime() time.Time {
 	return u.sess().connectionTime
 }
 
-func (u *Account) RoundTick() {
-
-}
-
 // The purpose of SetUnsentText(), GetUnsentText() is to
 // Capture what the user is typing so that when we redraw the
 // "prompt" or status bar, we can redraw what they were in the middle

@@ -5,6 +5,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,4 +58,24 @@ func TestConnectionControllerIgnoresEmptyText(t *testing.T) {
 	assert.NotPanics(t, func() {
 		NewConnectionController(acc).Perceive(perception.Perception{})
 	})
+}
+
+// bodyMob is the helper in registry_test.go.
+func TestBehaviourControllerTickFiresTheBehaviourHook(t *testing.T) {
+	m := bodyMob()
+	var got []*mobs.Mob
+	OnBehaviourTick.Register(func(x *mobs.Mob) *mobs.Mob {
+		if x == m {
+			got = append(got, x)
+		}
+		return x
+	})
+
+	NewBehaviourController(m).Tick()
+
+	assert.Equal(t, []*mobs.Mob{m}, got)
+}
+
+func TestConnectionControllerTickDoesNothing(t *testing.T) {
+	assert.NotPanics(t, func() { NewConnectionController(nil).Tick() })
 }

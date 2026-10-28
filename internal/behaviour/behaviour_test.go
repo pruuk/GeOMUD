@@ -155,6 +155,18 @@ func TestWanderPastMaxWanderPlansTheWayHome(t *testing.T) {
 	assert.Equal(t, 1, mob.Path.Len(), "a one-step path home")
 }
 
+func TestWanderAtMaxWanderPlansTheWayHome(t *testing.T) {
+	testRoom(t, 9143, testZone, map[string]int{"north": 9144})
+	testRoom(t, 9144, testZone, map[string]int{"south": 9143})
+	mob := testMob(t, 9144, 9143, 2)
+	mob.WanderCount = 2
+
+	got := queuedInput(t, mob, func() { Wander(mob) })
+
+	assert.Empty(t, got, "maxwander 2 allows two moves, not three")
+	assert.Equal(t, 1, mob.Path.Len())
+}
+
 func TestPathToUnknownRoomLogsAndMarksLost(t *testing.T) {
 	testRoom(t, 9151, testZone, nil)
 	mob := testMob(t, 9151, 9199, 3) // home is a room that does not exist

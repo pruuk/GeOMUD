@@ -17,8 +17,8 @@ func RegisterListeners() {
 	events.RegisterListener(events.NewRound{}, InactivePlayers)
 	events.RegisterListener(events.NewRound{}, UpdateZoneMutators)
 	events.RegisterListener(events.NewRound{}, CheckNewDay)
-	events.RegisterListener(events.NewRound{}, UserRoundTick)
-	events.RegisterListener(events.NewRound{}, MobRoundTick)
+	events.RegisterListener(events.NewRound{}, RoomRoundTick)
+	events.RegisterListener(events.NewRound{}, ActorUpkeep)
 	events.RegisterListener(events.NewRound{}, HandleRespawns)
 	//
 	// Combat goes here
@@ -28,8 +28,7 @@ func RegisterListeners() {
 	// Done with combat
 	//
 	events.RegisterListener(events.NewRound{}, AutoHeal)
-	events.RegisterListener(events.NewRound{}, IdleMobs)
-	events.RegisterListener(events.MobIdle{}, HandleIdleMobs)
+	events.RegisterListener(events.NewRound{}, ActorTick)
 
 	// Turn Hooks
 	events.RegisterListener(events.NewTurn{}, CleanupLinkDead)

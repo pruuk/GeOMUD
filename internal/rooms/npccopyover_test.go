@@ -30,7 +30,7 @@ func TestCopyoverBringsEveryNPCBackOnce(t *testing.T) {
 
 	x := liveTestNPC(t, 5, 1, 0) // live in A, owned by home slot 0
 	y := liveTestNPC(t, 6, 1, 0) // live in B, no slot
-	z := liveTestNPC(t, 7, 1, 0) // rested in A by boredom
+	z := liveTestNPC(t, 7, 1, 0) // rested in A
 	w := liveTestNPC(t, 8, 1, 0) // owned by home slot 1, rested in B
 	mobs.GetInstance(x).SpawnSlot = 1
 	mobs.GetInstance(w).SpawnSlot = 2

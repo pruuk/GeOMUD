@@ -1341,20 +1341,6 @@ var FIELD_META = {
     },
 
     // --- Memory ---
-    'Memory.MaxMobBoredom': {
-        label: 'Max Mob Boredom',
-        description: 'The boredom counter threshold at which a mob will be unloaded from memory if there are no players nearby. Higher values keep mobs active longer.',
-        implications: 'Lower values aggressively unload inactive mobs to save memory. Higher values keep mobs in memory longer, which uses more RAM but provides a more consistent world.',
-        inputType: 'number',
-        min: 10, max: 10000, step: 10,
-    },
-    'Memory.MobUnloadThreshold': {
-        label: 'Mob Unload Threshold',
-        description: 'Minimum number of loaded mobs before the server begins considering unloading idle ones. Set to 0 to always consider unloading.',
-        implications: 'Higher threshold keeps more mobs loaded at all times. Lower threshold allows aggressive memory reclamation even when few mobs are loaded.',
-        inputType: 'number',
-        min: 0, max: 10000, step: 50,
-    },
     'Memory.RoomUnloadRounds': {
         label: 'Room Unload Rounds',
         description: 'Minimum number of rounds a room must be empty before it becomes eligible for unloading from memory.',
@@ -1649,7 +1635,7 @@ var SECTIONS = [
         color: '#1a7a8a',
         iconBg: '#e4f4f6',
         icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/><path d="M6 6v12"/><path d="M10 6v12"/><path d="M14 6v12"/><path d="M18 6v12"/></svg>',
-        fields: ['Memory.MaxMobBoredom','Memory.MobUnloadThreshold','Memory.RoomUnloadRounds','Memory.RoomUnloadThreshold'],
+        fields: ['Memory.RoomUnloadRounds','Memory.RoomUnloadThreshold'],
     },
     {
         key: 'LootGoblin',

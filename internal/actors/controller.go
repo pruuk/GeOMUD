@@ -9,14 +9,16 @@ import (
 
 // Controller is what drives an actor: a connection with its account, or an
 // NPC behaviour. Code outside this package asks the controller questions and
-// never asserts its concrete type (internal/guards enforces this). Slice 6
-// adds Tick.
+// never asserts its concrete type (internal/guards enforces this).
 type Controller interface {
 	// Account is the account driving the actor, or nil when none does.
 	Account() *accounts.Account
 	// Perceive is called by internal/messaging for each message that
 	// reaches the actor.
 	Perceive(p perception.Perception)
+	// Tick is called once a round for every live actor, after combat and
+	// healing (internal/hooks ActorTick): what the actor does by itself.
+	Tick()
 }
 
 // ConnectionController drives an actor from an account's connection. The
@@ -42,8 +44,11 @@ func (c *ConnectionController) Perceive(p perception.Perception) {
 	c.account.SendText(p.Text)
 }
 
-// BehaviourController drives an NPC. In slice 1 it only holds the mob; slice
-// 6 moves the mob's runtime behaviour state here and runs it from Tick.
+// Tick does nothing: a player acts by typing.
+func (c *ConnectionController) Tick() {}
+
+// BehaviourController drives an NPC. Its round of behaviour runs from Tick
+// through OnBehaviourTick; the behaviour state stays on the Mob (slice 6).
 type BehaviourController struct {
 	mob *mobs.Mob
 }
@@ -72,3 +77,12 @@ func (b *BehaviourController) Perceive(p perception.Perception) {
 	}
 	OnBehaviourPerceive.Fire(BehaviourPerception{Mob: b.mob, Perception: p})
 }
+
+// OnBehaviourTick fires once a round for each NPC, from BehaviourController.Tick.
+// internal/behaviour attaches idle, wander and path walking to it
+// (behaviour.Init): this package cannot import behaviour, which imports rooms,
+// which imports this package.
+var OnBehaviourTick util.Hook[*mobs.Mob]
+
+// Tick runs the NPC's behaviour for the round.
+func (b *BehaviourController) Tick() { OnBehaviourTick.Fire(b.mob) }

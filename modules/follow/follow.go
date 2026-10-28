@@ -7,6 +7,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
+	"github.com/GoMudEngine/GoMud/internal/behaviour"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -65,7 +66,7 @@ func init() {
 	events.RegisterListener(events.PlayerDespawn{}, f.playerDespawnHandler)
 	events.RegisterListener(events.MobDeath{}, f.onMobDeath)
 	events.RegisterListener(events.PlayerDeath{}, f.onPlayerDeath)
-	events.RegisterListener(events.MobIdle{}, f.idleMobHandler, events.First)
+	behaviour.OnIdle.Register(f.idleMobHandler)
 	events.RegisterListener(events.PartyUpdated{}, f.onPartyChange)
 	events.RegisterListener(events.NewRound{}, f.onNewRound)
 }
@@ -242,15 +243,12 @@ func (f *FollowModule) onPartyChange(e events.Event) events.ListenerReturn {
 	return events.Continue
 }
 
-// Interrupt the idle action of mobs if they are currently following someone.
-func (f *FollowModule) idleMobHandler(e events.Event) events.ListenerReturn {
-	evt := e.(events.MobIdle)
-
-	if f.isFollowing(followId{mobId: evt.ActorId}) {
-		return events.Cancel
+// idleMobHandler keeps a following NPC from idling, so it stays with its leader.
+func (f *FollowModule) idleMobHandler(c behaviour.IdleCheck) behaviour.IdleCheck {
+	if f.isFollowing(followId{mobId: c.Mob.Character.Id}) {
+		c.Skip = true
 	}
-
-	return events.Continue
+	return c
 }
 
 func (f *FollowModule) roomChangeHandler(e events.Event) events.ListenerReturn {

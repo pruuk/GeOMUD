@@ -1120,7 +1120,6 @@ func (m *MyModule) onNewRound(e events.Event) events.ListenerReturn {
             <tbody>
                 <tr><td><span class="ev-badge">NewRound</span></td><td><code>RoundNumber uint64</code>, <code>TimeNow time.Time</code></td><td>Fires every game round. Primary hook for periodic module logic.</td></tr>
                 <tr><td><span class="ev-badge">NewTurn</span></td><td><code>TurnNumber uint64</code>, <code>TimeNow time.Time</code></td><td>Fires every turn (faster than a round, configured by <code>TurnMs</code>).</td></tr>
-                <tr><td><span class="ev-badge">MobIdle</span></td><td><code>ActorId ids.ID</code></td><td>Fires when a mob has nothing to do. Use <code>events.First</code> to intercept before built-in AI.</td></tr>
             </tbody>
         </table>
     </div>
@@ -1554,13 +1553,12 @@ func init() {
     // One command for players and mobs alike.
     f.plug.AddUserCommand("follow", f.followCommand, true, false)
 
-    // Multiple event listeners — MobIdle uses events.First to intercept
-    // before the built-in mob AI runs.
+    // behaviour.OnIdle lets a module keep an NPC from idling this round.
+    behaviour.OnIdle.Register(f.idleMobHandler)
     events.RegisterListener(events.RoomChange{}, f.roomChangeHandler)
     events.RegisterListener(events.PlayerDespawn{}, f.playerDespawnHandler)
     events.RegisterListener(events.MobDeath{}, f.onMobDeath)
     events.RegisterListener(events.PlayerDeath{}, f.onPlayerDeath)
-    events.RegisterListener(events.MobIdle{}, f.idleMobHandler, events.First) // intercept first
     events.RegisterListener(events.PartyUpdated{}, f.onPartyChange)
     events.RegisterListener(events.NewRound{}, f.onNewRound)
 }
@@ -1571,16 +1569,16 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
     return true, nil
 }
 
-func (f *FollowModule) idleMobHandler(e events.Event) events.ListenerReturn {
-    // Return events.Cancel to suppress the built-in mob AI for this mob.
-    // Return events.Continue to let the default AI run after this handler.
-    return events.Continue
+func (f *FollowModule) idleMobHandler(c behaviour.IdleCheck) behaviour.IdleCheck {
+    // Set c.Skip to keep c.Mob from idling this round.
+    // Leave it unset to let its idle run.
+    return c
 }</code></pre>
     </div>
 
     <div class="callout callout-tip">
         <svg class="callout-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <p>Using <code>events.First</code> on <code>MobIdle</code> lets your module run its own AI logic and optionally cancel the built-in mob AI by returning <code>events.Cancel</code>. This is the correct pattern for any module that wants to drive mob behaviour.</p>
+        <p>Register on <code>behaviour.OnIdle</code> and set <code>Skip</code> to keep an NPC from idling (emotes, wandering, the way home) this round. It fires once a round for each NPC that is not held back, fighting or walking a path.</p>
     </div>
 </section>
 

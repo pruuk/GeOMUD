@@ -2063,16 +2063,6 @@ func (r *Room) RoundTick() {
 	}
 	settling.save(r)
 
-	// If any players are in the room
-	// Update all mobs in the room that they've seen a player
-	if r.PlayerCt() > 0 {
-		for _, mobId := range r.mobIds() {
-			if mob := mobs.GetInstance(mobId); mob != nil {
-				mob.BoredomCounter = 0
-			}
-		}
-	}
-
 	//
 	// Decay any corpses
 	//

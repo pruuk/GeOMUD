@@ -27,13 +27,12 @@ func Wander(mob *mobs.Mob) {
 		return
 	}
 
-	// If they aren't home and need to go home, do it.
+	// If they aren't home and have used up their MaxWander moves, go home.
+	// -1 means they can wander forever and never go home. 0 means they never wander.
 	if mob.Character.RoomId != mob.HomeRoomId {
-		if mob.MaxWander > -1 { // -1 means they can wander forever and never go home. 0 means they never wander.
-			if mob.WanderCount > mob.MaxWander {
-				PathTo(mob, `home`)
-				return
-			}
+		if mob.MaxWander > 0 && mob.WanderCount >= mob.MaxWander {
+			PathTo(mob, `home`)
+			return
 		}
 	}
 
@@ -57,7 +56,7 @@ func Wander(mob *mobs.Mob) {
 }
 
 // PathTo plans mob's path to the listed rooms, or "home", as the pathto
-// command did. It does not move: the idle round tick walks the path.
+// command did. It does not move: Tick walks the path.
 // A path that cannot be found is logged (Decision 3) and marks the NPC lost,
 // as before.
 func PathTo(mob *mobs.Mob, args string) {
@@ -121,7 +120,7 @@ func PathTo(mob *mobs.Mob, args string) {
 // Rest takes mob out of memory without ending it (slice 2b decision 15), as
 // the rest command did: an NPC in an ephemeral room ends there; any other
 // rests in its room. It comes back only when that room is next loaded from
-// disk. Boredom and charm expiry use it. In an ephemeral room, where nothing
+// disk. Charm expiry uses it. In an ephemeral room, where nothing
 // is saved, it cannot rest and ends as a death would: a slot that owns it
 // refills after its respawn rate.
 func Rest(mob *mobs.Mob, reason string) {

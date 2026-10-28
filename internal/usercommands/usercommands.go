@@ -185,7 +185,7 @@ var (
 		`spawn`:       {Spawn, false, true}, // Admin only
 
 		// Kept until Phase 5: it is player and NPC death. NewRound_AutoHeal, NewRound_DoCombat
-		// (players and mobs), NewRound_MobRoundTick and Buff_ApplyBuffs dispatch it.
+		// (players and mobs), NewRound_ActorUpkeep (runCharmExpiredCommand) and Buff_ApplyBuffs dispatch it.
 		`suicide`:  {Suicide, true, false},
 		`syslogs`:  {SysLogs, true, true},  // Admin only
 		`teleport`: {Teleport, true, true}, // Admin only

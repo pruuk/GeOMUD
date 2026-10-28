@@ -7,6 +7,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/stretchr/testify/assert"
@@ -75,6 +76,23 @@ func TestCharmExpiredRestEmotesBeforeTheNPCLeaves(t *testing.T) {
 	assert.Empty(t, inputs, "nothing is left queued for an NPC that is gone")
 	assert.Nil(t, mobs.GetInstance(id), "and then the NPC rests out of memory")
 	assert.Empty(t, r.GetMobs())
+}
+
+// An NPC at 0 health whose charm expires into a rest is gone, so the upkeep
+// must not go on to queue its suicide.
+func TestUpkeepDoesNotKillAnNPCThatRestedOnCharmExpiry(t *testing.T) {
+	mob, _ := charmTestNPC(t)
+	id := mob.Character.Id
+	mob.Character.Charm(ids.ID{}, 0, characters.CharmExpiredRest)
+	mob.Character.Health = 0
+	require.True(t, mob.Character.IsCharmed())
+
+	_, inputs := collect(t, mob, func() {
+		ActorUpkeep(events.NewRound{RoundNumber: 1})
+	})
+
+	assert.Nil(t, mobs.GetInstance(id), "the NPC rested out of memory")
+	assert.NotContains(t, inputs, "suicide")
 }
 
 func TestCharmExpiredWithoutRestQueuesTheCommands(t *testing.T) {

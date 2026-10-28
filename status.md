@@ -1,14 +1,13 @@
 # Status (updated 2026-10-28)
 
 ## Now
-- Phase 4b slice 5 (one combat path): built on `strip/phase-4b-5-one-combat-path`, PR open
-  (plan `2026-10-28-phase-4b-5-one-combat-path-plan.md`, inventory beside it)
-- Strip Phases 0-4 and Phase 4b slices 1, 2, 2b, 2c, 3 and 4 are merged (`gomud_strip_plan.md`; spec
+- Phase 4b slice 6 (one tick and behaviour): built on `strip/phase-4b-6-one-tick`, PR open
+  (plan `2026-10-28-phase-4b-6-one-tick-plan.md`, inventory beside it)
+- Strip Phases 0-4 and Phase 4b slices 1, 2, 2b, 2c, 3, 4 and 5 are merged (`gomud_strip_plan.md`; spec
   `2026-10-27-phase-4b-npcs-are-players-design.md`; slice plans in `docs/completed/`)
 
 ## Next
-1. Phase 4b slices 6-7 (one tick, output conversion); each plan reads the spec's
-   "Notes for later slices" first
+1. Phase 4b slice 7 (output conversion); the plan reads the spec's "Notes for later slices" first
 2. Phase 5: rules seam. Takes over the death stand-in (revive at 1 health, portal out of room 75;
    `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
    `professions`/`skills`/`spells` world folders, `set shopstyle`, `help spell` and the loot goblin
