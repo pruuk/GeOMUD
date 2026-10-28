@@ -5,12 +5,24 @@ import (
 	"os"
 	"testing"
 
+	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 )
 
 func TestMain(m *testing.M) {
 	mudlog.SetupLogger(nil, "", "", false)
-	os.Exit(m.Run())
+	// DataFiles is an empty temp dir, so a test that saves a mob template
+	// never writes into the repo (the default is relative to the package).
+	dataDir, err := os.MkdirTemp("", "mobs-datafiles-")
+	if err != nil {
+		panic(err)
+	}
+	if err := configs.AddOverlayOverrides(map[string]any{"FilePaths.DataFiles": dataDir}); err != nil {
+		panic(err)
+	}
+	code := m.Run()
+	os.RemoveAll(dataDir)
+	os.Exit(code)
 }
 
 type fakeFS struct {

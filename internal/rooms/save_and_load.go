@@ -229,14 +229,13 @@ func SaveRoomTemplate(roomTpl Room) error {
 		}
 	}
 
-	// Copy items and stashed items
-	for _, itm := range roomBeingReplaced.GetAllFloorItems(true) {
-		if itm.StashedBy > 0 {
-			roomTpl.AddItem(itm, true)
-		} else {
-			roomTpl.AddItem(itm, false)
-		}
-	}
+	// The room in play keeps its floor and stashed items, as they are: roomTpl
+	// is often the live room itself (most admin room commands), so appending
+	// would hold each item twice under one ID, and a template's items are not
+	// things to add to a room already in play. The lists are copies, so the
+	// replaced room and this one share no backing array.
+	roomTpl.Items = append([]items.Item(nil), roomBeingReplaced.Items...)
+	roomTpl.Stash = append([]items.Item(nil), roomBeingReplaced.Stash...)
 
 	// Copy gold on floor
 	roomTpl.Gold = roomBeingReplaced.Gold

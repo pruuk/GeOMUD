@@ -2,9 +2,6 @@ package mobs
 
 import (
 	"errors"
-
-	"github.com/GoMudEngine/GoMud/internal/configs"
-	"github.com/GoMudEngine/GoMud/internal/fileloader"
 )
 
 func CreateNewMobFile(newMobInfo Mob) (MobId, error) {
@@ -23,13 +20,7 @@ func CreateNewMobFile(newMobInfo Mob) (MobId, error) {
 		return 0, errors.New(`Could not find a new mob id to assign.`)
 	}
 
-	saveModes := []fileloader.SaveOption{}
-
-	if configs.GetFilePathsConfig().CarefulSaveFiles {
-		saveModes = append(saveModes, fileloader.SaveCareful)
-	}
-
-	if err := fileloader.SaveFlatFile[*Mob](configs.GetFilePathsConfig().DataFiles.String()+`/mobs`, &newMobInfo, saveModes...); err != nil {
+	if err := writeTemplateFile(&newMobInfo); err != nil {
 		return 0, err
 	}
 

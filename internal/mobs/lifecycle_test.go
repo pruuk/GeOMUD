@@ -19,6 +19,8 @@ func TestNPCsFromOneTemplateHaveTheirOwnItems(t *testing.T) {
 	tpl.Validate() // as at template load: the template's items get IDs
 	mobs[9003] = tpl
 	t.Cleanup(func() { delete(mobs, 9003) })
+	heldBefore := tpl.Character.Items[0].Id
+	weaponBefore := tpl.Character.Equipment.Weapon.Id
 
 	a := NewMobById(9003, 1)
 	b := NewMobById(9003, 1)
@@ -27,7 +29,15 @@ func TestNPCsFromOneTemplateHaveTheirOwnItems(t *testing.T) {
 	assert.NotEqual(t, a.Character.Items[0].Id, b.Character.Items[0].Id)
 	assert.NotEqual(t, tpl.Character.Items[0].Id, a.Character.Items[0].Id)
 	assert.NotEqual(t, a.Character.Equipment.Weapon.Id, b.Character.Equipment.Weapon.Id)
+	assert.NotEqual(t, tpl.Character.Equipment.Weapon.Id, a.Character.Equipment.Weapon.Id)
+	assert.NotEqual(t, tpl.Character.Equipment.Weapon.Id, b.Character.Equipment.Weapon.Id)
 	assert.False(t, a.Character.Items[0].Id.IsZero())
+
+	// The template is unchanged by instantiating it.
+	if assert.Len(t, tpl.Character.Items, 1) {
+		assert.Equal(t, heldBefore, tpl.Character.Items[0].Id)
+	}
+	assert.Equal(t, weaponBefore, tpl.Character.Equipment.Weapon.Id)
 }
 
 func TestAddInstanceAssignsIdStoresAndFires(t *testing.T) {
