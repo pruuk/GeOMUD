@@ -143,7 +143,6 @@ func LoadRoomTemplate(roomId int) *Room {
 	return retRoom
 }
 
-// See C. UPDATING EXISTING ROOM TEMPLATES
 // templateData is r as written to its template file: an item in a template is
 // not a thing yet, so it has no ID (Phase 4b slice 2c). The item lists and the
 // container map are copies, so the live room keeps its item IDs.
@@ -161,6 +160,7 @@ func (r Room) templateData() Room {
 	return r
 }
 
+// See C. UPDATING EXISTING ROOM TEMPLATES
 func SaveRoomTemplate(roomTpl Room) error {
 
 	if roomTpl.IsEphemeral() {
@@ -229,11 +229,14 @@ func SaveRoomTemplate(roomTpl Room) error {
 		}
 	}
 
-	// The room in play keeps its floor and stashed items, as they are: roomTpl
-	// is often the live room itself (most admin room commands), so appending
-	// would hold each item twice under one ID, and a template's items are not
-	// things to add to a room already in play. The lists are copies, so the
-	// replaced room and this one share no backing array.
+	// The room in play keeps its floor and stashed items, as they are. roomTpl
+	// is either the live room (mapper.go coordinate migration, and BuildRoom,
+	// which puts its template load in memory first) or a fresh template load
+	// (admin room commands on non-ephemeral rooms, the web room PATCH). A live
+	// room passed in would hold each item twice under one ID if the lists were
+	// appended; a template load would add the template's items to a room already
+	// in play. So the lists are replaced, as copies, and the replaced room and
+	// this one share no backing array.
 	roomTpl.Items = append([]items.Item(nil), roomBeingReplaced.Items...)
 	roomTpl.Stash = append([]items.Item(nil), roomBeingReplaced.Stash...)
 

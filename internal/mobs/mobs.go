@@ -388,17 +388,17 @@ func (m *Mob) GetSellPrice(item items.Item) int {
 			break
 		}
 
-		tmpItm := items.New(stockItm.ItemId)
-		if tmpItm.ItemId == 0 {
+		stockSpec := items.GetItemSpec(stockItm.ItemId)
+		if stockSpec == nil {
 			continue
 		}
 
-		if !likesType && tmpItm.GetSpec().Type == itemType {
+		if !likesType && stockSpec.Type == itemType {
 			likesType = true
 			priceScale += 0.5
 		}
 
-		if !likesSubtype && tmpItm.GetSpec().Subtype == itemSubtype {
+		if !likesSubtype && stockSpec.Subtype == itemSubtype {
 			likesSubtype = true
 			priceScale += 0.5
 		}
