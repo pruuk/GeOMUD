@@ -24,6 +24,7 @@ type recorder struct {
 
 func (r *recorder) Account() *accounts.Account       { return r.acc }
 func (r *recorder) Perceive(p perception.Perception) { r.got = append(r.got, p) }
+func (r *recorder) Tick()                            {}
 
 // world builds rooms in memory and bodies in them for one test.
 type world struct {
