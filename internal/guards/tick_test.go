@@ -51,4 +51,33 @@ func TestOneActorTick(t *testing.T) {
 			t.Errorf("control: %s not found; the guard may be scanning the wrong place", key)
 		}
 	}
+
+	// Positive control: main registers the NPC behaviour tick. Without
+	// behaviour.Init() no NPC ever idles.
+	mainFile := goFiles(t)["main.go"]
+	if mainFile == nil {
+		t.Fatal("control: main.go not found; the guard may be scanning the wrong place")
+	}
+	initCalled := false
+	for _, d := range mainFile.Decls {
+		fd, ok := d.(*ast.FuncDecl)
+		if !ok || fd.Name.Name != "main" || fd.Body == nil {
+			continue
+		}
+		ast.Inspect(fd.Body, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Init" {
+				if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "behaviour" {
+					initCalled = true
+				}
+			}
+			return true
+		})
+	}
+	if !initCalled {
+		t.Errorf("main does not call behaviour.Init; NPCs would never idle")
+	}
 }
