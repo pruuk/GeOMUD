@@ -1,20 +1,20 @@
 package usercommands
 
 import (
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
-func Flee(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Flee(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	if user.Character.Aggro == nil || user.Character.Aggro.Type != characters.Flee {
-		user.SendText(`You attempt to flee...`)
+	if actor.Character.Aggro == nil || actor.Character.Aggro.Type != characters.Flee {
+		tell(actor, `You attempt to flee...`)
 
-		user.Character.Aggro = &characters.Aggro{}
-		user.Character.Aggro.Type = characters.Flee
-		events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
+		actor.Character.Aggro = &characters.Aggro{}
+		actor.Character.Aggro.Type = characters.Flee
+		events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 	}
 
 	return true, nil

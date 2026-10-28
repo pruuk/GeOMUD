@@ -5,24 +5,26 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
 // Prints message to screen
-func Print(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Print(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	events.AddToQueue(events.Message{
-		UserId: user.UserId,
-		Text:   rest,
-	})
+	if user := actor.Controller().Account(); user != nil {
+		events.AddToQueue(events.Message{
+			UserId: user.UserId,
+			Text:   rest,
+		})
+	}
 
 	return true, nil
 }
 
 // PrintLine (command `printline`) is just a simple measuring tool/ruler for layout purposes
-func PrintLine(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func PrintLine(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	sectionSize := 20
 
@@ -54,7 +56,7 @@ func PrintLine(rest string, user *accounts.Account, room *rooms.Room, flags even
 		}
 
 		finalOutput = strings.ReplaceAll(finalOutput, `=`, `<ansi fg="8">=</ansi>`)
-		user.SendText(finalOutput)
+		tell(actor, finalOutput)
 	}
 
 	return true, nil

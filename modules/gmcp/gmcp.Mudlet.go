@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -341,7 +342,9 @@ func (g *GMCPMudletModule) checkClientCommand(rest string, user *accounts.Accoun
 
 		// Show Mudlet help
 		user.SendText("\n\n<ansi fg=\"cyan-bold\">We have detected you are using Mudlet as a client.</ansi>\n")
-		usercommands.Help("mudletui", user, room, flags)
+		if actor := actors.ByUserId(user.UserId); actor != nil {
+			usercommands.Help("mudletui", actor, room, flags)
+		}
 	}
 	return true, nil
 }

@@ -1,25 +1,25 @@
 package usercommands
 
 import (
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
 // Default is a special command that tries to contextually pick a default action for a room.
 // The failover is to "look"
-func Default(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Default(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	// If a storage location, "storage"
 	if room.HasTag(`storage`) {
 		// Dispatch via the event queue so we do not create an init cycle
 		// with the storage module's RegisterCommand call.
-		user.Command(`storage`)
+		queue(actor, `storage`)
 		return true, nil
 	}
 
 	// Default to "look"
-	Look(``, user, room, flags)
+	accountCommand(Look)(``, actor, room, flags)
 
 	return true, nil
 }

@@ -5,14 +5,14 @@ import (
 	"math"
 	"sort"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Visited(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Visited(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	type ZoneRecord struct {
 		Name       string
@@ -38,7 +38,7 @@ func Visited(rest string, user *accounts.Account, room *rooms.Room, flags events
 			continue
 		}
 
-		visited, total := user.Character.ZoneVisitProgress(zoneName, zCfg.RoomIds)
+		visited, total := actor.Character.ZoneVisitProgress(zoneName, zCfg.RoomIds)
 		if visited == 0 {
 			continue
 		}
@@ -60,8 +60,8 @@ func Visited(rest string, user *accounts.Account, room *rooms.Room, flags events
 		Records:      records,
 	}
 
-	tplTxt, _ := templates.Process("character/visited", info, user.UserId)
-	user.SendText(tplTxt)
+	tplTxt, _ := templates.Process("character/visited", info, excludeId(actor))
+	tell(actor, tplTxt)
 
 	return true, nil
 }

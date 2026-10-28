@@ -5,13 +5,14 @@ import (
 	"strconv"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/language"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 )
 
-func Online(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Online(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	headers := []string{
 		language.T(`User.Name`),
@@ -22,7 +23,11 @@ func Online(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		language.T(`Role`),
 	}
 
-	if user.Role != accounts.RoleUser {
+	// Staff columns are shown by the account's role; an NPC has none.
+	user := actor.Controller().Account()
+	isStaff := user != nil && user.Role != accounts.RoleUser
+
+	if isStaff {
 		headers = append([]string{language.T(`UserId`)}, headers...)
 		headers = append(headers, []string{language.T(`Zone`), language.T(`RoomId`), language.T(`Conn Type`)}...)
 	}
@@ -74,7 +79,7 @@ func Online(rest string, user *accounts.Account, room *rooms.Room, flags events.
 				`<ansi fg="role-` + permClass + `-bold">%s</ansi>`,
 			}
 
-			if user.Role != accounts.RoleUser {
+			if isStaff {
 				row = append([]string{strconv.Itoa(u.UserId)}, row...)
 				row = append(row, []string{u.Character.Zone, strconv.Itoa(u.Character.RoomId), onlineInfo.ConnType}...)
 
@@ -94,8 +99,8 @@ func Online(rest string, user *accounts.Account, room *rooms.Room, flags events.
 	}
 
 	onlineResultsTable := templates.GetTable(tableTitle, headers, rows, allFormatting...)
-	tplTxt, _ := templates.Process("tables/generic", onlineResultsTable, user.UserId)
-	user.SendText(tplTxt)
+	tplTxt, _ := templates.Process("tables/generic", onlineResultsTable, excludeId(actor))
+	tell(actor, tplTxt)
 
 	return true, nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -11,7 +12,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Consider(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Consider(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(rest)
 
@@ -22,15 +23,15 @@ func Consider(rest string, user *accounts.Account, room *rooms.Room, flags event
 	lookAt := args[0]
 
 	playerId, mobId := room.FindByName(lookAt)
-	if playerId == user.UserId {
+	if playerId == excludeId(actor) {
 		playerId = 0
 	}
 
 	if playerId == 0 && mobId.IsZero() {
 		if lookAt == `` {
-			user.SendText(`<ansi fg="command">consider</ansi> whom??`)
+			tell(actor, `<ansi fg="command">consider</ansi> whom??`)
 		} else {
-			user.SendText(`<ansi fg="mobname">` + lookAt + `</ansi> can't be found.`)
+			tell(actor, `<ansi fg="mobname">`+lookAt+`</ansi> can't be found.`)
 		}
 		return true, nil
 	}
@@ -41,12 +42,12 @@ func Consider(rest string, user *accounts.Account, room *rooms.Room, flags event
 
 	if playerId > 0 {
 		u := accounts.GetByUserId(playerId)
-		odds = combat.CombatOdds(*user.Character, *u.Character)
+		odds = combat.CombatOdds(*actor.Character, *u.Character)
 		considerType = "user"
 		considerName = u.Character.Name
 	} else {
 		m := mobs.GetInstance(mobId)
-		odds = combat.CombatOdds(*user.Character, m.Character)
+		odds = combat.CombatOdds(*actor.Character, m.Character)
 		considerType = "mob"
 		considerName = m.Character.Name
 	}
@@ -72,10 +73,10 @@ func Consider(rest string, user *accounts.Account, room *rooms.Room, flags event
 		prediction = `<ansi fg="red-bold">YOU WILL DIE</ansi>`
 	}
 
-	user.SendText(
+	tell(actor,
 		fmt.Sprintf(`You consider <ansi fg="%sname">%s</ansi>...`, considerType, considerName),
 	)
-	user.SendText(
+	tell(actor,
 		fmt.Sprintf(`It is estimated that your chances to kill <ansi fg="%sname">%s</ansi> are %s`, considerType, considerName, prediction),
 	)
 

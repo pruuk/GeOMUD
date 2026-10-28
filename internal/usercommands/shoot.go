@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -15,10 +16,10 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	if user.Character.Equipment.Weapon.GetSpec().Subtype != items.Shooting {
-		user.SendText(`You don't have a shooting weapon.`)
+	if actor.Character.Equipment.Weapon.GetSpec().Subtype != items.Shooting {
+		tell(actor, `You don't have a shooting weapon.`)
 		return true, nil
 	}
 
@@ -30,7 +31,7 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 	args := util.SplitButRespectQuotes(rest)
 
 	if len(args) < 2 {
-		user.SendText(`Syntax: <ansi fg="command">shoot [target] [exit]</ansi>`)
+		tell(actor, `Syntax: <ansi fg="command">shoot [target] [exit]</ansi>`)
 		return true, nil
 	}
 
@@ -44,7 +45,7 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 		exitInfo, _ := room.GetExitInfo(exitName)
 		if exitInfo.Lock.IsLocked() {
-			user.SendText(fmt.Sprintf("The %s exit is locked.", exitName))
+			tell(actor, fmt.Sprintf("The %s exit is locked.", exitName))
 			return true, nil
 		}
 
@@ -52,21 +53,21 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 			attackPlayerId, attackMobId = adjacentRoom.FindByName(strings.Join(args, ` `))
 		}
 	} else {
-		user.SendText(`Could not find where you wanted to shoot`)
+		tell(actor, `Could not find where you wanted to shoot`)
 		return true, nil
 	}
 
 	if attackPlayerId == 0 && attackMobId.IsZero() {
-		user.SendText(`Could not find your target.`)
+		tell(actor, `Could not find your target.`)
 		return true, nil
 	}
 
-	isSneaking := user.Character.HasBuffFlag("hidden")
+	isSneaking := actor.Character.HasBuffFlag("hidden")
 
 	/*
-		combatAddlWaitRounds := user.Character.Equipment.Weapon.GetSpec().WaitRounds + user.Character.Equipment.Weapon.GetSpec().WaitRounds
+		combatAddlWaitRounds := actor.Character.Equipment.Weapon.GetSpec().WaitRounds + actor.Character.Equipment.Weapon.GetSpec().WaitRounds
 		attkType := characters.DefaultAttack
-		if user.Character.Equipment.Weapon.GetSpec().Subtype == items.Shooting {
+		if actor.Character.Equipment.Weapon.GetSpec().Subtype == items.Shooting {
 			attkType = characters.Shooting
 		}
 	*/
@@ -77,21 +78,21 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 		if m != nil {
 
-			if m.Character.IsCharmed(user.Character.Id) {
-				user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
+			if m.Character.IsCharmed(actor.Character.Id) {
+				tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
 				return true, nil
 			}
 
-			user.Character.SetAggroRemote(exitName, attackMobId, characters.Shooting)
+			actor.Character.SetAggroRemote(exitName, attackMobId, characters.Shooting)
 
-			user.SendText(
+			tell(actor,
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="mobname">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, m.Character.Name, exitName),
 			)
 
 			if !isSneaking {
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to shoot at <ansi fg="mobname">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, m.Character.Name, exitName),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to shoot at <ansi fg="mobname">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, m.Character.Name, exitName),
+					excludeId(actor),
 				)
 			}
 
@@ -103,24 +104,26 @@ func Shoot(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 		if p != nil {
 
-			if partyInfo := parties.Get(user.UserId); partyInfo != nil {
-				if partyInfo.IsMember(attackPlayerId) {
-					user.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is in your party!`, p.Character.Name))
-					return true, nil
+			if user := actor.Controller().Account(); user != nil {
+				if partyInfo := parties.Get(user.UserId); partyInfo != nil {
+					if partyInfo.IsMember(attackPlayerId) {
+						tell(actor, fmt.Sprintf(`<ansi fg="username">%s</ansi> is in your party!`, p.Character.Name))
+						return true, nil
+					}
 				}
 			}
 
-			user.Character.SetAggroRemote(exitName, p.Character.Id, characters.Shooting)
+			actor.Character.SetAggroRemote(exitName, p.Character.Id, characters.Shooting)
 
-			user.SendText(
+			tell(actor,
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="username">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, p.Character.Name, exitName),
 			)
 
 			if !isSneaking {
 
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to shoot at <ansi fg="username">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, user.Character.Name, p.Character.Name, exitName),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to shoot at <ansi fg="username">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, p.Character.Name, exitName),
+					excludeId(actor),
 				)
 
 			}

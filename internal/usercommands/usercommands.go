@@ -7,6 +7,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
+	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/keywords"
@@ -71,6 +72,21 @@ func excludeId(actor *actors.Actor) int {
 	return 0
 }
 
+// queue queues input text for the actor's body, ready after the optional wait
+// in seconds. It queues what Account.Command queues (Decision 11).
+func queue(actor *actors.Actor, text string, wait ...float64) {
+	readyTurn := util.GetTurnCount()
+	if len(wait) > 0 {
+		readyTurn += uint64(float64(configs.GetTimingConfig().SecondsToTurns(1)) * wait[0])
+	}
+
+	events.AddToQueue(events.Input{
+		ActorId:   actor.Id,
+		InputText: text,
+		ReadyTurn: readyTurn,
+	})
+}
+
 type FunctionExporter interface {
 	GetExportedFunction(funcName string) (any, bool)
 }
@@ -93,46 +109,46 @@ var (
 
 	userCommands map[string]CommandAccess = map[string]CommandAccess{
 		`alias`:       {Alias, true, false},
-		`attack`:      {accountCommand(Attack), false, false},
+		`attack`:      {Attack, false, false},
 		`badcommands`: {BadCommands, true, true}, // Admin only
-		`biome`:       {accountCommand(Biome), true, false},
+		`biome`:       {Biome, true, false},
 		`broadcast`:   {accountCommand(Broadcast), true, false},
 		`build`:       {Build, false, true},        // Admin only
 		`command`:     {AdminCommand, false, true}, // Admin only
 		`copyover`:    {Copyover, true, true},      // Admin only
-		`consider`:    {accountCommand(Consider), true, false},
-		`default`:     {accountCommand(Default), false, false},
+		`consider`:    {Consider, true, false},
+		`default`:     {Default, false, false},
 		`drop`:        {accountCommand(Drop), true, false},
 		`emote`:       {accountCommand(Emote), true, false},
 		`equip`:       {accountCommand(Equip), false, false},
-		`flee`:        {accountCommand(Flee), false, false},
+		`flee`:        {Flee, false, false},
 		`get`:         {accountCommand(Get), false, false},
 		`give`:        {accountCommand(Give), false, false},
 		`go`:          {accountCommand(Go), false, false},
 		`grant`:       {Grant, true, true}, // Admin only
-		`help`:        {accountCommand(Help), true, false},
-		`keyring`:     {accountCommand(KeyRing), true, false},
+		`help`:        {Help, true, false},
+		`keyring`:     {KeyRing, true, false},
 		`history`:     {History, true, false},
-		`inventory`:   {accountCommand(Inventory), true, false},
+		`inventory`:   {Inventory, true, false},
 		`item`:        {Item, true, true},   // Admin only
 		`locate`:      {Locate, true, true}, // Admin only
-		`lock`:        {accountCommand(Lock), false, false},
+		`lock`:        {Lock, false, false},
 		`look`:        {accountCommand(Look), true, false},
 		`macros`:      {Macros, true, false},
 		`mob`:         {Mob, true, true},    // Admin only
 		`modify`:      {Modify, true, true}, // Admin only
-		`motd`:        {accountCommand(Motd), true, false},
+		`motd`:        {Motd, true, false},
 		`mute`:        {Mute, true, true},
 		`noop`:        {accountCommand(Noop), true, false},
-		`online`:      {accountCommand(Online), true, false},
+		`online`:      {Online, true, false},
 		`party`:       {Party, true, false},
 		`password`:    {Password, true, false},
 		`prepare`:     {Prepare, true, true}, // Admin only
-		`print`:       {accountCommand(Print), true, false},
-		`printline`:   {accountCommand(PrintLine), true, false},
+		`print`:       {Print, true, false},
+		`printline`:   {PrintLine, true, false},
 		`put`:         {accountCommand(Put), false, false},
 		`quit`:        {Quit, true, false},
-		`read`:        {accountCommand(Read), false, false},
+		`read`:        {Read, false, false},
 		`reload`:      {Reload, true, true}, // Admin only
 		`remove`:      {accountCommand(Remove), false, false},
 		`rename`:      {Rename, false, true},     // Admin only
@@ -142,21 +158,21 @@ var (
 		`say`:         {accountCommand(Say), true, false},
 		`server`:      {Server, false, true}, // Admin only
 		`set`:         {Set, true, false},
-		`shoot`:       {accountCommand(Shoot), false, false},
+		`shoot`:       {Shoot, false, false},
 		`shout`:       {accountCommand(Shout), true, false},
-		`show`:        {accountCommand(Show), true, false},
+		`show`:        {Show, true, false},
 		`spawn`:       {Spawn, false, true}, // Admin only
 
 		// Kept until Phase 5: NewRound_AutoHeal and NewRound_DoCombat dispatch it as player death.
 		`suicide`:  {Suicide, true, false},
 		`syslogs`:  {SysLogs, true, true},  // Admin only
 		`teleport`: {Teleport, true, true}, // Admin only
-		`unlock`:   {accountCommand(Unlock), false, false},
+		`unlock`:   {Unlock, false, false},
 		`unmute`:   {UnMute, true, true}, // Admin only
-		`whisper`:  {accountCommand(Whisper), true, false},
-		`who`:      {accountCommand(Who), true, false},
+		`whisper`:  {Whisper, true, false},
+		`who`:      {Who, true, false},
 		`visit`:    {Visit, true, true}, // Admin only
-		`visited`:  {accountCommand(Visited), true, false},
+		`visited`:  {Visited, true, false},
 		`zone`:     {Zone, false, true}, // Admin only
 		// Special command only used upon creating a new account
 		`start`: {Start, false, false},

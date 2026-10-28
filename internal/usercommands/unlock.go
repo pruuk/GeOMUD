@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Unlock(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Unlock(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) < 1 {
-		user.SendText("Unlock what?")
+		tell(actor, "Unlock what?")
 		return true, nil
 	}
 
@@ -28,25 +28,25 @@ func Unlock(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		container := room.Containers[containerName]
 
 		if !container.Lock.IsLocked() {
-			user.SendText("That's not locked.")
+			tell(actor, "That's not locked.")
 			return true, nil
 		}
 
 		lockId := fmt.Sprintf(`%d-%s`, room.RoomId, containerName)
-		hasKey, _ := user.Character.HasKey(lockId, int(container.Lock.Difficulty))
+		hasKey, _ := actor.Character.HasKey(lockId, int(container.Lock.Difficulty))
 
 		var backpackKeyItm items.Item = items.Item{}
 		var hasBackpackKey bool = false
 		if !hasKey {
-			backpackKeyItm, hasBackpackKey = user.Character.FindKeyInBackpack(lockId)
+			backpackKeyItm, hasBackpackKey = actor.Character.FindKeyInBackpack(lockId)
 		}
 
 		if hasKey {
 			container.Lock.SetUnlocked()
 			room.Containers[containerName] = container
 
-			user.SendText(fmt.Sprintf(`You use a key to unlock the <ansi fg="container">%s</ansi>.`, containerName))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="container">%s</ansi>.`, user.Character.Name, containerName), user.UserId)
+			tell(actor, fmt.Sprintf(`You use a key to unlock the <ansi fg="container">%s</ansi>.`, containerName))
+			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="container">%s</ansi>.`, actor.Character.Name, containerName), excludeId(actor))
 		} else if hasBackpackKey {
 
 			itmSpec := backpackKeyItm.GetSpec()
@@ -56,21 +56,21 @@ func Unlock(rest string, user *accounts.Account, room *rooms.Room, flags events.
 
 			// Key entries look like:
 			// "key-<roomid>-<exitname>": "<itemid>"
-			user.Character.SetKey(`key-`+lockId, fmt.Sprintf(`%d`, backpackKeyItm.ItemId))
-			user.Character.RemoveItem(backpackKeyItm)
+			actor.Character.SetKey(`key-`+lockId, fmt.Sprintf(`%d`, backpackKeyItm.ItemId))
+			actor.Character.RemoveItem(backpackKeyItm)
 
 			events.AddToQueue(events.ItemOwnership{
-				ActorId: user.Character.Id,
+				ActorId: actor.Character.Id,
 				Item:    backpackKeyItm,
 				Gained:  false,
 			})
 
-			user.SendText(fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="container">%s</ansi>, and add it to your key ring for the future.`, itmSpec.Name, containerName))
+			tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="container">%s</ansi>, and add it to your key ring for the future.`, itmSpec.Name, containerName))
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="container">%s</ansi>.`, user.Character.Name, containerName),
-				user.UserId)
+				fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="container">%s</ansi>.`, actor.Character.Name, containerName),
+				excludeId(actor))
 		} else {
-			user.SendText(`You do not have the key for that. Maybe you could <ansi fg="command">picklock</ansi> the lock.`)
+			tell(actor, `You do not have the key for that. Maybe you could <ansi fg="command">picklock</ansi> the lock.`)
 		}
 
 		return true, nil
@@ -80,25 +80,25 @@ func Unlock(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		exitInfo, _ := room.GetExitInfo(exitName)
 
 		if !exitInfo.Lock.IsLocked() {
-			user.SendText("That's not locked.")
+			tell(actor, "That's not locked.")
 			return true, nil
 		}
 
 		lockId := fmt.Sprintf(`%d-%s`, room.RoomId, exitName)
-		hasKey, _ := user.Character.HasKey(lockId, int(exitInfo.Lock.Difficulty))
+		hasKey, _ := actor.Character.HasKey(lockId, int(exitInfo.Lock.Difficulty))
 
 		var backpackKeyItm items.Item = items.Item{}
 		var hasBackpackKey bool = false
 		if !hasKey {
-			backpackKeyItm, hasBackpackKey = user.Character.FindKeyInBackpack(lockId)
+			backpackKeyItm, hasBackpackKey = actor.Character.FindKeyInBackpack(lockId)
 		}
 
 		if hasKey {
 			exitInfo.Lock.SetUnlocked()
 			room.SetExitLock(exitName, false)
 
-			user.SendText(fmt.Sprintf(`You use a key to unlock the <ansi fg="exit">%s</ansi> lock.`, exitName))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> lock`, user.Character.Name, exitName), user.UserId)
+			tell(actor, fmt.Sprintf(`You use a key to unlock the <ansi fg="exit">%s</ansi> lock.`, exitName))
+			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> lock`, actor.Character.Name, exitName), excludeId(actor))
 		} else if hasBackpackKey {
 
 			itmSpec := backpackKeyItm.GetSpec()
@@ -108,28 +108,28 @@ func Unlock(rest string, user *accounts.Account, room *rooms.Room, flags events.
 
 			// Key entries look like:
 			// "key-<roomid>-<exitname>": "<itemid>"
-			user.Character.SetKey(`key-`+lockId, fmt.Sprintf(`%d`, backpackKeyItm.ItemId))
-			user.Character.RemoveItem(backpackKeyItm)
+			actor.Character.SetKey(`key-`+lockId, fmt.Sprintf(`%d`, backpackKeyItm.ItemId))
+			actor.Character.RemoveItem(backpackKeyItm)
 
 			events.AddToQueue(events.ItemOwnership{
-				ActorId: user.Character.Id,
+				ActorId: actor.Character.Id,
 				Item:    backpackKeyItm,
 				Gained:  false,
 			})
 
-			user.SendText(fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
+			tell(actor, fmt.Sprintf(`You use your <ansi fg="item">%s</ansi> to unlock the <ansi fg="exit">%s</ansi> exit, and add it to your key ring for the future.`, itmSpec.Name, exitName))
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> lock`, user.Character.Name, exitName),
-				user.UserId)
+				fmt.Sprintf(`<ansi fg="username">%s</ansi> uses a key to unlock the <ansi fg="exit">%s</ansi> lock`, actor.Character.Name, exitName),
+				excludeId(actor))
 		} else {
-			user.SendText(`You do not have the key for that. Maybe you could <ansi fg="command">picklock</ansi> the lock.`)
+			tell(actor, `You do not have the key for that. Maybe you could <ansi fg="command">picklock</ansi> the lock.`)
 		}
 
 		return true, nil
 
 	}
 
-	user.SendText("There is no such exit or container.")
+	tell(actor, "There is no such exit or container.")
 	return true, nil
 
 }

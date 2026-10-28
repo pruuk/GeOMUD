@@ -77,7 +77,7 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 			}
 
 			question.RejectResponse()
-			return accountCommand(Help)(helpCmd+` `+helpRest, actor, room, flags)
+			return Help(helpCmd+` `+helpRest, actor, room, flags)
 		}
 
 		raceNameSelection := question.Response

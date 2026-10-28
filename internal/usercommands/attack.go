@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -13,13 +14,20 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+
+	// Parties and party auto-attack belong to accounts; user is nil for an NPC.
+	user := actor.Controller().Account()
+	selfUserId := excludeId(actor)
 
 	attackPlayerId := 0
 	attackMobId := ids.ID{}
 
 	if rest == `` {
-		partyInfo := parties.Get(user.UserId)
+		var partyInfo *parties.Party
+		if user != nil {
+			partyInfo = parties.Get(user.UserId)
+		}
 
 		// If no argument supplied, attack whoever is attacking the player currently.
 		for _, mId := range room.GetMobs(rooms.FindFightingPlayer) {
@@ -28,7 +36,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 				continue
 			}
 
-			if m.Character.Aggro.Target == user.Character.Id {
+			if m.Character.Aggro.Target == actor.Character.Id {
 				attackMobId = m.Character.Id
 				break
 			}
@@ -48,7 +56,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 					continue
 				}
 
-				if u.Character.Aggro.Target == user.Character.Id {
+				if u.Character.Aggro.Target == actor.Character.Id {
 					attackPlayerId = u.UserId
 					break
 				}
@@ -95,7 +103,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 			allMobs := room.GetMobs()
 			allPlayers := []int{}
 			for _, userId := range room.GetPlayers() {
-				if userId == user.UserId {
+				if userId == selfUserId {
 					continue
 				}
 				allPlayers = append(allPlayers, userId)
@@ -125,7 +133,7 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 
 			allPlayers := []int{}
 			for _, userId := range room.GetPlayers() {
-				if userId == user.UserId {
+				if userId == selfUserId {
 					continue
 				}
 				allPlayers = append(allPlayers, userId)
@@ -141,16 +149,16 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		attackPlayerId, attackMobId = room.FindByName(rest)
 	}
 
-	if attackPlayerId == user.UserId { // Can't attack self!
+	if attackPlayerId == selfUserId { // Can't attack self!
 		attackPlayerId = 0
 	}
 
 	if attackMobId.IsZero() && attackPlayerId == 0 {
-		user.SendText("You attack the darkness!")
+		tell(actor, "You attack the darkness!")
 		return true, nil
 	}
 
-	isSneaking := user.Character.HasBuffFlag("hidden")
+	isSneaking := actor.Character.HasBuffFlag("hidden")
 
 	/*
 		combatAddlWaitRounds := user.Character.Equipment.Weapon.GetSpec().WaitRounds + user.Character.Equipment.Weapon.GetSpec().WaitRounds
@@ -165,39 +173,41 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 		m := mobs.GetInstance(attackMobId)
 
 		if m != nil {
-			if m.Character.IsCharmed(user.Character.Id) {
-				user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
+			if m.Character.IsCharmed(actor.Character.Id) {
+				tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
 				return true, nil
 			}
 
-			if party := parties.Get(user.UserId); party != nil {
-				if party.IsLeader(user.UserId) {
-					for _, id := range party.GetAutoAttackUserIds() {
-						if id == user.UserId {
-							continue
-						}
-						if partyUser := accounts.GetByUserId(id); partyUser != nil {
-							if partyUser.Character.RoomId == user.Character.RoomId {
-
-								partyUser.Command(fmt.Sprintf(`attack %s`, attackMobId)) // a body ID token names this exact mob
-
+			if user != nil {
+				if party := parties.Get(user.UserId); party != nil {
+					if party.IsLeader(user.UserId) {
+						for _, id := range party.GetAutoAttackUserIds() {
+							if id == user.UserId {
+								continue
 							}
-						}
+							if partyUser := accounts.GetByUserId(id); partyUser != nil {
+								if partyUser.Character.RoomId == actor.Character.RoomId {
 
+									partyUser.Command(fmt.Sprintf(`attack %s`, attackMobId)) // a body ID token names this exact mob
+
+								}
+							}
+
+						}
 					}
 				}
 			}
 
-			user.Character.SetAggro(attackMobId, characters.DefaultAttack)
+			actor.Character.SetAggro(attackMobId, characters.DefaultAttack)
 
-			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
+			events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 
-			user.SendText(fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, m.Character.Name))
+			tell(actor, fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, m.Character.Name))
 
 			if !isSneaking {
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight <ansi fg="mobname">%s</ansi>.`, user.Character.Name, m.Character.Name),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight <ansi fg="mobname">%s</ansi>.`, actor.Character.Name, m.Character.Name),
+					selfUserId,
 				)
 			}
 
@@ -207,48 +217,50 @@ func Attack(rest string, user *accounts.Account, room *rooms.Room, flags events.
 
 		if p := accounts.GetByUserId(attackPlayerId); p != nil {
 
-			if pvpErr := room.CanPvp(user, p); pvpErr != nil {
-				user.SendText(pvpErr.Error())
+			if pvpErr := room.CanPvp(actor.Character, p.Character); pvpErr != nil {
+				tell(actor, pvpErr.Error())
 				return true, nil
 			}
 
-			if partyInfo := parties.Get(user.UserId); partyInfo != nil {
-				if partyInfo.IsMember(attackPlayerId) {
-					user.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is in your party!`, p.Character.Name))
-					return true, nil
+			if user != nil {
+				if partyInfo := parties.Get(user.UserId); partyInfo != nil {
+					if partyInfo.IsMember(attackPlayerId) {
+						tell(actor, fmt.Sprintf(`<ansi fg="username">%s</ansi> is in your party!`, p.Character.Name))
+						return true, nil
+					}
 				}
-			}
 
-			if party := parties.Get(user.UserId); party != nil {
-				if party.IsLeader(user.UserId) {
-					for _, id := range party.GetAutoAttackUserIds() {
-						if id == user.UserId {
-							continue
-						}
-						if partyUser := accounts.GetByUserId(id); partyUser != nil {
-							if partyUser.Character.RoomId == user.Character.RoomId {
-								partyUser.Command(fmt.Sprintf(`attack %s`, p.Character.Id)) // a body ID token names this exact player
+				if party := parties.Get(user.UserId); party != nil {
+					if party.IsLeader(user.UserId) {
+						for _, id := range party.GetAutoAttackUserIds() {
+							if id == user.UserId {
+								continue
+							}
+							if partyUser := accounts.GetByUserId(id); partyUser != nil {
+								if partyUser.Character.RoomId == actor.Character.RoomId {
+									partyUser.Command(fmt.Sprintf(`attack %s`, p.Character.Id)) // a body ID token names this exact player
+								}
 							}
 						}
 					}
 				}
 			}
 
-			user.Character.SetAggro(p.Character.Id, characters.DefaultAttack)
+			actor.Character.SetAggro(p.Character.Id, characters.DefaultAttack)
 
-			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
+			events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 
-			user.SendText(fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, p.Character.Name))
+			tell(actor, fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, p.Character.Name))
 
 			if !isSneaking {
 
 				p.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight you!`, user.Character.Name),
+					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight you!`, actor.Character.Name),
 				)
 
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight <ansi fg="username">%s</ansi>.`, user.Character.Name, p.Character.Name),
-					user.UserId, attackPlayerId)
+					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to fight <ansi fg="username">%s</ansi>.`, actor.Character.Name, p.Character.Name),
+					selfUserId, attackPlayerId)
 			}
 
 		}

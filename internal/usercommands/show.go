@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
@@ -12,14 +13,14 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Show(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	rest = util.StripPrepositions(rest)
 
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) < 2 {
-		user.SendText("Show what? To whom?")
+		tell(actor, "Show what? To whom?")
 		return true, nil
 	}
 
@@ -31,10 +32,10 @@ func Show(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 	var objectName string = strings.Join(args, " ")
 
 	// Check whether the user has an item in their inventory that matches
-	showItem, found = user.Character.FindInBackpack(objectName)
+	showItem, found = actor.Character.FindInBackpack(objectName)
 
 	if !found {
-		user.SendText(fmt.Sprintf("You don't have a %s to show.", objectName))
+		tell(actor, fmt.Sprintf("You don't have a %s to show.", objectName))
 		return true, nil
 	}
 
@@ -42,7 +43,7 @@ func Show(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 	if playerId > 0 {
 
-		user.Character.CancelBuffsWithFlag("hidden")
+		actor.Character.CancelBuffsWithFlag("hidden")
 
 		targetUser := accounts.GetByUserId(playerId)
 
@@ -50,13 +51,13 @@ func Show(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 		if showItem.ItemId > 0 {
 
 			// Tell the shower
-			user.SendText(
+			tell(actor,
 				fmt.Sprintf(`You show the <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, showItem.DisplayName(), targetUser.Character.Name),
 			)
 
 			// Tell the Showee
 			targetUser.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> shows you their <ansi fg="item">%s</ansi>.`, user.Character.Name, showItem.DisplayName()),
+				fmt.Sprintf(`<ansi fg="username">%s</ansi> shows you their <ansi fg="item">%s</ansi>.`, actor.Character.Name, showItem.DisplayName()),
 			)
 
 			targetUser.SendText(
@@ -65,12 +66,12 @@ func Show(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 			// Tell the rest of the room
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> shows their <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, user.Character.Name, showItem.DisplayName(), targetUser.Character.Name),
+				fmt.Sprintf(`<ansi fg="username">%s</ansi> shows their <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, actor.Character.Name, showItem.DisplayName(), targetUser.Character.Name),
 				targetUser.UserId,
-				user.UserId)
+				excludeId(actor))
 
 		} else {
-			user.SendText("Something went wrong.")
+			tell(actor, "Something went wrong.")
 		}
 
 		return true, nil
@@ -82,7 +83,7 @@ func Show(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 	//
 	if !mobId.IsZero() {
 
-		user.Character.CancelBuffsWithFlag("hidden")
+		actor.Character.CancelBuffsWithFlag("hidden")
 
 		targetMob := mobs.GetInstance(mobId)
 
@@ -90,17 +91,17 @@ func Show(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 
 			if showItem.ItemId > 0 {
 
-				user.SendText(
+				tell(actor,
 					fmt.Sprintf(`You show the <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, showItem.DisplayName(), targetMob.Character.Name),
 				)
 
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> shows their <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, user.Character.Name, showItem.DisplayName(), targetMob.Character.Name),
-					user.UserId,
+					fmt.Sprintf(`<ansi fg="username">%s</ansi> shows their <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, actor.Character.Name, showItem.DisplayName(), targetMob.Character.Name),
+					excludeId(actor),
 				)
 
 			} else {
-				user.SendText("Something went wrong.")
+				tell(actor, "Something went wrong.")
 			}
 
 		}
@@ -108,7 +109,7 @@ func Show(rest string, user *accounts.Account, room *rooms.Room, flags events.Ev
 		return true, nil
 	}
 
-	user.SendText("Who???")
+	tell(actor, "Who???")
 
 	return true, nil
 }

@@ -3,14 +3,14 @@ package usercommands
 import (
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Inventory(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Inventory(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	typeSearchTerms := map[string]items.ItemType{
 		`weapons`:   items.Weapon,
@@ -56,7 +56,7 @@ func Inventory(rest string, user *accounts.Account, room *rooms.Room, flags even
 
 	itemList := []items.Item{}
 
-	for _, item := range user.Character.GetAllBackpackItems() {
+	for _, item := range actor.Character.GetAllBackpackItems() {
 
 		foundMatch := false
 		if len(rest) > 0 {
@@ -102,7 +102,7 @@ func Inventory(rest string, user *accounts.Account, room *rooms.Room, flags even
 
 	}
 
-	user.SendText(buildInventoryPanel(user, itemList, len(rest) > 0))
+	tell(actor, buildInventoryPanel(actor.Character, itemList, len(rest) > 0))
 
 	return true, nil
 }

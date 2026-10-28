@@ -266,7 +266,10 @@ func mob_Create(rest string, user *accounts.Account, room *rooms.Room, flags eve
 		}
 
 		question.RejectResponse()
-		return Help(helpCmd+` `+helpRest, user, room, flags)
+		if actor := actors.ByUserId(user.UserId); actor != nil {
+			return Help(helpCmd+` `+helpRest, actor, room, flags)
+		}
+		return false, nil
 	}
 
 	raceNameSelection := question.Response

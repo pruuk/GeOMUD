@@ -5,23 +5,24 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-func Whisper(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func Whisper(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(rest)
 
 	if len(args) < 1 {
-		user.SendText("Whisper to who?")
+		tell(actor, "Whisper to who?")
 		return true, nil
 	}
 
 	whisperName := args[0]
 	if len(rest) < len(whisperName)+1 {
-		user.SendText("You need to specify a message.")
+		tell(actor, "You need to specify a message.")
 		return true, nil
 	}
 
@@ -29,26 +30,26 @@ func Whisper(rest string, user *accounts.Account, room *rooms.Room, flags events
 
 	toUser := accounts.GetByCharacterName(whisperName)
 	if toUser == nil {
-		user.SendText("You can't find anyone by that name.")
+		tell(actor, "You can't find anyone by that name.")
 		return true, nil
 	}
 
 	targetIsMod := toUser.Role != accounts.RoleUser
 
-	if user.Muted && !targetIsMod {
-		user.SendText(`You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
+	if user := actor.Controller().Account(); user != nil && user.Muted && !targetIsMod {
+		tell(actor, `You are <ansi fg="alert-5">MUTED</ansi>. You can only send <ansi fg="command">whisper</ansi>'s to Admins and Moderators.`)
 		return true, nil
 	}
 
-	toUser.SendText(fmt.Sprintf(`<ansi fg="white">***</ansi> <ansi fg="black-bold"><ansi fg="username">%s</ansi> whispers, "%s"</ansi> <ansi fg="white">***</ansi>`, user.Character.Name, rest))
+	toUser.SendText(fmt.Sprintf(`<ansi fg="white">***</ansi> <ansi fg="black-bold"><ansi fg="username">%s</ansi> whispers, "%s"</ansi> <ansi fg="white">***</ansi>`, actor.Character.Name, rest))
 
-	user.SendText(fmt.Sprintf(`You sent a <ansi fg="command">whisper</ansi> to <ansi fg="username">%s</ansi>`, toUser.Character.Name))
+	tell(actor, fmt.Sprintf(`You sent a <ansi fg="command">whisper</ansi> to <ansi fg="username">%s</ansi>`, toUser.Character.Name))
 
 	events.AddToQueue(events.Communication{
-		SourceActorId: user.Character.Id,
+		SourceActorId: actor.Character.Id,
 		TargetUserId:  toUser.UserId,
 		CommType:      `whisper`,
-		Name:          user.Character.Name,
+		Name:          actor.Character.Name,
 		Message:       rest,
 	})
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/templates"
@@ -15,8 +14,7 @@ import (
 // When not searching: Equipment panel followed by a wrapped "Carrying:" line.
 // When searching: Equipment panel is omitted; results appear as "Found in your bag:".
 // itemList is the filtered set of carried items. searching is true when a filter was given.
-func buildInventoryPanel(user *accounts.Account, itemList []items.Item, searching bool) string {
-	c := user.Character
+func buildInventoryPanel(c *characters.Character, itemList []items.Item, searching bool) string {
 
 	var sb strings.Builder
 
