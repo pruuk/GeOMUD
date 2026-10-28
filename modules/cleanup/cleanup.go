@@ -7,6 +7,8 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
@@ -94,13 +96,18 @@ func (c *CleanupModule) trashCommand(rest string, actor *actors.Actor, room *roo
 			Gained:  false,
 		})
 
-		usercommands.Tell(actor,
-			fmt.Sprintf(`You trash the <ansi fg="item">%s</ansi> for good.`, matchItem.DisplayName()))
-
-		if !isSneaking {
-			room.SendText(
-				fmt.Sprintf(`<ansi fg="%s">%s</ansi> destroys <ansi fg="item">%s</ansi>...`, usercommands.NameColour(actor), actor.Character.Name, matchItem.DisplayName()),
-				usercommands.ExcludeId(actor))
+		trashText := fmt.Sprintf(`You trash the <ansi fg="item">%s</ansi> for good.`, matchItem.DisplayName())
+		if isSneaking {
+			usercommands.Tell(actor, trashText)
+		} else {
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ActorText:    trashText,
+				ObserverText: fmt.Sprintf(`{actor} destroys <ansi fg="item">%s</ansi>...`, matchItem.DisplayName()),
+			})
 		}
 
 		// Experience goes to an account.
@@ -140,8 +147,14 @@ func (c *CleanupModule) buryCommand(rest string, actor *actors.Actor, room *room
 				corpseColor = `user-corpse`
 			}
 
-			usercommands.Tell(actor, fmt.Sprintf(`You bury the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name))
-			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> buries the <ansi fg="%s">%s corpse</ansi>.`, usercommands.NameColour(actor), actor.Character.Name, corpseColor, corpse.Character.Name), usercommands.ExcludeId(actor))
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ActorText:    fmt.Sprintf(`You bury the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name),
+				ObserverText: fmt.Sprintf(`{actor} buries the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name),
+			})
 			return true, nil
 
 		}

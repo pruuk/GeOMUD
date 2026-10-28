@@ -251,10 +251,10 @@ func (r *Room) UpdateCorpses(roundNow uint64) {
 		if corpse.Prunable {
 			removeIdx = append(removeIdx, idx)
 			if corpse.MobId > 0 {
-				r.SendText(fmt.Sprintf(`A <ansi fg="mob-corpse">%s corpse</ansi> crumbles to dust.`, corpse.Character.Name))
+				r.announce(fmt.Sprintf(`A <ansi fg="mob-corpse">%s corpse</ansi> crumbles to dust.`, corpse.Character.Name))
 			}
 			if corpse.UserId > 0 {
-				r.SendText(fmt.Sprintf(`A <ansi fg="user-corpse">%s corpse</ansi> crumbles to dust.`, corpse.Character.Name))
+				r.announce(fmt.Sprintf(`A <ansi fg="user-corpse">%s corpse</ansi> crumbles to dust.`, corpse.Character.Name))
 			}
 		}
 		r.Corpses[idx] = corpse
@@ -265,18 +265,8 @@ func (r *Room) UpdateCorpses(roundNow uint64) {
 	}
 }
 
-func (r *Room) SendTextCommunication(txt string, excludeUserIds ...int) {
-
-	events.AddToQueue(events.Message{
-		RoomId:          r.RoomId,
-		Text:            txt + "\n",
-		ExcludeUserIds:  excludeUserIds,
-		IsQuiet:         false,
-		IsCommunication: true,
-	})
-
-}
-
+// SendText is kept only for internal/hooks/PlayerDespawn_HandleLeave.go,
+// which another slice 7 task converts; delete it when that lands.
 func (r *Room) SendText(txt string, excludeUserIds ...int) {
 
 	events.AddToQueue(events.Message{
@@ -288,38 +278,20 @@ func (r *Room) SendText(txt string, excludeUserIds ...int) {
 
 }
 
-func (r *Room) SendTextToExits(txt string, isQuiet bool, excludeUserIds ...int) {
-
-	testExitIds := []int{}
-	for _, rExit := range r.Exits {
-		testExitIds = append(testExitIds, rExit.RoomId)
+// announce tells everyone in the room a world event with no actor (a corpse
+// crumbles, a container is gone). It sends through SendMessage, which
+// messaging.Init sets; with no messaging (package tests) it does nothing.
+func (r *Room) announce(text string) {
+	if SendMessage == nil {
+		return
 	}
-	for _, tExit := range r.ExitsTemp {
-		testExitIds = append(testExitIds, tExit.RoomId)
-	}
-
-	for _, roomId := range testExitIds {
-
-		tgtRoom := LoadRoom(roomId)
-		if tgtRoom == nil {
-			continue
-		}
-
-		for exitName, tExit := range tgtRoom.Exits {
-			if tExit.RoomId != r.RoomId {
-				continue
-			}
-
-			events.AddToQueue(events.Message{
-				RoomId:         tgtRoom.RoomId,
-				Text:           fmt.Sprintf(`(From <ansi fg="exit">%s</ansi>) `, exitName) + txt + "\n",
-				IsQuiet:        isQuiet,
-				ExcludeUserIds: excludeUserIds,
-			})
-		}
-
-	}
-
+	SendMessage(perception.Message{
+		Kind:         perception.WorldEvent,
+		Room:         r.RoomId,
+		Senses:       perception.Sight | perception.Sound,
+		Range:        perception.Room,
+		ObserverText: text,
+	})
 }
 
 func (r *Room) SetLongTermData(key string, value any) {
@@ -537,7 +509,7 @@ func (r *Room) Prepare(checkAdjacentRooms bool) {
 	if len(r.Containers) > 0 {
 		for k, c := range r.Containers {
 			if c.DespawnRound > 0 && c.DespawnRound <= roundNow {
-				r.SendText(fmt.Sprintf(`The <ansi fg="container">%s</ansi> crumbles to dust, and is gone.`, k))
+				r.announce(fmt.Sprintf(`The <ansi fg="container">%s</ansi> crumbles to dust, and is gone.`, k))
 				delete(r.Containers, k)
 			}
 		}

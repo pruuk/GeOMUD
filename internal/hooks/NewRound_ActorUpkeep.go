@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/behaviour"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
@@ -143,7 +144,7 @@ func decayAlignment(user *accounts.Account, round uint64) {
 	if alignmentAfter := user.Character.AlignmentName(); alignmentAfter != alignmentBefore {
 		before := fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, alignmentBefore, alignmentBefore)
 		after := fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, alignmentAfter, alignmentAfter)
-		user.SendText(fmt.Sprintf(`<ansi fg="231">Your alignment has shifted from %s to %s!</ansi>`, before, after))
+		messaging.Tell(user.Character.Id, fmt.Sprintf(`<ansi fg="231">Your alignment has shifted from %s to %s!</ansi>`, before, after))
 		events.AddToQueue(events.AlignmentChanged{
 			UserId:       user.UserId,
 			AlignmentOld: alignmentBefore,

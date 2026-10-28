@@ -7,6 +7,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -36,11 +37,11 @@ func AutoSave(e events.Event) events.ListenerReturn {
 		//////////////////////////////////////////
 		// SAVE ALL USERS
 		//////////////////////////////////////////
-		events.AddToQueue(events.Broadcast{Text: `Saving users...`})
+		messaging.Notify(messaging.Notice{Text: `Saving users...`})
 
 		accounts.SaveAllUsers(true)
 
-		events.AddToQueue(events.Broadcast{
+		messaging.Notify(messaging.Notice{
 			Text:            `Done.` + term.CRLFStr,
 			SkipLineRefresh: true,
 		})
@@ -48,11 +49,11 @@ func AutoSave(e events.Event) events.ListenerReturn {
 		//////////////////////////////////////////
 		// SAVE ALL ROOMS
 		//////////////////////////////////////////
-		events.AddToQueue(events.Broadcast{Text: `Saving rooms...`})
+		messaging.Notify(messaging.Notice{Text: `Saving rooms...`})
 
 		rooms.SaveAllRooms()
 
-		events.AddToQueue(events.Broadcast{
+		messaging.Notify(messaging.Notice{
 			Text:            `Done.` + term.CRLFStr,
 			SkipLineRefresh: true,
 		})
@@ -60,11 +61,11 @@ func AutoSave(e events.Event) events.ListenerReturn {
 		//////////////////////////////////////////
 		// SAVE ALL PLUGINS
 		//////////////////////////////////////////
-		events.AddToQueue(events.Broadcast{Text: `Saving other...`})
+		messaging.Notify(messaging.Notice{Text: `Saving other...`})
 		// Save plugin states if applicable
 		plugins.Save()
 
-		events.AddToQueue(events.Broadcast{
+		messaging.Notify(messaging.Notice{
 			Text:            `Done.` + term.CRLFStr,
 			SkipLineRefresh: true,
 		})

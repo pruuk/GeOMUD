@@ -5,6 +5,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 )
 
 //
@@ -44,7 +45,7 @@ func InactivePlayers(e events.Event) events.ListenerReturn {
 		}
 
 		if li-cutoffRound == 5 {
-			user.SendText(`<ansi fg="203">WARNING:</ansi> <ansi fg="208">You are about to be kicked for inactivity!</ansi>`)
+			messaging.Tell(user.Character.Id, `<ansi fg="203">WARNING:</ansi> <ansi fg="208">You are about to be kicked for inactivity!</ansi>`)
 		}
 
 		if li < cutoffRound {

@@ -178,13 +178,13 @@ func (u *Account) GrantXP(amt int, source string) {
 	grantXP, xpScale := u.Character.GrantXP(amt)
 
 	if xpScale != 100 {
-		u.SendText(fmt.Sprintf(`You gained <ansi fg="yellow-bold">%d experience points</ansi> <ansi fg="yellow">(%d%% scale)</ansi>! <ansi fg="7">(%s)</ansi>`, grantXP, xpScale, source))
+		u.tell(fmt.Sprintf(`You gained <ansi fg="yellow-bold">%d experience points</ansi> <ansi fg="yellow">(%d%% scale)</ansi>! <ansi fg="7">(%s)</ansi>`, grantXP, xpScale, source))
 
 		u.EventLog.Add(`xp`, fmt.Sprintf(`Gained <ansi fg="yellow-bold">%d experience points</ansi> <ansi fg="yellow">(%d%% scale)</ansi>! <ansi fg="7">(%s)</ansi>`, grantXP, xpScale, source))
 
 	} else {
 
-		u.SendText(fmt.Sprintf(`You gained <ansi fg="yellow-bold">%d experience points</ansi>! <ansi fg="7">(%s)</ansi>`, grantXP, source))
+		u.tell(fmt.Sprintf(`You gained <ansi fg="yellow-bold">%d experience points</ansi>! <ansi fg="7">(%s)</ansi>`, grantXP, source))
 
 		u.EventLog.Add(`xp`, fmt.Sprintf(`Gained <ansi fg="yellow-bold">%d experience points</ansi>! <ansi fg="7">(%s)</ansi>`, grantXP, source))
 	}
@@ -336,6 +336,14 @@ func (u *Account) AddBuff(buffId int, source string) {
 // import internal/messaging, which imports it, so account code sends
 // through this variable.
 var Tell func(u *Account, text string)
+
+// tell sends interface text through Tell; with no messaging (package tests)
+// it does nothing.
+func (u *Account) tell(text string) {
+	if Tell != nil {
+		Tell(u, text)
+	}
+}
 
 func (u *Account) SendText(txt string) {
 

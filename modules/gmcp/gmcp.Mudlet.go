@@ -8,6 +8,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -243,9 +244,9 @@ func (g *GMCPMudletModule) mudletDetectedHandler(e events.Event) events.Listener
 func (g *GMCPMudletModule) handleToggleCommand(user *accounts.Account, settingName string, value bool, enableMsg string, disableMsg string) {
 	user.SetConfigOption(settingName, value)
 	if value {
-		user.SendText("\n<ansi fg=\"green\">" + enableMsg + "</ansi>\n")
+		messaging.ToAccount(user, "\n<ansi fg=\"green\">"+enableMsg+"</ansi>\n")
 	} else {
-		user.SendText("\n<ansi fg=\"yellow\">" + disableMsg + "</ansi>\n")
+		messaging.ToAccount(user, "\n<ansi fg=\"yellow\">"+disableMsg+"</ansi>\n")
 	}
 }
 
@@ -259,7 +260,7 @@ func (g *GMCPMudletModule) sendUICommand(rest string, actor *actors.Actor, room 
 	// Only proceed if client is Mudlet
 	connId := user.ConnectionId()
 	if gmcpData, ok := gmcpModule.cache.Get(connId); !ok || !gmcpData.Client.IsMudlet {
-		user.SendText("\n<ansi fg=\"red\">This command is only available for Mudlet clients.</ansi> You are currently using: " + gmcpData.Client.Name + "\n")
+		messaging.ToAccount(user, "\n<ansi fg=\"red\">This command is only available for Mudlet clients.</ansi> You are currently using: "+gmcpData.Client.Name+"\n")
 		return true, nil
 	}
 
@@ -277,16 +278,16 @@ func (g *GMCPMudletModule) sendUICommand(rest string, actor *actors.Actor, room 
 			promptStatus = "<ansi fg=\"green\">ENABLED</ansi>"
 		}
 
-		user.SendText("\n<ansi fg=\"cyan-bold\">" + mudName + " Mudlet UI Management</ansi>\n")
-		user.SendText("<ansi fg=\"yellow-bold\">Status:</ansi>\n")
-		user.SendText("  Login message display: " + promptStatus + "\n")
-		user.SendText("<ansi fg=\"yellow-bold\">Available Commands:</ansi>\n")
-		user.SendText("  <ansi fg=\"command\">mudletui install</ansi> - Install the Mudlet UI package\n")
-		user.SendText("  <ansi fg=\"command\">mudletui remove</ansi>  - Remove the Mudlet UI package\n")
-		user.SendText("  <ansi fg=\"command\">mudletui update</ansi>  - Manually check for updates to the Mudlet UI package\n")
-		user.SendText("  <ansi fg=\"command\">mudletui hide</ansi>    - Hide login messages\n")
-		user.SendText("  <ansi fg=\"command\">mudletui show</ansi>    - Enable login messages\n\n")
-		user.SendText("For more information, type <ansi fg=\"command\">help mudletui</ansi>\n")
+		messaging.ToAccount(user, "\n<ansi fg=\"cyan-bold\">"+mudName+" Mudlet UI Management</ansi>\n")
+		messaging.ToAccount(user, "<ansi fg=\"yellow-bold\">Status:</ansi>\n")
+		messaging.ToAccount(user, "  Login message display: "+promptStatus+"\n")
+		messaging.ToAccount(user, "<ansi fg=\"yellow-bold\">Available Commands:</ansi>\n")
+		messaging.ToAccount(user, "  <ansi fg=\"command\">mudletui install</ansi> - Install the Mudlet UI package\n")
+		messaging.ToAccount(user, "  <ansi fg=\"command\">mudletui remove</ansi>  - Remove the Mudlet UI package\n")
+		messaging.ToAccount(user, "  <ansi fg=\"command\">mudletui update</ansi>  - Manually check for updates to the Mudlet UI package\n")
+		messaging.ToAccount(user, "  <ansi fg=\"command\">mudletui hide</ansi>    - Hide login messages\n")
+		messaging.ToAccount(user, "  <ansi fg=\"command\">mudletui show</ansi>    - Enable login messages\n\n")
+		messaging.ToAccount(user, "For more information, type <ansi fg=\"command\">help mudletui</ansi>\n")
 		return true, nil
 	}
 
@@ -295,30 +296,30 @@ func (g *GMCPMudletModule) sendUICommand(rest string, actor *actors.Actor, room 
 	case "install":
 		g.sendMudletUIInstall(user.UserId)
 		user.SetConfigOption("mudlet_ui_prompt_disabled", true)
-		user.SendText("\n<ansi fg=\"green\">UI installation package sent to your Mudlet client.</ansi> If it doesn't install automatically, you may need to accept the installation prompt in Mudlet.\n")
+		messaging.ToAccount(user, "\n<ansi fg=\"green\">UI installation package sent to your Mudlet client.</ansi> If it doesn't install automatically, you may need to accept the installation prompt in Mudlet.\n")
 
 	case "remove":
 		g.sendMudletUIRemove(user.UserId)
-		user.SendText("\n<ansi fg=\"yellow\">UI removal command sent to your Mudlet client.</ansi>\n")
+		messaging.ToAccount(user, "\n<ansi fg=\"yellow\">UI removal command sent to your Mudlet client.</ansi>\n")
 
 	case "update":
 		g.sendMudletUIUpdate(user.UserId)
-		user.SendText("\n<ansi fg=\"cyan\">Manual UI update check sent to your Mudlet client.</ansi>\n")
+		messaging.ToAccount(user, "\n<ansi fg=\"cyan\">Manual UI update check sent to your Mudlet client.</ansi>\n")
 
 	case "hide":
 		g.handleToggleCommand(user, "mudlet_ui_prompt_disabled", true,
 			"The Mudlet UI prompt has been hidden.",
 			"")
-		user.SendText("You can use <ansi fg=\"command\">mudletui show</ansi> in the future if you want to see the prompts again.\n")
+		messaging.ToAccount(user, "You can use <ansi fg=\"command\">mudletui show</ansi> in the future if you want to see the prompts again.\n")
 
 	case "show":
 		g.handleToggleCommand(user, "mudlet_ui_prompt_disabled", false,
 			"The Mudlet UI prompt has been re-enabled.",
 			"")
-		user.SendText("You can use <ansi fg=\"command\">mudletui hide</ansi> in the future if you want to hide the prompts again.\n")
+		messaging.ToAccount(user, "You can use <ansi fg=\"command\">mudletui hide</ansi> in the future if you want to hide the prompts again.\n")
 
 	default:
-		user.SendText("\nUsage: mudletui install|remove|update|hide|show\n\nType '<ansi fg=\"command\">help mudletui</ansi>' for more information.\n")
+		messaging.ToAccount(user, "\nUsage: mudletui install|remove|update|hide|show\n\nType '<ansi fg=\"command\">help mudletui</ansi>' for more information.\n")
 	}
 
 	return true, nil
@@ -356,7 +357,7 @@ func (g *GMCPMudletModule) checkClientCommand(rest string, actor *actors.Actor, 
 		}
 
 		// Show Mudlet help
-		user.SendText("\n\n<ansi fg=\"cyan-bold\">We have detected you are using Mudlet as a client.</ansi>\n")
+		messaging.ToAccount(user, "\n\n<ansi fg=\"cyan-bold\">We have detected you are using Mudlet as a client.</ansi>\n")
 		usercommands.Help("mudletui", actor, room, flags)
 	}
 	return true, nil
