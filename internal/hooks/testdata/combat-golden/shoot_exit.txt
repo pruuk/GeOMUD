@@ -6,9 +6,9 @@ seed 707
   rat: room=93002 hp=12/12 aggro=[none] playerdamage={}
 == round 1
 -- Alice reads
-  Your shot towards <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi> through the <ansi fg="exit">north</ansi> misses!
+  Your shot towards <ansi fg="mobname">rat</ansi> through the <ansi fg="exit">north</ansi> misses!
 -- Carol reads
-  A shot from the <ansi fg="exit">south</ansi> direction sails past <ansi fg="mobname"><ansi fg="mobname">rat</ansi></ansi>.
+  A shot from the <ansi fg="exit">south</ansi> direction sails past <ansi fg="mobname">rat</ansi>.
 -- events
   Input rat: "go south"
   Input rat: "emote squeeks angrily."
@@ -23,6 +23,7 @@ seed 707
   Your target can't be found.
 -- Carol reads
 -- events
+  AggroChanged Alice room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93103
   Carol: room=93002 hp=10/10 aggro=[none] playerdamage={}

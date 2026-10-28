@@ -5,7 +5,7 @@ seed 303
   guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
 == round 1
 -- Alice reads
-  <ansi fg="mobname"><ansi fg="mobname">guard</ansi></ansi>'s attack goes wide.
+  <ansi fg="mobname">guard</ansi>'s attack goes wide.
 -- events
   AggroChanged guard room=93001
 -- state
@@ -13,7 +13,7 @@ seed 303
   guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
 == round 2
 -- Alice reads
-  You are hit by <ansi fg="mobname"><ansi fg="mobname">guard</ansi></ansi>'s attack for <ansi fg="damage">4 damage</ansi>.
+  You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">4 damage</ansi>.
 -- events
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001
@@ -22,7 +22,7 @@ seed 303
   guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
 == round 3
 -- Alice reads
-  <ansi fg="mobname"><ansi fg="mobname">guard</ansi></ansi> strikes you with their <ansi fg="item">fists</ansi>, causing <ansi fg="damage">5 damage</ansi>.
+  <ansi fg="mobname">guard</ansi> strikes you with their <ansi fg="item">fists</ansi>, causing <ansi fg="damage">5 damage</ansi>.
 -- events
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001
@@ -31,7 +31,7 @@ seed 303
   guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
 == round 4
 -- Alice reads
-  <ansi fg="mobname"><ansi fg="mobname">guard</ansi></ansi> missed you with their <ansi fg="item">fists</ansi>.
+  <ansi fg="mobname">guard</ansi> missed you with their <ansi fg="item">fists</ansi>.
 -- events
   AggroChanged guard room=93001
 -- state
@@ -39,7 +39,7 @@ seed 303
   guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
 == round 5
 -- Alice reads
-  <ansi fg="mobname"><ansi fg="mobname">guard</ansi></ansi> swings at you but misses!
+  <ansi fg="mobname">guard</ansi> swings at you but misses!
 -- events
   AggroChanged guard room=93001
 -- state
@@ -47,7 +47,7 @@ seed 303
   guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
 == round 6
 -- Alice reads
-  You are hit by <ansi fg="mobname"><ansi fg="mobname">guard</ansi></ansi>'s attack for <ansi fg="damage">5 damage</ansi>.
+  You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">5 damage</ansi>.
 -- events
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001

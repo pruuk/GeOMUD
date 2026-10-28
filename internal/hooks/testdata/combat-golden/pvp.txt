@@ -10,6 +10,7 @@ seed 202
   You feel a sharp pain as <ansi fg="username">Alice</ansi> cuts you for <ansi fg="damage">5 damage</ansi>!
 -- events
   CharacterVitalsChanged Bob
+  AggroChanged Alice room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101
   Bob: room=93001 hp=10/15 aggro=[none] playerdamage={Alice:5} offhand=93102
@@ -19,6 +20,7 @@ seed 202
 -- Bob reads
   <ansi fg="username">Alice</ansi> attempts to slash you but misses!
 -- events
+  AggroChanged Alice room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101
   Bob: room=93001 hp=10/15 aggro=[none] playerdamage={Alice:5} offhand=93102
@@ -29,6 +31,7 @@ seed 202
   In a sweeping motion, <ansi fg="username">Alice</ansi> slashes you with their <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">6 damage</ansi>!
 -- events
   CharacterVitalsChanged Bob
+  AggroChanged Alice room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101
   Bob: room=93001 hp=4/15 aggro=[none] playerdamage={Alice:11} offhand=93102
@@ -45,6 +48,8 @@ seed 202
   ItemOwnership Bob item=93102 gained=false
   ItemOwnership Bob item=0 gained=true
   CharacterVitalsChanged Bob
+  AggroChanged Alice room=93001
+  AggroChanged Bob room=93001
   PlayerDrop Bob room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101

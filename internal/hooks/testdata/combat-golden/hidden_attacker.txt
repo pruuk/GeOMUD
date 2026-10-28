@@ -8,7 +8,9 @@ seed 909
 -- Alice reads
   You watch <ansi fg="username">Bob</ansi> closely, looking for an opening.
 -- Bob reads
+  Someone watches you intently, waiting to strike.
 -- Carol reads
+  Someone waits for the right moment to attack <ansi fg="username">Bob</ansi>.
 -- events
 -- state
   Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93105
@@ -18,33 +20,37 @@ seed 909
 -- Alice reads
   You thrust at <ansi fg="username">Bob</ansi> with your <ansi fg="item">testdagger</ansi> but miss!
 -- Bob reads
-  <ansi fg="username">Alice</ansi> swings at you with their <ansi fg="item">testdagger</ansi>, but you evade the attack!
+  Someone swings at you with their <ansi fg="item">testdagger</ansi>, but you evade the attack!
 -- Carol reads
-  <ansi fg="username">Alice</ansi> attempts to strike <ansi fg="username">Bob</ansi>, but fails to connect!
+  Someone attempts to strike <ansi fg="username">Bob</ansi>, but fails to connect!
 -- events
+  AggroChanged Alice room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=1] playerdamage={} weapon=93105
-  Bob: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  Bob: room=93001 hp=10/10 aggro=[none] playerdamage={Alice:0}
   Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
 == round 3
 -- Alice reads
   You wait patiently, anticipating <ansi fg="username">Bob</ansi>'s next move.
 -- Bob reads
+  Someone circles dangerously.
 -- Carol reads
+  Someone waits for the right moment to attack <ansi fg="username">Bob</ansi>.
 -- events
 -- state
   Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93105
-  Bob: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  Bob: room=93001 hp=10/10 aggro=[none] playerdamage={Alice:0}
   Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
 == round 4
 -- Alice reads
   You impale <ansi fg="username">Bob</ansi> with your <ansi fg="item">testdagger</ansi>, causing an impressive <ansi fg="damage">6 damage</ansi>!
 -- Bob reads
-  <ansi fg="username">Alice</ansi> impales you with their <ansi fg="item">testdagger</ansi>, causing an impressive <ansi fg="damage">6 damage</ansi>!
+  Someone impales you with their <ansi fg="item">testdagger</ansi>, causing an impressive <ansi fg="damage">6 damage</ansi>!
 -- Carol reads
-  <ansi fg="username">Alice</ansi> delivers a heavy blow to <ansi fg="username">Bob</ansi> with their <ansi fg="item">testdagger</ansi>!
+  Someone delivers a heavy blow to <ansi fg="username">Bob</ansi> with their <ansi fg="item">testdagger</ansi>!
 -- events
   CharacterVitalsChanged Bob
+  AggroChanged Alice room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=1] playerdamage={} weapon=93105
   Bob: room=93001 hp=4/10 aggro=[none] playerdamage={Alice:6}
@@ -53,7 +59,9 @@ seed 909
 -- Alice reads
   You wait patiently, anticipating <ansi fg="username">Bob</ansi>'s next move.
 -- Bob reads
+  Someone watches you intently, waiting to strike.
 -- Carol reads
+  Someone circles <ansi fg="username">Bob</ansi> with cruel intentions.
 -- events
 -- state
   Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93105
@@ -63,11 +71,13 @@ seed 909
 -- Alice reads
   You strike <ansi fg="username">Bob</ansi> with your <ansi fg="item">testdagger</ansi>, dealing <ansi fg="damage">4 damage</ansi>!
 -- Bob reads
-  <ansi fg="username">Alice</ansi> stabs you with their <ansi fg="item">testdagger</ansi> and does <ansi fg="damage">4 damage</ansi>!
+  Someone stabs you with their <ansi fg="item">testdagger</ansi> and does <ansi fg="damage">4 damage</ansi>!
 -- Carol reads
-  <ansi fg="username">Alice</ansi> stabs <ansi fg="username">Bob</ansi> with their <ansi fg="item">testdagger</ansi>!
+  Someone stabs <ansi fg="username">Bob</ansi> with their <ansi fg="item">testdagger</ansi>!
 -- events
   CharacterVitalsChanged Bob
+  AggroChanged Alice room=93001
+  AggroChanged Bob room=93001
   PlayerDrop Bob room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93105
