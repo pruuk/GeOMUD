@@ -47,3 +47,50 @@ func TestStripItemIdsLeavesTheOriginal(t *testing.T) {
 	assert.False(t, live.Items[0].Id.IsZero(), "the original keeps its item IDs")
 	assert.False(t, live.Equipment.Body.Id.IsZero())
 }
+
+func TestKeepItemIdentity(t *testing.T) {
+	was := New()
+	ring1, ring2, sword := testItem(1), testItem(1), testItem(2)
+	ring1.Uses, ring2.Uses = 4, 7
+	sword.Adjectives = []string{"rusty"}
+	was.Items = []items.Item{ring1, ring2, sword}
+	was.Equipment.Weapon = testItem(3)
+	was.Equipment.Body = testItem(4)
+
+	// The admin removed one of the two rings, kept the sword, added an item 5,
+	// kept the weapon (and bound it), and swapped the body for item 6. The
+	// form cannot say which ring went, so the kept ring is the first one.
+	edited := New()
+	edited.Items = []items.Item{{ItemId: 2}, {ItemId: 1}, {ItemId: 5}}
+	edited.Equipment.Weapon = items.Item{ItemId: 3, CanNeverBeRemoved: true}
+	edited.Equipment.Body = items.Item{ItemId: 6}
+
+	edited.KeepItemIdentity(was)
+
+	assert.Equal(t, sword.Id, edited.Items[0].Id)
+	assert.Equal(t, []string{"rusty"}, edited.Items[0].Adjectives)
+	assert.Equal(t, ring1.Id, edited.Items[1].Id, "the first unused item of that kind")
+	assert.Equal(t, 4, edited.Items[1].Uses)
+	assert.True(t, edited.Items[2].Id.IsZero(), "a new item gets its ID in Validate")
+
+	assert.Equal(t, was.Equipment.Weapon.Id, edited.Equipment.Weapon.Id)
+	assert.True(t, edited.Equipment.Weapon.CanNeverBeRemoved, "the admin's lock applies")
+	assert.True(t, edited.Equipment.Body.Id.IsZero(), "a swapped slot holds a new item")
+}
+
+func TestKeepItemIdentityNeverCopiesAnId(t *testing.T) {
+	was := New()
+	was.Items = []items.Item{testItem(1)}
+
+	// A posted ID that matches nothing the character had is dropped, so a
+	// form cannot make a second item with an existing ID.
+	stray := ids.New(ids.NoCell)
+	edited := New()
+	edited.Items = []items.Item{{ItemId: 1, Id: was.Items[0].Id}, {ItemId: 1, Id: was.Items[0].Id}, {ItemId: 9, Id: stray}}
+
+	edited.KeepItemIdentity(was)
+
+	assert.Equal(t, was.Items[0].Id, edited.Items[0].Id)
+	assert.True(t, edited.Items[1].Id.IsZero(), "one item, one ID")
+	assert.True(t, edited.Items[2].Id.IsZero())
+}

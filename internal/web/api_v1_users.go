@@ -7,6 +7,8 @@ import (
 	"strconv"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/items"
 )
 
 // resolveUserId resolves a path segment that is a numeric user ID.
@@ -52,6 +54,47 @@ func apiV1GetUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// decodeUserPatch applies an admin PATCH body to a copy of u. The form sends
+// the complete desired skills, spellbook, items and equipment, and
+// json.Unmarshal merges into existing maps and slice elements, so those start
+// empty on the copy: a removed entry stays removed, an item never takes
+// another item's fields, and the live record is not touched. Items the form
+// kept keep their identity (characters.KeepItemIdentity). A body that leaves
+// out the items or the equipment leaves them as they were.
+func decodeUserPatch(u *accounts.Account, body []byte) (accounts.Account, error) {
+	updated := *u
+	if u.Character != nil {
+		charCopy := *u.Character
+		charCopy.Skills = nil
+		charCopy.SpellBook = nil
+		charCopy.Items = nil
+		charCopy.Equipment = characters.Worn{}
+		updated.Character = &charCopy
+	}
+	if err := json.Unmarshal(body, &updated); err != nil {
+		return accounts.Account{}, err
+	}
+	if u.Character == nil || updated.Character == nil {
+		return updated, nil
+	}
+
+	var present struct {
+		Character *struct {
+			Items     json.RawMessage
+			Equipment json.RawMessage
+		}
+	}
+	_ = json.Unmarshal(body, &present) // the body already decoded above
+	if present.Character == nil || present.Character.Items == nil {
+		updated.Character.Items = append([]items.Item(nil), u.Character.Items...)
+	}
+	if present.Character == nil || present.Character.Equipment == nil {
+		updated.Character.Equipment = u.Character.Equipment
+	}
+	updated.Character.KeepItemIdentity(u.Character)
+	return updated, nil
+}
+
 // PATCH /admin/api/v1/users/{userid}
 func apiV1PatchUser(w http.ResponseWriter, r *http.Request) {
 	userId := resolveUserId(w, r.PathValue("userid"))
@@ -77,23 +120,8 @@ func apiV1PatchUser(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = json.Unmarshal(body, &raw)
 
-	updated := *u
-
-	// Detach the character from the live/loaded record before decoding. The
-	// admin form submits the complete desired state of the map-typed
-	// collections (skills, spellbook), but json.Unmarshal MERGES into existing
-	// maps rather than replacing them — so a removed skill/spell (omitted from
-	// the payload) would otherwise survive and reappear on reload. Clearing
-	// those maps on a copy gives the payload full replace semantics and leaves
-	// the live record intact if decoding fails.
-	if u.Character != nil {
-		charCopy := *u.Character
-		charCopy.Skills = nil
-		charCopy.SpellBook = nil
-		updated.Character = &charCopy
-	}
-
-	if err := json.Unmarshal(body, &updated); err != nil {
+	updated, err := decodeUserPatch(u, body)
+	if err != nil {
 		writeAPIError(w, http.StatusBadRequest, "malformed request body: "+err.Error())
 		return
 	}
