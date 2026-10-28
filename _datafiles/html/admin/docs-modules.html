@@ -1569,10 +1569,10 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
     return true, nil
 }
 
-func (f *FollowModule) idleMobHandler(e events.Event) events.ListenerReturn {
-    // Return events.Cancel to suppress the built-in mob AI for this mob.
-    // Return events.Continue to let the default AI run after this handler.
-    return events.Continue
+func (f *FollowModule) idleMobHandler(c behaviour.IdleCheck) behaviour.IdleCheck {
+    // Set c.Skip to keep c.Mob from idling this round.
+    // Leave it unset to let its idle run.
+    return c
 }</code></pre>
     </div>
 
