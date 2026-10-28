@@ -108,7 +108,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 				})
 
 				tell(actor, fmt.Sprintf(`You take <ansi fg="gold">%d gold</ansi> from the %s.`, goldAmt, corpseName))
-				room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes some <ansi fg="gold">gold</ansi> from the %s.`, actor.Character.Name, corpseName), excludeId(actor))
+				room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> takes some <ansi fg="gold">gold</ansi> from the %s.`, nameColour(actor), actor.Character.Name, corpseName), excludeId(actor))
 				tookSomething = true
 			}
 
@@ -123,7 +123,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 						Gained:  true,
 					})
 					tell(actor, fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName))
-					room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, actor.Character.Name, item.DisplayName(), corpseName), excludeId(actor))
+					room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, nameColour(actor), actor.Character.Name, item.DisplayName(), corpseName), excludeId(actor))
 					tookSomething = true
 				} else {
 					tell(actor, fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, item.DisplayName()))
@@ -141,7 +141,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 						Gained:  true,
 					})
 					tell(actor, fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName))
-					room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, actor.Character.Name, item.DisplayName(), corpseName), excludeId(actor))
+					room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, nameColour(actor), actor.Character.Name, item.DisplayName(), corpseName), excludeId(actor))
 					tookSomething = true
 				} else {
 					tell(actor, fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, item.DisplayName()))
@@ -173,7 +173,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 				})
 
 				tell(actor, fmt.Sprintf(`You take <ansi fg="gold">%d gold</ansi> from the %s.`, goldAmt, corpseName))
-				room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes some <ansi fg="gold">gold</ansi> from the %s.`, actor.Character.Name, corpseName), excludeId(actor))
+				room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> takes some <ansi fg="gold">gold</ansi> from the %s.`, nameColour(actor), actor.Character.Name, corpseName), excludeId(actor))
 			}
 			return true, nil
 		}
@@ -216,7 +216,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		corpseRef.Character.RemoveFromBody(matchItem)
 
 		tell(actor, fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, matchItem.DisplayName(), corpseName))
-		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, actor.Character.Name, matchItem.DisplayName(), corpseName), excludeId(actor))
+		room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> takes the <ansi fg="itemname">%s</ansi> from the %s.`, nameColour(actor), actor.Character.Name, matchItem.DisplayName(), corpseName), excludeId(actor))
 
 		return true, nil
 	}
@@ -247,7 +247,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 					fmt.Sprintf(`You pick up <ansi fg="gold">%d gold</ansi> from the <ansi fg="container">%s</ansi>.`, goldAmt, containerName),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up some <ansi fg="gold">gold</ansi> from the <ansi fg="container">%s</ansi>.`, actor.Character.Name, containerName),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> picks up some <ansi fg="gold">gold</ansi> from the <ansi fg="container">%s</ansi>.`, nameColour(actor), actor.Character.Name, containerName),
 					excludeId(actor),
 				)
 			}
@@ -280,7 +280,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 					fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the <ansi fg="container">%s</ansi>.`, matchItem.DisplayName(), containerName),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up the <ansi fg="itemname">%s</ansi> from the <ansi fg="container">%s</ansi>...`, actor.Character.Name, matchItem.DisplayName(), containerName),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> picks up the <ansi fg="itemname">%s</ansi> from the <ansi fg="container">%s</ansi>...`, nameColour(actor), actor.Character.Name, matchItem.DisplayName(), containerName),
 					excludeId(actor),
 				)
 
@@ -318,7 +318,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 					fmt.Sprintf(`You pick up <ansi fg="gold">%d gold</ansi>.`, goldAmt),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up some <ansi fg="gold">gold</ansi>.`, actor.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> picks up some <ansi fg="gold">gold</ansi>.`, nameColour(actor), actor.Character.Name),
 					excludeId(actor),
 				)
 			}
@@ -370,7 +370,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 						fmt.Sprintf(`You dig out the <ansi fg="itemname">%s</ansi> from where it was stashed.`, matchItem.DisplayName()),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> digs around in the area and picks something up...`, actor.Character.Name),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> digs around in the area and picks something up...`, nameColour(actor), actor.Character.Name),
 						excludeId(actor),
 					)
 				} else {
@@ -378,7 +378,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 						fmt.Sprintf(`You pick up the <ansi fg="itemname">%s</ansi>.`, matchItem.DisplayName()),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> picks up the <ansi fg="itemname">%s</ansi>...`, actor.Character.Name, matchItem.DisplayName()),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> picks up the <ansi fg="itemname">%s</ansi>...`, nameColour(actor), actor.Character.Name, matchItem.DisplayName()),
 						excludeId(actor),
 					)
 				}
@@ -399,7 +399,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		if len(foundNoun) > 0 {
 
 			tell(actor, fmt.Sprintf(`You can't get the <ansi fg="noun">%s</ansi>`, foundNoun))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is grasping at the air.`, actor.Character.Name), excludeId(actor))
+			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> is grasping at the air.`, nameColour(actor), actor.Character.Name), excludeId(actor))
 
 			return true, nil
 		}

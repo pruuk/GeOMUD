@@ -12,6 +12,10 @@ import (
 
 func Remove(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
+	if permaGearRefused(actor) {
+		return true, nil
+	}
+
 	if rest == "all" {
 		removedItems := []items.Item{}
 		for _, item := range actor.Character.Equipment.GetAllItems() {
@@ -72,7 +76,7 @@ func Remove(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 				fmt.Sprintf(`You remove your <ansi fg="item">%s</ansi> and return it to your backpack.%s`, matchItem.DisplayName(), statDiff),
 			)
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> removes their <ansi fg="item">%s</ansi> and stores it away.`, actor.Character.Name, matchItem.DisplayName()),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> removes their <ansi fg="item">%s</ansi> and stores it away.`, nameColour(actor), actor.Character.Name, matchItem.DisplayName()),
 				excludeId(actor),
 			)
 

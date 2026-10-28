@@ -97,7 +97,7 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 
 		container.Gold += goldAmt
 		tell(actor, fmt.Sprintf(`You place <ansi fg="gold">%d gold</ansi> into the <ansi fg="container">%s</ansi>`, goldAmt, containerName))
-		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> places some <ansi fg="gold">gold</ansi> into the <ansi fg="container">%s</ansi>`, actor.Character.Name, containerName), excludeId(actor))
+		room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> places some <ansi fg="gold">gold</ansi> into the <ansi fg="container">%s</ansi>`, nameColour(actor), actor.Character.Name, containerName), excludeId(actor))
 	}
 
 	if itemFound {
@@ -112,7 +112,7 @@ func Put(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		})
 
 		tell(actor, fmt.Sprintf(`You place your <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, item.DisplayName(), containerName))
-		room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> places their <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, actor.Character.Name, item.DisplayName(), containerName), excludeId(actor))
+		room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> places their <ansi fg="itemname">%s</ansi> into the <ansi fg="container">%s</ansi>`, nameColour(actor), actor.Character.Name, item.DisplayName(), containerName), excludeId(actor))
 
 		// Enforce container size limits
 

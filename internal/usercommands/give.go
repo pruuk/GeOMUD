@@ -68,6 +68,9 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		actor.Character.CancelBuffsWithFlag("hidden")
 
 		targetUser := accounts.GetByUserId(playerId)
+		if targetUser == nil {
+			return true, nil
+		}
 
 		// Swap the item location
 		if giveItem.ItemId > 0 {
@@ -78,10 +81,10 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 				fmt.Sprintf(`You give the <ansi fg="item">%s</ansi> to <ansi fg="username">%s</ansi>.`, giveItem.DisplayName(), targetUser.Character.Name),
 			)
 			targetUser.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> gives you their <ansi fg="item">%s</ansi>.`, actor.Character.Name, giveItem.DisplayName()),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives you their <ansi fg="item">%s</ansi>.`, nameColour(actor), actor.Character.Name, giveItem.DisplayName()),
 			)
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> gives <ansi fg="username">%s</ansi> a <ansi fg="itemname">%s</ansi>.`, actor.Character.Name, targetUser.Character.Name, giveItem.NameSimple()),
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives <ansi fg="username">%s</ansi> a <ansi fg="itemname">%s</ansi>.`, nameColour(actor), actor.Character.Name, targetUser.Character.Name, giveItem.NameSimple()),
 				excludeId(actor),
 				targetUser.UserId)
 
@@ -105,7 +108,7 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 					fmt.Sprintf(`You count out <ansi fg="gold">%d gold</ansi> and put it back in your pocket.`, giveGoldAmount),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> counts out some <ansi fg="gold">gold</ansi> and put it back in their pocket.`, actor.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> counts out some <ansi fg="gold">gold</ansi> and put it back in their pocket.`, nameColour(actor), actor.Character.Name),
 					excludeId(actor))
 
 			} else {
@@ -126,10 +129,10 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 					fmt.Sprintf(`You give <ansi fg="gold">%d gold</ansi> to <ansi fg="username">%s</ansi>.`, giveGoldAmount, targetUser.Character.Name),
 				)
 				targetUser.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> gives you <ansi fg="gold">%d gold</ansi>.`, actor.Character.Name, giveGoldAmount),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives you <ansi fg="gold">%d gold</ansi>.`, nameColour(actor), actor.Character.Name, giveGoldAmount),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> gives <ansi fg="username">%s</ansi> some <ansi fg="gold">gold</ansi>.`, actor.Character.Name, targetUser.Character.Name),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> gives <ansi fg="username">%s</ansi> some <ansi fg="gold">gold</ansi>.`, nameColour(actor), actor.Character.Name, targetUser.Character.Name),
 					excludeId(actor),
 					targetUser.UserId)
 			}
@@ -168,7 +171,7 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 						fmt.Sprintf(`You give <ansi fg="gold">%d gold</ansi> to <ansi fg="username">%s</ansi>.`, giveGoldAmount, m.Character.Name),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> gave some gold to <ansi fg="mobname">%s</ansi>.`, actor.Character.Name, m.Character.Name),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> gave some gold to <ansi fg="mobname">%s</ansi>.`, nameColour(actor), actor.Character.Name, m.Character.Name),
 						excludeId(actor),
 					)
 				} else {
@@ -180,7 +183,7 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 						fmt.Sprintf(`You give the <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, giveItem.DisplayName(), m.Character.Name),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> gave their <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, actor.Character.Name, giveItem.DisplayName(), m.Character.Name),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> gave their <ansi fg="item">%s</ansi> to <ansi fg="mobname">%s</ansi>.`, nameColour(actor), actor.Character.Name, giveItem.DisplayName(), m.Character.Name),
 						excludeId(actor),
 					)
 

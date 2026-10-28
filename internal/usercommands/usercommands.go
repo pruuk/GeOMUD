@@ -58,6 +58,18 @@ func nameColour(actor *actors.Actor) string {
 	return "mobname"
 }
 
+// permaGearRefused reports whether the actor's gear is stuck on it (the
+// perma-gear buff flag). It then refuses: the actor is told, and the room sees
+// the actor struggle with its gear (Decision 15).
+func permaGearRefused(actor *actors.Actor) bool {
+	if !actor.Character.HasBuffFlag("perma-gear") {
+		return false
+	}
+	tell(actor, `Your gear won't budge.`)
+	queue(actor, `emote struggles with their gear for a while, then gives up.`)
+	return true
+}
+
 // queue queues input text for the actor's body, ready after the optional wait
 // in seconds. It queues what Account.Command queues (Decision 11).
 func queue(actor *actors.Actor, text string, wait ...float64) {

@@ -31,6 +31,11 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			Drop(fmt.Sprintf("%d gold", actor.Character.Gold), actor, room, flags)
 		}
 
+		// Gold has dropped; stuck gear refuses the items once, not per item.
+		if permaGearRefused(actor) {
+			return true, nil
+		}
+
 		iCopies = append(iCopies, actor.Character.Items...)
 
 		for _, item := range iCopies {
@@ -68,10 +73,14 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			fmt.Sprintf(`You drop <ansi fg="gold">%d gold</ansi> on the floor.`, dropAmt),
 		)
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="username">%s</ansi> drops <ansi fg="gold">%d gold</ansi>.`, actor.Character.Name, dropAmt),
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops <ansi fg="gold">%d gold</ansi>.`, nameColour(actor), actor.Character.Name, dropAmt),
 			excludeId(actor),
 		)
 
+		return true, nil
+	}
+
+	if permaGearRefused(actor) {
 		return true, nil
 	}
 
@@ -93,7 +102,7 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in your hands!`, matchItem.DisplayName()),
 			)
 			room.SendText(
-				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in <ansi fg="username">%s</ansi>'s hands!`, matchItem.DisplayName(), actor.Character.Name),
+				fmt.Sprintf(`There are too many items on the floor! The <ansi fg="item">%s</ansi> re-appears in <ansi fg="%s">%s</ansi>'s hands!`, matchItem.DisplayName(), nameColour(actor), actor.Character.Name),
 				excludeId(actor),
 			)
 			return true, nil
@@ -112,7 +121,7 @@ func Drop(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			fmt.Sprintf(`You drop the <ansi fg="item">%s</ansi>.`, matchItem.DisplayName()),
 		)
 		room.SendText(
-			fmt.Sprintf(`<ansi fg="username">%s</ansi> drops their <ansi fg="item">%s</ansi>...`, actor.Character.Name, matchItem.DisplayName()),
+			fmt.Sprintf(`<ansi fg="%s">%s</ansi> drops their <ansi fg="item">%s</ansi>...`, nameColour(actor), actor.Character.Name, matchItem.DisplayName()),
 			excludeId(actor),
 		)
 

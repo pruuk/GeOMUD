@@ -13,6 +13,10 @@ import (
 
 func Equip(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
+	if permaGearRefused(actor) {
+		return true, nil
+	}
+
 	if rest == "" {
 		tell(actor, `Wear WHAT?`)
 		return true, nil
@@ -41,9 +45,17 @@ func Equip(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		if wearSuccess {
 
-			actor.Character.CancelBuffsWithFlag("hidden")
-
 			actor.Character.RemoveItem(matchItem)
+
+			// Wearing the item that is already worn changes nothing: put it back
+			// and say nothing. This stops blind retries (NPC combat re-equips at
+			// random) from spamming the room.
+			if len(oldItems) == 1 && matchItem.Equals(oldItems[0]) {
+				actor.Character.StoreItem(oldItems[0])
+				return true, nil
+			}
+
+			actor.Character.CancelBuffsWithFlag("hidden")
 
 			for _, oldItem := range oldItems {
 				if oldItem.ItemId != 0 {
@@ -51,7 +63,7 @@ func Equip(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 						fmt.Sprintf(`You remove your <ansi fg="item">%s</ansi> and return it to your backpack.`, oldItem.DisplayName()),
 					)
 					room.SendText(
-						fmt.Sprintf(`<ansi fg="username">%s</ansi> removes their <ansi fg="item">%s</ansi> and stores it away.`, actor.Character.Name, oldItem.DisplayName()),
+						fmt.Sprintf(`<ansi fg="%s">%s</ansi> removes their <ansi fg="item">%s</ansi> and stores it away.`, nameColour(actor), actor.Character.Name, oldItem.DisplayName()),
 						excludeId(actor),
 					)
 
@@ -68,7 +80,7 @@ func Equip(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 					fmt.Sprintf(`You wear your <ansi fg="item">%s</ansi>.%s`, matchItem.DisplayName(), statDiff),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> puts on their <ansi fg="item">%s</ansi>.`, actor.Character.Name, matchItem.DisplayName()),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> puts on their <ansi fg="item">%s</ansi>.`, nameColour(actor), actor.Character.Name, matchItem.DisplayName()),
 					excludeId(actor),
 				)
 			} else {
@@ -76,7 +88,7 @@ func Equip(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 					fmt.Sprintf(`You wield your <ansi fg="item">%s</ansi>. You're feeling dangerous.%s`, matchItem.DisplayName(), statDiff),
 				)
 				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> wields their <ansi fg="item">%s</ansi>.`, actor.Character.Name, matchItem.DisplayName()),
+					fmt.Sprintf(`<ansi fg="%s">%s</ansi> wields their <ansi fg="item">%s</ansi>.`, nameColour(actor), actor.Character.Name, matchItem.DisplayName()),
 					excludeId(actor),
 				)
 			}
