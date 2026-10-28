@@ -376,7 +376,7 @@ func main() {
 			wg.Add(1)
 			go resumeRestoredConnection(cd, u, &wg)
 		}
-		connections.Broadcast([]byte("\r\nCopyover complete.\r\n"))
+		messaging.RawAll([]byte("\r\nCopyover complete.\r\n"))
 		mudlog.Info("Copyover", "status", "complete")
 	}
 

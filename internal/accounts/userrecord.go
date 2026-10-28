@@ -354,15 +354,6 @@ func (u *Account) SendText(txt string) {
 
 }
 
-func (u *Account) SendWebClientCommand(txt string) {
-
-	events.AddToQueue(events.WebClientCommand{
-		ConnectionId: u.sess().connectionId,
-		Text:         txt,
-	})
-
-}
-
 func (u *Account) SetTempData(key string, value any) {
 
 	if u.tempDataStore == nil {

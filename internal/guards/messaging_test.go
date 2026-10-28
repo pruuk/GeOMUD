@@ -18,9 +18,7 @@ func TestOnlyMessagingWritesToConnections(t *testing.T) {
 	permanent := map[string]string{
 		"modules/gmcp/gmcp.go": "GMCP keeps its own path (spec section 2)",
 	}
-	connectionWriters := map[string]string{
-		"main.go": "slice 7: connections.Broadcast (copyover complete), no messaging path yet",
-	}
+	connectionWriters := map[string]string{}
 	inside := func(path string) bool {
 		return strings.HasPrefix(path, "internal/connections/") ||
 			strings.HasPrefix(path, "internal/messaging/") ||

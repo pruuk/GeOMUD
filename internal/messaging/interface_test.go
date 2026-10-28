@@ -146,6 +146,21 @@ func TestRawWritesToAConnection(t *testing.T) {
 	assert.Equal(t, "login: ", conn.String(), "no prefix, no prompt")
 }
 
+func TestRawAllWritesToEveryConnectionPastLogin(t *testing.T) {
+	writers(t)
+	u, conn := wiredAccount(t, 9612, false)
+	connections.Get(u.ConnectionId()).SetState(connections.LoggedIn)
+	_, loginConn := wiredAccount(t, 9613, false) // still at the login screens
+
+	RawAll([]byte("\r\nCopyover complete.\r\n"))
+	events.ProcessEvents()
+
+	// The connection turns every "\n" into "\r\n", as it did for
+	// connections.Broadcast: the bytes on the wire are unchanged.
+	assert.Equal(t, crlf("\r\nCopyover complete.\r\n"), conn.String(), "no prefix, no prompt")
+	assert.Equal(t, "", loginConn.String(), "a connection at the login screens is skipped")
+}
+
 func TestRawConnWritesToAnUnregisteredConn(t *testing.T) {
 	conn := &fakeConn{}
 	RawConn(conn, []byte("Server is full.\n"))

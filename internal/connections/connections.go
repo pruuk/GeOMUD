@@ -234,28 +234,6 @@ func NotifyWindowChange(connId ConnectionId, cols, rows uint32) {
 	}
 }
 
-func SendRawTo(b []byte, ids ...ConnectionId) {
-	lock.Lock()
-
-	removeIds := []ConnectionId{}
-
-	for _, id := range ids {
-		if cd, ok := netConnections[id]; ok {
-			if _, err := cd.WriteRaw(b); err != nil {
-				mudlog.Warn("SendRawTo()", "connectionId", id, "remoteAddr", cd.RemoteAddr().String(), "error", err)
-				removeIds = append(removeIds, id)
-				continue
-			}
-		}
-	}
-
-	lock.Unlock()
-
-	for _, id := range removeIds {
-		Remove(id)
-	}
-}
-
 func SendTo(b []byte, ids ...ConnectionId) {
 	lock.Lock()
 

@@ -265,19 +265,6 @@ func (r *Room) UpdateCorpses(roundNow uint64) {
 	}
 }
 
-// SendText is kept only for internal/hooks/PlayerDespawn_HandleLeave.go,
-// which another slice 7 task converts; delete it when that lands.
-func (r *Room) SendText(txt string, excludeUserIds ...int) {
-
-	events.AddToQueue(events.Message{
-		RoomId:         r.RoomId,
-		Text:           txt + "\n",
-		ExcludeUserIds: excludeUserIds,
-		IsQuiet:        false,
-	})
-
-}
-
 // announce tells everyone in the room a world event with no actor (a corpse
 // crumbles, a container is gone). It sends through SendMessage, which
 // messaging.Init sets; with no messaging (package tests) it does nothing.

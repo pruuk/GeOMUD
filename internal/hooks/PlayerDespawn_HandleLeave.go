@@ -12,6 +12,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 )
@@ -56,8 +57,16 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 	}
 
 	if _, ok := room.RemovePlayer(evt.UserId); ok {
-		tplTxt, _ := templates.Process("player-despawn", user.Character.Name)
-		room.SendText(tplTxt)
+		// The leaving body is already out of the room's list; the template
+		// names it with {actor}, so an observer who cannot see reads "someone".
+		tplTxt, _ := templates.Process("player-despawn", nil)
+		messaging.Send(perception.Message{
+			Kind:         perception.WorldEvent,
+			Actor:        user.Character.Id,
+			Senses:       perception.Sight | perception.Sound,
+			Range:        perception.Room,
+			ObserverText: tplTxt,
+		})
 	}
 
 	tplTxt, _ := templates.Process("goodbye", nil, evt.UserId)

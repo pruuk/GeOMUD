@@ -48,15 +48,6 @@ func UserIdOf(actor *actors.Actor) int {
 	return 0
 }
 
-// ExcludeId is the ID a room send excludes for actor: its account's UserId,
-// or 0 for an NPC, which never receives room text (Decision 11).
-func ExcludeId(actor *actors.Actor) int {
-	if user := actor.Controller().Account(); user != nil {
-		return user.UserId
-	}
-	return 0
-}
-
 // NameColour is the ANSI alias an actor's name is written in: `username` for
 // an actor with an account, `mobname` otherwise.
 func NameColour(actor *actors.Actor) string {

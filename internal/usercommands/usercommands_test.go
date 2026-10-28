@@ -117,9 +117,9 @@ func TestTryCommandUnknownActor(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestTellAndExcludeId(t *testing.T) {
+func TestTellAndUserIdOf(t *testing.T) {
 	npc, player, _ := setup(t)
 	assert.NotPanics(t, func() { Tell(npc, "nobody hears this") })
-	assert.Equal(t, 0, ExcludeId(npc))
-	assert.Equal(t, 9201, ExcludeId(player))
+	assert.Equal(t, 0, UserIdOf(npc))
+	assert.Equal(t, 9201, UserIdOf(player))
 }

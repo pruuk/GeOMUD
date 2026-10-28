@@ -77,6 +77,13 @@ func Raw(connId connections.ConnectionId, b []byte) {
 	connections.SendTo(b, connId)
 }
 
+// RawAll writes bytes as they are to every connection past the login
+// screens (connections.Broadcast skips those): the copyover notice, sent
+// before any account is active again.
+func RawAll(b []byte) {
+	connections.Broadcast(b)
+}
+
 // RawConn writes to a connection that is not registered yet (server full).
 func RawConn(c net.Conn, b []byte) {
 	c.Write(b)
