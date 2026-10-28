@@ -44,7 +44,7 @@ func History(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 
 	searchResultsTable := templates.GetTable(`History`, headers, rows, formatting)
 	tplTxt, _ := templates.Process("tables/generic", searchResultsTable, user.UserId)
-	Tell(actor,tplTxt)
+	Tell(actor, tplTxt)
 
 	return true, nil
 }

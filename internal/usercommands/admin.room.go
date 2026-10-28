@@ -413,7 +413,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 					messaging.ToAccount(user, `  None.`)
 				}
 				for _, mut := range room.Mutators {
-					messaging.ToAccount(user, `  <ansi fg="mutator">` + mut.MutatorId + `</ansi>`)
+					messaging.ToAccount(user, `  <ansi fg="mutator">`+mut.MutatorId+`</ansi>`)
 				}
 				messaging.ToAccount(user, ``)
 
@@ -422,15 +422,15 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 				messaging.ToAccount(user, ``)
 
 				if !mutators.IsMutator(propertyValue) {
-					messaging.ToAccount(user, `<ansi fg="table-title"><ansi fg="mutator">` + propertyValue + `</ansi> is an invalid mutator id.</ansi>`)
+					messaging.ToAccount(user, `<ansi fg="table-title"><ansi fg="mutator">`+propertyValue+`</ansi> is an invalid mutator id.</ansi>`)
 					messaging.ToAccount(user, `<ansi fg="table-title">  Here is a list of valid mutator id's:</ansi>`)
 					for _, name := range mutators.GetAllMutatorIds() {
-						messaging.ToAccount(user, `    <ansi fg="mutator">` + name + `</ansi>`)
+						messaging.ToAccount(user, `    <ansi fg="mutator">`+name+`</ansi>`)
 					}
 				} else if room.Mutators.Remove(propertyValue) {
-					messaging.ToAccount(user, `<ansi fg="table-title">Mutator <ansi fg="mutator">` + propertyValue + `</ansi> Removed.</ansi>`)
+					messaging.ToAccount(user, `<ansi fg="table-title">Mutator <ansi fg="mutator">`+propertyValue+`</ansi> Removed.</ansi>`)
 				} else if room.Mutators.Add(propertyValue) {
-					messaging.ToAccount(user, `<ansi fg="table-title">Mutator <ansi fg="mutator">` + propertyValue + `</ansi> Added.</ansi>`)
+					messaging.ToAccount(user, `<ansi fg="table-title">Mutator <ansi fg="mutator">`+propertyValue+`</ansi> Added.</ansi>`)
 				}
 
 				messaging.ToAccount(user, ``)
@@ -525,7 +525,7 @@ func Room(rest string, actor *actors.Actor, liveRoom *rooms.Room, flags events.E
 			return true, nil
 
 		} else {
-			messaging.ToAccount(user, 
+			messaging.ToAccount(user,
 				`Invalid property provided to <ansi fg="command">room set</ansi>.`,
 			)
 			return false, fmt.Errorf("room %d not found", roomId)

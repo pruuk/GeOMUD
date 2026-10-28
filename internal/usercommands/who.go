@@ -18,7 +18,7 @@ func Who(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	details := rooms.GetDetails(room, user)
 
 	whoTxt, _ := templates.Process("descriptions/who", details, user.UserId)
-	Tell(actor,whoTxt)
+	Tell(actor, whoTxt)
 
 	return true, nil
 }

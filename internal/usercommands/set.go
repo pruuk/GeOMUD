@@ -23,70 +23,70 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 
 	if len(args) == 0 {
 
-		Tell(actor,`<ansi fg="yellow-bold">description:</ansi>`)
-		Tell(actor,`<ansi fg="yellow">` + util.SplitStringNL(user.Character.Description, 80) + `</ansi>`)
-		Tell(actor,``)
+		Tell(actor, `<ansi fg="yellow-bold">description:</ansi>`)
+		Tell(actor, `<ansi fg="yellow">`+util.SplitStringNL(user.Character.Description, 80)+`</ansi>`)
+		Tell(actor, ``)
 
 		screenReaderTxt := `<ansi fg="red">OFF</ansi>`
 		if user.ScreenReader {
 			screenReaderTxt = `<ansi fg="green">ON</ansi>`
 		}
-		Tell(actor,`<ansi fg="yellow-bold">ScreenReader:</ansi> ` + screenReaderTxt)
-		Tell(actor,``)
+		Tell(actor, `<ansi fg="yellow-bold">ScreenReader:</ansi> `+screenReaderTxt)
+		Tell(actor, ``)
 
 		on := user.GetConfigOption(`auction`)
 		onTxt := `<ansi fg="red">OFF</ansi>`
 		if on == nil || on.(bool) {
 			onTxt = `<ansi fg="green">ON</ansi>`
 		}
-		Tell(actor,`<ansi fg="yellow-bold">auction:</ansi> ` + onTxt)
-		Tell(actor,``)
+		Tell(actor, `<ansi fg="yellow-bold">auction:</ansi> `+onTxt)
+		Tell(actor, ``)
 
 		on = user.GetConfigOption(`shortadjectives`)
 		onTxt = `<ansi fg="red">OFF</ansi>`
 		if on == nil || on.(bool) {
 			onTxt = `<ansi fg="green">ON</ansi>`
 		}
-		Tell(actor,`<ansi fg="yellow-bold">shortadjectives:</ansi> ` + onTxt)
-		Tell(actor,``)
+		Tell(actor, `<ansi fg="yellow-bold">shortadjectives:</ansi> `+onTxt)
+		Tell(actor, ``)
 
 		on = user.GetConfigOption(`tinymap`)
 		onTxt = `<ansi fg="red">OFF</ansi>`
 		if on == nil || on.(bool) {
 			onTxt = `<ansi fg="green">ON</ansi>`
 		}
-		Tell(actor,`<ansi fg="yellow-bold">tinymap:</ansi> ` + onTxt)
-		Tell(actor,``)
+		Tell(actor, `<ansi fg="yellow-bold">tinymap:</ansi> `+onTxt)
+		Tell(actor, ``)
 
 		currentPrompt := user.GetConfigOption(`prompt`)
 		if currentPrompt == nil {
 			currentPrompt = c.Prompt.String()
 		}
-		Tell(actor,`<ansi fg="yellow-bold">prompt:</ansi> ` + currentPrompt.(string))
-		Tell(actor,``)
+		Tell(actor, `<ansi fg="yellow-bold">prompt:</ansi> `+currentPrompt.(string))
+		Tell(actor, ``)
 
 		currentPrompt = user.GetConfigOption(`fprompt`)
 		if currentPrompt == nil {
 			currentPrompt = c.Prompt.String()
 		}
-		Tell(actor,`<ansi fg="yellow-bold">fprompt:</ansi> ` + currentPrompt.(string))
-		Tell(actor,``)
+		Tell(actor, `<ansi fg="yellow-bold">fprompt:</ansi> `+currentPrompt.(string))
+		Tell(actor, ``)
 
 		currentWimpy := user.GetConfigOption(`wimpy`)
 		if currentWimpy == nil {
 			currentWimpy = 0
 		}
-		Tell(actor,fmt.Sprintf(`<ansi fg="yellow-bold">wimpy:</ansi> %d%%`, currentWimpy.(int)))
-		Tell(actor,``)
+		Tell(actor, fmt.Sprintf(`<ansi fg="yellow-bold">wimpy:</ansi> %d%%`, currentWimpy.(int)))
+		Tell(actor, ``)
 
 		currentStyle := user.GetConfigOption(`shopstyle`)
 		if currentStyle == nil {
 			currentStyle = "default"
 		}
-		Tell(actor,`<ansi fg="yellow-bold">shopstyle:</ansi> ` + currentStyle.(string))
-		Tell(actor,``)
+		Tell(actor, `<ansi fg="yellow-bold">shopstyle:</ansi> `+currentStyle.(string))
+		Tell(actor, ``)
 
-		Tell(actor,`See: <ansi fg="command">help set</ansi>`)
+		Tell(actor, `See: <ansi fg="command">help set</ansi>`)
 
 		return true, nil
 	}
@@ -102,7 +102,7 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		}
 		user.Character.Description = rest
 
-		Tell(actor,"Description set. Look at yourself to confirm.")
+		Tell(actor, "Description set. Look at yourself to confirm.")
 
 		events.AddToQueue(events.UserSettingChanged{
 			UserId: user.UserId,
@@ -119,10 +119,10 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		}
 		if !on.(bool) {
 			on = true
-			Tell(actor,`Auctions toggled <ansi fg="green">ON</ansi>.`)
+			Tell(actor, `Auctions toggled <ansi fg="green">ON</ansi>.`)
 		} else {
 			on = false
-			Tell(actor,`Auctions toggled <ansi fg="red">OFF</ansi>.`)
+			Tell(actor, `Auctions toggled <ansi fg="red">OFF</ansi>.`)
 		}
 
 		user.SetConfigOption(`auction`, on)
@@ -143,10 +143,10 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		}
 		if !on.(bool) {
 			on = true
-			Tell(actor,`Short Adjectives toggled <ansi fg="green">ON</ansi>.`)
+			Tell(actor, `Short Adjectives toggled <ansi fg="green">ON</ansi>.`)
 		} else {
 			on = false
-			Tell(actor,`Short Adjectives toggled <ansi fg="red">OFF</ansi>.`)
+			Tell(actor, `Short Adjectives toggled <ansi fg="red">OFF</ansi>.`)
 		}
 
 		user.SetConfigOption(`shortadjectives`, on)
@@ -167,10 +167,10 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		}
 		if !on.(bool) {
 			on = true
-			Tell(actor,`Tinymap toggled <ansi fg="green">ON</ansi>.`)
+			Tell(actor, `Tinymap toggled <ansi fg="green">ON</ansi>.`)
 		} else {
 			on = false
-			Tell(actor,`Tinymap toggled <ansi fg="red">OFF</ansi>.`)
+			Tell(actor, `Tinymap toggled <ansi fg="red">OFF</ansi>.`)
 		}
 
 		user.SetConfigOption(`tinymap`, on)
@@ -191,9 +191,9 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			if currentPrompt == nil {
 				currentPrompt = c.Prompt.String()
 			}
-			Tell(actor,"Your current prompt:\n")
-			Tell(actor,currentPrompt.(string))
-			Tell(actor,"\n" + `Type <ansi fg="command">help set-prompt</ansi> for more info on customizing prompts.` + "\n")
+			Tell(actor, "Your current prompt:\n")
+			Tell(actor, currentPrompt.(string))
+			Tell(actor, "\n"+`Type <ansi fg="command">help set-prompt</ansi> for more info on customizing prompts.`+"\n")
 			return true, nil
 		}
 
@@ -210,7 +210,7 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			user.SetConfigOption(`prompt-compiled`, util.ConvertColorShortTags(promptStr))
 		}
 
-		Tell(actor,"Prompt set.")
+		Tell(actor, "Prompt set.")
 
 		events.AddToQueue(events.UserSettingChanged{
 			UserId: user.UserId,
@@ -228,9 +228,9 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			if currentPrompt == nil {
 				currentPrompt = c.Prompt.String()
 			}
-			Tell(actor,"Your current fprompt:\n")
-			Tell(actor,currentPrompt.(string))
-			Tell(actor,"\n" + `Type <ansi fg="command">help set-prompt</ansi> for more info on customizing prompts.` + "\n")
+			Tell(actor, "Your current fprompt:\n")
+			Tell(actor, currentPrompt.(string))
+			Tell(actor, "\n"+`Type <ansi fg="command">help set-prompt</ansi> for more info on customizing prompts.`+"\n")
 			return true, nil
 		}
 
@@ -247,7 +247,7 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			user.SetConfigOption(`fprompt-compiled`, util.ConvertColorShortTags(promptStr))
 		}
 
-		Tell(actor,"fprompt set.")
+		Tell(actor, "fprompt set.")
 
 		events.AddToQueue(events.UserSettingChanged{
 			UserId: user.UserId,
@@ -265,9 +265,9 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			if currentWimpy == nil {
 				currentWimpy = 0
 			}
-			Tell(actor,"Your current wimpy:\n")
-			Tell(actor,fmt.Sprintf(`%d%%`, currentWimpy.(int)))
-			Tell(actor,"\n" + `Type <ansi fg="command">help wimpy</ansi> to learn about the wimpy setting.` + "\n")
+			Tell(actor, "Your current wimpy:\n")
+			Tell(actor, fmt.Sprintf(`%d%%`, currentWimpy.(int)))
+			Tell(actor, "\n"+`Type <ansi fg="command">help wimpy</ansi> to learn about the wimpy setting.`+"\n")
 			return true, nil
 		}
 
@@ -283,7 +283,7 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			user.SetConfigOption(`wimpy`, wimpyInt)
 		}
 
-		Tell(actor,"wimpy set.")
+		Tell(actor, "wimpy set.")
 
 		events.AddToQueue(events.UserSettingChanged{
 			UserId: user.UserId,
@@ -303,14 +303,14 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			if currentStyle == nil {
 				currentStyle = "default"
 			}
-			Tell(actor,fmt.Sprintf("Current shop style: %s", currentStyle))
-			Tell(actor,`Available styles: <ansi fg="command">default</ansi>, <ansi fg="command">fancy</ansi>, <ansi fg="command">minimal</ansi>, <ansi fg="command">grid</ansi>, <ansi fg="command">arcane</ansi>, <ansi fg="command">rugged</ansi>`)
+			Tell(actor, fmt.Sprintf("Current shop style: %s", currentStyle))
+			Tell(actor, `Available styles: <ansi fg="command">default</ansi>, <ansi fg="command">fancy</ansi>, <ansi fg="command">minimal</ansi>, <ansi fg="command">grid</ansi>, <ansi fg="command">arcane</ansi>, <ansi fg="command">rugged</ansi>`)
 			return true, nil
 		}
 
 		style := args[0]
 		if !validStyles[style] {
-			Tell(actor,`Invalid style. Available: <ansi fg="command">default</ansi>, <ansi fg="command">fancy</ansi>, <ansi fg="command">minimal</ansi>, <ansi fg="command">grid</ansi>, <ansi fg="command">arcane</ansi>, <ansi fg="command">rugged</ansi>`)
+			Tell(actor, `Invalid style. Available: <ansi fg="command">default</ansi>, <ansi fg="command">fancy</ansi>, <ansi fg="command">minimal</ansi>, <ansi fg="command">grid</ansi>, <ansi fg="command">arcane</ansi>, <ansi fg="command">rugged</ansi>`)
 			return true, nil
 		}
 
@@ -320,7 +320,7 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			user.SetConfigOption(`shopstyle`, style)
 		}
 
-		Tell(actor,fmt.Sprintf(`Shop list style set to: <ansi fg="command">%s</ansi>`, style))
+		Tell(actor, fmt.Sprintf(`Shop list style set to: <ansi fg="command">%s</ansi>`, style))
 
 		events.AddToQueue(events.UserSettingChanged{
 			UserId: user.UserId,
@@ -332,9 +332,9 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 
 	if setTarget == `screenreader` {
 		if user.ScreenReader {
-			Tell(actor,`ScreenReader mode toggled <ansi fg="red">OFF</ansi>.`)
+			Tell(actor, `ScreenReader mode toggled <ansi fg="red">OFF</ansi>.`)
 		} else {
-			Tell(actor,`ScreenReader mode toggled <ansi fg="green">ON</ansi>.`)
+			Tell(actor, `ScreenReader mode toggled <ansi fg="green">ON</ansi>.`)
 		}
 		user.ScreenReader = !user.ScreenReader
 
@@ -353,7 +353,7 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 
 		macroNum, _ := strconv.Atoi(string(setTarget[1]))
 		if macroNum == 0 {
-			Tell(actor,"Invalid macro number supplied.")
+			Tell(actor, "Invalid macro number supplied.")
 			return true, nil
 		}
 
@@ -368,12 +368,12 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 
 		if len(setVal) == 0 {
 			delete(user.Macros, setTarget)
-			Tell(actor,fmt.Sprintf(`Macro <ansi fg="command">=%d</ansi> deleted.`, macroNum))
+			Tell(actor, fmt.Sprintf(`Macro <ansi fg="command">=%d</ansi> deleted.`, macroNum))
 		} else {
 
 			allComands := strings.Split(setVal, ";")
 			if len(allComands) > 10 {
-				Tell(actor,`Macros are limited to 10 commands.`)
+				Tell(actor, `Macros are limited to 10 commands.`)
 				return true, nil
 			}
 
@@ -384,7 +384,7 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 				cmd = strings.TrimSpace(cmd)
 				if len(cmd) > 0 {
 					if cmd[0] == '=' {
-						Tell(actor,`You cannot reference macros inside of a macro`)
+						Tell(actor, `You cannot reference macros inside of a macro`)
 						return true, nil
 					}
 					finalMacroCommands = append(finalMacroCommands, cmd)
@@ -393,13 +393,13 @@ func Set(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			}
 
 			if len(finalMacroCommands) < 1 {
-				Tell(actor,`There was a problem setting your macro.`)
+				Tell(actor, `There was a problem setting your macro.`)
 				return true, nil
 			}
 
 			user.Macros[setTarget] = strings.Join(finalMacroCommands, `;`)
 
-			Tell(actor,fmt.Sprintf(`Macro set. Type <ansi fg="command">=%d</ansi> or (if your terminal supports it) press <ansi fg="command">F%d</ansi> to use it.`, macroNum, macroNum))
+			Tell(actor, fmt.Sprintf(`Macro set. Type <ansi fg="command">=%d</ansi> or (if your terminal supports it) press <ansi fg="command">F%d</ansi> to use it.`, macroNum, macroNum))
 		}
 
 		events.AddToQueue(events.UserSettingChanged{

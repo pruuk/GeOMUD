@@ -33,8 +33,8 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	cmdPrompt, isNew := user.StartPrompt(`start`, rest)
 
 	if isNew {
-		Tell(actor,``)
-		Tell(actor,fmt.Sprintf(`You'll need to answer some questions.%s`, term.CRLFStr))
+		Tell(actor, ``)
+		Tell(actor, fmt.Sprintf(`You'll need to answer some questions.%s`, term.CRLFStr))
 	}
 
 	if user.Character.RaceId == 0 {
@@ -58,9 +58,9 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		if !question.Done {
 
 			tplTxt, _ := templates.Process("tables/numbered-list", raceOptions, user.UserId)
-			Tell(actor,tplTxt)
-			Tell(actor,`  Want to know more details? Type <ansi fg="command">help {racename}</ansi> or <ansi fg="command">help {number}</ansi>`)
-			Tell(actor,``)
+			Tell(actor, tplTxt)
+			Tell(actor, `  Want to know more details? Type <ansi fg="command">help {racename}</ansi> or <ansi fg="command">help {number}</ansi>`)
+			Tell(actor, ``)
 			return true, nil
 		}
 
@@ -99,8 +99,8 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 					user.Character.Alignment = r.DefaultAlignment
 					user.Character.Validate()
 
-					Tell(actor,``)
-					Tell(actor,fmt.Sprintf(`  <ansi fg="magenta">*** Your ghostly form materializes into that of a %s ***</ansi>%s`, r.Name, term.CRLFStr))
+					Tell(actor, ``)
+					Tell(actor, fmt.Sprintf(`  <ansi fg="magenta">*** Your ghostly form materializes into that of a %s ***</ansi>%s`, r.Name, term.CRLFStr))
 					break
 				}
 
@@ -111,9 +111,9 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 			question.RejectResponse()
 
 			tplTxt, _ := templates.Process("tables/numbered-list", raceOptions, user.UserId)
-			Tell(actor,tplTxt)
-			Tell(actor,`  Want to know more details? Type <ansi fg="command">help {racename}</ansi> or <ansi fg="command">help {number}</ansi>`)
-			Tell(actor,``)
+			Tell(actor, tplTxt)
+			Tell(actor, `  Want to know more details? Type <ansi fg="command">help {racename}</ansi> or <ansi fg="command">help {number}</ansi>`)
+			Tell(actor, ``)
 
 			return true, nil
 		}
@@ -127,32 +127,32 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		}
 
 		if strings.EqualFold(question.Response, user.Username) {
-			Tell(actor,`Your username cannot match your character name!`)
+			Tell(actor, `Your username cannot match your character name!`)
 			question.RejectResponse()
 			return true, nil
 		}
 
 		if err := accounts.ValidateName(question.Response); err != nil {
-			Tell(actor,`that name is not allowed: ` + err.Error())
+			Tell(actor, `that name is not allowed: `+err.Error())
 			question.RejectResponse()
 			return true, nil
 		}
 
 		if bannedPattern, ok := configs.GetConfig().IsBannedName(question.Response); ok {
-			Tell(actor,`that username matched the prohibited name pattern: "` + bannedPattern + `"`)
+			Tell(actor, `that username matched the prohibited name pattern: "`+bannedPattern+`"`)
 			question.RejectResponse()
 			return true, nil
 		}
 
 		if foundUserId, _ := accounts.CharacterNameSearch(question.Response); foundUserId > 0 {
-			Tell(actor,`that character name is already in use.`)
+			Tell(actor, `that character name is already in use.`)
 			question.RejectResponse()
 			return true, nil
 		}
 
 		for _, name := range mobs.GetAllMobNames() {
 			if strings.EqualFold(name, question.Response) {
-				Tell(actor,"that name is in use")
+				Tell(actor, "that name is in use")
 				question.RejectResponse()
 				return true, nil
 			}
@@ -171,12 +171,12 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		}
 
 		if err := user.SetCharacterName(usernameSelected); err != nil {
-			Tell(actor,err.Error())
+			Tell(actor, err.Error())
 			question.RejectResponse()
 			return true, nil
 		}
 
-		Tell(actor,fmt.Sprintf(`You will be known as <ansi fg="yellow-bold">%s</ansi>!%s`, user.Character.Name, term.CRLFStr))
+		Tell(actor, fmt.Sprintf(`You will be known as <ansi fg="yellow-bold">%s</ansi>!%s`, user.Character.Name, term.CRLFStr))
 	}
 
 	user.Character.ExtraLives = int(configs.GetGamePlayConfig().LivesStart)
@@ -201,7 +201,7 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		user.ClearPrompt()
 
-		Tell(actor,fmt.Sprintf(`<ansi fg="magenta">Suddenly, a vortex appears before you, drawing you in before you have any chance to react!</ansi>%s`, term.CRLFStr))
+		Tell(actor, fmt.Sprintf(`<ansi fg="magenta">Suddenly, a vortex appears before you, drawing you in before you have any chance to react!</ansi>%s`, term.CRLFStr))
 
 		if destRoom := rooms.LoadRoom(rooms.StartRoomIdAlias); destRoom != nil {
 
@@ -230,7 +230,7 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 	if len(configs.GetSpecialRoomsConfig().TutorialRooms) == 0 {
 		// The start room failed to load and there is no tutorial to fall back on.
-		Tell(actor,`The start room could not be loaded. Please tell an admin.`)
+		Tell(actor, `The start room could not be loaded. Please tell an admin.`)
 		return true, nil
 	}
 
@@ -247,7 +247,7 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 	createdRoomIds, err := rooms.CreateEphemeralRoomIds(tutorialRoomIds...)
 	if err != nil {
-		Tell(actor,`The Tutorial zone is fully occupied right now. Please try again in a few minutes`)
+		Tell(actor, `The Tutorial zone is fully occupied right now. Please try again in a few minutes`)
 		return true, nil
 	}
 
@@ -256,7 +256,7 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 	ephemeralStartRoomId := createdRoomIds[startRoom]
 
-	Tell(actor,fmt.Sprintf(`<ansi fg="magenta">Suddenly, a vortex appears before you, drawing you in before you have any chance to react!</ansi>%s`, term.CRLFStr))
+	Tell(actor, fmt.Sprintf(`<ansi fg="magenta">Suddenly, a vortex appears before you, drawing you in before you have any chance to react!</ansi>%s`, term.CRLFStr))
 
 	rooms.MoveToRoom(user.Character.Id, ephemeralStartRoomId)
 
