@@ -10,9 +10,11 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -30,7 +32,13 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 
 		mob.Character.Health = mob.Character.HealthMax.Value
 
-		room.SendText(`<ansi fg="mobname">` + mob.Character.Name + `</ansi> is suddenly revived in a shower of sparks!`)
+		messaging.Send(perception.Message{
+			Kind:         perception.WorldEvent,
+			Actor:        actor.Id,
+			Senses:       perception.Sight | perception.Sound,
+			Range:        perception.Room,
+			ObserverText: `{actor} is suddenly revived in a shower of sparks!`,
+		})
 
 		mob.Character.CancelBuffsWithFlag("revive-on-death")
 
@@ -47,9 +55,13 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 	}
 
 	// Send a death msg to everyone in the room.
-	room.SendText(
-		fmt.Sprintf(`<ansi fg="mobname">%s</ansi> has died.`, mob.Character.Name),
-	)
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        actor.Id,
+		Senses:       perception.Sight | perception.Sound,
+		Range:        perception.Room,
+		ObserverText: `{actor} has died.`,
+	})
 
 	mobXP := mob.Character.XPTL(mob.Character.Level - 1)
 
@@ -204,6 +216,9 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 
 	}
 
+	// slice 7: party XP and the per-member sends below stay as they are (one
+	// Interface message per member), as do the item and gold drop lines (they
+	// name no actor).
 	if len(partyTracker) > 0 {
 
 		for leaderId, xp := range partyTracker {

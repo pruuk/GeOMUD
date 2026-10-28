@@ -10,11 +10,29 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
+
+// sendShootOpening tells the shooter's room that the shooter prepares to
+// shoot. The message has no Target on purpose: with a Target set, messaging
+// would also reach the target's room, and the target gets nothing today. The
+// target's name (already coloured) is part of the text. A hidden shooter reads
+// "Someone" (messaging's rule).
+func sendShootOpening(actor *actors.Actor, targetName, exitName string) {
+	messaging.Send(perception.Message{
+		Kind:   perception.WorldEvent,
+		Actor:  actor.Id,
+		Senses: perception.Sight | perception.Sound,
+		Range:  perception.Room,
+		ObserverText: fmt.Sprintf(`{actor} prepares to shoot at %s through the <ansi fg="exit">%s</ansi> exit.`,
+			targetName, exitName),
+	})
+}
 
 func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
@@ -62,8 +80,6 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		return true, nil
 	}
 
-	isSneaking := actor.Character.HasBuffFlag("hidden")
-
 	/*
 		combatAddlWaitRounds := actor.Character.Equipment.Weapon.GetSpec().WaitRounds + actor.Character.Equipment.Weapon.GetSpec().WaitRounds
 		attkType := characters.DefaultAttack
@@ -89,12 +105,7 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="mobname">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, m.Character.Name, exitName),
 			)
 
-			if !isSneaking {
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to shoot at <ansi fg="mobname">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, m.Character.Name, exitName),
-					ExcludeId(actor),
-				)
-			}
+			sendShootOpening(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi>`, m.Character.Name), exitName)
 
 		}
 
@@ -119,14 +130,7 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="username">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, p.Character.Name, exitName),
 			)
 
-			if !isSneaking {
-
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="username">%s</ansi> prepares to shoot at <ansi fg="username">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, actor.Character.Name, p.Character.Name, exitName),
-					ExcludeId(actor),
-				)
-
-			}
+			sendShootOpening(actor, fmt.Sprintf(`<ansi fg="username">%s</ansi>`, p.Character.Name), exitName)
 
 		}
 

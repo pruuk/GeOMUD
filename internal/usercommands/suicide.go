@@ -15,7 +15,9 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
@@ -42,10 +44,13 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 	}
 
 	// Send a death msg to everyone in the room.
-	room.SendText(
-		fmt.Sprintf(`<ansi fg="username">%s</ansi> has died.`, user.Character.Name),
-		user.UserId,
-	)
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        actor.Id,
+		Senses:       perception.Sight | perception.Sound,
+		Range:        perception.Room,
+		ObserverText: `{actor} has died.`,
+	})
 
 	i := 0
 	dmgCt := len(user.Character.PlayerDamage)
@@ -85,6 +90,9 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 		msg = fmt.Sprintf(`<ansi fg="magenta-bold">***</ansi> <ansi fg="username">%s</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by %s) <ansi fg="magenta-bold">***</ansi>%s`, user.Character.Name, killedBy, term.CRLFStr)
 	}
 
+	// slice 7: stays a Broadcast. messaging adds a newline after the CRLF the
+	// text carries, Broadcast has screen-reader and refresh fields messaging
+	// lacks, and the "killed by" list is text, not a role.
 	events.AddToQueue(events.Broadcast{
 		Text: msg,
 	})

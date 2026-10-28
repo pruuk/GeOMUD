@@ -8,8 +8,10 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -173,8 +175,6 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		return true, nil
 	}
 
-	isSneaking := actor.Character.HasBuffFlag("hidden")
-
 	/*
 		combatAddlWaitRounds := user.Character.Equipment.Weapon.GetSpec().WaitRounds + user.Character.Equipment.Weapon.GetSpec().WaitRounds
 		attkType := characters.DefaultAttack
@@ -219,12 +219,16 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 			Tell(actor, fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, m.Character.Name))
 
-			if !isSneaking {
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> prepares to fight <ansi fg="mobname">%s</ansi>.`, NameColour(actor), actor.Character.Name, m.Character.Name),
-					selfUserId,
-				)
-			}
+			// A hidden actor reads "Someone" to the room (messaging's rule); the
+			// actor's own line is the Tell above.
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Target:       attackMobId,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ObserverText: `{actor} prepares to fight {target}.`,
+			})
 
 		}
 
@@ -267,16 +271,15 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 			Tell(actor, fmt.Sprintf(`You prepare to fight <ansi fg="mobname">%s</ansi>!`, p.Character.Name))
 
-			if !isSneaking {
-
-				p.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> prepares to fight you!`, NameColour(actor), actor.Character.Name),
-				)
-
-				room.SendText(
-					fmt.Sprintf(`<ansi fg="%s">%s</ansi> prepares to fight <ansi fg="username">%s</ansi>.`, NameColour(actor), actor.Character.Name, p.Character.Name),
-					selfUserId, attackPlayerId)
-			}
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Target:       p.Character.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				TargetText:   `{actor} prepares to fight you!`,
+				ObserverText: `{actor} prepares to fight {target}.`,
+			})
 
 		}
 
