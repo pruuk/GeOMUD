@@ -89,7 +89,7 @@ func Teleport(rest string, user *accounts.Account, room *rooms.Room, flags event
 
 	if gotoRoomId != 0 || rest == `0` {
 
-		if err := rooms.MoveToRoom(targetUser.UserId, gotoRoomId); err != nil {
+		if err := rooms.MoveToRoom(targetUser.Character.Id, gotoRoomId); err != nil {
 			user.SendText(err.Error())
 
 		} else {
@@ -123,7 +123,7 @@ func Teleport(rest string, user *accounts.Account, room *rooms.Room, flags event
 								continue
 							}
 
-							rooms.MoveToRoom(partyUser.UserId, gotoRoomId)
+							rooms.MoveToRoom(partyUser.Character.Id, gotoRoomId)
 							partyUser.SendText(fmt.Sprintf("Moved to room %d.", gotoRoomId))
 							room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> appears in a flash of light!`, partyUser.Character.Name), partyUser.UserId)
 

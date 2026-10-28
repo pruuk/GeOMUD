@@ -151,7 +151,7 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 				oldRoom.AddPlayer(user.UserId)
 			}
 
-			rooms.MoveToRoom(user.UserId, -1)
+			rooms.MoveToRoom(user.Character.Id, -1)
 
 			return true, nil
 		}
@@ -294,7 +294,7 @@ func Suicide(rest string, user *accounts.Account, room *rooms.Room, flags events
 
 	clear(user.Character.PlayerDamage)
 
-	rooms.MoveToRoom(user.UserId, int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom))
+	rooms.MoveToRoom(user.Character.Id, int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom))
 
 	return true, nil
 }

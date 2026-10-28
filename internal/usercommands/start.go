@@ -198,7 +198,7 @@ func Start(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 		if destRoom := rooms.LoadRoom(rooms.StartRoomIdAlias); destRoom != nil {
 
-			rooms.MoveToRoom(user.UserId, destRoom.RoomId)
+			rooms.MoveToRoom(user.Character.Id, destRoom.RoomId)
 
 			// Tell the new room they have arrived
 
@@ -248,7 +248,7 @@ func Start(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 
 	user.SendText(fmt.Sprintf(`<ansi fg="magenta">Suddenly, a vortex appears before you, drawing you in before you have any chance to react!</ansi>%s`, term.CRLFStr))
 
-	rooms.MoveToRoom(user.UserId, ephemeralStartRoomId)
+	rooms.MoveToRoom(user.Character.Id, ephemeralStartRoomId)
 
 	if lookRoom := rooms.LoadRoom(ephemeralStartRoomId); lookRoom != nil {
 		Look(``, user, lookRoom, events.CmdSecretly)

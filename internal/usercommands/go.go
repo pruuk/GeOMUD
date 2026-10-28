@@ -172,7 +172,7 @@ func Go(rest string, user *accounts.Account, room *rooms.Room, flags events.Even
 			enterFromExit = fmt.Sprintf(`the <ansi fg="exit">%s</ansi>`, enterFromExit)
 		}
 
-		if err := rooms.MoveToRoom(user.UserId, destRoom.RoomId); err != nil {
+		if err := rooms.MoveToRoom(user.Character.Id, destRoom.RoomId); err != nil {
 			user.SendText("Oops, couldn't move there!")
 		} else {
 

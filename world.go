@@ -290,7 +290,8 @@ func (w *World) logOutUserByConnectionId(connectionId connections.ConnectionId) 
 
 func (w *World) enterWorld(userId int, roomId int) {
 
-	if userInfo := accounts.GetByUserId(userId); userInfo != nil {
+	userInfo := accounts.GetByUserId(userId)
+	if userInfo != nil {
 		events.AddToQueue(events.PlayerSpawn{
 			UserId:        userInfo.UserId,
 			ConnectionId:  userInfo.ConnectionId(),
@@ -303,7 +304,9 @@ func (w *World) enterWorld(userId int, roomId int) {
 	w.UpdateStats()
 
 	// Put htme in the room
-	rooms.MoveToRoom(userId, roomId, true)
+	if userInfo != nil {
+		rooms.MoveToRoom(userInfo.Character.Id, roomId, true)
+	}
 }
 
 /*

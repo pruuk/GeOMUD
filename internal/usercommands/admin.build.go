@@ -40,7 +40,7 @@ func Build(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 			} else {
 				user.SendText(fmt.Sprintf("Zone %s created.", zoneName))
 
-				if err := rooms.MoveToRoom(user.UserId, roomId); err != nil {
+				if err := rooms.MoveToRoom(user.Character.Id, roomId); err != nil {
 					user.SendText(err.Error())
 				} else {
 					user.SendText(fmt.Sprintf("Moved to room %d.", roomId))
@@ -143,7 +143,7 @@ func Build(rest string, user *accounts.Account, room *rooms.Room, flags events.E
 				}
 			}
 
-			if err := rooms.MoveToRoom(user.UserId, destinationRoom.RoomId); err != nil {
+			if err := rooms.MoveToRoom(user.Character.Id, destinationRoom.RoomId); err != nil {
 				user.SendText(err.Error())
 			} else {
 				user.SendText(fmt.Sprintf("Moved to room %d.", destinationRoom.RoomId))

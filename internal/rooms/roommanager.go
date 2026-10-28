@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/exit"
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -266,14 +268,24 @@ func GetAllZoneRoomsIds(zoneName string) []int {
 	return []int{}
 }
 
-func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
+// MoveToRoom moves the body with actorId to a room: any actor, player or NPC.
+// What only makes sense for a player (the user visitor trail, the
+// roomsWithUsers count, preparing a room when its first player enters) is
+// keyed on the account and runs only when the actor has one.
+func MoveToRoom(actorId ids.ID, toRoomId int, isSpawn ...bool) error {
 
-	user := accounts.GetByUserId(userId)
-	if user == nil {
-		return fmt.Errorf("user %d not found", userId)
+	a := actors.Get(actorId)
+	if a == nil || a.Character == nil {
+		return fmt.Errorf("actor %s not found", actorId)
+	}
+	char := a.Character
+	acc := a.Controller().Account() // nil for an NPC
+
+	if acc == nil && mobs.GetInstance(actorId) == nil {
+		return fmt.Errorf("actor %s has no account and no NPC instance", actorId)
 	}
 
-	currentRoom := LoadRoom(user.Character.RoomId)
+	currentRoom := LoadRoom(char.RoomId)
 
 	cfg := configs.GetSpecialRoomsConfig()
 
@@ -282,7 +294,7 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 	deathRecoveryRoomId := int(cfg.DeathRecoveryRoom)
 	if toRoomId == deathRecoveryRoomId {
 		// Set their reset room id to death recovery.
-		user.Character.RoomIdOnReset = deathRecoveryRoomId
+		char.RoomIdOnReset = deathRecoveryRoomId
 		if newRooms, err := CreateEphemeralRoomIds(deathRecoveryRoomId); err == nil {
 			toRoomId = newRooms[deathRecoveryRoomId]
 		}
@@ -291,7 +303,7 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 	if toRoomId == StartRoomIdAlias {
 
 		// If "StartRoom" is set for MiscData on the char, use that.
-		if charStartRoomId := user.Character.GetMiscData(`StartRoom`); charStartRoomId != nil {
+		if charStartRoomId := char.GetMiscData(`StartRoom`); charStartRoomId != nil {
 			if rId, ok := charStartRoomId.(int); ok {
 				toRoomId = rId
 			}
@@ -314,19 +326,26 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 	}
 
 	// r.prepare locks, so do it before the upcoming lock
-	if newRoom.PlayerCt() == 0 {
+	// (rooms are prepared for players only)
+	if acc != nil && newRoom.PlayerCt() == 0 {
 		newRoom.Prepare(true)
 	}
 
-	fromRoomId := user.Character.RoomId
+	fromRoomId := char.RoomId
 	if currentRoom != nil {
-		currentRoom.MarkUserVisited(userId, 1)
-		if len, _ := currentRoom.RemovePlayer(userId); len < 1 {
-			delete(roomManager.roomsWithUsers, currentRoom.RoomId)
+		if acc != nil {
+			currentRoom.MarkUserVisited(acc.UserId, 1)
+			if len, _ := currentRoom.RemovePlayer(acc.UserId); len < 1 {
+				delete(roomManager.roomsWithUsers, currentRoom.RoomId)
+			}
+		} else {
+			currentRoom.RemoveMob(actorId) // marks the trail as it leaves
 		}
 	}
 
-	newRoom.MarkUserVisited(userId)
+	if acc != nil {
+		newRoom.MarkUserVisited(acc.UserId)
+	}
 
 	//
 	// Apply any mutators from the zone or room
@@ -339,8 +358,13 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 			continue
 		}
 		for _, buffId := range spec.PlayerBuffIds {
-			if !user.Character.HasBuff(buffId) {
-				user.AddBuff(buffId, `area`)
+			if !char.HasBuff(buffId) {
+				// Same event Account.AddBuff queues, for any body
+				events.AddToQueue(events.Buff{
+					ActorId: char.Id,
+					BuffId:  buffId,
+					Source:  `area`,
+				})
 			}
 		}
 	}
@@ -350,13 +374,13 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 	//
 	if IsEphemeralRoomId(newRoom.RoomId) {
 
-		if user.Character.RoomIdOnReset == 0 {
+		if char.RoomIdOnReset == 0 {
 			//
 			// If their previous room was non ephemeral, set it to their reset room by default
 			// This can be overridden manually by scripts/coding if/when needed.
 			//
-			if !IsEphemeralRoomId(user.Character.RoomId) {
-				user.Character.RoomIdOnReset = user.Character.RoomId
+			if !IsEphemeralRoomId(char.RoomId) {
+				char.RoomIdOnReset = char.RoomId
 			}
 		}
 
@@ -365,8 +389,8 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 		// If their RoomIdOnReset is non zero and they are moving to a non ephemeral room
 		// Clear their RoomIdOnReset.
 		//
-		if user.Character.RoomIdOnReset != 0 {
-			user.Character.RoomIdOnReset = 0
+		if char.RoomIdOnReset != 0 {
+			char.RoomIdOnReset = 0
 		}
 	}
 
@@ -374,24 +398,32 @@ func MoveToRoom(userId int, toRoomId int, isSpawn ...bool) error {
 	// Done adding mutator buffs
 	//
 
-	user.Character.RoomId = newRoom.RoomId
-	user.Character.Zone = newRoom.Zone
-	user.Character.RememberRoom(newRoom.RoomId) // Mark this room as remembered.
-	if zCfg := GetZoneConfig(newRoom.Zone); zCfg != nil {
-		user.Character.MarkVisitedRoom(newRoom.RoomId, newRoom.Zone, zCfg.RoomIds) // Permanently record the visit.
+	if acc == nil {
+		// AddMob sets RoomId and Zone, lists the body, and queues the one
+		// RoomChange for the move (from the room the body is still in).
+		newRoom.AddMob(actorId)
 	} else {
-		user.Character.MarkVisitedRoom(newRoom.RoomId, newRoom.Zone, nil) // Permanently record the visit.
+		char.RoomId = newRoom.RoomId
+		char.Zone = newRoom.Zone
+	}
+	char.RememberRoom(newRoom.RoomId) // Mark this room as remembered.
+	if zCfg := GetZoneConfig(newRoom.Zone); zCfg != nil {
+		char.MarkVisitedRoom(newRoom.RoomId, newRoom.Zone, zCfg.RoomIds) // Permanently record the visit.
+	} else {
+		char.MarkVisitedRoom(newRoom.RoomId, newRoom.Zone, nil) // Permanently record the visit.
 	}
 
-	playerCt := newRoom.AddPlayer(userId)
-	roomManager.roomsWithUsers[newRoom.RoomId] = playerCt
+	if acc != nil {
+		playerCt := newRoom.AddPlayer(acc.UserId)
+		roomManager.roomsWithUsers[newRoom.RoomId] = playerCt
 
-	events.AddToQueue(events.RoomChange{
-		ActorId:    user.Character.Id,
-		FromRoomId: fromRoomId,
-		ToRoomId:   newRoom.RoomId,
-		Unseen:     user.Character.HasBuffFlag("hidden"),
-	})
+		events.AddToQueue(events.RoomChange{
+			ActorId:    char.Id,
+			FromRoomId: fromRoomId,
+			ToRoomId:   newRoom.RoomId,
+			Unseen:     char.HasBuffFlag("hidden"),
+		})
+	}
 
 	return nil
 }

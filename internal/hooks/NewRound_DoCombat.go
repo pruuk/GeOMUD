@@ -143,7 +143,7 @@ func handlePlayerCombat(evt events.NewRound) (affectedPlayerIds []int, affectedM
 			user.Character.Aggro = nil
 			events.AddToQueue(events.AggroChanged{ActorId: user.Character.Id, RoomId: user.Character.RoomId})
 
-			if err := rooms.MoveToRoom(user.UserId, exitRoomId); err == nil {
+			if err := rooms.MoveToRoom(user.Character.Id, exitRoomId); err == nil {
 
 				for _, instId := range uRoom.GetMobs(rooms.FindCharmed) {
 					if mob := mobs.GetInstance(instId); mob != nil {
