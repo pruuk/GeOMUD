@@ -382,3 +382,18 @@ func TestFindNoun(t *testing.T) {
 		})
 	}
 }
+
+func TestInstanceItemIdsReplaceTheTemplates(t *testing.T) {
+	tpl := NewEmptyRoom()
+	tpl.Items = []items.Item{{ItemId: 1}} // a template item, no ID
+	live := NewEmptyRoom()
+	live.Items = []items.Item{{ItemId: 1, Id: ids.New(ids.NoCell)}, {ItemId: 2, Id: ids.New(ids.NoCell)}}
+
+	b, err := yaml.Marshal(map[string]any{"items": live.Items}) // as saveRoomInstanceData writes a changed field
+	require.NoError(t, err)
+	require.NoError(t, yaml.Unmarshal(b, tpl)) // as LoadRoomInstance applies it
+
+	require.Len(t, tpl.Items, 2)
+	assert.Equal(t, live.Items[0].Id, tpl.Items[0].Id)
+	assert.Equal(t, live.Items[1].Id, tpl.Items[1].Id)
+}
