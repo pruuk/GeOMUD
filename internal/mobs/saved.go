@@ -11,7 +11,7 @@ import (
 // SavedNPC is a live NPC as saved to disk (Phase 4b decision 13): what it is,
 // has and is tangled with. It is separate from Mob so template saves
 // (SaveMobSpec) never gain runtime fields. What the NPC was doing (path, wander
-// count, boredom, last idle command, temp data) is not saved.
+// count, temp data) is not saved.
 type SavedNPC struct {
 	Template   Mob                   `yaml:"mob"` // the instance's exported fields, including Character
 	HomeRoomId int                   `yaml:"homeroomid"`
