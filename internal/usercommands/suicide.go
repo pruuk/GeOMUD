@@ -23,6 +23,11 @@ import (
 )
 
 func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+	// Death branches on whether the body returns from a template (Decision 10).
+	if mob := mobs.GetInstance(actor.Id); mob != nil {
+		return npcDeath(actor, mob, room)
+	}
+
 	user := actor.Controller().Account()
 	if user == nil {
 		return false, nil
