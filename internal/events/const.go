@@ -7,7 +7,7 @@ func (f EventFlag) Has(flag EventFlag) bool {
 }
 
 func (f *EventFlag) Add(flag EventFlag) {
-	*f = (*f) &^ flag
+	*f = (*f) | flag
 }
 
 func (f *EventFlag) Remove(flag EventFlag) {

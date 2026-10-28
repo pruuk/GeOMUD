@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/events"
-	"github.com/GoMudEngine/GoMud/internal/mobcommands"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
 
@@ -30,10 +29,8 @@ func AdminCommand(rest string, actor *actors.Actor, room *rooms.Room, flags even
 	args := util.SplitButRespectQuotes(rest)
 
 	if len(args) < 2 {
-		// send some sort of help info?
-		mobCommands := mobcommands.GetAllMobCommands()
-
-		infoOutput, _ := templates.Process("admincommands/help/command.command", mobCommands, user.UserId)
+		// NPCs run the same commands as players, so the help lists none.
+		infoOutput, _ := templates.Process("admincommands/help/command.command", nil, user.UserId)
 		user.SendText(infoOutput)
 		return true, nil
 	}

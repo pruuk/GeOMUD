@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
-	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -50,14 +49,35 @@ func init() {
 	c.plug.Web.AdminPage("Config", "cleanup-config", "html/admin/cleanup-config.html", true, "Modules", "Cleanup", "Configure automated world cleanup schedules and rules.", "Automated cleanup module removing stale corpses, items, and temporary objects.", nil)
 	c.plug.Web.AdminPage("About", "cleanup-about", "html/admin/cleanup-about.html", true, "Modules", "Cleanup", "Information and version details for the Cleanup module.", "", nil)
 	//
-	// Register any user/mob commands
+	// Register the commands (players and NPCs run the same ones)
 	//
-	c.plug.AddUserCommand("trash", c.userTrashCommand, false, false)
-	c.plug.AddUserCommand("bury", c.userBuryCommand, false, false)
+	c.plug.AddUserCommand("trash", c.trashCommand, false, false)
+	c.plug.AddUserCommand("bury", c.buryCommand, false, false)
 
-	c.plug.AddMobCommand("trash", c.mobTrashCommand, false)
-	c.plug.AddMobCommand("bury", c.mobBuryCommand, false)
+}
 
+// tell writes text to the actor's account, if it has one.
+func tell(actor *actors.Actor, text string) {
+	if user := actor.Controller().Account(); user != nil {
+		user.SendText(text)
+	}
+}
+
+// excludeId is the ID a room send excludes for the actor: its account's
+// UserId, or 0 for an NPC, which never receives room text.
+func excludeId(actor *actors.Actor) int {
+	if user := actor.Controller().Account(); user != nil {
+		return user.UserId
+	}
+	return 0
+}
+
+// nameColour is `username` for an actor with an account, `mobname` otherwise.
+func nameColour(actor *actors.Actor) string {
+	if actor.Controller().Account() != nil {
+		return "username"
+	}
+	return "mobname"
 }
 
 // Using a struct gives a way to store longer term data.
@@ -76,37 +96,38 @@ func (c *CleanupModule) loadConfig() {
 
 }
 
-func (c *CleanupModule) userTrashCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (c *CleanupModule) trashCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
-	// Check whether the user has an item in their inventory that matches
-	matchItem, found := user.Character.FindInBackpack(rest)
+	// Check whether the actor has an item in their inventory that matches
+	matchItem, found := actor.Character.FindInBackpack(rest)
 
 	if !found {
-		user.SendText(fmt.Sprintf(`You don't have a "%s" to trash.`, rest))
+		tell(actor, fmt.Sprintf(`You don't have a "%s" to trash.`, rest))
 	} else {
 
 		c.loadConfig()
 
-		isSneaking := user.Character.HasBuffFlag("hidden")
+		isSneaking := actor.Character.HasBuffFlag("hidden")
 
-		user.Character.RemoveItem(matchItem)
+		actor.Character.RemoveItem(matchItem)
 
 		events.AddToQueue(events.ItemOwnership{
-			ActorId: user.Character.Id,
+			ActorId: actor.Character.Id,
 			Item:    matchItem,
 			Gained:  false,
 		})
 
-		user.SendText(
+		tell(actor,
 			fmt.Sprintf(`You trash the <ansi fg="item">%s</ansi> for good.`, matchItem.DisplayName()))
 
 		if !isSneaking {
 			room.SendText(
-				fmt.Sprintf(`<ansi fg="username">%s</ansi> destroys <ansi fg="item">%s</ansi>...`, user.Character.Name, matchItem.DisplayName()),
-				user.UserId)
+				fmt.Sprintf(`<ansi fg="%s">%s</ansi> destroys <ansi fg="item">%s</ansi>...`, nameColour(actor), actor.Character.Name, matchItem.DisplayName()),
+				excludeId(actor))
 		}
 
-		if c.DefaultTrashExperienceValue > 0 {
+		// Experience goes to an account.
+		if user := actor.Controller().Account(); user != nil && c.DefaultTrashExperienceValue > 0 {
 
 			// Grant experience equal to a tenth of the item value
 			iSpec := matchItem.GetSpec()
@@ -124,31 +145,12 @@ func (c *CleanupModule) userTrashCommand(rest string, user *accounts.Account, ro
 	return true, nil
 }
 
-func (c *CleanupModule) mobTrashCommand(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
-
-	// Check whether the user has an item in their inventory that matches
-	matchItem, found := mob.Character.FindInBackpack(rest)
-
-	if found {
-		mob.Character.RemoveItem(matchItem)
-
-		events.AddToQueue(events.ItemOwnership{
-			ActorId: mob.Character.Id,
-			Item:    matchItem,
-			Gained:  false,
-		})
-
-	}
-
-	return true, nil
-}
-
-func (c *CleanupModule) userBuryCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (c *CleanupModule) buryCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
 
 	args := util.SplitButRespectQuotes(strings.ToLower(rest))
 
 	if len(args) == 0 {
-		user.SendText("Bury what?")
+		tell(actor, "Bury what?")
 		return true, nil
 	}
 
@@ -161,8 +163,8 @@ func (c *CleanupModule) userBuryCommand(rest string, user *accounts.Account, roo
 				corpseColor = `user-corpse`
 			}
 
-			user.SendText(fmt.Sprintf(`You bury the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name))
-			room.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> buries the <ansi fg="%s">%s corpse</ansi>.`, user.Character.Name, corpseColor, corpse.Character.Name), user.UserId)
+			tell(actor, fmt.Sprintf(`You bury the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name))
+			room.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> buries the <ansi fg="%s">%s corpse</ansi>.`, nameColour(actor), actor.Character.Name, corpseColor, corpse.Character.Name), excludeId(actor))
 			return true, nil
 
 		}
@@ -170,35 +172,7 @@ func (c *CleanupModule) userBuryCommand(rest string, user *accounts.Account, roo
 		return true, nil
 	}
 
-	user.SendText(fmt.Sprintf("You don't see a %s around for burying.", rest))
-
-	return true, nil
-}
-
-func (c *CleanupModule) mobBuryCommand(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
-
-	args := util.SplitButRespectQuotes(strings.ToLower(rest))
-
-	if len(args) == 0 {
-		return true, nil
-	}
-
-	if corpse, corpseFound := room.FindCorpse(rest); corpseFound {
-
-		if room.RemoveCorpse(corpse) {
-
-			corpseColor := `mob-corpse`
-			if corpse.UserId > 0 {
-				corpseColor = `user-corpse`
-			}
-
-			room.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> buries the <ansi fg="%s">%s corpse</ansi>.`, mob.Character.Name, corpseColor, corpse.Character.Name))
-			return true, nil
-
-		}
-
-		return true, nil
-	}
+	tell(actor, fmt.Sprintf("You don't see a %s around for burying.", rest))
 
 	return true, nil
 }

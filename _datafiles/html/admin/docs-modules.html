@@ -364,7 +364,7 @@ make run</code></pre>
 <section class="doc-section" id="overview">
     <h2>Overview</h2>
 
-    <p>Modules are compiled Go packages that live under <code>modules/</code>. They are wired into the server at build time via a generated import file and register themselves through Go's <code>init()</code> mechanism. Modules run natively and can access any internal package, listen to any server event, add new player and mob commands, contribute admin pages, and persist their own data.</p>
+    <p>Modules are compiled Go packages that live under <code>modules/</code>. They are wired into the server at build time via a generated import file and register themselves through Go's <code>init()</code> mechanism. Modules run natively and can access any internal package, listen to any server event, add new commands (players and mobs run the same ones), contribute admin pages, and persist their own data.</p>
 
     <div class="feature-row">
         <div class="feature-card">
@@ -426,10 +426,10 @@ import (
     "embed"
     "fmt"
 
+    "github.com/GoMudEngine/GoMud/internal/actors"
     "github.com/GoMudEngine/GoMud/internal/events"
     "github.com/GoMudEngine/GoMud/internal/plugins"
     "github.com/GoMudEngine/GoMud/internal/rooms"
-    "github.com/GoMudEngine/GoMud/internal/users"
 )
 
 // Embed all files under the files/ directory into the binary.
@@ -449,23 +449,33 @@ func init() {
         panic(err)
     }
 
-    // Register the player command "greet".
-    // Signature: (command string, handler UserCommand, allowWhenDowned bool, adminOnly bool)
+    // Register the command "greet". Players and mobs run the same commands.
+    // Signature: (command string, handler usercommands.Command, allowWhenDowned bool, adminOnly bool)
     plug.AddUserCommand("greet", greetCommand, true, false)
 }
 
-// greetCommand is the handler for the "greet" player command.
-// rest       - everything the player typed after "greet"
-// user       - the player who typed the command
-// room       - the room the player is currently in
+// greetCommand is the handler for the "greet" command.
+// rest       - everything typed after "greet"
+// actor      - the player or mob running the command
+// room       - the room the actor is currently in
 // flags      - event flags (e.g. CmdSecretly)
-func greetCommand(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func greetCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+    user := actor.Controller().Account() // nil when a mob runs the command
+    excludeId := 0
+    if user != nil {
+        excludeId = user.UserId
+    }
+
     if rest == "" {
-        user.SendText("Greet whom? Usage: greet &lt;name&gt;")
+        if user != nil {
+            user.SendText("Greet whom? Usage: greet &lt;name&gt;")
+        }
         return true, nil
     }
-    user.SendText(fmt.Sprintf("You wave cheerfully at %s!", rest))
-    room.SendText(fmt.Sprintf("%s waves cheerfully at %s!", user.Character.Name, rest), user.UserId)
+    if user != nil {
+        user.SendText(fmt.Sprintf("You wave cheerfully at %s!", rest))
+    }
+    room.SendText(fmt.Sprintf("%s waves cheerfully at %s!", actor.Character.Name, rest), excludeId)
     return true, nil
 }</code></pre>
     </div>
@@ -607,36 +617,20 @@ func (m *MyModule) save() {
 <section class="doc-section" id="api-commands">
     <h2>Plugin API: Commands</h2>
 
-    <p>Modules can register new player commands and new mob AI commands. Registered commands are indistinguishable from built-in commands — they appear in help, support aliases, and participate in autocomplete.</p>
+    <p>Modules can register new commands. Players and mobs run the same commands through the same input path, so one handler serves both: it receives the actor that runs it and asks the actor for an account where it needs one. Registered commands are indistinguishable from built-in commands — they appear in help, support aliases, and participate in autocomplete.</p>
 
     <div class="api-group">
-        <div class="api-group-title">Player Commands</div>
+        <div class="api-group-title">Commands</div>
         <table class="ref-table">
             <thead><tr><th>Signature</th><th>Parameters</th></tr></thead>
             <tbody>
                 <tr>
-                    <td><code>plug.AddUserCommand(command string, handler UserCommand, allowWhenDowned bool, adminOnly bool)</code></td>
+                    <td><code>plug.AddUserCommand(command string, handler usercommands.Command, allowWhenDowned bool, adminOnly bool)</code></td>
                     <td>
-                        <code>command</code> — the keyword the player types.<br>
-                        <code>handler</code> — function with signature <code>func(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error)</code>.<br>
-                        <code>allowWhenDowned</code> — if <code>true</code>, the command works even when the player is incapacitated.<br>
-                        <code>adminOnly</code> — if <code>true</code>, only admin/mod accounts can use it.
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="api-group">
-        <div class="api-group-title">Mob Commands</div>
-        <table class="ref-table">
-            <thead><tr><th>Signature</th><th>Parameters</th></tr></thead>
-            <tbody>
-                <tr>
-                    <td><code>plug.AddMobCommand(command string, handler MobCommand, allowWhenDowned bool)</code></td>
-                    <td>
-                        <code>handler</code> — function with signature <code>func(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error)</code>.<br>
-                        Mob commands are invoked by name, the same way mob idle and combat commands are.
+                        <code>command</code>: the keyword a player types, or a mob's idle, combat or scripted input names.<br>
+                        <code>handler</code>: a <code>usercommands.Command</code>, the function <code>func(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error)</code>. <code>actor.Controller().Account()</code> returns the player's account, or nil for a mob; text for the actor goes to the account when there is one.<br>
+                        <code>allowWhenDowned</code>: if <code>true</code>, the command works even when the actor is incapacitated.<br>
+                        <code>adminOnly</code>: if <code>true</code>, only admin/mod accounts can use it (a mob never can).
                     </td>
                 </tr>
             </tbody>
@@ -907,7 +901,11 @@ func (m *MyModule) setMaxBid(newMax int) {
 plug.ReserveTags("fishing-spot", "fishing-premium")
 
 // In a command handler or event listener:
-func (m *MyModule) fishCommand(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (m *MyModule) fishCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+    user := actor.Controller().Account()
+    if user == nil { // players only
+        return false, nil
+    }
     if !room.HasTag("fishing-spot") &amp;&amp; !room.HasTag("fishing-premium") {
         user.SendText("There is nothing to fish here.")
         return true, nil
@@ -1366,11 +1364,11 @@ import (
     "embed"
     "fmt"
 
+    "github.com/GoMudEngine/GoMud/internal/actors"
     "github.com/GoMudEngine/GoMud/internal/events"
     "github.com/GoMudEngine/GoMud/internal/gametime"
     "github.com/GoMudEngine/GoMud/internal/plugins"
     "github.com/GoMudEngine/GoMud/internal/rooms"
-    "github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //go:embed files/*
@@ -1396,7 +1394,11 @@ func init() {
     plug.AddUserCommand("time", TimeCommand, true, false)
 }
 
-func TimeCommand(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func TimeCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+    user := actor.Controller().Account()
+    if user == nil { // players only
+        return false, nil
+    }
     gd := gametime.GetDate()
 
     dayNight := "day"
@@ -1429,10 +1431,10 @@ func TimeCommand(rest string, user *users.UserRecord, room *rooms.Room, flags ev
 import (
     "embed"
 
+    "github.com/GoMudEngine/GoMud/internal/actors"
     "github.com/GoMudEngine/GoMud/internal/events"
     "github.com/GoMudEngine/GoMud/internal/plugins"
     "github.com/GoMudEngine/GoMud/internal/rooms"
-    "github.com/GoMudEngine/GoMud/internal/users"
 )
 
 //go:embed files/*
@@ -1489,7 +1491,7 @@ func (mod *AuctionsModule) newRoundHandler(e events.Event) events.ListenerReturn
     return events.Continue
 }
 
-func (mod *AuctionsModule) auctionCommand(rest string, user *users.UserRecord, room *rooms.Room, flags events.EventFlag) (bool, error) {
+func (mod *AuctionsModule) auctionCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
     // ... command handling ...
     return true, nil
 }</code></pre>
@@ -1502,7 +1504,7 @@ func (mod *AuctionsModule) auctionCommand(rest string, user *users.UserRecord, r
 <section class="doc-section" id="example-advanced">
     <h2>Example: Advanced Module (follow)</h2>
 
-    <p>The <code>follow</code> module demonstrates the full breadth of the plugin API: a struct-based module, both player and mob commands, multiple event listeners with priority control, and reserved room tags.</p>
+    <p>The <code>follow</code> module demonstrates the full breadth of the plugin API: a struct-based module, one command that players and mobs both run, multiple event listeners with priority control, and reserved room tags.</p>
 
     <div class="code-block">
         <div class="code-block-header">modules/follow/follow.go (abridged)</div>
@@ -1511,7 +1513,7 @@ func (mod *AuctionsModule) auctionCommand(rest string, user *users.UserRecord, r
 import (
     "embed"
 
-    "github.com/GoMudEngine/GoMud/internal/accounts"
+    "github.com/GoMudEngine/GoMud/internal/actors"
     "github.com/GoMudEngine/GoMud/internal/events"
     "github.com/GoMudEngine/GoMud/internal/ids"
     "github.com/GoMudEngine/GoMud/internal/plugins"
@@ -1549,9 +1551,8 @@ func init() {
         "Configure follow behavior and allowed follow distances.",
         "Follow system allowing players and NPCs to trail behind another character.", nil)
 
-    // Both a player command and a mob AI command.
-    f.plug.AddUserCommand("follow", f.followUserCommand, true, false)
-    f.plug.AddMobCommand("follow", f.followMobCommand, true)
+    // One command for players and mobs alike.
+    f.plug.AddUserCommand("follow", f.followCommand, true, false)
 
     // Multiple event listeners — MobIdle uses events.First to intercept
     // before the built-in mob AI runs.
@@ -1564,8 +1565,9 @@ func init() {
     events.RegisterListener(events.NewRound{}, f.onNewRound)
 }
 
-func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
-    // ... follow logic for players ...
+func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+    // ... follow logic. actor.Controller().Account() is nil for a mob, so
+    // party checks and texts to the actor run only when it returns an account ...
     return true, nil
 }
 

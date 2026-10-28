@@ -25,8 +25,6 @@ var (
 	mobInstances    = map[ids.ID]*Mob{}
 	mobsHatePlayers = map[string]map[int]int{}
 	mobNameCache    = map[MobId]string{}
-
-	recentlyDied = map[ids.ID]int{}
 )
 
 var (
@@ -97,26 +95,6 @@ func GetAllMobInfo() []Mob {
 
 func GetAllMobNames() []string {
 	return append([]string{}, allMobNames...)
-}
-
-func TrackRecentDeath(instanceId ids.ID) {
-	recentlyDied[instanceId] = int(util.GetRoundCount())
-}
-
-func RecentlyDied(instanceId ids.ID) bool {
-
-	if len(recentlyDied) > 30 {
-		roundNow := int(util.GetRoundCount())
-		for k, v := range recentlyDied {
-			if roundNow-v > 15 {
-				delete(recentlyDied, k)
-			}
-		}
-	}
-
-	_, ok := recentlyDied[instanceId]
-
-	return ok
 }
 
 func MobIdByName(mobName string) MobId {
@@ -270,11 +248,6 @@ func (m *Mob) AddBuff(buffId int, source string) {
 		Source:  source,
 	})
 
-}
-
-// Cause the mob to basically wait and do nothing for x seconds
-func (m *Mob) Sleep(seconds int) {
-	m.Command(`noop`, float64(seconds))
 }
 
 func (m *Mob) Command(inputTxt string, waitSeconds ...float64) {

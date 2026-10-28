@@ -56,10 +56,9 @@ func init() {
 
 	f.plug.Web.AdminPage("Config", "follow-config", "html/admin/follow-config.html", true, "Modules", "Follow", "Configure follow behavior and allowed follow distances.", "Follow system allowing players and NPCs to trail behind another character.", nil)
 	f.plug.Web.AdminPage("About", "follow-about", "html/admin/follow-about.html", true, "Modules", "Follow", "Information and version details for the Follow module.", "", nil) //
-	// Register any user/mob commands
+	// Register the command (players and NPCs run the same one)
 	//
-	f.plug.AddUserCommand(`follow`, f.followUserCommand, true, false)
-	f.plug.AddMobCommand(`follow`, f.followMobCommand, true)
+	f.plug.AddUserCommand(`follow`, f.followCommand, true, false)
 
 	events.RegisterListener(events.RoomChange{}, f.roomChangeHandler)
 	events.RegisterListener(events.PlayerDespawn{}, f.playerDespawnHandler)
@@ -374,15 +373,35 @@ func (f *FollowModule) onPlayerDeath(e events.Event) events.ListenerReturn {
 // Commands
 //
 
-func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
+// tell writes text to the actor's account, if it has one.
+func tell(actor *actors.Actor, text string) {
+	if user := actor.Controller().Account(); user != nil {
+		user.SendText(text)
+	}
+}
+
+// nameColour is `username` for an actor with an account, `mobname` otherwise.
+func nameColour(actor *actors.Actor) string {
+	if actor.Controller().Account() != nil {
+		return "username"
+	}
+	return "mobname"
+}
+
+// followCommand is the one follow command for players and NPCs. A follow key
+// is the account's UserId for a player and the body's ID for an NPC.
+func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+
+	user := actor.Controller().Account() // nil for an NPC
 
 	if rest == "" {
-		user.SendText(`Follow whom? Try <ansi fg="command">help command</ansi>`)
+		tell(actor, `Follow whom? Try <ansi fg="command">help command</ansi>`)
 		return true, nil
 	}
 
-	if parties.Get(user.UserId) != nil {
-		user.SendText(`You can't use this command while in a party.`)
+	// Parties belong to accounts.
+	if user != nil && parties.Get(user.UserId) != nil {
+		tell(actor, `You can't use this command while in a party.`)
 		return true, nil
 	}
 
@@ -416,10 +435,14 @@ func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, ro
 	}
 
 	followCommandTarget := followId{userId: userId, mobId: targetMobId}
-	followCommandSource := followId{userId: user.UserId}
+	followCommandSource := followId{mobId: actor.Id}
+	if user != nil {
+		followCommandSource = followId{userId: user.UserId}
+	}
 
-	if followCommandTarget.userId == followCommandSource.userId {
-		user.SendText(`You can't target yourself.`)
+	if (user != nil && followCommandTarget.userId == followCommandSource.userId) ||
+		(user == nil && followCommandTarget.mobId == followCommandSource.mobId) {
+		tell(actor, `You can't target yourself.`)
 		return true, nil
 	}
 
@@ -435,13 +458,13 @@ func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, ro
 				}
 
 				if followerUser := accounts.GetByUserId(fId.userId); followerUser != nil {
-					followerUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, user.Character.Name))
+					followerUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="%s">%s</ansi>.`, nameColour(actor), actor.Character.Name))
 				}
 			}
 
 		}
 
-		user.SendText(fmt.Sprintf(`Nobody is following you.`))
+		tell(actor, `Nobody is following you.`)
 
 		return true, nil
 	}
@@ -454,8 +477,8 @@ func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, ro
 		if wasFollowing.userId > 0 {
 
 			if followUser := accounts.GetByUserId(wasFollowing.userId); followUser != nil {
-				followUser.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> stopped following you.`, followUser.Character.Name))
-				user.SendText(fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followUser.Character.Name))
+				followUser.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> stopped following you.`, nameColour(actor), actor.Character.Name))
+				tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followUser.Character.Name))
 				return true, nil
 			}
 
@@ -464,27 +487,33 @@ func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, ro
 		if !wasFollowing.mobId.IsZero() {
 
 			if followMob := mobs.GetInstance(wasFollowing.mobId); followMob != nil {
-				user.SendText(fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followMob.Character.Name))
+				tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followMob.Character.Name))
 				return true, nil
 			}
 
 		}
 
-		user.SendText(`You aren't following anyone.`)
+		tell(actor, `You aren't following anyone.`)
 
 		return true, nil
 	}
 
 	// Default behavior is follow
+
+	// An NPC on a path drops it. The follow takes priority.
+	if mob := mobs.GetInstance(actor.Id); mob != nil {
+		mob.Path.Clear()
+	}
+
 	if followCommandTarget.userId > 0 {
 
 		f.startFollow(followCommandTarget, followCommandSource, followEndRound)
 
 		targetUser := accounts.GetByUserId(followCommandTarget.userId)
 
-		user.SendText(fmt.Sprintf(`You start following <ansi fg="username">%s</ansi>.`, targetUser.Character.Name))
+		tell(actor, fmt.Sprintf(`You start following <ansi fg="username">%s</ansi>.`, targetUser.Character.Name))
 
-		targetUser.SendText(fmt.Sprintf(`<ansi fg="username">%s</ansi> is following you.`, user.Character.Name))
+		targetUser.SendText(fmt.Sprintf(`<ansi fg="%s">%s</ansi> is following you.`, nameColour(actor), actor.Character.Name))
 
 		return true, nil
 	}
@@ -493,125 +522,18 @@ func (f *FollowModule) followUserCommand(rest string, user *accounts.Account, ro
 
 		targetMob := mobs.GetInstance(followCommandTarget.mobId)
 
-		if targetMob.HatesAlignment(user.Character.Alignment) {
-			user.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> won't let you follow them.`, targetMob.Character.Name))
+		if targetMob.HatesAlignment(actor.Character.Alignment) {
+			tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> won't let you follow them.`, targetMob.Character.Name))
 		} else {
 			f.startFollow(followCommandTarget, followCommandSource, followEndRound)
 
-			user.SendText(fmt.Sprintf(`You start following <ansi fg="mobname">%s</ansi>.`, targetMob.Character.Name))
+			tell(actor, fmt.Sprintf(`You start following <ansi fg="mobname">%s</ansi>.`, targetMob.Character.Name))
 		}
 
 		return true, nil
 	}
 
-	user.SendText(`Follow whom?`)
+	tell(actor, `Follow whom?`)
 
 	return true, nil
-}
-
-func (f *FollowModule) followMobCommand(rest string, mob *mobs.Mob, room *rooms.Room) (bool, error) {
-
-	if rest == "" {
-		return true, nil
-	}
-
-	args := util.SplitButRespectQuotes(strings.ToLower(rest))
-
-	followTargetName := args[0]
-	followAction := `follow`
-	followEndRound := uint64(0)
-
-	if rest == `stop` || rest == `lose` {
-		followAction = rest
-		followTargetName = ``
-	}
-
-	gd := gametime.GetDate(util.GetRoundCount())
-
-	if len(args) > 1 {
-		followEndRound = gd.AddPeriod(strings.Join(args[1:], ` `))
-	} else if followPeriod, ok := f.plug.Config.Get(`DefaultFollowPeriod`).(string); ok {
-		followEndRound = gd.AddPeriod(followPeriod)
-	}
-
-	// in case something went wrong, we still want to cap it.
-	if followEndRound <= util.GetRoundCount() {
-		followEndRound = gd.AddPeriod(`5 real minutes`)
-	}
-
-	userId, targetMobId := 0, ids.ID{}
-	if len(followTargetName) > 0 {
-		userId, targetMobId = room.FindByName(followTargetName)
-	}
-
-	followCommandTarget := followId{userId: userId, mobId: targetMobId}
-	followCommandSource := followId{mobId: mob.Character.Id}
-
-	if followCommandTarget.mobId == followCommandSource.mobId {
-		return true, nil
-	}
-
-	// Lose any followers
-	if followAction == `lose` {
-
-		if lostFollowers := f.loseFollowers(followCommandSource); len(lostFollowers) > 0 {
-
-			// Tell all the followers they
-			for _, fId := range lostFollowers {
-				if fId.userId == 0 {
-					continue
-				}
-
-				if followerUser := accounts.GetByUserId(fId.userId); followerUser != nil {
-					followerUser.SendText(fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, mob.Character.Name))
-				}
-			}
-
-			return true, nil
-		}
-
-		return true, nil
-	}
-
-	// Stop following someone?
-	if followAction == `stop` {
-
-		wasFollowing := f.stopFollowing(followCommandSource)
-
-		if wasFollowing.userId > 0 {
-
-			if followUser := accounts.GetByUserId(wasFollowing.userId); followUser != nil {
-				followUser.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> stopped following you.`, followUser.Character.Name))
-				return true, nil
-			}
-
-		}
-
-		return true, nil
-	}
-
-	// Default behavior is follow
-
-	// If they are on a path, clear it. The follow takes priority.
-	mob.Path.Clear()
-
-	if followCommandTarget.userId > 0 {
-
-		f.startFollow(followCommandTarget, followCommandSource, followEndRound)
-
-		targetUser := accounts.GetByUserId(followCommandTarget.userId)
-
-		targetUser.SendText(fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is following you.`, mob.Character.Name))
-
-		return true, nil
-	}
-
-	if !followCommandTarget.mobId.IsZero() {
-
-		f.startFollow(followCommandTarget, followCommandSource, followEndRound)
-
-		return true, nil
-	}
-
-	return false, nil
 }
