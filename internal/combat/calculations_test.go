@@ -169,29 +169,19 @@ func TestWeaponlessAttackCount(t *testing.T) {
 func TestCritChance(t *testing.T) {
 	tests := []struct {
 		atkSmarts, defSmarts int
-		hasAccuracy          bool
-		targetHasBlink       bool
 		wantMin              int
 		wantMax              int
 	}{
-		{0, 0, false, false, 15, 15},   // equal -> proportional 0.5 -> 15
-		{100, 0, false, false, 30, 30}, // full proportional advantage -> 30
-		{50, 0, false, false, 30, 30},  // 50/(50+0)=1.0 -> 30
-		{0, 100, false, false, 5, 5},   // no advantage -> 0, clamped to min (5)
-		// accuracy doubles, capped at 100
-		{100, 0, true, false, 60, 60},
-		// blink halves
-		{100, 0, false, true, 15, 15},
-		// both: 30*2/2 = 30
-		{100, 0, true, true, 30, 30},
-		// blink halves: 15/2=7, min enforced (max(5,7)=7)
-		{0, 0, false, true, 7, 7},
+		{0, 0, 15, 15},   // equal -> proportional 0.5 -> 15
+		{100, 0, 30, 30}, // full proportional advantage -> 30
+		{50, 0, 30, 30},  // 50/(50+0)=1.0 -> 30
+		{0, 100, 5, 5},   // no advantage -> 0, clamped to min (5)
 	}
 	for _, tt := range tests {
-		got := critChance(tt.atkSmarts, tt.defSmarts, tt.hasAccuracy, tt.targetHasBlink)
+		got := critChance(tt.atkSmarts, tt.defSmarts)
 		if got < tt.wantMin || got > tt.wantMax {
-			t.Errorf("critChance(%d, %d, %v, %v) = %d; want [%d, %d]",
-				tt.atkSmarts, tt.defSmarts, tt.hasAccuracy, tt.targetHasBlink, got, tt.wantMin, tt.wantMax)
+			t.Errorf("critChance(%d, %d) = %d; want [%d, %d]",
+				tt.atkSmarts, tt.defSmarts, got, tt.wantMin, tt.wantMax)
 		}
 	}
 }

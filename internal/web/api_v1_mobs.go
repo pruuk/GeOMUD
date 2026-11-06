@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -165,10 +164,6 @@ func apiV1PutMobStock(w http.ResponseWriter, r *http.Request) {
 	}
 	if entry.MobId != 0 && mobs.GetMobSpec(mobs.MobId(entry.MobId)) == nil {
 		writeAPIError(w, http.StatusBadRequest, "mob_id does not exist: "+strconv.Itoa(entry.MobId))
-		return
-	}
-	if entry.BuffId != 0 && buffs.GetBuffSpec(entry.BuffId) == nil {
-		writeAPIError(w, http.StatusBadRequest, "buff_id does not exist: "+strconv.Itoa(entry.BuffId))
 		return
 	}
 

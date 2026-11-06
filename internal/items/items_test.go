@@ -260,11 +260,6 @@ func TestEnchantDoesNotChangeTheSharedSpec(t *testing.T) {
 	assert.Equal(t, map[string]int{"strength": 1}, map[string]int(shared.StatMods), "the shared spec is unchanged")
 	assert.Equal(t, 3, itm.Spec.StatMods["strength"])
 	assert.Equal(t, 3, itm.Spec.StatMods["speed"])
-
-	itm2 := Item{ItemId: id, Id: ids.New(ids.NoCell)}
-	itm2.AddWornBuff(8)
-	assert.Equal(t, []int{7}, shared.WornBuffIds, "the shared spec's buffs are unchanged")
-	assert.Equal(t, []int{7, 8}, itm2.Spec.WornBuffIds)
 }
 
 func TestWithoutIds(t *testing.T) {

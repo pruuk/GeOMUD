@@ -335,9 +335,6 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 			if user := actor.Controller().Account(); user != nil {
 				renderNouns = user.HasRolePermission(`room.nouns`)
 			}
-			if actor.Character.HasBuffFlag("see-nouns") {
-				renderNouns = true
-			}
 
 			if renderNouns && len(room.Nouns) > 0 {
 				for idx, descLine := range finalNounDesc {

@@ -168,22 +168,13 @@ func combatAttackCount(sourceChar characters.Character, targetChar characters.Ch
 }
 
 // critChance returns the integer crit probability in [CritChanceMin,
-// CritChanceMax] based on the Smarts stat delta. Buff flags are applied after.
+// CritChanceMax] based on the Smarts stat delta.
 // equal stats will result in 50%
-func critChance(atkSmarts, defSmarts int, hasAccuracy, targetHasBlink bool) int {
+func critChance(atkSmarts, defSmarts int) int {
 	cfg := configs.GetCombatConfig()
 	minChance := int(cfg.CritChanceMin)
 	maxChance := int(cfg.CritChanceMax)
 	actual := int(math.Floor(statDeltaProportional(atkSmarts, defSmarts) * float64(maxChance)))
-	if actual < minChance {
-		actual = minChance
-	}
-	if hasAccuracy {
-		actual *= 2
-	}
-	if targetHasBlink {
-		actual /= 2
-	}
 	if actual < minChance {
 		actual = minChance
 	}
@@ -198,8 +189,6 @@ func Crits(sourceChar characters.Character, targetChar characters.Character) boo
 	chance := critChance(
 		sourceChar.Stats.Smarts.ValueAdj,
 		targetChar.Stats.Smarts.ValueAdj,
-		sourceChar.HasBuffFlag("accuracy"),
-		targetChar.HasBuffFlag("blink"),
 	)
 	critRoll := util.Rand(100)
 	util.LogRoll(`Crits`, critRoll, chance)
@@ -403,8 +392,6 @@ func expectedDPS(atkChar characters.Character, defChar characters.Character) flo
 	critPct := float64(critChance(
 		atkChar.Stats.Smarts.ValueAdj,
 		defChar.Stats.Smarts.ValueAdj,
-		false,
-		false,
 	)) / 100.0
 
 	// A hit that lands is still negated if the defender dodges.

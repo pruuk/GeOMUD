@@ -436,10 +436,6 @@ func (c *Character) GetAdjectives() []string {
 		retAdjectives = append(retAdjectives, `hidden`)
 	}
 
-	if c.HasBuffFlag("poison") {
-		retAdjectives = append(retAdjectives, `poisoned`)
-	}
-
 	// End dynamic adjectives
 
 	retAdjectives = append(retAdjectives, c.Adjectives...)
@@ -850,10 +846,6 @@ func (c *Character) AddBuff(buffId int, isPermanent bool, triggerCountOverride .
 	}
 	c.Validate()
 	return nil
-}
-
-func (c *Character) TrackBuffStarted(buffId int) {
-	c.Buffs.Started(buffId)
 }
 
 func (c *Character) GetBuffs(buffId ...int) []*buffs.Buff {

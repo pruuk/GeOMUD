@@ -10,10 +10,9 @@ const (
 )
 
 type Buff struct {
-	BuffId         int    // Which buff template does it refer to?
-	Source         string `yaml:"source,omitempty"`         // Optional source identifier for where this buff originated. Example: spell, item, area
-	OnStartWaiting bool   `yaml:"onstartwaiting,omitempty"` // Is the onstart event waiting to trigger?
-	PermaBuff      bool   `yaml:"permabuff,omitempty"`      // Is this buff from a worn item or race?
+	BuffId    int    // Which buff template does it refer to?
+	Source    string `yaml:"source,omitempty"`    // Optional source identifier for where this buff originated. Example: spell, item, area
+	PermaBuff bool   `yaml:"permabuff,omitempty"` // Is this buff from a worn item or race?
 	// Need to instance track the following:
 	RoundCounter    int `yaml:"roundcounter,omitempty"`    // How many rounds have passed. Triggers on (RoundCounter%RoundInterval == 0)
 	TriggersLeft    int `yaml:"triggersleft,omitempty"`    // How many times it triggers
@@ -102,24 +101,6 @@ func (bs *Buffs) RemoveBuff(buffId int) bool {
 	return false
 }
 
-func (bs *Buffs) TriggersLeft(buffId int) int {
-	if idx, ok := bs.buffIds[buffId]; ok {
-		return bs.List[idx].TriggersLeft
-	}
-	return 0
-}
-
-func (bs *Buffs) GetBuffIdsWithFlag(action string) []int {
-	if action != All && !IsValidFlag(action) {
-		mudlog.Warn("buffs.GetBuffIdsWithFlag()", "flag", action, "error", "unknown buff flag")
-	}
-	buffIds := []int{}
-	for _, idx := range bs.buffFlags[action] {
-		buffIds = append(buffIds, bs.List[idx].BuffId)
-	}
-	return buffIds
-}
-
 func (bs *Buffs) HasFlag(action string, expire bool) bool {
 
 	if action != All {
@@ -172,12 +153,6 @@ func (bs *Buffs) HasBuff(buffId int) bool {
 	return false
 }
 
-func (bs *Buffs) Started(buffId int) {
-	if idx, ok := bs.buffIds[buffId]; ok {
-		bs.List[idx].OnStartWaiting = false
-	}
-}
-
 func (bs *Buffs) AddBuff(buffId int, isPermanent bool, triggerCountOverride ...int) bool {
 	if buffInfo := GetBuffSpec(buffId); buffInfo != nil {
 
@@ -224,19 +199,9 @@ func (bs *Buffs) AddBuff(buffId int, isPermanent bool, triggerCountOverride ...i
 }
 
 // Returns what buffs were triggered
-func (bs *Buffs) Trigger(buffId ...int) (triggeredBuffs []*Buff) {
+func (bs *Buffs) Trigger() (triggeredBuffs []*Buff) {
 
 	for idx, b := range bs.List {
-
-		// Special case where 1 or more specific buffId's were expectred to trigger (ONLY!)
-		// This might happen if a buff needs to trigger before a round begins
-		if len(buffId) > 0 {
-			for _, id := range buffId {
-				if b.BuffId != id {
-					continue
-				}
-			}
-		}
 
 		if buffInfo := GetBuffSpec(b.BuffId); buffInfo != nil {
 

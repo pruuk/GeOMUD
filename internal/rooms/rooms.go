@@ -450,7 +450,7 @@ func (r *Room) ApplyBuffIdToNativeMobs(buffIds []int, source string) {
 
 }
 
-func (r *Room) SpawnTempContainer(name string, duration string, lockDifficulty int, trapBuffIds ...int) string {
+func (r *Room) SpawnTempContainer(name string, duration string, lockDifficulty int) string {
 
 	c := Container{}
 
@@ -458,10 +458,6 @@ func (r *Room) SpawnTempContainer(name string, duration string, lockDifficulty i
 	c.DespawnRound = gd.AddPeriod(duration)
 
 	c.Lock.Difficulty = uint8(lockDifficulty)
-
-	if len(trapBuffIds) > 0 {
-		c.Lock.TrapBuffIds = trapBuffIds
-	}
 
 	containerName := name
 

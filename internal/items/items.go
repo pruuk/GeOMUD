@@ -254,14 +254,6 @@ func (i *Item) GetSpec() ItemSpec {
 	return *iSpec
 }
 
-func (i *Item) AddWornBuff(buffId int) {
-	if i.Spec == nil {
-		i.Spec = cloneSpec(GetItemSpec(i.ItemId))
-	}
-
-	i.Spec.WornBuffIds = append(i.Spec.WornBuffIds, buffId)
-}
-
 func (i *Item) Rename(newName string, displayNameOrStyle ...string) {
 	if i.Spec == nil {
 		specCopy := *GetItemSpec(i.ItemId)

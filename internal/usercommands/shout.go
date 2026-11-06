@@ -18,14 +18,7 @@ func Shout(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		return true, nil
 	}
 
-	isDrunk := actor.Character.HasBuffFlag("drunk")
-
 	rest = strings.ToUpper(rest)
-
-	if isDrunk {
-		// modify the text to look like it's the speech of a drunk person
-		rest = drunkify(rest)
-	}
 
 	// {actor} reads "Someone" for a receiver who cannot see a hidden shouter.
 	// Rooms next to this one (exits, temporary exits, mutator exits) read the

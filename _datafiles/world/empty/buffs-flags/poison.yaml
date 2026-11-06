@@ -1,4 +1,0 @@
-flag: poison
-name: "Poisoned"
-description: "Marks the character as poisoned, typically dealing periodic health damage."
-locked: true
