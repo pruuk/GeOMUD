@@ -689,66 +689,6 @@ func TestCharacter_SetKey(t *testing.T) {
 	}
 }
 
-func TestCharacter_GetAllSkillRanks(t *testing.T) {
-	tests := []struct {
-		name   string
-		skills map[string]int
-		want   map[string]int
-	}{
-		{
-			name:   "Nil Skills returns empty map",
-			skills: nil,
-			want:   map[string]int{},
-		},
-		{
-			name:   "Empty Skills returns empty map",
-			skills: map[string]int{},
-			want:   map[string]int{},
-		},
-		{
-			name:   "Single skill",
-			skills: map[string]int{"sword": 2},
-			want:   map[string]int{"sword": 2},
-		},
-		{
-			name:   "Multiple skills",
-			skills: map[string]int{"sword": 2, "archery": 3, "magic": 1},
-			want:   map[string]int{"sword": 2, "archery": 3, "magic": 1},
-		},
-		{
-			name:   "Skill with zero value",
-			skills: map[string]int{"alchemy": 0},
-			want:   map[string]int{"alchemy": 0},
-		},
-		{
-			name:   "Skill with negative value",
-			skills: map[string]int{"curse": -1},
-			want:   map[string]int{"curse": -1},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := New()
-			if tt.skills != nil {
-				c.Skills = make(map[string]int)
-				for k, v := range tt.skills {
-					c.Skills[k] = v
-				}
-			} else {
-				c.Skills = nil
-			}
-			got := c.GetAllSkillRanks()
-			assert.Equal(t, tt.want, got)
-			// Ensure returned map is a copy, not the same reference
-			if c.Skills != nil {
-				got["newskill"] = 99
-				_, exists := c.Skills["newskill"]
-				assert.False(t, exists, "GetAllSkillRanks should return a copy, not the original map")
-			}
-		})
-	}
-}
 func TestCharacter_HasAdjective(t *testing.T) {
 	tests := []struct {
 		name       string

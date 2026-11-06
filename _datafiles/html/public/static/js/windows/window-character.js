@@ -612,13 +612,13 @@
         const nameEl = document.getElementById('cw-char-name');
         nameEl.innerHTML = '';
 
-        const parts = [info.name].filter(Boolean);
-        if (parts.length) {
-            nameEl.appendChild(document.createTextNode(parts.join(' \u00b7 ')));
+        const name = info.name || '';
+        if (name) {
+            nameEl.appendChild(document.createTextNode(name));
         }
 
         if (info.race) {
-            if (parts.length) {
+            if (name) {
                 nameEl.appendChild(document.createTextNode(' \u00b7 '));
             }
             const raceSpan = document.createElement('span');

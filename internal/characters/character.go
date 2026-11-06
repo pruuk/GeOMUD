@@ -360,12 +360,6 @@ func (c *Character) GetHealthAppearance() string {
 	return fmt.Sprintf(`<ansi fg="username">%s</ansi> is in <ansi fg="%s">perfect health.</ansi>`, c.Name, className)
 }
 
-func (c *Character) GetAllSkillRanks() map[string]int {
-	retMap := make(map[string]int)
-	maps.Copy(retMap, c.Skills)
-	return retMap
-}
-
 // Returns an integer representing a % damage reduction
 func (c *Character) GetDefense() int {
 
@@ -1054,13 +1048,11 @@ func (c *Character) RecalculateStats() {
 	beforeManaMax := c.ManaMax
 	beforeStats := c.Stats
 
-	if trueRaceInfo := races.GetRace(c.RaceId); trueRaceInfo != nil {
-		c.TNLScale = trueRaceInfo.TNLScale
+	if raceInfo := races.GetRace(c.RaceId); raceInfo != nil {
+		c.TNLScale = raceInfo.TNLScale
 		if c.TNLScale == 0 {
 			c.TNLScale = 1.0
 		}
-	}
-	if raceInfo := races.GetRace(c.GetRaceId()); raceInfo != nil {
 		c.Stats.Strength.Base = raceInfo.Stats.Strength.Base
 		c.Stats.Speed.Base = raceInfo.Stats.Speed.Base
 		c.Stats.Smarts.Base = raceInfo.Stats.Smarts.Base

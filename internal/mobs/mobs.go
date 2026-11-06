@@ -59,7 +59,6 @@ type Mob struct {
 	SpawnSlot       int      `yaml:"-"`                        // the home room's spawn slot this NPC fills, index plus one; zero for none. Saved in SavedNPC.
 	Hostile         bool     `yaml:"hostile,omitempty"`        // whether they attack on sight
 	Groups          []string `yaml:"groups,omitempty"`         // What group do they identify with? Helps with teamwork
-	Hates           []string `yaml:"hates,omitempty"`          // What NPC groups or races do they hate and probably fight if encountered?
 	IdleCommands    []string `yaml:"idlecommands,omitempty"`   // Commands they may do while idle (not in combat)
 	AngryCommands   []string `yaml:"angrycommands,omitempty"`  // randomly chosen to queue when they are angry/entering combat.
 	CombatCommands  []string `yaml:"combatcommands,omitempty"` // Commands they may do while in combat

@@ -339,17 +339,6 @@
                         <div class="field-hint">Groups this mob belongs to for ally/hate detection</div>
                     </div>
 
-                    <div class="field span2">
-                        <label>Hates (groups/races)</label>
-                        <div class="tags-wrap" id="hates-list"></div>
-                        <div style="display:flex; gap:0.4rem; align-items:center; margin-top:0.4rem;">
-                            <input type="text" class="tag-add-input" id="hates-input" placeholder="group or race"
-                                   onkeydown="if(event.key==='Enter'){addTag('hates-list','hates-input');}" />
-                            <button class="btn-add-sm" onclick="addTag('hates-list','hates-input')">+ Add</button>
-                        </div>
-                        <div class="field-hint">Groups or race names this mob will attack. Use * for all.</div>
-                    </div>
-
                     <div class="section-title" style="margin-top:0.5rem;">Commands</div>
 
                     <div class="field span2">
@@ -799,9 +788,8 @@
 
         setVal('f-gold', ch.Gold || 0);
 
-        // Groups, Hates
+        // Groups
         renderTags('groups-list', mob.Groups || []);
-        renderTags('hates-list', mob.Hates || []);
 
         // Commands
         setVal('f-idlecommands', (mob.IdleCommands || []).join('\n'));
@@ -864,7 +852,7 @@
     };
 
     // -------------------------------------------------------------------------
-    // Tags (groups, hates)
+    // Tags (groups)
     // -------------------------------------------------------------------------
     function renderTags(listId, values) {
         const list = document.getElementById(listId);
@@ -1274,7 +1262,6 @@
             ItemDropChance: parseInt(document.getElementById('f-itemdropchance').value, 10) || 0,
             EliteChance:    parseInt(document.getElementById('f-elitechance').value, 10) || 0,
             Groups:         collectTags('groups-list'),
-            Hates:          collectTags('hates-list'),
             BuffIds:        collectBuffIds('buffids-list'),
             IdleCommands:   textToArray('f-idlecommands'),
             AngryCommands:  textToArray('f-angrycommands'),

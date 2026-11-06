@@ -29,7 +29,6 @@ var allPermissions = []PermissionDef{
 	{Key: "build", Category: "Commands", Description: "Build and link rooms"},
 	{Key: "command", Category: "Commands", Description: "Execute NPC commands directly"},
 	{Key: "copyover", Category: "Commands", Description: "Perform a live server restart (copyover)"},
-	{Key: "formset", Category: "Commands", Description: "Set form/transformation data"},
 	{Key: "grant", Category: "Commands", Description: "Grant experience or other rewards to players"},
 	{Key: "item", Category: "Commands", Description: "All item admin sub-commands"},
 	{Key: "item.create", Category: "Commands", Description: "Create new item specifications"},
