@@ -33,7 +33,6 @@ var pageWritePermissions = map[string]string{
 	"/admin/skills":                "skills.write",
 	"/admin/skills-professions":    "skills.write",
 	"/admin/rooms":                 "rooms.write",
-	"/admin/spells":                "spells.write",
 	"/admin/users":                 "users.write",
 	"/admin/mapper":                "rooms.write",
 }
@@ -190,14 +189,6 @@ func adminMobsAPI(w http.ResponseWriter, r *http.Request) {
 
 func adminMobRankings(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "mob-rankings.html", nil)
-}
-
-func adminSpells(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "spells.html", nil)
-}
-
-func adminSpellsAPI(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "spells-api.html", nil)
 }
 
 func adminMutators(w http.ResponseWriter, r *http.Request) {

@@ -1880,16 +1880,13 @@
         const display = document.createElement('div');
         display.className = 'train-skill-display' + (skill ? '' : ' empty');
         display.dataset.skill = skill;
-        if (skill) display.dataset.spellId = skill;
         display.textContent = skill || 'Click to pick skill…';
         display.addEventListener('click', function () {
             Picker.open({
-                ...PickerConfigs.spells,
-                title: 'Select Skill',
-                onSelect: function (spell) {
-                    display.dataset.skill = spell.SpellId;
-                    display.dataset.spellId = spell.SpellId;
-                    display.textContent = spell.SpellId + ' - ' + spell.Name;
+                ...PickerConfigs.skills,
+                onSelect: function (sk) {
+                    display.dataset.skill = sk.SkillId;
+                    display.textContent = sk.SkillId + ' - ' + sk.Name;
                     display.className = 'train-skill-display';
                 },
             });

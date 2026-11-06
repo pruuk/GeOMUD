@@ -16,7 +16,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/skills"
-	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/statmods"
 	"github.com/GoMudEngine/GoMud/internal/stats"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -65,7 +64,6 @@ type Character struct {
 	Gold             int                            `yaml:"gold,omitempty"`           // The gold the character is holding
 	Bank             int                            `yaml:"bank,omitempty"`           // The gold the character has in the bank
 	Shop             Shop                           `yaml:"shop,omitempty"`           // Definition of shop services/items this character stocks (or just has at the moment)
-	SpellBook        map[string]int                 `yaml:"spellbook,omitempty"`      // The spells the character has learned
 	Charmed          *CharmInfo                     `yaml:"-"`                        // If they are charmed, this is the info
 	CharmedMobs      []ids.ID                       `yaml:"charmedmobs,omitempty"`    // If they have charmed anyone, this is the list of their body IDs
 	Items            []items.Item                   `yaml:"items,omitempty"`          // The items the character is holding
@@ -125,7 +123,6 @@ func New() *Character {
 		Skills:         make(map[string]int),
 		Gold:           25,
 		Bank:           100,
-		SpellBook:      make(map[string]int),
 		CharmedMobs:    []ids.ID{},
 		Items:          []items.Item{},
 		Buffs:          buffs.New(),
@@ -171,63 +168,6 @@ func (c *Character) TrackPlayerDamage(userId int, damageAmt int) {
 	c.PlayerDamage[userId] = c.PlayerDamage[userId] + damageAmt
 	c.LastPlayerDamage = roundNow
 
-}
-
-/*
-All spells should have a 10% minimum chance of success.
-*/
-func (c *Character) GetBaseCastSuccessChance(spellId string) int {
-
-	sp := spells.GetSpell(spellId)
-	if sp == nil {
-		return -1
-	}
-
-	// start with 100% chance of success
-	targetNumber := 100
-
-	// subtract spell difficulty
-	// 1-100
-	targetNumber -= sp.GetDifficulty()
-
-	// add spell level bonus
-	// 10-30
-	skillLevel := c.GetSkillLevel(`cast`)
-	//targetNumber += (skillLevel * 5)
-	//targetNumber -= 5 // cancel out the first level
-
-	// add the proficiency of the spell (more casts == better)
-	// 0-20
-	profFactor := 1.0
-	if skillLevel == 2 {
-		profFactor = 1.25 // .25 more than lvl 1
-	} else if skillLevel == 3 {
-		profFactor = 1.75 // .50 more than lvl 2
-	} else if skillLevel == 4 {
-		profFactor = 2.50 // .75 more than lvl 3
-	}
-	casts := c.SpellBook[spellId]
-	proficiency := int(math.Floor((float64(casts) / 50 * profFactor))) // after 50 casts proficiency is 1
-	if proficiency < 0 {
-		proficiency = 0
-	} else if proficiency > 20 {
-		proficiency = 20
-	}
-	targetNumber += proficiency
-
-	targetNumber += int(math.Floor(float64(c.Stats.Mysticism.ValueAdj) / 5))
-
-	// add by any stat mods for casting, or casting school
-	// 0-xx
-	targetNumber += c.StatMod(string(statmods.Casting)) + c.StatMod(string(statmods.CastingPrefix)+string(sp.School))
-
-	if targetNumber < 0 {
-		targetNumber = 0
-	} else if targetNumber > 100 {
-		targetNumber = 100
-	}
-
-	return targetNumber
 }
 
 func (c *Character) CarryCapacity() int {
@@ -376,63 +316,6 @@ func (c *Character) GetDefaultDiceRoll() (attacks int, dCount int, dSides int, b
 	}
 
 	return attacks, dCount, dSides, bonus, buffOnCrit
-}
-
-func (c *Character) GetSpells() map[string]int {
-	ret := make(map[string]int)
-	maps.Copy(ret, c.SpellBook)
-	return ret
-}
-
-func (c *Character) HasSpell(spellName string) bool {
-	if intVal, ok := c.SpellBook[spellName]; ok {
-		return intVal > 0
-	}
-	return false
-}
-
-func (c *Character) DisableSpell(spellName string) bool {
-	if intVal, ok := c.SpellBook[spellName]; ok {
-		if intVal > 0 {
-			c.SpellBook[spellName] = intVal * -1
-		}
-	}
-	return false
-}
-
-func (c *Character) EnableSpell(spellName string) bool {
-	if intVal, ok := c.SpellBook[spellName]; ok {
-		if intVal < 0 {
-			c.SpellBook[spellName] = intVal * -1
-		}
-	}
-	return false
-}
-
-func (c *Character) TrackSpellCast(spellName string) bool {
-	if intVal, ok := c.SpellBook[spellName]; ok {
-		if intVal > 0 {
-			intVal++
-			c.SpellBook[spellName] = intVal
-		}
-	}
-	return false
-}
-
-func (c *Character) LearnSpell(spellName string) bool {
-	if _, ok := c.SpellBook[spellName]; !ok {
-		c.SpellBook[spellName] = 1
-		return true
-	}
-	return false
-}
-
-func (c *Character) UnLearnSpell(spellName string) bool {
-	if _, ok := c.SpellBook[spellName]; !ok {
-		return false
-	}
-	delete(c.SpellBook, spellName)
-	return true
 }
 
 func (c *Character) GrantXP(xp int) (actualXP int, xpScale int) {
@@ -1524,10 +1407,6 @@ func (c *Character) Validate(recalcPermaBuffs ...bool) error {
 
 	if c.Created.IsZero() {
 		c.Created = time.Now()
-	}
-
-	if c.SpellBook == nil {
-		c.SpellBook = make(map[string]int)
 	}
 
 	if c.Zone == "" {

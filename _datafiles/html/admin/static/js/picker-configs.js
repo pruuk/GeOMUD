@@ -89,18 +89,21 @@ const PickerConfigs = {
         },
     },
 
-    spells: {
-        title:      'Select Spell',
-        source:     '/admin/api/v2/spells',
-        idKey:      'SpellId',
+    skills: {
+        title:      'Select Skill',
+        idKey:      'SkillId',
         columns: [
-            { key: 'SpellId', label: 'ID',     width: '10rem', mono: true },
-            { key: 'Name',    label: 'Name',   flex: true },
-            { key: 'Type',    label: 'Type',   width: '8rem' },
-            { key: 'School',  label: 'School', width: '8rem' },
+            { key: 'SkillId', label: 'ID',   width: '10rem', mono: true },
+            { key: 'Name',    label: 'Name', flex: true },
         ],
-        searchKeys: ['SpellId', 'Name'],
+        searchKeys: ['SkillId', 'Name'],
         sort: (a, b) => a.Name.localeCompare(b.Name),
+        source: async () => {
+            const res = await AdminAPI.get('/admin/api/v1/skills');
+            if (!res.ok) throw new Error(res.error || 'Failed to load skills');
+            // The endpoint returns a map keyed by skill id.
+            return Object.values((res.data && res.data.data) || {});
+        },
     },
 
     mutators: {
@@ -296,53 +299,6 @@ attachHoverTooltip('[data-item-id]', function (target) {
         const t = document.createElement('div');
         t.style.cssText = 'color:var(--color-text-subtle);font-size:0.74rem;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:0.2rem;';
         t.textContent = subtype ? (type + ' / ' + subtype) : type;
-        wrap.appendChild(t);
-    }
-
-    const desc = document.createElement('div');
-    if (spec.Description) {
-        desc.style.cssText = 'color:var(--color-text-muted);';
-        desc.textContent = spec.Description;
-    } else {
-        desc.style.cssText = 'color:var(--color-text-faint);font-style:italic;';
-        desc.textContent = 'No description.';
-    }
-    wrap.appendChild(desc);
-
-    return wrap;
-});
-
-// Pre-warm _adminSpellSpecs (keyed by SpellId) so spell tooltips can resolve a
-// spell's details synchronously at hover time.
-AdminAPI.get('/admin/api/v2/spells').then(res => {
-    if (res.ok && res.data && Array.isArray(res.data.data)) {
-        const byId = {};
-        for (const sp of res.data.data) byId[String(sp.SpellId)] = sp;
-        window._adminSpellSpecs = byId;
-    }
-});
-
-// SpellTooltip - any element carrying a `data-spell-id` attribute (e.g. spellbook
-// chips on mobs/users pages, skill-training rows on rooms) gets a hover tooltip
-// showing the spell name, type, and description.
-attachHoverTooltip('[data-spell-id]', function (target) {
-    const id = target.getAttribute('data-spell-id');
-    if (id == null || id === '') return null;
-    const spec = (window._adminSpellSpecs || {})[String(id)];
-    if (!spec) return null; // cache not warm / unknown spell - skip silently
-
-    const wrap = document.createElement('div');
-
-    const title = document.createElement('div');
-    title.style.cssText = 'font-weight:700;margin-bottom:0.15rem;';
-    title.textContent = spec.Name || id;
-    wrap.appendChild(title);
-
-    const type = (spec.Type || '').toString();
-    if (type) {
-        const t = document.createElement('div');
-        t.style.cssText = 'color:var(--color-text-subtle);font-size:0.74rem;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:0.2rem;';
-        t.textContent = type;
         wrap.appendChild(t);
     }
 

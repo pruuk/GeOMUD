@@ -175,12 +175,4 @@ func registerAdminAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /admin/api/v1/panels/validate", doBasicAuth(RunWithMUDLocked(apiV1PostPanelValidate)))
 	mux.HandleFunc("POST /admin/api/v1/panels/preview", doBasicAuth(RunWithMUDLocked(apiV1PostPanelPreview)))
 	mux.HandleFunc("PUT /admin/api/v1/panels/{panelname...}", doBasicAuth(RequirePermission("panels.write", RunWithMUDLocked(apiV1PutPanel))))
-
-	// Spells
-	mux.HandleFunc("GET /admin/api/v2/spells", doBasicAuth(RunWithMUDLocked(apiV2GetSpells)))
-	mux.HandleFunc("POST /admin/api/v2/spells", doBasicAuth(RequirePermission("spells.write", RunWithMUDLocked(apiV2CreateSpell))))
-	mux.HandleFunc("GET /admin/api/v2/spells/{spellId}/yaml", doBasicAuth(RunWithMUDLocked(apiV2GetSpellYAML)))
-	mux.HandleFunc("GET /admin/api/v2/spells/{spellId}", doBasicAuth(RunWithMUDLocked(apiV2GetSpell)))
-	mux.HandleFunc("PATCH /admin/api/v2/spells/{spellId}", doBasicAuth(RequirePermission("spells.write", RunWithMUDLocked(apiV2PatchSpell))))
-	mux.HandleFunc("DELETE /admin/api/v2/spells/{spellId}", doBasicAuth(RequirePermission("spells.write", RunWithMUDLocked(apiV2DeleteSpell))))
 }

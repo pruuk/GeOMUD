@@ -60,9 +60,6 @@ var allPermissions = []PermissionDef{
 	{Key: "server", Category: "Commands", Description: "All server admin sub-commands"},
 	{Key: "skillset", Category: "Commands", Description: "Set skill levels on players"},
 	{Key: "spawn", Category: "Commands", Description: "Spawn mobs or items in the room"},
-	{Key: "spell", Category: "Commands", Description: "All spell admin sub-commands"},
-	{Key: "spell.create", Category: "Commands", Description: "Create new spell definitions"},
-	{Key: "spell.list", Category: "Commands", Description: "List all available spells"},
 	{Key: "syslogs", Category: "Commands", Description: "View and follow system logs in-game"},
 	{Key: "teleport", Category: "Commands", Description: "All teleport sub-commands"},
 	{Key: "teleport.direction", Category: "Commands", Description: "Teleport through walls in a direction"},
@@ -87,7 +84,6 @@ var allPermissions = []PermissionDef{
 	{Key: "races.write", Category: "Races", Description: "Create, edit, and delete races"},
 	{Key: "rooms.write", Category: "Rooms", Description: "Create, edit, and delete rooms"},
 	{Key: "skills.write", Category: "Skills", Description: "Create, edit, and delete skills and professions"},
-	{Key: "spells.write", Category: "Spells", Description: "Create, edit, and delete spells"},
 	{Key: "users.write", Category: "Users", Description: "Create and edit user accounts"},
 	{Key: "zones.write", Category: "Zones", Description: "Create, rename, edit, and delete zones"},
 }

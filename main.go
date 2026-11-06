@@ -46,7 +46,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/skills"
-	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -1450,7 +1449,6 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 // is missing. Derived from the loaders in loadAllDataFiles and their neighbours:
 //
 //	biomes         rooms.LoadBiomeDataFiles
-//	spells         spells.LoadSpellFiles
 //	rooms          rooms.LoadDataFiles (zone-config.yaml and room files)
 //	buffs-flags    buffs.LoadFlagDataFiles (a missing folder panics the load)
 //	buffs          buffs.LoadDataFiles
@@ -1484,7 +1482,6 @@ var requiredWorldFolders = []string{
 	"races",
 	"rooms",
 	"skills",
-	"spells",
 	"templates",
 	"users",
 }
@@ -1504,7 +1501,6 @@ func loadAllDataFiles(isReload bool) {
 	gametime.LoadGameTimeConfigs()
 	// Load biomes before rooms since rooms reference biomes
 	rooms.LoadBiomeDataFiles()
-	spells.LoadSpellFiles()
 	rooms.LoadDataFiles()
 	buffs.LoadFlagDataFiles() // Load buff flags before buffs so buff validation can check flags
 	buffs.LoadDataFiles()     // Load buffs before items for cost calculation reasons

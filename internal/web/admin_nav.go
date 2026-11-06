@@ -41,7 +41,7 @@ func buildAdminNav() []WebNavItem {
 
 		{
 			Name:        "Content",
-			Description: "Manage items, rooms, buffs, and spells.",
+			Description: "Manage items, rooms, and buffs.",
 			Children: []WebNavItem{
 				{
 					Name:        "Items",
@@ -75,15 +75,6 @@ func buildAdminNav() []WebNavItem {
 						{Label: "View / Edit", Target: "/admin/buffs", Description: "Browse, create, and edit buff definitions."},
 						{Label: "Flags", Target: "/admin/buffs-flags", Description: "Browse, create, and edit buff flag definitions."},
 						{Label: "API Docs", Target: "/admin/buffs-api", Description: "REST API reference for the buffs and buff flags endpoints."},
-					},
-				},
-				{
-					Name:        "Spells",
-					Target:      "/admin/spells",
-					Description: "Configure castable spells.",
-					Children: []WebNavItem{
-						{Label: "View / Edit", Target: "/admin/spells", Description: "Browse, create, and edit spell definitions."},
-						{Label: "API Docs", Target: "/admin/spells-api", Description: "REST API reference for the spells endpoint."},
 					},
 				},
 				{

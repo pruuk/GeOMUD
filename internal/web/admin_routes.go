@@ -53,8 +53,6 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /admin/gametime-api", doBasicAuth(RunWithMUDLocked(adminGameTimeAPI)))
 	mux.HandleFunc("GET /admin/stats", doBasicAuth(RunWithMUDLocked(adminStats)))
 	mux.HandleFunc("GET /admin/stats-api", doBasicAuth(RunWithMUDLocked(adminStatsAPI)))
-	mux.HandleFunc("GET /admin/spells", doBasicAuth(RunWithMUDLocked(adminSpells)))
-	mux.HandleFunc("GET /admin/spells-api", doBasicAuth(RunWithMUDLocked(adminSpellsAPI)))
 	mux.HandleFunc("GET /admin/docs-coding", doBasicAuth(RunWithMUDLocked(adminDocsCoding)))
 	mux.HandleFunc("GET /admin/docs-modules", doBasicAuth(RunWithMUDLocked(adminDocsModules)))
 	mux.HandleFunc("GET /admin/docs-aws", doBasicAuth(RunWithMUDLocked(adminDocsAWS)))

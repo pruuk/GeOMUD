@@ -459,15 +459,6 @@
                         <div class="field-hint">Items the mob carries</div>
                     </div>
 
-                    <div class="section-title" style="margin-top:0.5rem;">Spellbook</div>
-
-                    <div class="field span2">
-                        <label>Known Spells</label>
-                        <div class="buff-ids-wrap" id="spellbook-list"></div>
-                        <button class="btn-add-sm" style="margin-top:0.4rem;" onclick="pickSpell()">+ Add Spell</button>
-                        <div class="field-hint">Spells this mob knows. Value indicates cast count (positive = enabled, negative = disabled).</div>
-                    </div>
-
                     <div class="section-title" style="margin-top:0.5rem;">Shop</div>
 
                     <div class="field span2">
@@ -833,9 +824,6 @@
         // Buff IDs
         renderBuffChips('buffids-list', mob.BuffIds || []);
 
-        // Spellbook
-        renderSpellChips('spellbook-list', ch.SpellBook || {});
-
         // Stats
         const st = ch.Stats || {};
         setVal('f-stat-strength', (st.Strength && st.Strength.Training) || 0);
@@ -954,54 +942,6 @@
 
     function collectBuffIds(listId) {
         return Array.from(document.querySelectorAll('#' + listId + ' .buff-chip')).map(c => parseInt(c.dataset.id, 10));
-    }
-
-    // -------------------------------------------------------------------------
-    // Spell chips (spellbook)
-    // -------------------------------------------------------------------------
-    function renderSpellChips(listId, spellBook) {
-        const list = document.getElementById(listId);
-        list.innerHTML = '';
-        for (const [id, val] of Object.entries(spellBook)) {
-            appendSpellChip(list, id, val);
-        }
-    }
-
-    function appendSpellChip(list, spellId, val) {
-        const chip = document.createElement('span');
-        chip.className = 'buff-chip';
-        chip.dataset.id = spellId;
-        chip.dataset.spellId = spellId;
-        chip.dataset.val = val;
-        const label = esc(spellId);
-        chip.innerHTML = `${label} <button title="Remove" onclick="this.closest('.buff-chip').remove()">&times;</button>`;
-        list.appendChild(chip);
-    }
-
-    window.pickSpell = function () {
-        const listEl = document.getElementById('spellbook-list');
-        const existing = collectSpellBook();
-        const existingIds = Object.keys(existing);
-        Picker.open({
-            ...PickerConfigs.spells,
-            multi:    true,
-            selected: existingIds,
-            onSelect: (spells) => {
-                listEl.innerHTML = '';
-                for (const spell of spells) {
-                    const prev = existing[spell.SpellId];
-                    appendSpellChip(listEl, spell.SpellId, prev !== undefined ? prev : 1);
-                }
-            },
-        });
-    };
-
-    function collectSpellBook() {
-        const book = {};
-        document.querySelectorAll('#spellbook-list .buff-chip').forEach(c => {
-            book[c.dataset.id] = parseInt(c.dataset.val, 10) || 1;
-        });
-        return book;
     }
 
     // -------------------------------------------------------------------------
@@ -1377,7 +1317,6 @@
                 }()),
                 Items:     collectItems(),
                 Shop:      collectShop(),
-                SpellBook: collectSpellBook(),
             },
         };
 
