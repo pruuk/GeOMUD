@@ -233,6 +233,40 @@ lines and that a fighter gets "You're too busy to quit right now!" and no medita
 - [ ] Per-group check. Expected golden changes: `G-character-info.txt:39` (shopstyle line gone; check the `set` overview lines around it). If a reads golden covers quit, name its new lines.
 - [ ] Commit: `Phase 5.1: delete loot goblin, PricePerLife and set shopstyle; quit says it is meditating`.
 
+### Carried from task reviews
+
+- Task 1 review: `ansi-aliases.yaml:12-13` (`spellname`, `spell-text`) unused: delete in Task 4.
+  `statmods.Casting`/`CastingPrefix` (`statmods.go:20-21`) dead since spells went: slice 4 deletes
+  them with statmods (add to the design's slice 4 notes in Task 6). Deleting `SpellCast` shifted
+  `AggroType` values (`Flee` 4 to 3); NPC sidecars save `Type` as an int (`mobs/saved.go:20`), so a
+  local dev sidecar saved mid-flee loads as a plain attack. Unlaunched, no data in the repo: no fix.
+  No loader in the repo decodes YAML strictly, so removed keys in old saves load fine.
+- Task 2 (`93e400f0`): a second combat golden changed. `flee_success` charmed its `dog` bystander,
+  so `flee_success.txt` loses one line (`Input dog: "flee"`); the review confirmed no other line or
+  random draw moved. `mvm.txt` differs from `mvm_charmed.txt` only in the rat's `playerdamage`
+  (charmer credit gone) and three group-hatred lines. Follow-up commit removes code the charm
+  deletion left dead (`behaviour.Rest`, the accounts function exporter); `Room.RestNPC` moved to
+  `rooms/export_test.go` because the resting-store tests seed state with it.
+- Task 3 (`bb96c182`): reads goldens `G-character-info.txt` (online table loses Profession) and
+  `H-outside.txt` (tame line gone; title string; `RoomRoundTick x21` to `x22` because removing the
+  `Rand(1000)` tame roll shifts the seeded stream the idle-message loop draws from). Review
+  confirmed both. Follow-up removes `GetAllSkillRanks`, the form split in `RecalculateStats`,
+  `statmods.Tame`, the `formset` permission, the `tame` skill file, `Mob.Hates` (no reader since
+  `HatesRace`/`HatesMob` went), and unused CSS and JS leftovers.
+- Task 4 (`8cd1bdac`): `critChance` lost the accuracy/blink inputs and a second min clamp; review
+  confirmed both clamps compared against the same `minChance` with only the flag branches between,
+  so no value changes; `Crits` draws the same. Follow-up: `users.html` buff shop entries (missed),
+  dead `RoomView.TrackingString`, the room visitor exit finders and `ApplyCharacterWarping`, the
+  `poisoned` adjective style (`5231e9c5`). Left for later: `Room.userVisitors`/`mobVisitors` are
+  still written but read only by a `len(...) > 0` check (`rooms.go` ~:1352); clean up with the
+  room code when that check's purpose is settled.
+
+- Whole-branch review (Opus): Task 5 passed; follow-ups `bcc1582c` (room visitor tracking removed;
+  `MarkVisited` keeps the `lastVisited` bump the unloader reads; `TurnsPerSecond` gone) and
+  `ffb7eb6d` (five functions orphaned by the slice, GMCP party help, known issues). The controller
+  found the rewritten `move_test` asserts vacuous (`AddTestRoom` already sets `lastVisited`), zeroed
+  it before the move, and showed the asserts fail with `MarkVisited` stubbed.
+
 ### Task 6: Verify, review, PR (controller)
 
 - [ ] Full check from a clean tree: `go build ./...`, `go test ./... -count=1` (3 known failures only), `gofmt -l .` minus vendored, smoke `go run ./cmd/smoke` and `-bots 5`; paste the summary lines.

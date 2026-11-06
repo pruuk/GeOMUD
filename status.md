@@ -7,7 +7,8 @@
   damage, regen, death at 0, respawn, gold), engine knows health only, dead systems deleted, for an
   Earthdawn ruleset later; decisions 10-11: no movement cost or carry limit, death drops carried
   items and gold to a corpse. Design: `2026-11-06-phase-5-rules-seam-design.md` (7 slices),
-  approved. Slice 1 plan: `2026-11-06-phase-5-1-dead-systems-plan.md` (delete dead systems).
+  approved. Slice 1 (delete dead systems, plan `2026-11-06-phase-5-1-dead-systems-plan.md`) built
+  and reviewed; PR next. Then slice 2 (the seam and the fight).
 - Before Phase 5: Strip Phases 0-4 and Phase 4b (NPCs are players, slices 1-7) are merged
   (`gomud_strip_plan.md`; spec `2026-10-27-phase-4b-npcs-are-players-design.md`, whose "Notes for
   later slices" carry what Phase 4b leaves; slice plans in `docs/completed/`)

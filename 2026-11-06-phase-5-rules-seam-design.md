@@ -179,6 +179,22 @@ Slice 4 implements both.
    Recommendation: (b). A fork gets a working corpse run with no tuning knobs, and the corpse code is
    engine code that stays anyway.
 
+## Notes for later slices
+
+Each slice plan reads these first; a note leaves once a slice settles it.
+
+- **From slice 1 (2026-11-06).** Slice 4 deletes `statmods.Casting`/`CastingPrefix` (dead since
+  spells went), the race field `KnowsFirstAid` (shown only in `races.template`), and the stat help
+  templates that still mention spells (`help/mysticism`, `smarts`, `stats`); `skills/cast.yaml` goes
+  with skills. Upstream `AGENTS.md`/`README.md` notes in `characters`, `gamelock`, `rooms`, `mobs`,
+  `buffs`, `skills` still describe charm, spells, trap buffs and visitor tracking as live; they go
+  with their packages or are trimmed in slice 7's docs sweep. `AggroType` values shifted when
+  `SpellCast` went (`Flee` 4 to 3); NPC sidecars save the int, so a pre-slice-1 local sidecar saved
+  mid-flee loads as a plain attack (no shipped data). The spec's 4b note "Slice 5 inherits" is stale
+  (inventory N section 6): only the -10 branch, players-first turn order, NPCs never attacking,
+  accounts-only alignment decay and the pet hatred and killer quirks remain, and slices 2-4 settle
+  them.
+
 ## Out of scope
 
 NPC aggression, initiative, `aid`, NPC levelling, party XP rules, possession, the geo work. Each
