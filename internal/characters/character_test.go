@@ -21,8 +21,6 @@ func TestAggroHoldsOneTarget(t *testing.T) {
 	c.SetAggro(target, DefaultAttack)
 	require.NotNil(t, c.Aggro)
 	assert.Equal(t, target, c.Aggro.Target)
-	assert.True(t, c.IsAggro(target))
-	assert.False(t, c.IsAggro(ids.New(ids.NoCell)))
 }
 
 func TestRecoveringHealthClearsTheKiller(t *testing.T) {

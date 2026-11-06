@@ -74,12 +74,6 @@ type Mob struct {
 	lastCommandTurn uint64 // The last turn a command was scheduled for
 }
 
-func MobInstanceExists(instanceId ids.ID) bool {
-
-	_, ok := mobInstances[instanceId]
-	return ok
-}
-
 // Gets a copy of all mob info
 func GetAllMobInfo() []Mob {
 	ret := []Mob{}

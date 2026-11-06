@@ -815,10 +815,6 @@ func (c *Character) EndAggro() {
 	c.Aggro = nil
 }
 
-func (c *Character) IsAggro(target ids.ID) bool {
-	return c.Aggro != nil && !c.Aggro.Target.IsZero() && c.Aggro.Target == target
-}
-
 func (c *Character) IsDisabled() bool {
 	return c.Health <= 0
 }

@@ -197,55 +197,6 @@ func TestGetBuffSpec(t *testing.T) {
 		})
 	}
 }
-func TestGetAllBuffIds(t *testing.T) {
-	origBuffs := buffs
-	defer func() { buffs = origBuffs }()
-
-	tests := []struct {
-		name       string
-		setupBuffs map[int]*BuffSpec
-		wantIds    []int
-	}{
-		{
-			name:       "No buffs",
-			setupBuffs: map[int]*BuffSpec{},
-			wantIds:    []int{},
-		},
-		{
-			name: "Single buff",
-			setupBuffs: map[int]*BuffSpec{
-				10: {BuffId: 10, Name: "Solo Buff"},
-			},
-			wantIds: []int{10},
-		},
-		{
-			name: "Multiple buffs",
-			setupBuffs: map[int]*BuffSpec{
-				1: {BuffId: 1, Name: "Buff One"},
-				2: {BuffId: 2, Name: "Buff Two"},
-				3: {BuffId: 3, Name: "Buff Three"},
-			},
-			wantIds: []int{1, 2, 3},
-		},
-		{
-			name: "Buffs with non-sequential IDs",
-			setupBuffs: map[int]*BuffSpec{
-				100: {BuffId: 100, Name: "Buff 100"},
-				5:   {BuffId: 5, Name: "Buff 5"},
-				42:  {BuffId: 42, Name: "Buff 42"},
-			},
-			wantIds: []int{100, 5, 42},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			buffs = tt.setupBuffs
-			got := GetAllBuffIds()
-			assert.ElementsMatch(t, tt.wantIds, got)
-		})
-	}
-}
 func TestBuffSpec_Id(t *testing.T) {
 	tests := []struct {
 		name   string

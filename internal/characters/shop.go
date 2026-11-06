@@ -173,16 +173,6 @@ func (s *Shop) Destock(si ShopItem) bool {
 	return false
 }
 
-func (s *Shop) GetInstock() Shop {
-	ret := Shop{}
-	for _, fsItem := range *s {
-		if fsItem.Quantity > 0 || fsItem.QuantityMax == StockUnlimited {
-			ret = append(ret, fsItem)
-		}
-	}
-	return ret
-}
-
 func (si *ShopItem) Available() bool {
 	return si.Quantity > 0 || si.QuantityMax == StockUnlimited
 }

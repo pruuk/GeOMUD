@@ -75,16 +75,6 @@ func GetBuffSpec(buffId int) *BuffSpec {
 	return nil
 }
 
-func GetAllBuffIds() []int {
-
-	var results []int = make([]int, 0, len(buffs))
-	for _, buff := range buffs {
-		results = append(results, buff.BuffId)
-	}
-
-	return results
-}
-
 // Presumably to ensure the datafile hasn't messed something up.
 func (b *BuffSpec) Id() int {
 	return b.BuffId

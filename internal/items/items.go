@@ -347,21 +347,6 @@ func (i *Item) GetDiceRoll() (attacks int, dCount int, dSides int, bonus int, bu
 	return dmg.Attacks, dmg.DiceCount, dmg.SideCount, dmg.BonusDamage, dmg.CritBuffIds
 }
 
-func (i *Item) IsSpecial() bool {
-	iSpec := i.GetSpec()
-	if len(i.Blob) > 0 {
-		return true
-	}
-	if iSpec.Uses > 0 && iSpec.Uses != i.Uses {
-		return true
-	}
-	if i.Spec != nil {
-		return true
-	}
-
-	return false
-}
-
 func (i *Item) GetDamage() Damage {
 	return i.GetSpec().Damage
 }
