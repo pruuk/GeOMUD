@@ -127,7 +127,6 @@
     .shop-card-type-badge { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
     .shop-type-item  { background: var(--color-success-bg); color: var(--color-success-text); }
     .shop-type-mob   { background: var(--color-info-bg); color: var(--color-info-text); }
-    .shop-type-buff  { background: var(--color-method-put-bg); color: var(--color-method-put-text); }
     .shop-card-remove { position: absolute; top: 0.5rem; right: 0.6rem; background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--color-text-secondary); line-height: 1; }
     .shop-card-remove:hover { color: var(--color-danger); }
     .shop-card-fields { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0.5rem 0.75rem; align-items: start; }
@@ -433,7 +432,6 @@
                     <div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;">
                         <button class="btn-add-sm" onclick="addShopEntry('item')">+ Item</button>
                         <button class="btn-add-sm" onclick="addShopEntry('mob')">+ Mob for Hire</button>
-                        <button class="btn-add-sm" onclick="addShopEntry('buff')">+ Buff</button>
                     </div>
                     <div class="field-hint">Leave empty if not a shopkeeper. QuantityMax: 0 = always in stock, -1 = never restocks.</div>
                 </div>
@@ -811,7 +809,6 @@
     function detectShopType(entry) {
         // Loaded entries carry every shop field (the API does not omit zero
         // values), so detect by which id is actually populated.
-        if (entry.BuffId)  return 'buff';
         if (entry.MobId)   return 'mob';
         return 'item';
     }
@@ -825,11 +822,6 @@
             const res = await AdminAPI.get('/admin/api/v1/items');
             for (const e of (res.ok && res.data && res.data.data) || [])
                 _shopNameCache['item:' + e.ItemId] = e.Name;
-        } else if (type === 'buff') {
-            const res = await AdminAPI.get('/admin/api/v1/buffs');
-            const specs = (res.ok && res.data && res.data.data && res.data.data.specs) || {};
-            for (const e of Object.values(specs))
-                _shopNameCache['buff:' + e.BuffId] = e.Name;
         } else if (type === 'mob') {
             const res = await AdminAPI.get('/admin/api/v1/mobs');
             for (const e of (res.ok && res.data && res.data.data) || [])
@@ -841,7 +833,6 @@
     const shopTypeMeta = {
         item: { label: 'Item',         badge: 'shop-type-item', idField: 'ItemId',  idLabel: 'Item' },
         mob:  { label: 'Mob for Hire', badge: 'shop-type-mob',  idField: 'MobId',   idLabel: 'Mob' },
-        buff: { label: 'Buff',         badge: 'shop-type-buff', idField: 'BuffId',  idLabel: 'Buff' },
     };
 
     const restockOptions = [
@@ -887,8 +878,7 @@
         btn.textContent = 'Pick\u2026';
 
         const pickerConfig = type === 'item' ? PickerConfigs.items
-            : type === 'mob'  ? PickerConfigs.mobs
-            : PickerConfigs.buffs;
+            : PickerConfigs.mobs;
 
         btn.addEventListener('click', () => {
             Picker.open({

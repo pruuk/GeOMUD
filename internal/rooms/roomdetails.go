@@ -45,7 +45,6 @@ type RoomTemplateDetails struct {
 	Description    string
 	IsDark         bool
 	IsNight        bool
-	TrackingString string
 	RoomAlerts     [][]string // Messages to show below room description as a special alert
 	ShowPvp        bool       // Whether to display that the room is PVP
 	Tags           []string   // Tags applied to the room
@@ -99,7 +98,6 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 		RoomLegend:     roomLegend,
 		IsDark:         b.IsDark(),
 		IsNight:        gametime.IsNight(),
-		TrackingString: ``,
 		ShowPvp:        showPvp,
 		Tags:           r.GetTags(),
 	}
