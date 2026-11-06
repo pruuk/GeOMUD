@@ -10,7 +10,6 @@ type Timing struct {
 	// Protected values
 	turnsPerRound   int     // calculated and cached when data is validated.
 	turnsPerSave    int     // calculated and cached when data is validated.
-	turnsPerSecond  int     // calculated and cached when data is validated.
 	roundsPerMinute float64 // calculated and cached when data is validated.
 }
 
@@ -31,7 +30,6 @@ func (e *Timing) Validate() {
 	// Pre-calculate and cache useful values
 	e.turnsPerRound = int((e.RoundSeconds * 1000) / e.TurnMs)
 	e.turnsPerSave = int(e.RoundsPerAutoSave) * e.turnsPerRound
-	e.turnsPerSecond = int(1000 / e.TurnMs)
 	e.roundsPerMinute = 60 / float64(e.RoundSeconds)
 
 }
@@ -42,10 +40,6 @@ func (e Timing) TurnsPerRound() int {
 
 func (e Timing) TurnsPerAutoSave() int {
 	return e.turnsPerSave
-}
-
-func (e Timing) TurnsPerSecond() int {
-	return e.turnsPerSecond
 }
 
 func (e Timing) MinutesToRounds(minutes int) int {

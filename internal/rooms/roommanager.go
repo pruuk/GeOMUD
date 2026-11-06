@@ -192,8 +192,6 @@ func RoomMaintenance() []int {
 
 	for _, room := range roomManager.rooms {
 
-		room.PruneVisitors()
-
 		// Notify that room that something happened to the sign?
 		if prunedSigns := room.PruneSigns(); len(prunedSigns) > 0 {
 
@@ -342,7 +340,7 @@ func MoveToRoom(actorId ids.ID, toRoomId int, isSpawn ...bool) error {
 	fromRoomId := char.RoomId
 	if currentRoom != nil {
 		if acc != nil {
-			currentRoom.MarkUserVisited(acc.UserId, 1)
+			currentRoom.MarkVisited()
 			if len, _ := currentRoom.RemovePlayer(acc.UserId); len < 1 {
 				delete(roomManager.roomsWithUsers, currentRoom.RoomId)
 			}
@@ -352,7 +350,7 @@ func MoveToRoom(actorId ids.ID, toRoomId int, isSpawn ...bool) error {
 	}
 
 	if acc != nil {
-		newRoom.MarkUserVisited(acc.UserId)
+		newRoom.MarkVisited()
 	}
 
 	//

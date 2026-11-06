@@ -23,7 +23,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
-const visitorTrackingTimeout = 180 // 180 seconds (3 minutes?)
 const defaultMapSymbol = `•`
 
 var (
@@ -93,13 +92,11 @@ type Room struct {
 	MapZ              int                               `yaml:"mapz"`
 	HasCoordinates    bool                              `yaml:"hascoordinates,omitempty"`
 	// Unexported/private
-	bodies        []ids.ID          // body IDs of the players and mobs in the room, in arrival order. Does not get saved.
-	userVisitors  map[int]uint64    // user IDs that have visited this room, and the turn their trail goes cold
-	mobVisitors   map[ids.ID]uint64 // body IDs of mobs that have visited this room, and the turn their trail goes cold
-	lastVisited   uint64            // last round a visitor was in the room
-	tempDataStore map[string]any    // Temporary data store for the room
-	resting       []mobs.SavedNPC   // NPCs saved to disk and out of memory that belong to this room (Phase 4b decision 12). Saved in the sidecar, not the instance diff.
-	restoreDue    map[ids.ID]bool   // resting NPCs read from disk when the room loaded; its first Prepare restores them, and only them (decision 16)
+	bodies        []ids.ID        // body IDs of the players and mobs in the room, in arrival order. Does not get saved.
+	lastVisited   uint64          // last round a visitor was in the room
+	tempDataStore map[string]any  // Temporary data store for the room
+	resting       []mobs.SavedNPC // NPCs saved to disk and out of memory that belong to this room (Phase 4b decision 12). Saved in the sidecar, not the instance diff.
+	restoreDue    map[ids.ID]bool // resting NPCs read from disk when the room loaded; its first Prepare restores them, and only them (decision 16)
 }
 
 type TrainingRange struct {
@@ -116,8 +113,6 @@ func NewRoom(zone string) *Room {
 		MapSymbol:     ``,
 		Exits:         make(map[string]exit.RoomExit),
 		bodies:        []ids.ID{},
-		userVisitors:  make(map[int]uint64),
-		mobVisitors:   make(map[ids.ID]uint64),
 		tempDataStore: make(map[string]any),
 	}
 
@@ -133,8 +128,6 @@ func NewEmptyRoom() *Room {
 		MapSymbol:     ``,
 		Exits:         make(map[string]exit.RoomExit),
 		bodies:        []ids.ID{},
-		userVisitors:  make(map[int]uint64),
-		mobVisitors:   make(map[ids.ID]uint64),
 		tempDataStore: make(map[string]any),
 	}
 	return r
@@ -689,7 +682,7 @@ func (r *Room) AddMob(mobId ids.ID) {
 		return
 	}
 
-	r.MarkMobVisited(mobId)
+	r.MarkVisited()
 
 	events.AddToQueue(events.RoomChange{
 		ActorId:    mobId,
@@ -708,7 +701,7 @@ func (r *Room) AddMob(mobId ids.ID) {
 
 func (r *Room) RemoveMob(mobId ids.ID) {
 
-	r.MarkMobVisited(mobId, 1)
+	r.MarkVisited()
 
 	r.removeBody(mobId)
 
@@ -1041,38 +1034,9 @@ func (r *Room) FindOnFloor(itemName string, stash bool) (items.Item, bool) {
 	return items.Item{}, false
 }
 
-// visitorTrailEnd is the turn a visit marked now goes cold, less subtrackTurns.
-func visitorTrailEnd(subtrackTurns ...int) uint64 {
-
-	lastSeen := util.GetTurnCount() + uint64(visitorTrackingTimeout*configs.GetTimingConfig().TurnsPerSecond())
-
-	if len(subtrackTurns) > 0 {
-		if uint64(subtrackTurns[0]) > lastSeen {
-			lastSeen = 0
-		} else {
-			lastSeen -= uint64(subtrackTurns[0])
-		}
-	}
-	return lastSeen
-}
-
-func (r *Room) MarkUserVisited(userId int, subtrackTurns ...int) {
-
-	if r.userVisitors == nil {
-		r.userVisitors = make(map[int]uint64)
-	}
-
-	r.userVisitors[userId] = visitorTrailEnd(subtrackTurns...)
-	r.lastVisited = util.GetRoundCount()
-}
-
-func (r *Room) MarkMobVisited(mobId ids.ID, subtrackTurns ...int) {
-
-	if r.mobVisitors == nil {
-		r.mobVisitors = make(map[ids.ID]uint64)
-	}
-
-	r.mobVisitors[mobId] = visitorTrailEnd(subtrackTurns...)
+// MarkVisited records that a player or mob was just in the room, so the room
+// unloader leaves it loaded.
+func (r *Room) MarkVisited() {
 	r.lastVisited = util.GetRoundCount()
 }
 
@@ -1319,11 +1283,6 @@ func (r *Room) GetDescriptionFormatted(lineSplit int, highlightNouns bool) strin
 
 func (r *Room) GetDescription() string {
 	return r.Description
-}
-
-func (r *Room) HasRecentVisitors() bool {
-
-	return len(r.userVisitors) > 0 || len(r.mobVisitors) > 0
 }
 
 func (r *Room) GetPublicSigns() []Sign {
@@ -1773,50 +1732,6 @@ func (r *Room) PruneSigns() []Sign {
 	}
 
 	return prunedSigned
-}
-
-func (r *Room) PruneVisitors() int {
-
-	if r.userVisitors == nil && r.mobVisitors == nil {
-		r.userVisitors = make(map[int]uint64)
-		r.mobVisitors = make(map[ids.ID]uint64)
-		return 0
-	}
-
-	c := configs.GetTimingConfig()
-
-	// Make sure whoever is here has the freshest mark.
-	if len(r.userVisitors) > 0 {
-		for _, userId := range r.playerIds() {
-			r.userVisitors[userId] = util.GetTurnCount() + uint64(visitorTrackingTimeout*c.TurnsPerSecond())
-		}
-	}
-
-	if len(r.mobVisitors) > 0 {
-		for _, mobId := range r.mobIds() {
-			r.mobVisitors[mobId] = util.GetTurnCount() + uint64(visitorTrackingTimeout*c.TurnsPerSecond())
-		}
-	}
-
-	pruneCt := 0
-
-	for id, expires := range r.userVisitors {
-		// Check whether expires is older than now
-		if expires < util.GetTurnCount() {
-			delete(r.userVisitors, id)
-			pruneCt++
-		}
-	}
-
-	for id, expires := range r.mobVisitors {
-		// Check whether expires is older than now
-		if expires < util.GetTurnCount() {
-			delete(r.mobVisitors, id)
-			pruneCt++
-		}
-	}
-
-	return pruneCt
 }
 
 func (r *Room) RoundTick() {
