@@ -209,7 +209,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 	defMob := mobs.GetInstance(d.Id)
 
 	// Group hatred follows kill credit (plan Decision 8): the attacker's
-	// account, or its charmer's.
+	// account.
 	if defMob != nil {
 		if acct := combat.CreditAccount(a); acct != nil {
 			c := configs.GetConfig()

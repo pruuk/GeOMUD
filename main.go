@@ -182,7 +182,6 @@ func main() {
 	buffs.RegisterFlagFS(plugins.GetPluginRegistry())
 	mobs.RegisterFS(plugins.GetPluginRegistry())
 	usercommands.AddFunctionExporter(plugins.GetPluginRegistry())
-	accounts.AddFunctionExporter(plugins.GetPluginRegistry())
 	usercommands.SetRoomTagProvider(plugins.GetRegisteredRoomTags)
 	web.SetRoomTagProvider(plugins.GetRegisteredRoomTags)
 
