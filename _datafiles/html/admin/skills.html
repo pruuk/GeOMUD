@@ -248,7 +248,6 @@ async function deleteSkill() {
         document.getElementById('editorForm').style.display = 'none';
         document.getElementById('editorPlaceholder').style.display = '';
     } else {
-        // 409 = referenced by a profession.
         showStatus('error', res.error || 'Delete failed.');
     }
 }

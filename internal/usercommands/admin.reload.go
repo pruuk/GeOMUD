@@ -41,8 +41,7 @@ func Reload(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		Tell(actor, `Buff flags reloaded.`)
 	case `skills`:
 		skills.LoadDataFiles()
-		skills.LoadProfessionDataFiles()
-		Tell(actor, `Skills and professions reloaded.`)
+		Tell(actor, `Skills reloaded.`)
 	case `translations`:
 		ok := language.ReloadTranslation()
 		if !ok {

@@ -391,11 +391,6 @@
                             <option value="0">- none -</option>
                         </select>
                     </div>
-                    <div class="field" id="f-formrace-wrap" style="display:none;">
-                        <label>Current Form</label>
-                        <input type="text" id="f-formrace" readonly
-                               style="background:var(--color-border-faint); cursor:default;" />
-                    </div>
 
                     <div class="field span2">
                         <label>Description</label>
@@ -779,14 +774,6 @@
         setVal('f-description', ch.Description || '');
         setVal('f-raceid', ch.RaceId || 0);
         applyRaceEquipDisabled(ch.RaceId || 0);
-        var formWrap = document.getElementById('f-formrace-wrap');
-        if (ch.FormRaceId > 0) {
-            var fr = allRaces[String(ch.FormRaceId)];
-            document.getElementById('f-formrace').value = fr ? fr.Name : 'Unknown (#' + ch.FormRaceId + ')';
-            formWrap.style.display = '';
-        } else {
-            formWrap.style.display = 'none';
-        }
         setVal('f-level', ch.Level || 1);
         setVal('f-hostile', mob.Hostile);
 

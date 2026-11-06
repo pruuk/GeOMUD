@@ -62,7 +62,6 @@ type GMCPGamePlayer struct {
 	Name       string `json:"name"`
 	Level      int    `json:"level"`
 	Alignment  string `json:"alignment"`
-	Profession string `json:"profession"`
 	TimeOnline string `json:"time_online"`
 	Role       string `json:"role"`
 }
@@ -76,7 +75,6 @@ func (g *GMCPGameModule) buildWhoPayload() []GMCPGamePlayer {
 			Name:       info.CharacterName,
 			Level:      info.Level,
 			Alignment:  info.Alignment,
-			Profession: info.Profession,
 			TimeOnline: info.OnlineTimeStr,
 			Role:       info.Role,
 		})

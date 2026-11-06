@@ -108,9 +108,9 @@ Ann: <ansi fg="yellow">Custom Alias Added:</ansi> <ansi fg="command">zz</ansi>=<
 == online (Ann the only active account: the list is in map order)
 > Ann: online
 Ann: <ansi fg="black-bold">.:</ansi> <ansi fg="table-title">1 user online</ansi>
-Ann| <ansi fg="yellow-bold">╒══════╕═══════╕═══════════╕════════════╕═════════════╕══════╕
-Ann| │<ansi fg="white"> Name </ansi>│<ansi fg="white"> Level </ansi>│<ansi fg="white"> Alignment </ansi>│<ansi fg="white"> Profession </ansi>│<ansi fg="white"> Online      </ansi>│<ansi fg="white"> Role </ansi>│
-Ann| └──────┘───────┘───────────┘────────────┘─────────────┘──────┘
-Ann| │<ansi fg="name"> <ansi fg="username">Ann </ansi> </ansi>│<ansi fg="level"> <ansi fg="red">1    </ansi> </ansi>│<ansi fg="alignment"> <ansi fg="neutral">neutral  </ansi> </ansi>│<ansi fg="profession"> <ansi fg="white-bold">scrub     </ansi> </ansi>│<ansi fg="online"> <ansi fg="magenta">2562047h47m</ansi> </ansi>│<ansi fg="role"> <ansi fg="role-user-bold">user</ansi> </ansi>│
-Ann| └──────┘───────┘───────────┘────────────┘─────────────┘──────┘</ansi>
+Ann| <ansi fg="yellow-bold">╒══════╕═══════╕═══════════╕═════════════╕══════╕
+Ann| │<ansi fg="white"> Name </ansi>│<ansi fg="white"> Level </ansi>│<ansi fg="white"> Alignment </ansi>│<ansi fg="white"> Online      </ansi>│<ansi fg="white"> Role </ansi>│
+Ann| └──────┘───────┘───────────┘─────────────┘──────┘
+Ann| │<ansi fg="name"> <ansi fg="username">Ann </ansi> </ansi>│<ansi fg="level"> <ansi fg="red">1    </ansi> </ansi>│<ansi fg="alignment"> <ansi fg="neutral">neutral  </ansi> </ansi>│<ansi fg="online"> <ansi fg="magenta">2562047h47m</ansi> </ansi>│<ansi fg="role"> <ansi fg="role-user-bold">user</ansi> </ansi>│
+Ann| └──────┘───────┘───────────┘─────────────┘──────┘</ansi>
 Ann|

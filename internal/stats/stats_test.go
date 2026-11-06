@@ -81,8 +81,7 @@ func TestStatInfo_Recalculate_BelowCap(t *testing.T) {
 
 func TestStatInfo_Recalculate_WithMods(t *testing.T) {
 	defaultProgression()
-	si := StatInfo{Base: 10, Training: 3}
-	si.SetMod(7)
+	si := StatInfo{Base: 10, Training: 3, Mods: 7}
 	si.Recalculate(5)
 
 	assert.Equal(t, si.Racial+3+7, si.Value)
@@ -120,24 +119,4 @@ func TestStatInfo_Recalculate_ExactlyAtCap(t *testing.T) {
 	overage := 105 - int(cfg.StatCapAnchor)
 	expectedAdj := int(cfg.StatCapAnchor) + int(math.Round(math.Pow(float64(overage), float64(cfg.StatCapExponent))*float64(cfg.StatCapScale)))
 	assert.Equal(t, expectedAdj, si.ValueAdj)
-}
-
-func TestStatInfo_SetMod(t *testing.T) {
-	t.Run("single mod", func(t *testing.T) {
-		si := StatInfo{}
-		si.SetMod(5)
-		assert.Equal(t, 5, si.Mods)
-	})
-
-	t.Run("multiple mods are summed", func(t *testing.T) {
-		si := StatInfo{}
-		si.SetMod(3, 7, -2)
-		assert.Equal(t, 8, si.Mods)
-	})
-
-	t.Run("no args resets to zero", func(t *testing.T) {
-		si := StatInfo{Mods: 99}
-		si.SetMod()
-		assert.Equal(t, 0, si.Mods)
-	})
 }

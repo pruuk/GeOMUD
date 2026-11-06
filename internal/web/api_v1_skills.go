@@ -68,11 +68,6 @@ func apiV1DeleteSkill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := skills.DeleteSkill(skillId); err != nil {
-		// A skill that is referenced by a profession cannot be deleted.
-		if strings.Contains(err.Error(), "is used by professions") {
-			writeAPIError(w, http.StatusConflict, err.Error())
-			return
-		}
 		writeAPIError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

@@ -55,7 +55,7 @@ func TestRecoveringHealthClearsTheKiller(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	// Seed the skills cache so skill-gated helpers (SetSkill/TrainSkill/GetSkillLevel)
+	// Seed the skills cache so skill-gated helpers (GetSkillLevel)
 	// behave deterministically without loading datafiles from disk.
 	seedSkills := []*skills.Skill{}
 	for _, id := range []string{
@@ -66,7 +66,7 @@ func TestMain(m *testing.M) {
 	} {
 		seedSkills = append(seedSkills, &skills.Skill{SkillId: id, Name: id, Description: id, MaxLevel: 4})
 	}
-	skills.SetTestData(seedSkills, nil)
+	skills.SetTestData(seedSkills)
 
 	os.Exit(m.Run())
 }

@@ -7,11 +7,11 @@ It also tells you how long they are online, their role, and some other informati
 
     **[HP:66/66 MP:35/35]:** ~online~  
     **4 users online**  
-    **╒══════════╕═══════╕═══════════╕════════════════════╕════════╕═══════╕**  
-    **│ Name     │ Level │ Alignment │ Profession         │ Online │ Role  │**  
-    **└──────────┘───────┘───────────┘────────────────────┘────────┘───────┘**  
-    **│ Chuckles │ 9     │ neutral   │ apprentice paladin │ 43m    │ admin │**  
-    **│ Rockshot │ 3     │ corrupt   │ novice assassin    │ 3m     │ user  │**  
-    **│ Wutend   │ 13    │ lawful    │ expert warrior     │ 1h8m   │ user  │**  
-    **│ Skitzith │ 23    │ virtuous  │ journeyman paladin │ 2h21m  │ user  │**  
-    **└──────────┘───────┘───────────┘────────────────────┘────────┘───────┘**
+    **╒══════════╕═══════╕═══════════╕════════╕═══════╕**  
+    **│ Name     │ Level │ Alignment │ Online │ Role  │**  
+    **└──────────┘───────┘───────────┘────────┘───────┘**  
+    **│ Chuckles │ 9     │ neutral   │ 43m    │ admin │**  
+    **│ Rockshot │ 3     │ corrupt   │ 3m     │ user  │**  
+    **│ Wutend   │ 13    │ lawful    │ 1h8m   │ user  │**  
+    **│ Skitzith │ 23    │ virtuous  │ 2h21m  │ user  │**  
+    **└──────────┘───────┘───────────┘────────┘───────┘**

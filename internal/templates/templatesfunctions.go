@@ -17,7 +17,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/language"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
-	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/mattn/go-runewidth"
 )
@@ -108,7 +107,6 @@ var (
 			return "glorble"
 		},
 		"idsOtherThan": idsOtherThan,
-		"tnl":          TNL,
 		"pct":          pct,
 		"numberFormat": numberFormat,
 		"mod":          func(a, b int) int { return a % b },
@@ -143,11 +141,6 @@ var (
 		"formatdiceroll": func(roll string) string {
 			a, d, s, b, _ := util.ParseDiceRoll(roll)
 			return util.FormatDiceRoll(a, d, s, b, []int{})
-		},
-		"profession": func(char characters.Character) string {
-
-			allRanks := char.GetAllSkillRanks()
-			return skills.GetProfession(allRanks)
 		},
 		"roundstotime": func(rounds int) string {
 			if rounds >= buffs.TriggersLeftUnlimited {
@@ -353,12 +346,6 @@ func idsOtherThan(allIds []uint64, excludeId uint64) []uint64 {
 		}
 	}
 	return finalIds
-}
-
-func TNL(userId int) string {
-	user := accounts.GetByUserId(userId)
-	realXPNow, realXPTNL := user.Character.XPTNLActual()
-	return fmt.Sprintf(`%d/%d (%d%%)`, realXPNow, realXPTNL, pct(realXPNow, realXPTNL))
 }
 
 func pct(a, b int) int {

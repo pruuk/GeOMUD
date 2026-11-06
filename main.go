@@ -1452,7 +1452,6 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 //	combat-messages items.LoadDataFiles
 //	races          races.LoadDataFiles
 //	skills         skills.LoadDataFiles
-//	professions    skills.LoadProfessionDataFiles
 //	mobs           mobs.LoadDataFiles
 //	mutators       mutators.LoadDataFiles
 //	templates      templates package (help, screens, prompts)
@@ -1474,7 +1473,6 @@ var requiredWorldFolders = []string{
 	"mobs",
 	"mutators",
 	"panel-layouts",
-	"professions",
 	"races",
 	"rooms",
 	"skills",
@@ -1502,8 +1500,7 @@ func loadAllDataFiles(isReload bool) {
 	buffs.LoadDataFiles()     // Load buffs before items for cost calculation reasons
 	items.LoadDataFiles()
 	races.LoadDataFiles()
-	skills.LoadDataFiles()           // skills before professions for cross-ref warnings
-	skills.LoadProfessionDataFiles() // professions reference skills
+	skills.LoadDataFiles()
 	mobs.LoadDataFiles()
 	templates.LoadAliases(plugins.GetPluginRegistry())
 	keywords.LoadAliases(plugins.GetPluginRegistry())

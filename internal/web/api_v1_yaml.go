@@ -150,7 +150,7 @@ func apiV1GetRaceYAML(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
-// Skills & Professions
+// Skills
 // ---------------------------------------------------------------------------
 
 // GET /admin/api/v1/skills/{skillId}/yaml
@@ -161,24 +161,6 @@ func apiV1GetSkillYAML(w http.ResponseWriter, r *http.Request) {
 	}
 	spec := skills.GetSkill(skillId)
 	path := dataFiles() + `/skills/` + spec.Filepath()
-	content, ok := readYAMLFile(w, path)
-	if !ok {
-		return
-	}
-	writeJSON(w, http.StatusOK, APIResponse[yamlResponse]{
-		Success: true,
-		Data:    yamlResp(content, path),
-	})
-}
-
-// GET /admin/api/v1/professions/{professionId}/yaml
-func apiV1GetProfessionYAML(w http.ResponseWriter, r *http.Request) {
-	professionId, ok := resolveProfessionId(w, r.PathValue("professionId"))
-	if !ok {
-		return
-	}
-	spec := skills.GetProfessionSpec(professionId)
-	path := dataFiles() + `/professions/` + spec.Filepath()
 	content, ok := readYAMLFile(w, path)
 	if !ok {
 		return

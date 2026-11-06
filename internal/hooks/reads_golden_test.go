@@ -263,7 +263,6 @@ func newReadsWorld(t *testing.T, seed int64) *readsWorld {
 		items.LoadDataFiles()
 		races.LoadDataFiles()
 		skills.LoadDataFiles()
-		skills.LoadProfessionDataFiles()
 		mobs.LoadDataFiles()
 		// As main does. With no file system registered, templates.Process
 		// takes a missing .md for an empty one.
@@ -837,11 +836,10 @@ func TestReadsH_Outside(t *testing.T) {
 		map[string]any{"GamePlay.Death.CorpsesEnabled": bool(gp.Death.CorpsesEnabled), "GamePlay.AlignmentDecayRounds": int(gp.AlignmentDecayRounds)},
 	)
 
-	w.section("NPC death: suicide on the rat after damage by Ann (tame and alignment lines)")
-	// The tame roll is util.Rand(1000) < level delta + skills delta; a level
-	// delta of 1000 makes it certain. Neutral 19 killing an evil rat moves
-	// Ann over the line to lawful.
-	ann.Character.SetSkill("tame", 1)
+	w.section("NPC death: suicide on the rat after damage by Ann (alignment lines)")
+	// Neutral 19 killing an evil rat moves Ann over the line to lawful. The
+	// level change keeps the combat XP line at 5 (it was set for the removed
+	// tame roll and the golden's XP depends on it).
 	level := ann.Character.Level
 	ann.Character.Level = 1000
 	ann.Character.Alignment = 19

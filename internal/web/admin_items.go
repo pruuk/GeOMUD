@@ -31,7 +31,6 @@ var pageWritePermissions = map[string]string{
 	"/admin/panels":                "panels.write",
 	"/admin/races":                 "races.write",
 	"/admin/skills":                "skills.write",
-	"/admin/skills-professions":    "skills.write",
 	"/admin/rooms":                 "rooms.write",
 	"/admin/users":                 "users.write",
 	"/admin/mapper":                "rooms.write",
@@ -161,10 +160,6 @@ func adminRacesAPI(w http.ResponseWriter, r *http.Request) {
 
 func adminSkills(w http.ResponseWriter, r *http.Request) {
 	serveAdminTemplate(w, r, "skills.html", nil)
-}
-
-func adminSkillsProfessions(w http.ResponseWriter, r *http.Request) {
-	serveAdminTemplate(w, r, "skills-professions.html", nil)
 }
 
 func adminSkillsAPI(w http.ResponseWriter, r *http.Request) {

@@ -414,7 +414,6 @@ func MoveToRoom(actorId ids.ID, toRoomId int, isSpawn ...bool) error {
 		char.RoomId = newRoom.RoomId
 		char.Zone = newRoom.Zone
 	}
-	char.RememberRoom(newRoom.RoomId) // Mark this room as remembered.
 	if zCfg := GetZoneConfig(newRoom.Zone); zCfg != nil {
 		char.MarkVisitedRoom(newRoom.RoomId, newRoom.Zone, zCfg.RoomIds) // Permanently record the visit.
 	} else {

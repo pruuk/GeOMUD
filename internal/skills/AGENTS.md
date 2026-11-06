@@ -7,12 +7,12 @@
 
 ## Data-driven model
 
-- Skills and professions are YAML datafiles (`_datafiles/world/default/skills/`, `/professions/`), loaded via `fileloader.LoadAllFlatFiles` into `allSkills`/`allProfessions` maps. See `skill.go`, `profession.go`, `admin.go`.
+- Skills are YAML datafiles (`_datafiles/world/default/skills/`), loaded via `fileloader.LoadAllFlatFiles` into the `allSkills` map. See `skill.go`, `admin.go`.
 - Skills are keyed by lowercase string ids that match `Character.Skills` keys, so there is no save migration. `maxlevel` is per-skill (default 4); progression math generalizes to `max*(max+1)/2` points per skill.
-- Validation policy: reject writes / zero reads. Unknown skill ids cause `SetSkill`/`TrainSkill` to warn and no-op; `GetSkillLevel` returns 0. Orphaned save entries stay inert.
-- Skills are referenced as plain lowercase string ids (e.g. `"cast"`, `"dual-wield"`). There are no skill-name constants. Do not reintroduce a `SkillTag` type or skill constants; do not derive the skill list from professions.
+- Validation policy: zero reads. `GetSkillLevel` returns 0 for unknown skill ids. Orphaned save entries stay inert.
+- Skills are referenced as plain lowercase string ids (e.g. `"cast"`, `"dual-wield"`). There are no skill-name constants. Do not reintroduce a `SkillTag` type or skill constants.
 - Tests seed the caches via `skills.SetTestData(...)` instead of loading from disk.
-- Skill files use `SkillId + ".yaml"` for their filename (NOT `util.ConvertForFilename`, which would mangle `dual-wield`); professions use `ConvertForFilename` for their spaced ids.
+- Skill files use `SkillId + ".yaml"` for their filename (NOT `util.ConvertForFilename`, which would mangle `dual-wield`).
 
 ## Working Rules
 

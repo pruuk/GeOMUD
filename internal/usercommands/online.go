@@ -18,7 +18,6 @@ func Online(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		language.T(`User.Name`),
 		language.T(`Level`),
 		language.T(`Alignment`),
-		language.T(`Profession`),
 		language.T(`Online`),
 		language.T(`Role`),
 	}
@@ -65,7 +64,6 @@ func Online(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 				onlineInfo.CharacterName,
 				strconv.Itoa(onlineInfo.Level),
 				onlineInfo.Alignment,
-				onlineInfo.Profession,
 				onlineTime,
 				onlineInfo.Role,
 			}
@@ -74,7 +72,6 @@ func Online(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 				`<ansi fg="username">%s</ansi>`,
 				`<ansi fg="red">%s</ansi>`,
 				`<ansi fg="` + onlineInfo.Alignment + `">%s</ansi>`,
-				`<ansi fg="white-bold">%s</ansi>`,
 				`<ansi fg="magenta">%s</ansi>`,
 				`<ansi fg="role-` + permClass + `-bold">%s</ansi>`,
 			}

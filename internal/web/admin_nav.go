@@ -80,11 +80,10 @@ func buildAdminNav() []WebNavItem {
 				{
 					Name:        "Skills",
 					Target:      "/admin/skills",
-					Description: "Define skills, their level caps, and the professions that group them.",
+					Description: "Define skills and their level caps.",
 					Children: []WebNavItem{
 						{Label: "View / Edit", Target: "/admin/skills", Description: "Browse, create, and edit skill definitions."},
-						{Label: "Professions", Target: "/admin/skills-professions", Description: "Browse, create, and edit profession definitions."},
-						{Label: "API Docs", Target: "/admin/skills-api", Description: "REST API reference for the skills and professions endpoints."},
+						{Label: "API Docs", Target: "/admin/skills-api", Description: "REST API reference for the skills endpoints."},
 					},
 				},
 			},

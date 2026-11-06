@@ -83,7 +83,7 @@ var allPermissions = []PermissionDef{
 	{Key: "panels.write", Category: "Panels", Description: "Create and edit display panels"},
 	{Key: "races.write", Category: "Races", Description: "Create, edit, and delete races"},
 	{Key: "rooms.write", Category: "Rooms", Description: "Create, edit, and delete rooms"},
-	{Key: "skills.write", Category: "Skills", Description: "Create, edit, and delete skills and professions"},
+	{Key: "skills.write", Category: "Skills", Description: "Create, edit, and delete skills"},
 	{Key: "users.write", Category: "Users", Description: "Create and edit user accounts"},
 	{Key: "zones.write", Category: "Zones", Description: "Create, rename, edit, and delete zones"},
 }

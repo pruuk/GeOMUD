@@ -36,7 +36,6 @@ type Race struct {
 	Size             Size
 	TNLScale         float32
 	UnarmedName      string
-	Tameable         bool
 	Damage           items.Damage
 	Selectable       bool
 	AngryCommands    []string         // randomly chosen to queue when they are angry/entering combat.
@@ -55,27 +54,6 @@ func GetRaces() []Race {
 
 func GetRace(raceId int) *Race {
 	return races[raceId]
-}
-
-func FindRace(name string) (Race, bool) {
-
-	name = strings.ToLower(name)
-
-	closeMatch := -1
-	for idx, r := range races {
-		testName := strings.ToLower(r.Name)
-		if strings.HasPrefix(testName, name) {
-			return *r, true
-		} else if strings.Contains(testName, name) {
-			closeMatch = idx
-		}
-	}
-	// close matches
-	if closeMatch > -1 {
-		return *races[closeMatch], true
-	}
-
-	return Race{}, false
 }
 
 func (r *Race) Id() int {

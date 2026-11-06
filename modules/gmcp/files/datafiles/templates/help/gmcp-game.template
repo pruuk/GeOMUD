@@ -14,7 +14,6 @@ The <ansi fg="white-bold">Game</ansi> GMCP payload is sent to all online players
   <ansi fg="cyan">name</ansi>        <ansi fg="green">string</ansi>  - Character name
   <ansi fg="cyan">level</ansi>       <ansi fg="yellow">number</ansi>  - Character level
   <ansi fg="cyan">alignment</ansi>   <ansi fg="green">string</ansi>  - Character alignment
-  <ansi fg="cyan">profession</ansi>  <ansi fg="green">string</ansi>  - Character profession/class
   <ansi fg="cyan">time_online</ansi> <ansi fg="green">string</ansi>  - How long the character has been online this session
   <ansi fg="cyan">role</ansi>        <ansi fg="green">string</ansi>  - Account role (e.g. "player", "admin")
 
