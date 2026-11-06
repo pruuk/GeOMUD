@@ -55,6 +55,9 @@ func TestMoveToRoomMovesAnNPC(t *testing.T) {
 	a.AddMob(id)
 	events.ProcessEvents()
 	*changes = nil
+	// AddTestRoom marks both rooms visited this round; clear it so the
+	// lastVisited asserts below can only pass if the move marks them.
+	a.lastVisited, b.lastVisited = 0, 0
 
 	require.NoError(t, MoveToRoom(id, moveRoomB))
 	events.ProcessEvents()
@@ -80,6 +83,9 @@ func TestMoveToRoomMovesAPlayer(t *testing.T) {
 	u := &accounts.Account{UserId: 9101, Character: c}
 	actors.Spawn(c, actors.NewConnectionController(u))
 	a.AddPlayer(u.UserId)
+	// AddTestRoom marks both rooms visited this round; clear it so the
+	// lastVisited asserts below can only pass if the move marks them.
+	a.lastVisited, b.lastVisited = 0, 0
 
 	require.NoError(t, MoveToRoom(c.Id, moveRoomB))
 	events.ProcessEvents()
