@@ -188,11 +188,6 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		m := mobs.GetInstance(attackMobId)
 
 		if m != nil {
-			if m.Character.IsCharmed(actor.Character.Id) {
-				Tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
-				return true, nil
-			}
-
 			if user != nil {
 				if party := parties.Get(user.UserId); party != nil {
 					if party.IsLeader(user.UserId) {

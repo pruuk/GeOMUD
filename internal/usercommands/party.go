@@ -9,9 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
-	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/messaging"
-	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/templates"
@@ -224,8 +222,6 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 			isInvited := currentParty.Invited(user.UserId)
 			leaderId := currentParty.LeaderUserId
 
-			charmedMobIds := []ids.ID{}
-
 			for _, uid := range currentParty.UserIds {
 				uStatus := "In Party"
 				if leaderId == uid {
@@ -271,40 +267,6 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 					`<ansi fg="yellow">%s</ansi>`,
 					//`<ansi fg="cyan-bold">%s</ansi>`,
 					`<ansi fg="` + healthClass + `">%s</ansi>`,
-					`<ansi fg="magenta-bold">%s</ansi>`,
-					`<ansi fg="white-bold">%s</ansi>`}
-
-				formatting = append(formatting, rowFormat)
-
-				charmedMobIds = append(charmedMobIds, u.Character.GetCharmIds()...)
-			}
-
-			for _, charmedMobId := range charmedMobIds {
-				m := mobs.GetInstance(charmedMobId)
-				if m == nil {
-					continue
-				}
-				mRoom := rooms.LoadRoom(m.Character.RoomId)
-				mLoc := `-`
-				if mRoom != nil {
-					mLoc = mRoom.Title
-				}
-				mHealthPct := int(math.Floor((float64(m.Character.Health) / float64(m.Character.HealthMax.Value)) * 100))
-				rows = append(rows, []string{
-					m.Character.Name,
-					`♥friend`,
-					fmt.Sprintf(`%d`, m.Character.Level),
-					//fmt.Sprintf(`%d/%d`, m.Character.Health, m.Character.HealthMax.Value),
-					fmt.Sprintf(`%d%%`, mHealthPct),
-					mLoc,
-					`-`,
-				})
-
-				rowFormat := []string{`<ansi fg="username">%s</ansi>`,
-					`<ansi fg="white-bold">%s</ansi>`,
-					`<ansi fg="yellow">%s</ansi>`,
-					//`<ansi fg="cyan-bold">%s</ansi>`,
-					`<ansi fg="` + util.HealthClass(m.Character.Health, m.Character.HealthMax.Value) + `">%s</ansi>`,
 					`<ansi fg="magenta-bold">%s</ansi>`,
 					`<ansi fg="white-bold">%s</ansi>`}
 

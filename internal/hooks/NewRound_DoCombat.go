@@ -456,16 +456,6 @@ func flee(a *actors.Actor, aRoom *rooms.Room) {
 		return
 	}
 
-	// A charmed NPC fighting beside the fleer is in the fight too: it flees
-	// on its own roll.
-	for _, instId := range aRoom.GetMobs(rooms.FindCharmed) {
-		if mob := mobs.GetInstance(instId); mob != nil {
-			if mob.Character.IsCharmed(a.Id) {
-				mob.Command(`flee`)
-			}
-		}
-	}
-
 	// Only a player sees where they fled to; an NPC's look prepares nothing.
 	if accountOf(a) != nil {
 		usercommands.Look(``, a, rooms.LoadRoom(exitRoomId), events.CmdSecretly)

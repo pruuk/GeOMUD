@@ -10,7 +10,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/messaging"
-	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/perception"
@@ -120,7 +119,6 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 				// Party leaders can move the whole party.
 				if party.LeaderUserId == targetUser.UserId {
 
-					newRoom := rooms.LoadRoom(gotoRoomId)
 					for _, uid := range room.GetPlayers() {
 						if party.IsMember(uid) {
 
@@ -145,15 +143,6 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 
 							if partyActor := actors.ByUserId(partyUser.UserId); partyActor != nil {
 								Look(``, partyActor, gotoRoom, flags)
-							}
-
-							for _, charmedMobId := range room.GetMobs(rooms.FindCharmed) {
-								if mob := mobs.GetInstance(charmedMobId); mob != nil {
-									if mob.Character.IsCharmed(partyUser.Character.Id) {
-										room.RemoveMob(mob.Character.Id)
-										newRoom.AddMob(mob.Character.Id)
-									}
-								}
 							}
 						}
 					}

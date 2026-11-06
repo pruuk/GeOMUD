@@ -434,17 +434,16 @@ func TestCombatGoldenMvP(t *testing.T) {
 	require.Less(t, alice.Character.Health, 1, "the fixture must reach Alice going down")
 }
 
-// An NPC charmed by a player attacks an NPC; the charmer is credited.
-func TestCombatGoldenMvMCharmed(t *testing.T) {
+// An NPC attacks an NPC (the aggro is set directly); nobody is credited.
+func TestCombatGoldenMvM(t *testing.T) {
 	w := newCombatWorld(t, 404)
-	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 10)
+	w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 10)
 	dog := w.addNPC(93203, "dog", 1, goldenRoomA, 30, 30, 20, 10)
-	dog.Character.Charm(alice.Character.Id, 100, "")
 	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "golden-rats-mvm")
 	dog.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
 	w.start()
 	w.rounds(20)
-	w.check("mvm_charmed")
+	w.check("mvm")
 	require.Less(t, rat.Character.Health, 1, "the fixture must reach the rat's death")
 }
 
@@ -464,14 +463,13 @@ func TestCombatGoldenFleeBlocked(t *testing.T) {
 	require.Equal(t, goldenRoomA, alice.Character.RoomId, "the fixture must show a blocked flee")
 }
 
-// A player's flee succeeds: they leave through the only exit, their charmed
-// NPC is told to flee, and the NPC that fought them loses its target.
+// A player's flee succeeds: they leave through the only exit and the NPC
+// that fought them loses its target.
 func TestCombatGoldenFleeSuccess(t *testing.T) {
 	w := newCombatWorld(t, 606)
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 100, 10, 10, 10)
 	guard := w.addNPC(93202, "guard", 1, goldenRoomA, 1, 5, 5, 10)
-	dog := w.addNPC(93203, "dog", 1, goldenRoomA, 10, 10, 10, 10)
-	dog.Character.Charm(alice.Character.Id, 100, "")
+	w.addNPC(93203, "dog", 1, goldenRoomA, 10, 10, 10, 10) // an idle bystander
 	guard.Character.SetAggro(alice.Character.Id, characters.DefaultAttack)
 	fleeAggro(alice.Character)
 	w.start()

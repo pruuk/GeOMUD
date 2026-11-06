@@ -13,12 +13,11 @@ import (
 // (SaveMobSpec) never gain runtime fields. What the NPC was doing (path, wander
 // count, temp data) is not saved.
 type SavedNPC struct {
-	Template   Mob                   `yaml:"mob"` // the instance's exported fields, including Character
-	HomeRoomId int                   `yaml:"homeroomid"`
-	SpawnSlot  int                   `yaml:"spawnslot,omitempty"` // index plus one of the home room slot it fills; zero for none
-	IsElite    bool                  `yaml:"elite,omitempty"`
-	Aggro      *characters.Aggro     `yaml:"aggro,omitempty"`
-	Charmed    *characters.CharmInfo `yaml:"charmed,omitempty"`
+	Template   Mob               `yaml:"mob"` // the instance's exported fields, including Character
+	HomeRoomId int               `yaml:"homeroomid"`
+	SpawnSlot  int               `yaml:"spawnslot,omitempty"` // index plus one of the home room slot it fills; zero for none
+	IsElite    bool              `yaml:"elite,omitempty"`
+	Aggro      *characters.Aggro `yaml:"aggro,omitempty"`
 }
 
 // Snapshot saves m as it is now.
@@ -29,7 +28,6 @@ func Snapshot(m *Mob) SavedNPC {
 		SpawnSlot:  m.SpawnSlot,
 		IsElite:    m.IsElite,
 		Aggro:      m.Character.Aggro,
-		Charmed:    m.Character.Charmed,
 	}
 }
 
@@ -54,7 +52,6 @@ func (s SavedNPC) Mob() Mob {
 	m.IsElite = s.IsElite
 	m.Character.SetPermaBuffs(templatePermaBuffs(m.MobId, m.Character.Id))
 	m.Character.Aggro = s.Aggro
-	m.Character.Charmed = s.Charmed
 	m.WanderCount = 0
 	m.Path = PathQueue{}
 	m.PreventIdle = false

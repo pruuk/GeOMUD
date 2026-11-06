@@ -9,7 +9,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/messaging"
-	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/perception"
@@ -46,14 +45,6 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 
 	if currentParty := parties.Get(evt.UserId); currentParty != nil {
 		currentParty.Leave(evt.UserId)
-	}
-
-	for _, mobInstId := range room.GetMobs(rooms.FindCharmed) {
-		if mob := mobs.GetInstance(mobInstId); mob != nil {
-			if mob.Character.IsCharmed(user.Character.Id) {
-				mob.Character.Charmed.Expire()
-			}
-		}
 	}
 
 	if _, ok := room.RemovePlayer(evt.UserId); ok {

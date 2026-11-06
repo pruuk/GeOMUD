@@ -64,8 +64,6 @@ type Character struct {
 	Gold             int                            `yaml:"gold,omitempty"`           // The gold the character is holding
 	Bank             int                            `yaml:"bank,omitempty"`           // The gold the character has in the bank
 	Shop             Shop                           `yaml:"shop,omitempty"`           // Definition of shop services/items this character stocks (or just has at the moment)
-	Charmed          *CharmInfo                     `yaml:"-"`                        // If they are charmed, this is the info
-	CharmedMobs      []ids.ID                       `yaml:"charmedmobs,omitempty"`    // If they have charmed anyone, this is the list of their body IDs
 	Items            []items.Item                   `yaml:"items,omitempty"`          // The items the character is holding
 	Buffs            buffs.Buffs                    `yaml:"buffs,omitempty"`          // The buffs the character has active
 	Equipment        Worn                           `yaml:"equipment,omitempty"`      // The equipment the character is wearing
@@ -123,7 +121,6 @@ func New() *Character {
 		Skills:         make(map[string]int),
 		Gold:           25,
 		Bank:           100,
-		CharmedMobs:    []ids.ID{},
 		Items:          []items.Item{},
 		Buffs:          buffs.New(),
 		Equipment:      Worn{},
@@ -345,67 +342,11 @@ func (c *Character) GrantXP(xp int) (actualXP int, xpScale int) {
 	return actualXP, xpScale
 }
 
-func (c *Character) TrackCharmed(mobId ids.ID, add bool) {
-	for pos, charmedId := range c.CharmedMobs {
-		if charmedId == mobId {
-			if !add {
-				c.CharmedMobs = slices.Delete(c.CharmedMobs, pos, pos+1)
-			}
-			return
-		}
-	}
-	c.CharmedMobs = append(c.CharmedMobs, mobId)
-}
-
-func (c *Character) GetCharmIds() []ids.ID {
-	return append([]ids.ID{}, c.CharmedMobs...)
-}
-
-func (c *Character) Charm(by ids.ID, rounds int, expireCommand string) {
-	c.SetAdjective(`charmed`, true)
-	c.Charmed = NewCharm(by, rounds, expireCommand)
-	if c.Aggro != nil && c.Aggro.Target == by {
-		c.Aggro = nil
-	}
-}
-
 func (c *Character) KnowsFirstAid() bool {
 	if r := races.GetRace(c.GetRaceId()); r != nil {
 		return r.KnowsFirstAid
 	}
 	return false
-}
-
-// GetCharmedBy returns the body ID of whoever charmed them, or the zero ID.
-func (c *Character) GetCharmedBy() ids.ID {
-	if c.Charmed != nil {
-		return c.Charmed.By
-	}
-	return ids.ID{}
-}
-
-func (c *Character) IsCharmed(by ...ids.ID) bool {
-
-	if c.Charmed == nil {
-		return false
-	}
-
-	if len(by) == 0 {
-		return true
-	}
-
-	return slices.Contains(by, c.Charmed.By)
-}
-
-// Returns the body ID of whoever had charmed them
-func (c *Character) RemoveCharm() ids.ID {
-	var charmedBy ids.ID
-	c.SetAdjective(`charmed`, false)
-	if c.Charmed != nil {
-		charmedBy = c.Charmed.By
-		c.Charmed = nil
-	}
-	return charmedBy
 }
 
 func (c *Character) GetRandomItem() (items.Item, bool) {
@@ -852,11 +793,6 @@ func (c *Character) GetSkillLevel(skillName string) int {
 
 func (c *Character) GetSkillLevelCost(currentLevel int) int {
 	return currentLevel
-}
-
-func (c *Character) GetMaxCharmedCreatures() int {
-	lvl := c.GetSkillLevel(`tame`)
-	return lvl + 1
 }
 
 func (c *Character) GetMemoryCapacity() int {

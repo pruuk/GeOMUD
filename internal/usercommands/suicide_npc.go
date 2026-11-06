@@ -47,13 +47,6 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 
 	mudlog.Debug(`Mob Death`, `name`, mob.Character.Name)
 
-	// Make sure to clean up any charm stuff if it's being removed
-	if charmedBy := mob.Character.RemoveCharm(); !charmedBy.IsZero() {
-		if charmedUser := accounts.GetByBodyId(charmedBy); charmedUser != nil {
-			charmedUser.Character.TrackCharmed(mob.Character.Id, false)
-		}
-	}
-
 	// Send a death msg to everyone in the room.
 	messaging.Send(perception.Message{
 		Kind:         perception.WorldEvent,

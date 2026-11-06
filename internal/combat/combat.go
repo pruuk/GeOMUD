@@ -58,16 +58,9 @@ func accountOf(a *actors.Actor) *accounts.Account {
 }
 
 // CreditAccount is the account a's attacks are credited to: its own, else
-// the account of whoever charmed it, else none. Kill credit and group
-// hatred both follow it (plan Decisions 3 and 8).
+// none. Kill credit and group hatred both follow it (plan Decisions 3 and 8).
 func CreditAccount(a *actors.Actor) *accounts.Account {
-	if acct := accountOf(a); acct != nil {
-		return acct
-	}
-	if by := a.Character.GetCharmedBy(); !by.IsZero() {
-		return actors.AccountOf(by)
-	}
-	return nil
+	return accountOf(a)
 }
 
 // combatMessage is one combat line set as a world event: seen or heard by

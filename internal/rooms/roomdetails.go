@@ -266,8 +266,6 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 		}
 	}
 
-	visibleFriendlyMobs := []string{}
-
 	staleMobIds := []ids.ID{}
 	for _, mobId := range r.mobIds() {
 		if mob := mobs.GetInstance(mobId); mob != nil {
@@ -282,11 +280,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 			mobName := mob.Character.GetMobName(user.Character.Id, tmpNameFlags...)
 
-			if mob.Character.IsCharmed() {
-				visibleFriendlyMobs = append(visibleFriendlyMobs, mobName.String())
-			} else {
-				details.VisibleMobs = append(details.VisibleMobs, mobName.String())
-			}
+			details.VisibleMobs = append(details.VisibleMobs, mobName.String())
 		} else {
 			staleMobIds = append(staleMobIds, mobId)
 		}
@@ -296,9 +290,6 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 	for _, mobId := range staleMobIds {
 		r.removeBody(mobId)
 	}
-
-	// Add the friendly mobs to the end
-	details.VisibleMobs = append(details.VisibleMobs, visibleFriendlyMobs...)
 
 	for exitStr, exitInfo := range r.ExitsTemp {
 		details.TemporaryExits[exitStr] = exitInfo

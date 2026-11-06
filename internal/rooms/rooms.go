@@ -46,8 +46,7 @@ const (
 	AffectsRoom   = "room"   // Does it affect everyone in the room?
 
 	// Useful for finding mobs/players
-	FindCharmed        FindFlag = 0b00000000001 // charmed
-	FindNeutral        FindFlag = 0b00000000010 // Not aggro, not charmed, not Hostile
+	FindNeutral        FindFlag = 0b00000000010 // Not aggro, not Hostile
 	FindFightingPlayer FindFlag = 0b00000000100 // aggro vs. a player
 	FindFightingMob    FindFlag = 0b00000001000 // aggro vs. a mob
 	FindHostile        FindFlag = 0b00000010000 // will auto-attack players
@@ -59,7 +58,6 @@ const (
 
 	// Combinatorial flags
 	FindFighting          = FindFightingPlayer | FindFightingMob // Currently in combat (aggro)
-	FindIdle              = FindCharmed | FindNeutral            // Not aggro or hostile
 	FindAll      FindFlag = 0b111111111
 )
 
@@ -1126,8 +1124,6 @@ func (r *Room) GetMobs(findTypes ...FindFlag) []ids.ID {
 		return roomMobs
 	}
 
-	var isCharmed bool = false
-
 	for _, mobId := range roomMobs {
 
 		mob := mobs.GetInstance(mobId)
@@ -1173,17 +1169,9 @@ func (r *Room) GetMobs(findTypes ...FindFlag) []ids.ID {
 			continue
 		}
 
-		isCharmed = mob.Character.IsCharmed()
-
-		if isCharmed && typeFlag&FindCharmed == FindCharmed {
-			mobMatches = append(mobMatches, mobId)
-			continue
-		}
-
-		// If not allied with players
-		// and not current aggressive to anything
+		// If not current aggressive to anything
 		// and won't automatically attack players
-		if typeFlag&FindNeutral == FindNeutral && !isCharmed && mob.Character.Aggro == nil && !mob.Hostile {
+		if typeFlag&FindNeutral == FindNeutral && mob.Character.Aggro == nil && !mob.Hostile {
 			mobMatches = append(mobMatches, mobId)
 			continue
 		}
@@ -1229,8 +1217,6 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 		return roomPlayers
 	}
 
-	var isCharmed bool = false
-
 	for _, userId := range roomPlayers {
 
 		user := accounts.GetByUserId(userId)
@@ -1259,17 +1245,8 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 			continue
 		}
 
-		isCharmed = user.Character.IsCharmed()
-
-		if isCharmed && typeFlag&FindCharmed == FindCharmed {
-			playerMatches = append(playerMatches, userId)
-			continue
-		}
-
-		// If not allied with players
-		// and not current aggressive to anything
-		// and won't automatically attack players
-		if typeFlag&FindNeutral == FindNeutral && !isCharmed && user.Character.Aggro == nil {
+		// If not current aggressive to anything
+		if typeFlag&FindNeutral == FindNeutral && user.Character.Aggro == nil {
 			playerMatches = append(playerMatches, userId)
 			continue
 		}
@@ -1500,7 +1477,6 @@ func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, 
 	}
 
 	namesInRoom := []string{}
-	friendlyMobs := map[ids.ID]*mobs.Mob{}
 	mobLookup := map[string]ids.ID{}
 	for _, mId := range r.GetMobs(findTypes...) {
 
@@ -1509,23 +1485,10 @@ func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, 
 			continue // body with no instance (disconnect race)
 		}
 
-		if m.Character.IsCharmed() {
-			friendlyMobs[mId] = m // Put friendly mobs at the end of the list.
-			continue
-		}
-
 		mobName := fmt.Sprintf(`%s#%d`, m.Character.Name, len(namesInRoom)+1) // skeleton#1, skeleton#2 etc
 		mobLookup[mobName] = mId
 		namesInRoom = append(namesInRoom, mobName)
 
-	}
-
-	// Now add the friendly mobs (at the end)
-	for mId, m := range friendlyMobs {
-		mobName := fmt.Sprintf(`%s#%d`, m.Character.Name, len(namesInRoom)+1)
-		mobLookup[mobName] = mId
-		namesInRoom = append(namesInRoom, mobName)
-		delete(friendlyMobs, mId)
 	}
 
 	closeMatch, fullMatch := util.FindMatchIn(searchName, namesInRoom...)

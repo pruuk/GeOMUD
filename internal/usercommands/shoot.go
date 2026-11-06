@@ -94,11 +94,6 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		if m != nil {
 
-			if m.Character.IsCharmed(actor.Character.Id) {
-				Tell(actor, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> is your friend!`, m.Character.Name))
-				return true, nil
-			}
-
 			actor.Character.SetAggroRemote(exitName, attackMobId, characters.Shooting)
 
 			Tell(actor,

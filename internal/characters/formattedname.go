@@ -23,7 +23,6 @@ var (
 
 	// -short suffix should also be defined in case shorthand symbols are preferred
 	adjectiveStyles = map[string]adjectiveStyle{
-		`charmed`:  {`♥friend`, `♥`, `pink`},     // Are they charmed/friendly?
 		`downed`:   {`☠downed`, `☠`, `red`},      // Are they downed?
 		`elite`:    {`elite`, `◆`, `elite`},      // Are they an elite mob?
 		`hidden`:   {`hidden`, `?`, `gray`},      // Are they hiding?
