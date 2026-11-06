@@ -6,12 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
-	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
@@ -125,18 +123,6 @@ func mob_List(rest string, user *accounts.Account, _ *rooms.Room, _ events.Event
 }
 
 func mob_Spawn(rest string, user *accounts.Account, room *rooms.Room, flags events.EventFlag) (bool, error) {
-
-	c := configs.GetLootGoblinConfig()
-
-	// special handling of loot goblin
-	if rest == `loot goblin` && c.RoomId != 0 {
-		if gRoom := rooms.LoadRoom(int(c.RoomId)); gRoom != nil { // loot goblin room
-			messaging.ToAccount(user, `Somewhere in the realm, a <ansi fg="mobname">loot goblin</ansi> appears!`)
-			mudlog.Info(`Loot Goblin Spawn`, `roundNumber`, util.GetRoundCount(), `forced`, true)
-			gRoom.Prepare(false) // Make sure the loot goblin spawns.
-		}
-		return true, nil
-	}
 
 	mobId := mobs.MobIdByName(rest)
 

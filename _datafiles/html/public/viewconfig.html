@@ -83,7 +83,7 @@
 <div class="overlay">
   <h3 class="cfg-section-title">Server Configuration</h3>
   <div class="cfg-grid">
-    {{range $name, $value := (.CONFIG.AllConfigData "bannednames" "*startroom*" "script*" "onlogin*" "nextroomid*" "mob*" "*port" "seed*" "folder*" "file*" "seedint" "carefulsavefiles" "lootgoblin*" "maxcpucores" "*roommessagewrapper" "logintervalroundcount")}}
+    {{range $name, $value := (.CONFIG.AllConfigData "bannednames" "*startroom*" "script*" "onlogin*" "nextroomid*" "mob*" "*port" "seed*" "folder*" "file*" "seedint" "carefulsavefiles" "maxcpucores" "*roommessagewrapper" "logintervalroundcount")}}
     <div class="cfg-row">
       <div class="cfg-key">{{ $name }}</div>
       <div class="cfg-val" data-cfgval="{{ $value }}">{{ $value }}</div>

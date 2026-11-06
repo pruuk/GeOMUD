@@ -25,7 +25,6 @@ func seedConfig() Config {
 	c.GamePlay.XPScale = 100
 	c.GamePlay.ShopRestockRate = "6 hours"
 	c.GamePlay.ContainerSizeMax = 10
-	c.GamePlay.PricePerLife = 100
 	c.GamePlay.Death.XPPenalty = "none"
 	c.GamePlay.Death.CorpseDecayTime = "1 hour"
 	c.Validation.NameSizeMin = 3

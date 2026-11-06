@@ -1128,13 +1128,6 @@ var FIELD_META = {
         inputType: 'number',
         min: 0, max: 10, step: 1,
     },
-    'GamePlay.PricePerLife': {
-        label: 'Price Per Life (gold)',
-        description: 'The gold cost to purchase one additional permadeath life from a vendor.',
-        implications: 'Higher prices make extra lives a meaningful gold sink. Lower prices make them accessible to most players. Balance against the gold economy of your server.',
-        inputType: 'number',
-        min: 1, max: 10000000, step: 100,
-    },
     'GamePlay.ShopRestockRate': {
         label: 'Shop Restock Rate',
         description: 'Default time interval for shops to restock one unit of each item. Uses period format (e.g., "6 hours", "30 minutes").',
@@ -1356,42 +1349,6 @@ var FIELD_META = {
         min: 0, max: 100000, step: 100,
     },
 
-    // --- LootGoblin ---
-    'LootGoblin.RoomId': {
-        label: 'Loot Goblin Spawn Room',
-        description: 'The room ID where the loot goblin spawns. The loot goblin is a special NPC that cleans up excess items and gold from the floor.',
-        implications: 'Choose a room that makes thematic sense for the goblin to emerge from. The goblin will travel from here to collect loot.',
-        inputType: 'number',
-        min: 0, max: 9999999, step: 1,
-    },
-    'LootGoblin.RoundCount': {
-        label: 'Loot Goblin Spawn Interval (rounds)',
-        description: 'How many rounds between loot goblin spawn attempts. The goblin only spawns if there is enough loot to attract it.',
-        implications: 'Lower values spawn the goblin more frequently, keeping floors cleaner. Higher values let loot accumulate longer before cleanup.',
-        inputType: 'number',
-        min: 10, max: 10000, step: 10,
-    },
-    'LootGoblin.MinimumItems': {
-        label: 'Minimum Items to Attract Goblin',
-        description: 'The minimum number of items that must be on the floor across the world to trigger a loot goblin spawn.',
-        implications: 'Lower threshold causes the goblin to spawn more aggressively. Higher threshold lets more items accumulate before cleanup.',
-        inputType: 'number',
-        min: 1, max: 1000, step: 1,
-    },
-    'LootGoblin.MinimumGold': {
-        label: 'Minimum Gold to Attract Goblin',
-        description: 'The minimum amount of gold that must be on the floor across the world to trigger a loot goblin spawn.',
-        implications: 'Lower threshold causes the goblin to clean up small gold piles. Higher threshold only triggers cleanup for significant gold accumulations.',
-        inputType: 'number',
-        min: 1, max: 1000000, step: 10,
-    },
-    'LootGoblin.IncludeRecentRooms': {
-        label: 'Include Recently Visited Rooms',
-        description: 'When enabled, the loot goblin will also consider cleaning up rooms that players have recently visited, not just long-abandoned ones.',
-        implications: 'Enabling this makes cleanup more aggressive and keeps recently-active areas cleaner. Disabling it protects loot in active areas from premature cleanup.',
-        inputType: 'bool',
-    },
-
     // --- TextFormats ---
     'TextFormats.Prompt': {
         label: 'Status Prompt',
@@ -1590,7 +1547,7 @@ var SECTIONS = [
         color: '#b03060',
         iconBg: '#fce8ef',
         icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
-        fields: ['GamePlay.LivesStart','GamePlay.LivesMax','GamePlay.LivesOnLevelUp','GamePlay.PricePerLife'],
+        fields: ['GamePlay.LivesStart','GamePlay.LivesMax','GamePlay.LivesOnLevelUp'],
     },
     {
         key: 'GamePlay.Death',
@@ -1636,15 +1593,6 @@ var SECTIONS = [
         iconBg: '#e4f4f6',
         icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M10 12h.01M14 12h.01M18 12h.01"/><path d="M6 6v12"/><path d="M10 6v12"/><path d="M14 6v12"/><path d="M18 6v12"/></svg>',
         fields: ['Memory.RoomUnloadRounds','Memory.RoomUnloadThreshold'],
-    },
-    {
-        key: 'LootGoblin',
-        name: 'Loot Goblin',
-        desc: 'Configure the floor-cleanup goblin that removes excess items and gold.',
-        color: '#5d8a2b',
-        iconBg: '#edf5e4',
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
-        fields: ['LootGoblin.RoomId','LootGoblin.RoundCount','LootGoblin.MinimumItems','LootGoblin.MinimumGold','LootGoblin.IncludeRecentRooms'],
     },
     {
         key: 'TextFormats',

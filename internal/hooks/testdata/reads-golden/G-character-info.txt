@@ -36,8 +36,6 @@ Ann: <ansi fg="yellow-bold">fprompt:</ansi> {8}[{t} {T} {255}HP:{hp}{8}/{HP} {25
 Ann:
 Ann: <ansi fg="yellow-bold">wimpy:</ansi> 0%
 Ann:
-Ann: <ansi fg="yellow-bold">shopstyle:</ansi> default
-Ann:
 Ann: See: <ansi fg="command">help set</ansi>
 == who
 > Ann: who

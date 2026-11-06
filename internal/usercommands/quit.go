@@ -3,6 +3,8 @@ package usercommands
 import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/messaging"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 )
 
@@ -17,6 +19,16 @@ func Quit(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		Tell(actor, "You're too busy to quit right now!")
 		return true, nil
 	}
+
+	messaging.Send(perception.Message{
+		Kind:         perception.WorldEvent,
+		Actor:        actor.Id,
+		Senses:       perception.Sight | perception.Sound,
+		Range:        perception.Room,
+		ActorText:    "You sit down and begin your meditation.",
+		ObserverText: "{actor} sits down and begins to meditate.",
+	})
+	Tell(actor, "Your meditation must complete without interruption to quit gracefully.")
 	user.AddBuff(0, `quitting`)
 
 	return true, nil

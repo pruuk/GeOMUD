@@ -435,57 +435,6 @@ func MoveToRoom(actorId ids.ID, toRoomId int, isSpawn ...bool) error {
 	return nil
 }
 
-// skipRecentlyVisited means ignore rooms with recent visitors
-// minimumItemCt is the minimum items in the room to care about it
-func GetRoomWithMostItems(skipRecentlyVisited bool, minimumItemCt int, minimumGoldCt int) (roomId int, itemCt int) {
-
-	lgConfig := configs.GetLootGoblinConfig()
-	goblinZone := ``
-	if goblinRoomId := int(lgConfig.RoomId); goblinRoomId != 0 {
-		if goblinRoom := LoadRoom(int(lgConfig.RoomId)); goblinRoom != nil {
-			goblinZone = goblinRoom.Zone
-		}
-	}
-
-	topItemRoomId, topItemCt := 0, 0
-	topGoldRoomId, topGoldCt := 0, 0
-
-	for cRoomId, cRoom := range roomManager.rooms {
-		// Don't include goblin trash zone items
-		if cRoom.Zone == goblinZone {
-			continue
-		}
-
-		iCt := len(cRoom.Items)
-
-		if iCt < minimumItemCt && cRoom.Gold < minimumGoldCt {
-			continue
-		}
-
-		if iCt > topItemCt {
-			if skipRecentlyVisited && cRoom.HasRecentVisitors() {
-				continue
-			}
-			topItemRoomId = cRoomId
-			topItemCt = iCt
-		}
-
-		if cRoom.Gold > topGoldCt {
-			if skipRecentlyVisited && cRoom.HasRecentVisitors() {
-				continue
-			}
-			topGoldRoomId = cRoomId
-			topGoldCt = cRoom.Gold
-		}
-	}
-
-	if topItemRoomId == 0 && topGoldCt > 0 {
-		return topGoldRoomId, topGoldCt
-	}
-
-	return topItemRoomId, topItemCt
-}
-
 func GetRoomsWithPlayers() []int {
 
 	deleteKeys := []int{}
