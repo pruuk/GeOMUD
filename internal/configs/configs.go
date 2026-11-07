@@ -39,7 +39,6 @@ type Config struct {
 	// Start config subsections
 	Server       Server       `yaml:"Server"`
 	Memory       Memory       `yaml:"Memory"`
-	LootGoblin   LootGoblin   `yaml:"LootGoblin"`
 	Timing       Timing       `yaml:"Timing"`
 	FilePaths    FilePaths    `yaml:"FilePaths"`
 	GamePlay     GamePlay     `yaml:"GamePlay"`
@@ -218,7 +217,6 @@ func (c *Config) Validate() {
 
 	c.Server.Validate()
 	c.Memory.Validate()
-	c.LootGoblin.Validate()
 	c.Timing.Validate()
 	c.FilePaths.Validate()
 	c.GamePlay.Validate()
@@ -228,8 +226,6 @@ func (c *Config) Validate() {
 	c.SpecialRooms.Validate()
 	c.Validation.Validate()
 	c.Modules.Validate()
-
-	// nothing to do with LootGoblinIncludeRecentRooms
 
 	// Nothing to do with Locked
 

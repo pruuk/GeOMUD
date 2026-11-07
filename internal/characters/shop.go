@@ -18,7 +18,6 @@ type Shop []ShopItem
 type ShopItem struct {
 	MobId       int    `yaml:"mobid,omitempty"`       // Is it a mercenary for sale?
 	ItemId      int    `yaml:"itemid,omitempty"`      // Is it an item for sale?
-	BuffId      int    `yaml:"buffid,omitempty"`      // Does this shop keeper apply a buff if purchased?
 	Quantity    int    `yaml:"quantity,omitempty"`    // How many currently avilable
 	QuantityMax int    `yaml:"quantitymax,omitempty"` // 0 for unlimited, or a maximum that can be stocked at one time
 	Price       int    `yaml:"price,omitempty"`       // If a price is provided, use it
@@ -155,9 +154,6 @@ func (s *Shop) Destock(si ShopItem) bool {
 		if fsItem.MobId != si.MobId {
 			continue
 		}
-		if fsItem.BuffId != si.BuffId {
-			continue
-		}
 
 		// If unlimited quantity, just return true
 		if (*s)[i].QuantityMax == StockUnlimited {
@@ -175,16 +171,6 @@ func (s *Shop) Destock(si ShopItem) bool {
 	}
 
 	return false
-}
-
-func (s *Shop) GetInstock() Shop {
-	ret := Shop{}
-	for _, fsItem := range *s {
-		if fsItem.Quantity > 0 || fsItem.QuantityMax == StockUnlimited {
-			ret = append(ret, fsItem)
-		}
-	}
-	return ret
 }
 
 func (si *ShopItem) Available() bool {

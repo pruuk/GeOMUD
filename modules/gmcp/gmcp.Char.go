@@ -1,7 +1,6 @@
 package gmcp
 
 import (
-	"math"
 	"strconv"
 	"strings"
 
@@ -323,7 +322,7 @@ func (g *GMCPCharModule) charTrainedHandler(e events.Event) events.ListenerRetur
 	}
 
 	// Changing equipment might affect stats, inventory, maxhp/maxmp etc
-	events.AddToQueue(GMCPCharUpdate{UserId: evt.UserId, Identifier: `Char.Info, Char.Stats, Char.Worth, Char.Vitals, Char.Inventory.Backpack.Summary, Char.Skills, Char.Jobs`})
+	events.AddToQueue(GMCPCharUpdate{UserId: evt.UserId, Identifier: `Char.Info, Char.Stats, Char.Worth, Char.Vitals, Char.Inventory.Backpack.Summary, Char.Skills`})
 
 	return events.Continue
 }
@@ -427,7 +426,6 @@ func (g *GMCPCharModule) GetCharNode(user *accounts.Account, gmcpModule string) 
 		payload.Info = &GMCPCharModule_Payload_Info{
 			Account:        user.Username,
 			Name:           user.Character.Name,
-			Class:          skills.GetProfession(user.Character.GetAllSkillRanks()),
 			Race:           user.Character.Race(),
 			Alignment:      user.Character.AlignmentName(),
 			Level:          user.Character.Level,
@@ -649,24 +647,6 @@ func (g *GMCPCharModule) GetCharNode(user *accounts.Account, gmcpModule string) 
 		}
 	}
 
-	if all || g.wantsGMCPPayload(`Char.Jobs`, gmcpModule) {
-
-		payload.Jobs = []GMCPCharModule_Payload_Job{}
-
-		allRanks := user.Character.GetAllSkillRanks()
-		for _, rank := range skills.GetProfessionRanks(allRanks) {
-			payload.Jobs = append(payload.Jobs, GMCPCharModule_Payload_Job{
-				Name:        rank.Profession,
-				Proficiency: rank.ExperienceTitle,
-				Completion:  int(math.Floor(rank.Completion * 100)),
-			})
-		}
-
-		if !all {
-			return payload.Jobs, `Char.Jobs`
-		}
-	}
-
 	if all || g.wantsGMCPPayload(`Char.Kills`, gmcpModule) {
 
 		mobKills := map[string]int{}
@@ -767,7 +747,6 @@ type GMCPCharModule_Payload struct {
 	Vitals    *GMCPCharModule_Payload_Vitals           `json:"Vitals,omitempty"`
 	Worth     *GMCPCharModule_Payload_Worth            `json:"Worth,omitempty"`
 	Skills    []GMCPCharModule_Payload_Skill           `json:"Skills,omitempty"`
-	Jobs      []GMCPCharModule_Payload_Job             `json:"Jobs,omitempty"`
 	Kills     *GMCPCharModule_Payload_Kills            `json:"Kills,omitempty"`
 }
 
@@ -777,7 +756,6 @@ type GMCPCharModule_Payload struct {
 type GMCPCharModule_Payload_Info struct {
 	Account        string `json:"account,omitempty"`
 	Name           string `json:"name,omitempty"`
-	Class          string `json:"class,omitempty"`
 	Race           string `json:"race,omitempty"`
 	Alignment      string `json:"alignment,omitempty"`
 	Level          int    `json:"level,omitempty"`
@@ -930,15 +908,6 @@ type GMCPCharModule_Payload_Skill struct {
 	Name    string `json:"name"`
 	Level   int    `json:"level"`
 	Maximum bool   `json:"maximum,omitempty"`
-}
-
-// /////////////////
-// Char.Jobs
-// /////////////////
-type GMCPCharModule_Payload_Job struct {
-	Name        string `json:"name"`
-	Completion  int    `json:"completion"`
-	Proficiency string `json:"proficiency"`
 }
 
 // /////////////////

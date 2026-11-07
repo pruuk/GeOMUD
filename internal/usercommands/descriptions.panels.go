@@ -61,12 +61,6 @@ func buildRoomDescPanel(details rooms.RoomTemplateDetails) string {
 		out.WriteString(alertBorderBottom)
 	}
 
-	if details.TrackingString != `` {
-		out.WriteString(term.CRLFStr)
-		out.WriteString(fmt.Sprintf(`<ansi fg="182">%s</ansi>`, details.TrackingString))
-		out.WriteString(term.CRLFStr)
-	}
-
 	return out.String()
 }
 

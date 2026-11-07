@@ -21,7 +21,7 @@ import (
 
 // Attack performs one combat round of attacker's attacks on defender, for
 // any pair of actors. It applies the damage to the defender, credits the
-// attacker's account (or its charmer's) in the defender's PlayerDamage on
+// attacker's account in the defender's PlayerDamage on
 // every attack, hit or miss (plan Decision 3), and runs the defender's
 // wimpy check when the defender has an account and took damage (Decision
 // 9). The result's Messages are the round's lines, one per swing, for the
@@ -57,17 +57,11 @@ func accountOf(a *actors.Actor) *accounts.Account {
 	return nil
 }
 
-// CreditAccount is the account a's attacks are credited to: its own, else
-// the account of whoever charmed it, else none. Kill credit and group
-// hatred both follow it (plan Decisions 3 and 8).
+// CreditAccount is the account a's attacks are credited to: its own account,
+// or none for an NPC. Kill credit and group hatred both follow it (plan
+// Decisions 3 and 8).
 func CreditAccount(a *actors.Actor) *accounts.Account {
-	if acct := accountOf(a); acct != nil {
-		return acct
-	}
-	if by := a.Character.GetCharmedBy(); !by.IsZero() {
-		return actors.AccountOf(by)
-	}
-	return nil
+	return accountOf(a)
 }
 
 // combatMessage is one combat line set as a world event: seen or heard by

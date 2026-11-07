@@ -9,4 +9,3 @@ angrycommands: [emote squeeks angrily.]
 damage:
   diceroll: 1d2
 disabledslots: ['weapon', 'offhand', 'head', 'neck', 'belt', 'gloves', 'ring', 'legs', 'feet']
-tameable: true

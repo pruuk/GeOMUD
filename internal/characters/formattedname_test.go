@@ -9,11 +9,11 @@ import (
 func TestGetFormattedAdjectives(t *testing.T) {
 	// Setup: populate adjectiveSwaps with test data
 	adjectiveSwaps = map[string]string{
-		"charmed":       "♥friend",
-		"charmed-short": "♥",
-		"hidden":        "hidden",
-		"hidden-short":  "?",
-		"zombie":        "zOmBie",
+		"downed":       "♥friend",
+		"downed-short": "♥",
+		"hidden":       "hidden",
+		"hidden-short": "?",
+		"zombie":       "zOmBie",
 	}
 
 	tests := []struct {
@@ -24,12 +24,12 @@ func TestGetFormattedAdjectives(t *testing.T) {
 		{
 			name:         "Include short adjectives",
 			excludeShort: false,
-			expected:     []string{"charmed", "charmed-short", "hidden", "hidden-short", "zombie"},
+			expected:     []string{"downed", "downed-short", "hidden", "hidden-short", "zombie"},
 		},
 		{
 			name:         "Exclude short adjectives",
 			excludeShort: true,
-			expected:     []string{"charmed", "hidden", "zombie"},
+			expected:     []string{"downed", "hidden", "zombie"},
 		},
 		{
 			name:         "Empty adjectiveSwaps",
@@ -55,11 +55,11 @@ func TestGetFormattedAdjectives(t *testing.T) {
 func TestGetFormattedAdjective(t *testing.T) {
 	// Setup: populate adjectiveSwaps with test data
 	adjectiveSwaps = map[string]string{
-		"charmed":       "♥friend",
-		"charmed-short": "♥",
-		"hidden":        "hidden",
-		"hidden-short":  "?",
-		"zombie":        "zOmBie",
+		"downed":       "♥friend",
+		"downed-short": "♥",
+		"hidden":       "hidden",
+		"hidden-short": "?",
+		"zombie":       "zOmBie",
 	}
 
 	tests := []struct {
@@ -69,12 +69,12 @@ func TestGetFormattedAdjective(t *testing.T) {
 	}{
 		{
 			name:     "Existing adjective",
-			input:    "charmed",
+			input:    "downed",
 			expected: "♥friend",
 		},
 		{
 			name:     "Existing short adjective",
-			input:    "charmed-short",
+			input:    "downed-short",
 			expected: "♥",
 		},
 		{
@@ -104,7 +104,7 @@ func TestGetFormattedAdjective(t *testing.T) {
 	// Test with empty adjectiveSwaps
 	adjectiveSwaps = map[string]string{}
 	t.Run("Empty adjectiveSwaps returns input", func(t *testing.T) {
-		got := GetFormattedAdjective("charmed")
-		assert.Equal(t, "charmed", got)
+		got := GetFormattedAdjective("downed")
+		assert.Equal(t, "downed", got)
 	})
 }

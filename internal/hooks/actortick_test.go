@@ -17,6 +17,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// collect runs f and returns the messages sent and the inputs queued for mob.
+func collect(t *testing.T, mob *mobs.Mob, f func()) (messages []string, inputs []string) {
+	t.Helper()
+	mid := events.RegisterListener(events.Message{}, func(e events.Event) events.ListenerReturn {
+		messages = append(messages, e.(events.Message).Text)
+		return events.Continue
+	})
+	iid := events.RegisterListener(events.Input{}, func(e events.Event) events.ListenerReturn {
+		if in := e.(events.Input); in.ActorId == mob.Character.Id {
+			inputs = append(inputs, in.InputText)
+		}
+		return events.Continue
+	})
+	t.Cleanup(func() {
+		events.UnregisterListener(events.Message{}, mid)
+		events.UnregisterListener(events.Input{}, iid)
+	})
+	events.ProcessEvents()
+	messages, inputs = nil, nil
+	f()
+	events.ProcessEvents()
+	return messages, inputs
+}
+
 func TestActorUpkeepTicksEveryActorsCooldowns(t *testing.T) {
 	actors.Reset()
 	t.Cleanup(actors.Reset)

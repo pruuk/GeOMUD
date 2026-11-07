@@ -9,8 +9,6 @@ colors:
   mobname: 51
   mobname-aggro: 9 # Bright red
   mobname-downed: 124
-  spellname: magenta
-  spell-text: 183
   role: 8
   role-admin: 9
   role-mod: 1
@@ -25,7 +23,6 @@ colors:
   map-you: 14
   map-secret: 8 # Bright black
   map-player: 11 # Bright yellow
-  map-friend: 11 # Bright green
   map-mob: 9 # Bright red
   map-npc: 6 # Bright cyan
   map-here: 13 # Bright magenta

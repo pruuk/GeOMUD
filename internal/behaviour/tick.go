@@ -137,17 +137,11 @@ func walkPath(mob *mobs.Mob) bool {
 // idle is the NPC's free round: home if it has strayed, else maybe one of its
 // idle commands at its ActivityLevel odds.
 func idle(mob *mobs.Mob) {
-	isCharmed := mob.Character.IsCharmed()
-
 	// if a mob shouldn't be allowed to leave their area (via wandering)
 	// but has somehow been displaced, such as pulling through combat, spells, or otherwise
 	// tell them to path back home
-	if mob.MaxWander == 0 && mob.Character.RoomId != mob.HomeRoomId && !isCharmed {
+	if mob.MaxWander == 0 && mob.Character.RoomId != mob.HomeRoomId {
 		PathTo(mob, "home")
-		return
-	}
-
-	if isCharmed {
 		return
 	}
 

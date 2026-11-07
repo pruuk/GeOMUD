@@ -17,7 +17,6 @@ type GamePlay struct {
 	LivesStart     ConfigInt `yaml:"LivesStart"`     // Starting permadeath lives
 	LivesMax       ConfigInt `yaml:"LivesMax"`       // Maximum permadeath lives
 	LivesOnLevelUp ConfigInt `yaml:"LivesOnLevelUp"` // # lives gained on level up
-	PricePerLife   ConfigInt `yaml:"PricePerLife"`   // Price in gold to buy new lives
 	// Shops/Containers
 	ShopRestockRate       ConfigString `yaml:"ShopRestockRate"`       // Default time it takes to restock 1 quantity in shops
 	MercHirePricePerLevel ConfigInt    `yaml:"MercHirePricePerLevel"` // Gold cost per mob level when auto-calculating mercenary hire price
@@ -129,10 +128,6 @@ func (g *GamePlay) Validate() {
 
 	if g.LivesOnLevelUp < 0 {
 		g.LivesOnLevelUp = 0
-	}
-
-	if g.PricePerLife < 1 {
-		g.PricePerLife = 1
 	}
 
 	if g.ShopRestockRate == `` {

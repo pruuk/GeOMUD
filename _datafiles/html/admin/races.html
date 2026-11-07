@@ -159,7 +159,6 @@
                     <label>Flags</label>
                     <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
                         <label class="checkbox-row"><input type="checkbox" id="fSelectable" /> Selectable by players</label>
-                        <label class="checkbox-row"><input type="checkbox" id="fTameable" /> Tameable</label>
                         <label class="checkbox-row"><input type="checkbox" id="fKnowsFirstAid" /> Knows First Aid</label>
                     </div>
                 </div>
@@ -299,7 +298,6 @@ function populateForm(race) {
     fDiceRoll.value = (r.Damage && r.Damage.DiceRoll) ? r.Damage.DiceRoll : '';
     fDiceRoll.dispatchEvent(new Event('change'));
     document.getElementById('fSelectable').checked = !!r.Selectable;
-    document.getElementById('fTameable').checked = !!r.Tameable;
     document.getElementById('fKnowsFirstAid').checked = !!r.KnowsFirstAid;
     document.getElementById('fBuffIds').innerHTML = '';
     for (const id of (r.BuffIds || [])) appendRaceBuffChip(id, null);
@@ -341,7 +339,6 @@ function buildPayload() {
         TNLScale:         parseFloat(parseFloat(document.getElementById('fTNLScale').value).toFixed(1)) || 1.0,
         UnarmedName:      document.getElementById('fUnarmedName').value.trim(),
         Selectable:       document.getElementById('fSelectable').checked,
-        Tameable:         document.getElementById('fTameable').checked,
         KnowsFirstAid:    document.getElementById('fKnowsFirstAid').checked,
         BuffIds:          buffIds.length ? buffIds : null,
         AngryCommands:    angryCommands.length ? angryCommands : null,

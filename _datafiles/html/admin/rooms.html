@@ -129,15 +129,6 @@
     .lock-section { background: var(--color-warning-bg); border: 1px solid var(--color-border); border-radius: 4px; padding: 0.6rem; margin-top: 0.5rem; }
     .lock-section-title { font-size: 0.72rem; font-weight: 700; color: var(--color-warning-text); text-transform: uppercase; margin-bottom: 0.5rem; }
 
-    /* buff chips */
-    .buff-ids-wrap { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
-    .buff-chip {
-        display: inline-flex; align-items: center; gap: 0.25rem;
-        background: var(--color-chip-bg); color: var(--color-chip-text); border-radius: 12px;
-        padding: 0.15rem 0.5rem; font-size: 0.78rem;
-    }
-    .buff-chip button { background: none; border: none; cursor: pointer; color: var(--color-chip-text); font-size: 0.82rem; line-height: 1; padding: 0; }
-    .buff-chip button:hover { color: var(--color-danger); }
 
     /* spawn cards */
     .spawn-card {
@@ -547,18 +538,6 @@
     </div>
 </div>
 
-<!-- Buff picker modal -->
-<div id="buff-modal" style="display:none; position:fixed; inset:0; background:var(--color-overlay); z-index:500; align-items:center; justify-content:center;">
-    <div style="background:var(--color-surface-white); border-radius:8px; padding:1.25rem; max-width:400px; width:90%; max-height:80vh; display:flex; flex-direction:column; gap:0.75rem;">
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-            <strong style="font-size:0.95rem;">Select Buff</strong>
-            <button onclick="closeBuffModal()" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:var(--color-text-subtle);">&times;</button>
-        </div>
-        <input type="search" id="buff-modal-search" placeholder="Search buffs..." style="padding:0.35rem 0.6rem; border:1px solid var(--color-border-medium); border-radius:4px; font-size:0.85rem;" oninput="filterBuffModal()" />
-        <div id="buff-modal-list" style="overflow-y:auto; flex:1; border:1px solid var(--color-border-light); border-radius:4px;"></div>
-    </div>
-</div>
-
 <!-- Instance editor modal -->
 <div id="instance-modal" class="instance-modal-overlay" onclick="handleInstanceOverlayClick(event)">
     <div class="instance-modal">
@@ -586,30 +565,26 @@
     let allZones = [];
     let biomes = [];
     let allTags = [];   // [{tag, module}, ...]
-    let allBuffs = {};  // id -> spec
     let currentPage = 1;
     let totalRooms = 0;
     let perPage = 1000;
     let currentRoomId = null;
     let isNew = false;
     let searchTimer = null;
-    let buffPickerTarget = null; // exit card element
 
     // -------------------------------------------------------------------------
     // Init
     // -------------------------------------------------------------------------
     async function init() {
-        const [zonesRes, biomesRes, tagsRes, buffsRes] = await AdminAPI.all([
+        const [zonesRes, biomesRes, tagsRes] = await AdminAPI.all([
             AdminAPI.get('/admin/api/v1/zones'),
             AdminAPI.get('/admin/api/v1/rooms/biomes'),
             AdminAPI.get('/admin/api/v1/tags'),
-            AdminAPI.get('/admin/api/v1/buffs'),
         ]);
         if (!zonesRes.ok) { showStatus('Failed to load zones: ' + zonesRes.error, false); return; }
         allZones = zonesRes.data.data || [];
         biomes = (biomesRes.ok && biomesRes.data.data) || [];
         allTags = (tagsRes.ok && tagsRes.data.data) || [];
-        allBuffs = (buffsRes.ok && buffsRes.data.data && buffsRes.data.data.specs) || {};
         populateZoneFilter();
         populateBiomeSelects();
         buildTagPickerList('');
@@ -1003,7 +978,6 @@
         ex = ex || {};
         const lock = ex.Lock || {};
         const hasLock = (lock.Difficulty || 0) > 0;
-        const trapBuffIds = lock.TrapBuffIds || [];
 
         const card = document.createElement('div');
         card.className = 'exit-card';
@@ -1072,11 +1046,6 @@
                                     '<label>Relock Interval</label>' +
                                     '<input type="text" class="lock-relock" value="' + esc(lock.RelockInterval || '') + '" placeholder="e.g. 1 hour (default)" />' +
                                 '</div>' +
-                                '<div class="exit-field span2">' +
-                                    '<label>Trap Buff IDs (on failed pick)</label>' +
-                                    '<div class="buff-ids-wrap lock-trap-buffs">' + renderTrapBuffChips(trapBuffIds) + '</div>' +
-                                    '<button class="btn-add-sm" style="margin-top:0.3rem;" onclick="pickTrapBuff(this)">+ Add Trap Buff</button>' +
-                                '</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
@@ -1090,15 +1059,6 @@
         }
 
         list.appendChild(card);
-    }
-
-    function renderTrapBuffChips(buffIds) {
-        return (buffIds || []).map(id => {
-            const spec = allBuffs[id];
-            const label = spec ? spec.Name : 'buff #' + id;
-            return '<span class="buff-chip" data-buff-id="' + id + '">' + esc(label) +
-                ' <button onclick="this.closest(\'.buff-chip\').remove()" title="Remove">&times;</button></span>';
-        }).join('');
     }
 
     window.toggleExitCard = function (header) {
@@ -1140,11 +1100,6 @@
         input.nextElementSibling.textContent = input.value;
     };
 
-    window.pickTrapBuff = function (btn) {
-        buffPickerTarget = btn.previousElementSibling; // .lock-trap-buffs
-        openBuffModal();
-    };
-
     window.addExit = function () { appendExitCard(document.getElementById('exits-list'), '', {}); };
 
     function collectExits() {
@@ -1167,12 +1122,8 @@
             if (hasLock) {
                 const diff = parseInt(card.querySelector('.lock-difficulty').value, 10) || 5;
                 const relock = card.querySelector('.lock-relock').value.trim();
-                const trapBuffIds = Array.from(card.querySelectorAll('.lock-trap-buffs .buff-chip'))
-                    .map(c => parseInt(c.dataset.buffId, 10))
-                    .filter(n => !isNaN(n));
                 exitObj.Lock = { Difficulty: diff };
                 if (relock) exitObj.Lock.RelockInterval = relock;
-                if (trapBuffIds.length) exitObj.Lock.TrapBuffIds = trapBuffIds;
             }
 
             exits[name] = exitObj;
@@ -1195,7 +1146,6 @@
         c = c || {};
         const lock = c.Lock || {};
         const hasLock = (lock.Difficulty || 0) > 0;
-        const trapBuffIds = lock.TrapBuffIds || [];
         const recipes = c.Recipes || {};
         const recipeCount = Object.keys(recipes).length;
 
@@ -1252,11 +1202,6 @@
                                     '<label>Relock Interval</label>' +
                                     '<input type="text" class="lock-relock" value="' + esc(lock.RelockInterval || '') + '" ' +
                                         'placeholder="e.g. 1 hour (default)" />' +
-                                '</div>' +
-                                '<div class="container-field span2">' +
-                                    '<label>Trap Buff IDs (on failed pick)</label>' +
-                                    '<div class="buff-ids-wrap lock-trap-buffs">' + renderTrapBuffChips(trapBuffIds) + '</div>' +
-                                    '<button class="btn-add-sm" style="margin-top:0.3rem;" onclick="pickContainerTrapBuff(this)">+ Add Trap Buff</button>' +
                                 '</div>' +
                             '</div>' +
                         '</div>' +
@@ -1355,11 +1300,6 @@
         updateContainerHeader(cb);
     };
 
-    window.pickContainerTrapBuff = function (btn) {
-        buffPickerTarget = btn.previousElementSibling;
-        openBuffModal();
-    };
-
     window.addContainer = function () {
         appendContainerCard(document.getElementById('containers-list'), '', {});
     };
@@ -1414,12 +1354,8 @@
             if (hasLock) {
                 const diff = parseInt(card.querySelector('.lock-difficulty').value, 10) || 5;
                 const relock = card.querySelector('.lock-relock').value.trim();
-                const trapBuffIds = Array.from(card.querySelectorAll('.lock-trap-buffs .buff-chip'))
-                    .map(ch => parseInt(ch.dataset.buffId, 10))
-                    .filter(n => !isNaN(n));
                 c.Lock = { Difficulty: diff };
                 if (relock) c.Lock.RelockInterval = relock;
-                if (trapBuffIds.length) c.Lock.TrapBuffIds = trapBuffIds;
             }
 
             const recipes = {};
@@ -1437,67 +1373,6 @@
             containers[name] = c;
         });
         return containers;
-    }
-
-    // -------------------------------------------------------------------------
-    // Buff picker modal (for trap buffs)
-    // -------------------------------------------------------------------------
-    function openBuffModal() {
-        renderBuffModalList('');
-        document.getElementById('buff-modal').style.display = 'flex';
-        document.getElementById('buff-modal-search').value = '';
-        document.getElementById('buff-modal-search').focus();
-    }
-
-    window.closeBuffModal = function () {
-        document.getElementById('buff-modal').style.display = 'none';
-        buffPickerTarget = null;
-    };
-
-    window.filterBuffModal = function () {
-        renderBuffModalList(document.getElementById('buff-modal-search').value);
-    };
-
-    function renderBuffModalList(filter) {
-        const container = document.getElementById('buff-modal-list');
-        const filterLc = filter.toLowerCase();
-        container.innerHTML = '';
-
-        const entries = Object.entries(allBuffs)
-            .filter(([id, spec]) => spec.Name !== 'empty')
-            .filter(([id, spec]) => !filterLc || spec.Name.toLowerCase().includes(filterLc) || String(id).includes(filterLc))
-            .sort((a, b) => a[1].Name.localeCompare(b[1].Name));
-
-        if (entries.length === 0) {
-            container.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--color-empty-text); font-size:0.85rem;">No buffs found.</div>';
-            return;
-        }
-
-        for (const [id, spec] of entries) {
-            const row = document.createElement('div');
-            row.style.cssText = 'padding:0.4rem 0.75rem; cursor:pointer; font-size:0.85rem; border-bottom:1px solid var(--color-border-faint);';
-            row.innerHTML = '<strong>' + esc(spec.Name) + '</strong> <span style="color:var(--color-empty-text); font-size:0.75rem;">#' + id + '</span>';
-            row.onmouseover = () => row.style.background = 'var(--color-row-hover)';
-            row.onmouseout = () => row.style.background = '';
-            row.onclick = () => selectTrapBuff(parseInt(id, 10), spec.Name);
-            container.appendChild(row);
-        }
-    }
-
-    function selectTrapBuff(buffId, buffName) {
-        if (!buffPickerTarget) return;
-        // avoid duplicates
-        const existing = Array.from(buffPickerTarget.querySelectorAll('.buff-chip')).map(c => parseInt(c.dataset.buffId, 10));
-        if (existing.includes(buffId)) { closeBuffModal(); return; }
-        const chip = document.createElement('span');
-        chip.className = 'buff-chip';
-        chip.dataset.buffId = buffId;
-        chip.innerHTML = esc(buffName) + ' <button onclick="this.closest(\'.buff-chip\').remove()" title="Remove">&times;</button>';
-        buffPickerTarget.appendChild(chip);
-        closeBuffModal();
-        // update the exit header
-        const card = buffPickerTarget.closest('.exit-card');
-        if (card) updateExitHeader(card.querySelector('.exit-name'));
     }
 
     // -------------------------------------------------------------------------
@@ -1880,16 +1755,13 @@
         const display = document.createElement('div');
         display.className = 'train-skill-display' + (skill ? '' : ' empty');
         display.dataset.skill = skill;
-        if (skill) display.dataset.spellId = skill;
         display.textContent = skill || 'Click to pick skill…';
         display.addEventListener('click', function () {
             Picker.open({
-                ...PickerConfigs.spells,
-                title: 'Select Skill',
-                onSelect: function (spell) {
-                    display.dataset.skill = spell.SpellId;
-                    display.dataset.spellId = spell.SpellId;
-                    display.textContent = spell.SpellId + ' - ' + spell.Name;
+                ...PickerConfigs.skills,
+                onSelect: function (sk) {
+                    display.dataset.skill = sk.SkillId;
+                    display.textContent = sk.SkillId + ' - ' + sk.Name;
                     display.className = 'train-skill-display';
                 },
             });

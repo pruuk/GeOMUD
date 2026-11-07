@@ -199,7 +199,6 @@
     /* ── Online ──────────────────────────────────────────────── */
     --t-online-level:    var(--p-accent);
     --t-online-name:     var(--p-text);
-    --t-online-prof:     #a0c8f8;
     --t-online-align:    var(--p-text-sub);
     --t-online-time:     var(--p-accent-mid);
     --t-online-role:     #c0a040;

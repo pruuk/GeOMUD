@@ -616,7 +616,6 @@
         ex = ex || {};
         const lock = ex.Lock || {};
         const hasLock = (lock.Difficulty || 0) > 0;
-        const trapBuffIds = lock.TrapBuffIds || [];
 
         const card = document.createElement('div');
         card.className = 'exit-card';
@@ -685,11 +684,6 @@
                                     '<label>Relock Interval</label>' +
                                     '<input type="text" class="lock-relock" value="' + esc(lock.RelockInterval || '') + '" placeholder="e.g. 1 hour (default)" />' +
                                 '</div>' +
-                                '<div class="exit-field span2">' +
-                                    '<label>Trap Buff IDs (on failed pick)</label>' +
-                                    '<div class="buff-ids-wrap lock-trap-buffs">' + renderTrapBuffChips(trapBuffIds) + '</div>' +
-                                    '<button class="btn-add-sm" style="margin-top:0.3rem;" onclick="pickTrapBuff(this)">+ Add Trap Buff</button>' +
-                                '</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>' +
@@ -703,14 +697,6 @@
         }
 
         list.appendChild(card);
-    }
-
-    function renderTrapBuffChips(buffIds) {
-        return (buffIds || []).map(id => {
-            const name = PickerConfigs.buffName(id);
-            return '<span class="buff-chip" data-buff-id="' + id + '">' + esc(name) +
-                ' <button onclick="this.closest(\'.buff-chip\').remove()" title="Remove">&times;</button></span>';
-        }).join('');
     }
 
     window.toggleExitCard = function (header) {
@@ -751,27 +737,6 @@
         input.nextElementSibling.textContent = input.value;
     };
 
-    window.pickTrapBuff = function (btn) {
-        const trapWrap = btn.previousElementSibling; // .lock-trap-buffs
-        const existing = Array.from(trapWrap.querySelectorAll('.buff-chip')).map(c => parseInt(c.dataset.buffId, 10));
-        Picker.open({
-            ...PickerConfigs.buffs,
-            selected: existing,
-            onSelect: (buffs) => {
-                trapWrap.innerHTML = '';
-                for (const buff of buffs) {
-                    const chip = document.createElement('span');
-                    chip.className = 'buff-chip';
-                    chip.dataset.buffId = buff.BuffId;
-                    chip.innerHTML = esc(buff.Name) + ' <button onclick="this.closest(\'.buff-chip\').remove()" title="Remove">&times;</button>';
-                    trapWrap.appendChild(chip);
-                }
-                const card = trapWrap.closest('.exit-card');
-                if (card) updateExitHeader(card.querySelector('.exit-name'));
-            },
-        });
-    };
-
     window.addExit = function () { appendExitCard(document.getElementById('exits-list'), '', {}); };
 
     function collectExits() {
@@ -794,12 +759,8 @@
             if (hasLock) {
                 const diff = parseInt(card.querySelector('.lock-difficulty').value, 10) || 5;
                 const relock = card.querySelector('.lock-relock').value.trim();
-                const trapBuffIds = Array.from(card.querySelectorAll('.lock-trap-buffs .buff-chip'))
-                    .map(c => parseInt(c.dataset.buffId, 10))
-                    .filter(n => !isNaN(n));
                 exitObj.Lock = { Difficulty: diff };
                 if (relock) exitObj.Lock.RelockInterval = relock;
-                if (trapBuffIds.length) exitObj.Lock.TrapBuffIds = trapBuffIds;
             }
 
             exits[name] = exitObj;

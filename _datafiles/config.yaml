@@ -101,39 +101,6 @@ Memory:
 
 ################################################################################
 #
-#   LOOT GOBLIN CONFIGURATIONS
-#   This is a special mob that cleans up items and gold left on the ground.
-#   It portals in from a special zone and when it can't find any items or gold
-#   to pick up, it portals back.
-#   Players can actually chase the goblin to its realm and possibly find some
-#   treasure.
-#
-################################################################################
-LootGoblin:
-  # - RoomId -
-  #   The room the loot goblin spawns in (per its spawninfo). Also the room it returns
-  #   to to drop off loot it finds. If zero (0), no loot goblin spawning.
-  RoomId: 0
-  # - RoundCount -
-  #   How often the Loot Goblin will spawn. It is a good idea to keep this
-  #   number low to keep the game from getting bogged down with too many items
-  #   on the ground. At 4 seconds per round, 900 rounds is 1 hour.
-  RoundCount: 900
-  # - MinimumItems -
-  #   How many items there must be on the room to attract the loot goblin
-  MinimumItems: 3
-  # - MinimumGold -
-  #   How much gold there must be on the room to attract the loot goblin
-  MinimumGold: 100
-  # - IncludeRecentRooms -
-  #   If true, the loot goblin will also clean recently visited by players rooms
-  #   If allowed, this could create a situation where a lot of loot drops and the
-  #   suddenly the goblin shows up.
-  IncludeRecentRooms: true
-
-
-################################################################################
-#
 #   ENGINE TIMING
 #   Fine tuning for input throttling, round time, day length etc.
 #
@@ -268,9 +235,6 @@ GamePlay:
   # - LivesOnLevelUp -
   #   (Req: PermaDeath) If non zero, players gain this many lives per level.
   LivesOnLevelUp: 1
-  # - PricePerLife -
-  #   (Req: PermaDeath) If non-zero, players can buy extra lives for this amount.
-  PricePerLife: 1000000
   # - ShopRestockRate -
   #   The default time for a shops to restock 1 item. This can still be
   #   overriden in character shop definitions if desired.

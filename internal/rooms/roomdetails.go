@@ -45,7 +45,6 @@ type RoomTemplateDetails struct {
 	Description    string
 	IsDark         bool
 	IsNight        bool
-	TrackingString string
 	RoomAlerts     [][]string // Messages to show below room description as a special alert
 	ShowPvp        bool       // Whether to display that the room is PVP
 	Tags           []string   // Tags applied to the room
@@ -99,7 +98,6 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 		RoomLegend:     roomLegend,
 		IsDark:         b.IsDark(),
 		IsNight:        gametime.IsNight(),
-		TrackingString: ``,
 		ShowPvp:        showPvp,
 		Tags:           r.GetTags(),
 	}
@@ -124,9 +122,6 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 	// End Room Alerts
 	//
 	renderNouns := user.HasRolePermission(`room.nouns`)
-	if user.Character.HasBuffFlag("see-nouns") {
-		renderNouns = true
-	}
 
 	if len(tinymap) > 0 {
 		desclineWidth := 80 - 7 // 7 is the width of the tinymap
@@ -266,8 +261,6 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 		}
 	}
 
-	visibleFriendlyMobs := []string{}
-
 	staleMobIds := []ids.ID{}
 	for _, mobId := range r.mobIds() {
 		if mob := mobs.GetInstance(mobId); mob != nil {
@@ -282,11 +275,7 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 
 			mobName := mob.Character.GetMobName(user.Character.Id, tmpNameFlags...)
 
-			if mob.Character.IsCharmed() {
-				visibleFriendlyMobs = append(visibleFriendlyMobs, mobName.String())
-			} else {
-				details.VisibleMobs = append(details.VisibleMobs, mobName.String())
-			}
+			details.VisibleMobs = append(details.VisibleMobs, mobName.String())
 		} else {
 			staleMobIds = append(staleMobIds, mobId)
 		}
@@ -296,9 +285,6 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 	for _, mobId := range staleMobIds {
 		r.removeBody(mobId)
 	}
-
-	// Add the friendly mobs to the end
-	details.VisibleMobs = append(details.VisibleMobs, visibleFriendlyMobs...)
 
 	for exitStr, exitInfo := range r.ExitsTemp {
 		details.TemporaryExits[exitStr] = exitInfo
@@ -361,101 +347,6 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 		for exitName, exitInfo := range spec.Exits {
 			details.VisibleExits[exitName] = exitInfo
 		}
-	}
-
-	if searchMobName := user.Character.GetMiscData(`tracking-mob`); searchMobName != nil {
-
-		if searchMobNameStr, ok := searchMobName.(string); ok {
-
-			if r.isInRoom(searchMobNameStr, ``) {
-
-				details.TrackingString = `Tracking <ansi fg="mobname">` + searchMobNameStr + `</ansi>... They are here!`
-				user.Character.RemoveBuff(26)
-
-			} else {
-
-				allNames := []string{}
-
-				for visitorMobId, _ := range r.MobVisitors() {
-					if mob := mobs.GetInstance(visitorMobId); mob != nil {
-						allNames = append(allNames, mob.Character.Name)
-					}
-				}
-
-				match, closeMatch := util.FindMatchIn(searchMobNameStr, allNames...)
-				if match == `` && closeMatch == `` {
-
-					details.TrackingString = `You lost the trail of <ansi fg="mobname">` + searchMobNameStr + `</ansi>`
-					user.Character.RemoveBuff(26)
-
-				} else {
-
-					exitName := r.findMobExit(ids.ID{}, searchMobNameStr)
-					if exitName == `` {
-
-						details.TrackingString = `You lost the trail of <ansi fg="username">` + searchMobNameStr + `</ansi>`
-						user.Character.RemoveBuff(26)
-
-					} else {
-
-						details.TrackingString = `Tracking <ansi fg="mobname">` + searchMobNameStr + `</ansi>... They went <ansi fg="exit">` + exitName + `</ansi>`
-					}
-
-				}
-			}
-		}
-
-	}
-
-	if searchUserName := user.Character.GetMiscData(`tracking-user`); searchUserName != nil {
-		if searchUserNameStr, ok := searchUserName.(string); ok {
-
-			if r.isInRoom(``, searchUserNameStr) {
-
-				details.TrackingString = `Tracking <ansi fg="username">` + searchUserNameStr + `</ansi>... They are here!`
-				user.Character.RemoveBuff(26)
-
-			} else {
-
-				allNames := []string{}
-
-				for userId, _ := range r.UserVisitors() {
-					if u := accounts.GetByUserId(userId); u != nil {
-						allNames = append(allNames, u.Character.Name)
-					}
-				}
-
-				match, closeMatch := util.FindMatchIn(searchUserNameStr, allNames...)
-				if match == `` && closeMatch == `` {
-
-					details.TrackingString = `You lost the trail of <ansi fg="username">` + searchUserNameStr + `</ansi>`
-					user.Character.RemoveBuff(26)
-
-				} else {
-
-					exitName := r.findUserExit(0, searchUserNameStr)
-					if exitName == `` {
-
-						details.TrackingString = `You lost the trail of <ansi fg="username">` + searchUserNameStr + `</ansi>`
-						user.Character.RemoveBuff(26)
-
-					} else {
-
-						details.TrackingString = `Tracking <ansi fg="username">` + searchUserNameStr + `</ansi>... They went <ansi fg="exit">` + exitName + `</ansi>`
-					}
-
-				}
-			}
-
-		}
-	}
-
-	if user.Character.HasBuffFlag("tripping") {
-		details.Title = colorpatterns.ApplyCharacterWarping(details.Title)
-		details.Description = colorpatterns.ApplyCharacterWarping(details.Description)
-
-		details.Title = colorpatterns.ApplyColorPattern(details.Title, "tripping")
-		details.Description = colorpatterns.ApplyColorPattern(details.Description, "tripping")
 	}
 
 	return OnRoomLook.Fire(details)

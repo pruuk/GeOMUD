@@ -31,7 +31,6 @@ slices"). Remove a line when its fix lands (with a `PATCH_NOTES.md` line).
 
 - `_datafiles/html/admin/docs-modules.html` code examples at about lines 462, 621, 910, 1399 and 1492
   still use upstream's `*users.UserRecord` (now `*accounts.Account`).
-- `empty` world: the `wildfire` mutator names missing buff 22; item 30001 names missing buff 5; the
-  `exits` command file was never registered (upstream too).
+- `empty` world: the `exits` command file was never registered (upstream too).
 - Login splash globe (`templates/login/connect-splash.template`): Calabe called it weak, fine for now
   (2026-10-27); redo it when the splash is next touched.

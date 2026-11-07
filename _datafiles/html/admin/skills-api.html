@@ -38,8 +38,8 @@
     .perm-badge { font-size: 0.72rem; font-family: monospace; padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 600; background: var(--color-border-faint); color: var(--color-text-tertiary); margin-left: 0.5rem; }
 </style>
 
-<h1>Skills &amp; Professions API Reference</h1>
-<p class="subtitle">REST endpoints for browsing, creating, editing, and deleting skill and profession definitions. Mutations require the <code>skills.write</code> permission.</p>
+<h1>Skills API Reference</h1>
+<p class="subtitle">REST endpoints for browsing, creating, editing, and deleting skill definitions. Mutations require the <code>skills.write</code> permission.</p>
 
 <div class="api-section-title">Skills</div>
 <div class="api-list">
@@ -142,136 +142,13 @@
             <span class="perm-badge">skills.write</span>
         </summary>
         <div class="api-body">
-            <p><code>{skillId}</code> is the skill's string id. Removes the skill data file from disk. A skill referenced by any profession cannot be deleted and returns <code>409 Conflict</code>.</p>
+            <p><code>{skillId}</code> is the skill's string id. Removes the skill data file from disk.</p>
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> <span class="flag">-X</span> DELETE \
      <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/skills/fishing</span></div>
             <div class="response-examples">
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
                     <div class="resp-body"><div class="curl-block">{"success":true,"data":null}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">409</span> <span class="resp-label">In use by professions</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"skill \"brawling\" is used by professions: warrior, paladin"}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-</div>
-
-<div class="api-section-title">Professions</div>
-<div class="api-list">
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-get">GET</span>
-            <span class="api-path">/admin/api/v1/professions</span>
-            <span class="api-desc">Return all professions</span>
-        </summary>
-        <div class="api-body">
-            <p>Returns a map of professionId &rarr; Profession object. Profession ids may contain spaces.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/professions</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"warrior":{"ProfessionId":"warrior","Name":"Warrior","Description":"Front-line fighters.","Skills":["brawling","dual-wield"]}}}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-get">GET</span>
-            <span class="api-path">/admin/api/v1/professions/{professionId}/yaml</span>
-            <span class="api-desc">View a profession's raw YAML</span>
-        </summary>
-        <div class="api-body">
-            <p>Returns the raw YAML datafile contents for a profession. Percent-encode spaces in the id (e.g. <code>treasure%20hunter</code>).</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/professions/warrior/yaml</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"yaml":"professionid: warrior\nname: Warrior\n...","path":"professions/warrior.yaml"}}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-post">POST</span>
-            <span class="api-path">/admin/api/v1/professions</span>
-            <span class="api-desc">Create a new profession</span>
-            <span class="perm-badge">skills.write</span>
-        </summary>
-        <div class="api-body">
-            <p>Creates a new profession. Every entry in <code>Skills</code> must reference an existing skill id, otherwise the request is rejected.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> <span class="flag">-X</span> POST \
-     <span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \
-     <span class="flag">-d</span> <span class="str">'{"ProfessionId":"angler","Name":"Angler","Description":"Masters of the rod.","Skills":["fishing"]}'</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/professions</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"ProfessionId":"angler","Name":"Angler","Description":"Masters of the rod.","Skills":["fishing"]}}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">400</span> <span class="resp-label">Unknown skill</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"profession references unknown skill: bogus"}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-patch">PATCH</span>
-            <span class="api-path">/admin/api/v1/professions/{professionId}</span>
-            <span class="api-desc">Update a profession</span>
-            <span class="perm-badge">skills.write</span>
-        </summary>
-        <div class="api-body">
-            <p><code>{professionId}</code> is the profession's string id. Fields in the request body overwrite the existing profession. The <code>ProfessionId</code> is immutable. Unknown skill references are rejected.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> <span class="flag">-X</span> PATCH \
-     <span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \
-     <span class="flag">-d</span> <span class="str">'{"Name":"Angler","Description":"Updated.","Skills":["fishing"]}'</span> \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/professions/angler</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"ProfessionId":"angler","Name":"Angler","Description":"Updated.","Skills":["fishing"]}}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">404</span> <span class="resp-label">Not found</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"profession not found: bogus"}</div></div>
-                </details>
-            </div>
-        </div>
-    </details>
-
-    <details class="api-entry">
-        <summary>
-            <span class="method method-delete">DELETE</span>
-            <span class="api-path">/admin/api/v1/professions/{professionId}</span>
-            <span class="api-desc">Delete a profession</span>
-            <span class="perm-badge">skills.write</span>
-        </summary>
-        <div class="api-body">
-            <p><code>{professionId}</code> is the profession's string id. Removes the profession data file from disk.</p>
-            <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> <span class="flag">-X</span> DELETE \
-     <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/professions/angler</span></div>
-            <div class="response-examples">
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":null}</div></div>
-                </details>
-                <details class="resp-entry">
-                    <summary><span class="method resp-label status-err">404</span> <span class="resp-label">Not found</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":false,"error":"profession not found: angler"}</div></div>
                 </details>
             </div>
         </div>

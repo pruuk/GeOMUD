@@ -127,7 +127,6 @@
     .shop-card-type-badge { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
     .shop-type-item  { background: var(--color-success-bg); color: var(--color-success-text); }
     .shop-type-mob   { background: var(--color-info-bg); color: var(--color-info-text); }
-    .shop-type-buff  { background: var(--color-method-put-bg); color: var(--color-method-put-text); }
     .shop-card-remove { position: absolute; top: 0.5rem; right: 0.6rem; background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--color-text-secondary); line-height: 1; }
     .shop-card-remove:hover { color: var(--color-danger); }
     .shop-card-fields { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0.5rem 0.75rem; align-items: start; }
@@ -327,11 +326,6 @@
                         <option value="0">- none -</option>
                     </select>
                 </div>
-                <div class="field" id="f-formrace-wrap" style="display:none;">
-                    <label>Current Form</label>
-                    <input type="text" id="f-formrace" readonly
-                           style="background:var(--color-border-faint); cursor:default;" />
-                </div>
 
                 <div class="field span2">
                     <label>Description</label>
@@ -431,15 +425,6 @@
                     <div class="field-hint">Items the character is carrying</div>
                 </div>
 
-                <div class="section-title" style="margin-top:0.5rem;">Spellbook</div>
-
-                <div class="field span2">
-                    <label>Known Spells</label>
-                    <div class="buff-ids-wrap" id="spellbook-list"></div>
-                    <button class="btn-add-sm" style="margin-top:0.4rem;" onclick="pickSpell()">+ Add Spell</button>
-                    <div class="field-hint">Spells this character knows. Value indicates cast count (positive = enabled, negative = disabled).</div>
-                </div>
-
                 <div class="section-title" style="margin-top:0.5rem;">Shop</div>
 
                 <div class="field span2">
@@ -447,7 +432,6 @@
                     <div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;">
                         <button class="btn-add-sm" onclick="addShopEntry('item')">+ Item</button>
                         <button class="btn-add-sm" onclick="addShopEntry('mob')">+ Mob for Hire</button>
-                        <button class="btn-add-sm" onclick="addShopEntry('buff')">+ Buff</button>
                     </div>
                     <div class="field-hint">Leave empty if not a shopkeeper. QuantityMax: 0 = always in stock, -1 = never restocks.</div>
                 </div>
@@ -598,14 +582,6 @@
         setVal('f-name',    ch.Name        || '');
         setVal('f-raceid',  ch.RaceId      || 0);
         applyRaceEquipDisabled(ch.RaceId || 0);
-        var formWrap = document.getElementById('f-formrace-wrap');
-        if (ch.FormRaceId > 0) {
-            var fr = allRaces[String(ch.FormRaceId)];
-            document.getElementById('f-formrace').value = fr ? fr.Name : 'Unknown (#' + ch.FormRaceId + ')';
-            formWrap.style.display = '';
-        } else {
-            formWrap.style.display = 'none';
-        }
         setVal('f-description', ch.Description || '');
         setVal('f-level',   ch.Level       || 1);
         setVal('f-experience', ch.Experience || 0);
@@ -641,9 +617,6 @@
 
         // Inventory
         renderItemRows(ch.Items || []);
-
-        // Spellbook
-        renderSpellChips('spellbook-list', ch.SpellBook || {});
 
         // Shop
         renderShopEntries(ch.Shop || []);
@@ -831,60 +804,11 @@
     }
 
     // -------------------------------------------------------------------------
-    // Spell chips (spellbook)
-    // -------------------------------------------------------------------------
-    function renderSpellChips(listId, spellBook) {
-        const list = document.getElementById(listId);
-        list.innerHTML = '';
-        for (const [id, val] of Object.entries(spellBook)) {
-            appendSpellChip(list, id, val);
-        }
-    }
-
-    function appendSpellChip(list, spellId, val) {
-        const chip = document.createElement('span');
-        chip.className = 'buff-chip';
-        chip.dataset.id = spellId;
-        chip.dataset.spellId = spellId;
-        chip.dataset.val = val;
-        const label = esc(spellId);
-        chip.innerHTML = `${label} <button title="Remove" onclick="this.closest('.buff-chip').remove()">&times;</button>`;
-        list.appendChild(chip);
-    }
-
-    window.pickSpell = function () {
-        const listEl = document.getElementById('spellbook-list');
-        const existing = collectSpellBook();
-        const existingIds = Object.keys(existing);
-        Picker.open({
-            ...PickerConfigs.spells,
-            multi:    true,
-            selected: existingIds,
-            onSelect: (spells) => {
-                listEl.innerHTML = '';
-                for (const spell of spells) {
-                    const prev = existing[spell.SpellId];
-                    appendSpellChip(listEl, spell.SpellId, prev !== undefined ? prev : 1);
-                }
-            },
-        });
-    };
-
-    function collectSpellBook() {
-        const book = {};
-        document.querySelectorAll('#spellbook-list .buff-chip').forEach(c => {
-            book[c.dataset.id] = parseInt(c.dataset.val, 10) || 1;
-        });
-        return book;
-    }
-
-    // -------------------------------------------------------------------------
     // Shop entries (shared logic with mobs page)
     // -------------------------------------------------------------------------
     function detectShopType(entry) {
         // Loaded entries carry every shop field (the API does not omit zero
         // values), so detect by which id is actually populated.
-        if (entry.BuffId)  return 'buff';
         if (entry.MobId)   return 'mob';
         return 'item';
     }
@@ -898,11 +822,6 @@
             const res = await AdminAPI.get('/admin/api/v1/items');
             for (const e of (res.ok && res.data && res.data.data) || [])
                 _shopNameCache['item:' + e.ItemId] = e.Name;
-        } else if (type === 'buff') {
-            const res = await AdminAPI.get('/admin/api/v1/buffs');
-            const specs = (res.ok && res.data && res.data.data && res.data.data.specs) || {};
-            for (const e of Object.values(specs))
-                _shopNameCache['buff:' + e.BuffId] = e.Name;
         } else if (type === 'mob') {
             const res = await AdminAPI.get('/admin/api/v1/mobs');
             for (const e of (res.ok && res.data && res.data.data) || [])
@@ -914,7 +833,6 @@
     const shopTypeMeta = {
         item: { label: 'Item',         badge: 'shop-type-item', idField: 'ItemId',  idLabel: 'Item' },
         mob:  { label: 'Mob for Hire', badge: 'shop-type-mob',  idField: 'MobId',   idLabel: 'Mob' },
-        buff: { label: 'Buff',         badge: 'shop-type-buff', idField: 'BuffId',  idLabel: 'Buff' },
     };
 
     const restockOptions = [
@@ -960,8 +878,7 @@
         btn.textContent = 'Pick\u2026';
 
         const pickerConfig = type === 'item' ? PickerConfigs.items
-            : type === 'mob'  ? PickerConfigs.mobs
-            : PickerConfigs.buffs;
+            : PickerConfigs.mobs;
 
         btn.addEventListener('click', () => {
             Picker.open({
@@ -1189,7 +1106,6 @@
                 }()),
                 Items:     collectItems(),
                 Shop:      collectShop(),
-                SpellBook: collectSpellBook(),
             },
         };
 

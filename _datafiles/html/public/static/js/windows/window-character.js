@@ -4,24 +4,21 @@
  * Virtual window: Character - left dock, tabbed.
  *
  * Tabs:
- *   Overview - name, race/class, level, alignment, stats grid, point badges
+ *   Overview - name, race, level, alignment, stats grid, point badges
  *   Skills   - learned skills with levels and max indicator
- *   Jobs     - profession completion and proficiency
  *   Effects  - active buffs/debuffs with duration bars
  *
  * Responds to GMCP namespaces:
  *   Char         - full character update
- *   Char.Info    - name, race, class, level, alignment, skill/training points
+ *   Char.Info    - name, race, level, alignment, skill/training points
  *   Char.Stats   - six core stats
  *   Char.Skills  - skill names, levels, max flag
- *   Char.Jobs    - profession completion and proficiency
  *   Char.Affects - active buffs/debuffs
  *
  * Reads:
  *   Client.GMCPStructs.Char.Info
  *   Client.GMCPStructs.Char.Stats
  *   Client.GMCPStructs.Char.Skills
- *   Client.GMCPStructs.Char.Jobs
  *   Client.GMCPStructs.Char.Affects
  */
 
@@ -341,95 +338,6 @@
             border: 1px solid var(--t-quest-badge-border);
         }
 
-        /* ---- Jobs tab ---- */
-        #cw-jobs {
-            padding: 4px 6px;
-            gap: 5px;
-        }
-
-        #cw-jobs .cjb-empty {
-            color: var(--t-text-dim);
-            font-size: 0.78em;
-            font-style: italic;
-            text-align: center;
-            padding: 12px 0;
-        }
-
-        .cjb-item {
-            background: var(--t-bg-surface-alt);
-            border: 1px solid var(--t-accent-dim);
-            border-radius: 4px;
-            padding: 5px 7px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-
-        .cjb-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 6px;
-        }
-
-        .cjb-name {
-            font-size: 0.82em;
-            color: var(--t-text);
-            font-weight: bold;
-            text-transform: capitalize;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .cjb-meta {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            flex-shrink: 0;
-        }
-
-        .cjb-proficiency {
-            font-size: 0.68em;
-            color: var(--t-text-secondary);
-            text-transform: capitalize;
-        }
-
-        .cjb-pct {
-            font-size: 0.7em;
-            color: var(--t-text-secondary);
-        }
-
-        .cjb-bar-track {
-            width: 100%;
-            height: 5px;
-            background: var(--t-bg-row);
-            border-radius: 3px;
-            overflow: hidden;
-            border: 1px solid var(--t-party-hp-border);
-        }
-
-        .cjb-bar-fill {
-            height: 100%;
-            border-radius: 3px;
-            background: linear-gradient(to right, var(--t-progress-from), var(--t-progress-to));
-            transition: width 0.4s ease-out;
-        }
-
-        .cjb-item.complete .cjb-name {
-            color: var(--t-warning);
-        }
-
-        .cjb-item.complete .cjb-pct {
-            color: var(--t-warning);
-            font-weight: bold;
-        }
-
-        .cjb-bar-fill.complete {
-            background: var(--t-warning);
-        }
-
         /* ---- Effects tab ---- */
         #cw-effects {
             padding: 4px 6px;
@@ -629,7 +537,6 @@
             '<div class="cw-tab-bar">' +
                 '<button class="cw-tab-btn active" data-panel="cw-overview">Overview</button>' +
                 '<button class="cw-tab-btn"        data-panel="cw-skills">Skills</button>' +
-                '<button class="cw-tab-btn"        data-panel="cw-jobs">Jobs</button>' +
                 '<button class="cw-tab-btn"        data-panel="cw-effects">Effects</button>' +
             '</div>' +
 
@@ -642,10 +549,6 @@
 
             '<div class="cw-tab-panel" id="cw-skills">' +
                 '<div class="csk-empty">No skills learned</div>' +
-            '</div>' +
-
-            '<div class="cw-tab-panel" id="cw-jobs">' +
-                '<div class="cjb-empty">No job progress</div>' +
             '</div>' +
 
             '<div class="cw-tab-panel" id="cw-effects">' +
@@ -709,13 +612,13 @@
         const nameEl = document.getElementById('cw-char-name');
         nameEl.innerHTML = '';
 
-        const parts = [info.name, info.class].filter(Boolean);
-        if (parts.length) {
-            nameEl.appendChild(document.createTextNode(parts.join(' \u00b7 ')));
+        const name = info.name || '';
+        if (name) {
+            nameEl.appendChild(document.createTextNode(name));
         }
 
         if (info.race) {
-            if (parts.length) {
+            if (name) {
                 nameEl.appendChild(document.createTextNode(' \u00b7 '));
             }
             const raceSpan = document.createElement('span');
@@ -824,49 +727,6 @@
         });
     }
 
-    function updateJobs() {
-        const jobs  = Client.GMCPStructs.Char && Client.GMCPStructs.Char.Jobs;
-        const panel = document.getElementById('cw-jobs');
-        if (!panel) { return; }
-
-        if (!Array.isArray(jobs) || jobs.length === 0) {
-            panel.innerHTML = '<div class="cjb-empty">No job progress</div>';
-            return;
-        }
-
-        const sorted = [...jobs].sort(function(a, b) {
-            if (b.completion !== a.completion) { return b.completion - a.completion; }
-            return (a.name || '').localeCompare(b.name || '');
-        });
-
-        panel.innerHTML = '';
-
-        sorted.forEach(function(job) {
-            const pct      = Math.max(0, Math.min(100, job.completion || 0));
-            const complete = pct >= 100;
-
-            const item = document.createElement('div');
-            item.className    = 'cjb-item' + (complete ? ' complete' : '');
-            item.style.cursor = 'help';
-            item.innerHTML =
-                '<div class="cjb-header">' +
-                    '<span class="cjb-name">' + (job.name || '') + '</span>' +
-                    '<div class="cjb-meta">' +
-                        '<span class="cjb-proficiency">' + (job.proficiency || '') + '</span>' +
-                        '<span class="cjb-pct">' + pct + '%</span>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="cjb-bar-track">' +
-                    '<div class="cjb-bar-fill' + (complete ? ' complete' : '') + '" style="width:' + pct + '%"></div>' +
-                '</div>';
-
-            item.addEventListener('click', function() {
-                Client.GMCPRequest('Help', (job.name || '').toLowerCase().replace(/\s+/g, '-'));
-            });
-            panel.appendChild(item);
-        });
-    }
-
     function _isDebuff(mods) {
         if (!mods) { return false; }
         return Object.values(mods).some(v => v < 0);
@@ -969,7 +829,6 @@
         updateOverview();
         updateStats();
         updateSkills();
-        updateJobs();
         updateEffects();
     }
 
@@ -978,7 +837,7 @@
     // -----------------------------------------------------------------------
     VirtualWindows.register({
         window:       win,
-        gmcpHandlers: ['Char.Info', 'Char.Stats', 'Char.Skills', 'Char.Jobs', 'Char.Affects', 'Char'],
+        gmcpHandlers: ['Char.Info', 'Char.Stats', 'Char.Skills', 'Char.Affects', 'Char'],
         onGMCP() { update(); },
     });
 

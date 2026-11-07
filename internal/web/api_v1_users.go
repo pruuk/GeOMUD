@@ -71,7 +71,7 @@ func jsonAbsent(raw json.RawMessage) bool {
 // returns an error and changes nothing, the live record included. On success
 // the live record is never written to; the result is a copy.
 //
-// The form sends the complete desired skills, spellbook, items, equipment and
+// The form sends the complete desired skills, items, equipment and
 // shop, so on success those lists have replace semantics: they start empty on
 // the copy, a removed entry stays removed, and an item never takes another
 // item's fields. A list, a single equipment slot, or the whole character that
@@ -96,7 +96,6 @@ func decodeUserPatch(u *accounts.Account, body []byte) (accounts.Account, error)
 	old := u.Character
 	charCopy := *old
 	charCopy.Skills = nil
-	charCopy.SpellBook = nil
 	charCopy.Items = nil
 	charCopy.Shop = nil
 	charCopy.Equipment = characters.Worn{}
@@ -115,16 +114,13 @@ func decodeUserPatch(u *accounts.Account, body []byte) (accounts.Account, error)
 		present.Character = nil
 	}
 	var chars struct {
-		Skills, SpellBook, Items, Equipment, Shop json.RawMessage
+		Skills, Items, Equipment, Shop json.RawMessage
 	}
 	_ = json.Unmarshal(present.Character, &chars)
 
 	c := updated.Character
 	if jsonAbsent(chars.Skills) {
 		c.Skills = maps.Clone(old.Skills)
-	}
-	if jsonAbsent(chars.SpellBook) {
-		c.SpellBook = maps.Clone(old.SpellBook)
 	}
 	if jsonAbsent(chars.Items) {
 		c.Items = append([]items.Item(nil), old.Items...)

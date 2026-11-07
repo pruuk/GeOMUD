@@ -14,7 +14,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 
 	"github.com/GoMudEngine/GoMud/internal/fileloader"
-	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -60,7 +59,6 @@ type Mob struct {
 	SpawnSlot       int      `yaml:"-"`                        // the home room's spawn slot this NPC fills, index plus one; zero for none. Saved in SavedNPC.
 	Hostile         bool     `yaml:"hostile,omitempty"`        // whether they attack on sight
 	Groups          []string `yaml:"groups,omitempty"`         // What group do they identify with? Helps with teamwork
-	Hates           []string `yaml:"hates,omitempty"`          // What NPC groups or races do they hate and probably fight if encountered?
 	IdleCommands    []string `yaml:"idlecommands,omitempty"`   // Commands they may do while idle (not in combat)
 	AngryCommands   []string `yaml:"angrycommands,omitempty"`  // randomly chosen to queue when they are angry/entering combat.
 	CombatCommands  []string `yaml:"combatcommands,omitempty"` // Commands they may do while in combat
@@ -74,12 +72,6 @@ type Mob struct {
 	Path            PathQueue `yaml:"-"`                     // a pre-calculated path the mob is following.
 	tempDataStore   map[string]any
 	lastCommandTurn uint64 // The last turn a command was scheduled for
-}
-
-func MobInstanceExists(instanceId ids.ID) bool {
-
-	_, ok := mobInstances[instanceId]
-	return ok
 }
 
 // Gets a copy of all mob info
@@ -285,18 +277,6 @@ func (m *Mob) HasShop() bool {
 	return len(m.Character.Shop) > 0
 }
 
-func (m *Mob) IsTameable() bool {
-	if m.HasShop() {
-		return false
-	}
-	if r := races.GetRace(m.Character.GetRaceId()); r != nil {
-		if !r.Tameable {
-			return false
-		}
-	}
-	return true
-}
-
 func (m *Mob) SetTempData(key string, value any) {
 
 	if m.tempDataStore == nil {
@@ -322,90 +302,6 @@ func (m *Mob) GetTempData(key string) any {
 	return nil
 }
 
-func (m *Mob) Despawns() bool {
-	if m.HasShop() {
-		return false
-	}
-	return true
-}
-
-func (m *Mob) GetSellPrice(item items.Item) int {
-
-	if item.IsSpecial() {
-		return 0
-	}
-
-	itemType := item.GetSpec().Type
-	itemSubtype := item.GetSpec().Subtype
-	value := 0
-	likesType := false
-	likesSubtype := false
-	newAddition := true
-	priceScale := 0.0
-
-	currentSaleItems := m.Character.Shop.GetInstock()
-
-	for _, stockItm := range currentSaleItems {
-		if stockItm.ItemId == 0 {
-			continue
-		}
-
-		if stockItm.ItemId == item.ItemId { // If it's in stock, we can set everyting and break out
-			newAddition = false // already stocking this item
-			likesType = true
-			likesSubtype = true
-			value = stockItm.Price
-			// Scale down amount willing to pay based on how many there are already in stock
-			priceScale = 1.0 - (float64(stockItm.Quantity) / 20)
-			break
-		}
-
-		stockSpec := items.GetItemSpec(stockItm.ItemId)
-		if stockSpec == nil {
-			continue
-		}
-
-		if !likesType && stockSpec.Type == itemType {
-			likesType = true
-			priceScale += 0.5
-		}
-
-		if !likesSubtype && stockSpec.Subtype == itemSubtype {
-			likesSubtype = true
-			priceScale += 0.5
-		}
-	}
-
-	// If this is a new addition, don't allow more than 20 varieites
-	if newAddition && len(currentSaleItems) >= 20 {
-		return 0
-	}
-
-	if value == 0 {
-		value = item.GetSpec().Value
-	}
-
-	if priceScale < 0 {
-		priceScale = 0
-	} else if priceScale > 100 {
-		priceScale = 100
-	}
-
-	priceScale *= .25 // Can never be more than 25% value of object
-
-	return int(math.Ceil(float64(value) * priceScale))
-}
-
-func (r *Mob) HatesRace(raceName string) bool {
-	raceName = strings.ToLower(raceName)
-	for _, hateGroup := range r.Hates {
-		if hateGroup == raceName {
-			return true
-		}
-	}
-	return false
-}
-
 func (r *Mob) HatesAlignment(otherAlignment int8) bool {
 
 	// If either are neutral, no hatred
@@ -426,37 +322,6 @@ func (r *Mob) HatesAlignment(otherAlignment int8) bool {
 	delta := int(math.Abs(float64(r.Character.Alignment) - float64(otherAlignment)))
 
 	return delta > characters.AlignmentAggroThreshold
-}
-
-func (r *Mob) HatesMob(m *Mob) bool {
-	if r.MobId == m.MobId {
-		return false // Can't hate exact same as self
-	}
-
-	mRace := races.GetRace(m.Character.GetRaceId())
-	raceName := strings.ToLower(mRace.Name)
-	for _, rGroup := range r.Groups {
-		if rGroup == raceName {
-			return true
-		}
-		for _, mGroup := range m.Groups {
-			if rGroup == mGroup {
-				return false // Can't hate groups its part of.
-			}
-		}
-	}
-	// Loop through groups it hates and if it finds a match, return true
-	for _, groupName := range r.Hates {
-		if groupName == `*` { // If * it hates all groups
-			return true
-		}
-		for _, mGroup := range m.Groups {
-			if groupName == mGroup {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func (m *Mob) GetAngryCommand() string {
@@ -491,33 +356,6 @@ func (m *Mob) GetIdleCommand() string {
 	}
 
 	return ``
-}
-
-func (r *Mob) ConsidersAnAlly(m *Mob) bool {
-
-	if m.MobId == r.MobId {
-		return true // Auto ally with own kind
-	}
-
-	if len(m.Groups) == 0 && len(r.Groups) == 0 {
-		return true // No allegiance on either side, consider an ally for now
-	}
-
-	// If they both belong to factions/groups, check for matches
-	// Could conver tthis to a look up map.
-	// Only a couple entries likely, so maybe not worth it.
-	if len(r.Groups) > 0 {
-		// Look for a group match
-		for _, targetGroup := range r.Groups {
-			for _, testGroup := range m.Groups {
-				if testGroup == targetGroup {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
 }
 
 func (r *Mob) Id() int {

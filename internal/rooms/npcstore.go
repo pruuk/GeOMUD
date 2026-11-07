@@ -852,46 +852,6 @@ func NPCEnded(m *mobs.Mob, immediate bool) {
 	}
 }
 
-// RestNPC rests one live NPC in this room (decision 15: charm
-// expiry): saved into the room's sidecar, out of the room and out of memory,
-// listed in the resting index. No ending. It stays resting while the room
-// stays in memory, written by each of its saves, and comes back on the first
-// prepare after the room unloads and loads again (decision 16). It reports
-// false, leaving the NPC live, for an ephemeral room (nothing there is saved)
-// or a failed save.
-func (r *Room) RestNPC(m *mobs.Mob) bool {
-	if r.IsEphemeral() {
-		return false
-	}
-	id := m.Character.Id
-	saved := mobs.Snapshot(m)
-	// Live in the room, the save writes it; one not listed here is written
-	// from its resting entry.
-	before := len(r.resting)
-	inRoom := false
-	for _, b := range r.mobIds() {
-		if b == id {
-			inRoom = true
-			break
-		}
-	}
-	if !inRoom {
-		r.resting = append(r.resting, saved)
-	}
-	if err := saveRoomNPCs(r); err != nil {
-		mudlog.Error("npc store: NPC not rested, its room could not be saved", "room", r.RoomId, "npc", id.String(), "error", err)
-		r.resting = r.resting[:before]
-		return false
-	}
-	r.RemoveMob(id)
-	mobs.Rest(id)
-	if inRoom {
-		r.resting = append(r.resting, saved)
-	}
-	indexResting(id, r.RoomId)
-	return true
-}
-
 // peekEnding reads an NPC's ending without consuming it.
 func peekEnding(id ids.ID) (ending, bool) {
 	npcStoreMu.Lock()

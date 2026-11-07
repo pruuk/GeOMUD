@@ -243,24 +243,9 @@ func CopyoverReconnectUser(user *Account, connectionId connections.ConnectionId)
 	userManagerMu.Unlock()
 	activated(user)
 
-	pruneCharmed(user)
-
 	user.EventLog.Add(`conn`, `Reconnected`)
 
 	return user, "Reconnecting...", nil
-}
-
-// NPCExists says whether a charmed NPC's ID still names an NPC. The default sees live NPCs only;
-// startup widens it to resting ones (accounts cannot import rooms).
-var NPCExists = func(id ids.ID) bool { return mobs.MobInstanceExists(id) }
-
-// pruneCharmed drops charmed IDs that name no live or resting NPC.
-func pruneCharmed(user *Account) {
-	for _, mobInstId := range user.Character.GetCharmIds() {
-		if !NPCExists(mobInstId) {
-			user.Character.TrackCharmed(mobInstId, false)
-		}
-	}
 }
 
 // First time creating a user.
@@ -296,8 +281,6 @@ func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, 
 				userManagerMu.Unlock()
 				activated(user)
 
-				pruneCharmed(user)
-
 				// Set their input round to current to track idle time fresh
 				user.SetLastInputRound(util.GetRoundCount())
 
@@ -327,8 +310,6 @@ func LoginUser(user *Account, connectionId connections.ConnectionId) (*Account, 
 
 	user.EventLog.Add(`conn`, `Connected`)
 
-	pruneCharmed(user)
-
 	return user, "", nil
 }
 
@@ -343,24 +324,6 @@ func SetLinkDeadUser(userId int) {
 
 	u.Character.RemoveBuff(0)
 	u.Character.SetAdjective(`zombie`, true)
-
-	// Special case for `newbieguide` module exported function check
-	// If module was loaded, this function should exist.
-	if fn, ok := GetExportedFunction(`PlayerGuideMobId`); ok {
-		guideMobId := 0
-		if guideMobIdFn, ok := fn.(func() int); ok {
-			guideMobId = guideMobIdFn()
-		}
-
-		// Prevent guide mob dupes
-		for _, miid := range u.Character.CharmedMobs {
-			if m := mobs.GetInstance(miid); m != nil {
-				if m.MobId == mobs.MobId(guideMobId) && m.Character.Charmed != nil {
-					m.Character.Charmed.RoundsRemaining = 0
-				}
-			}
-		}
-	}
 
 	userManagerMu.Lock()
 	if _, ok := userManager.LinkDeadConnections[u.sess().connectionId]; !ok {

@@ -155,13 +155,6 @@ func registerAdminAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /admin/api/v1/skills/{skillId}", doBasicAuth(RequirePermission("skills.write", RunWithMUDLocked(apiV1PatchSkill))))
 	mux.HandleFunc("DELETE /admin/api/v1/skills/{skillId}", doBasicAuth(RequirePermission("skills.write", RunWithMUDLocked(apiV1DeleteSkill))))
 
-	// Professions
-	mux.HandleFunc("GET /admin/api/v1/professions", doBasicAuth(RunWithMUDLocked(apiV1GetProfessions)))
-	mux.HandleFunc("POST /admin/api/v1/professions", doBasicAuth(RequirePermission("skills.write", RunWithMUDLocked(apiV1CreateProfession))))
-	mux.HandleFunc("GET /admin/api/v1/professions/{professionId}/yaml", doBasicAuth(RunWithMUDLocked(apiV1GetProfessionYAML)))
-	mux.HandleFunc("PATCH /admin/api/v1/professions/{professionId}", doBasicAuth(RequirePermission("skills.write", RunWithMUDLocked(apiV1PatchProfession))))
-	mux.HandleFunc("DELETE /admin/api/v1/professions/{professionId}", doBasicAuth(RequirePermission("skills.write", RunWithMUDLocked(apiV1DeleteProfession))))
-
 	// GameTime
 	mux.HandleFunc("GET /admin/api/v1/gametime", doBasicAuth(RunWithMUDLocked(apiV1GetGameTime)))
 	mux.HandleFunc("POST /admin/api/v1/gametime", doBasicAuth(RequirePermission("gametime.write", RunWithMUDLocked(apiV1CreateGameTimeCalendar))))
@@ -175,12 +168,4 @@ func registerAdminAPIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /admin/api/v1/panels/validate", doBasicAuth(RunWithMUDLocked(apiV1PostPanelValidate)))
 	mux.HandleFunc("POST /admin/api/v1/panels/preview", doBasicAuth(RunWithMUDLocked(apiV1PostPanelPreview)))
 	mux.HandleFunc("PUT /admin/api/v1/panels/{panelname...}", doBasicAuth(RequirePermission("panels.write", RunWithMUDLocked(apiV1PutPanel))))
-
-	// Spells
-	mux.HandleFunc("GET /admin/api/v2/spells", doBasicAuth(RunWithMUDLocked(apiV2GetSpells)))
-	mux.HandleFunc("POST /admin/api/v2/spells", doBasicAuth(RequirePermission("spells.write", RunWithMUDLocked(apiV2CreateSpell))))
-	mux.HandleFunc("GET /admin/api/v2/spells/{spellId}/yaml", doBasicAuth(RunWithMUDLocked(apiV2GetSpellYAML)))
-	mux.HandleFunc("GET /admin/api/v2/spells/{spellId}", doBasicAuth(RunWithMUDLocked(apiV2GetSpell)))
-	mux.HandleFunc("PATCH /admin/api/v2/spells/{spellId}", doBasicAuth(RequirePermission("spells.write", RunWithMUDLocked(apiV2PatchSpell))))
-	mux.HandleFunc("DELETE /admin/api/v2/spells/{spellId}", doBasicAuth(RequirePermission("spells.write", RunWithMUDLocked(apiV2DeleteSpell))))
 }

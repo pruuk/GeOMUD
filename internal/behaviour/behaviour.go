@@ -22,11 +22,6 @@ import (
 // "go <exit>"; past MaxWander it plans the way home instead.
 func Wander(mob *mobs.Mob) {
 
-	// Friendly (charmed) mobs don't wander.
-	if mob.Character.IsCharmed() {
-		return
-	}
-
 	// If they aren't home and have used up their MaxWander moves, go home.
 	// -1 means they can wander forever and never go home. 0 means they never wander.
 	if mob.Character.RoomId != mob.HomeRoomId {
@@ -115,33 +110,6 @@ func PathTo(mob *mobs.Mob, args string) {
 	}
 
 	mob.Path.SetPath(newPath)
-}
-
-// Rest takes mob out of memory without ending it (slice 2b decision 15), as
-// the rest command did: an NPC in an ephemeral room ends there; any other
-// rests in its room. It comes back only when that room is next loaded from
-// disk. Charm expiry uses it. In an ephemeral room, where nothing
-// is saved, it cannot rest and ends as a death would: a slot that owns it
-// refills after its respawn rate.
-func Rest(mob *mobs.Mob, reason string) {
-
-	mudlog.Info("rest", "mobname", mob.Character.Name, "reason", reason)
-
-	room := rooms.LoadRoom(mob.Character.RoomId)
-	if room == nil {
-		return
-	}
-
-	if room.IsEphemeral() {
-		room.EndEphemeralNPC(mob)
-		if r := rooms.LoadRoom(mob.HomeRoomId); r != nil {
-			r.CleanupMobSpawns()
-		}
-		return
-	}
-
-	// A failed save is logged by RestNPC; the NPC stays live.
-	room.RestNPC(mob)
 }
 
 // RunIdle runs one idle command from data: "wander" and "pathto ..." are

@@ -67,8 +67,6 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 			return true, nil
 		}
 
-		originRoomId := actor.Character.RoomId
-
 		exitInfo, _ := room.GetExitInfo(exitName)
 
 		if exitInfo.Lock.IsLocked() {
@@ -272,20 +270,6 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 				}
 			}
 
-			for _, instId := range room.GetMobs(rooms.FindCharmed) {
-				mob := mobs.GetInstance(instId)
-				if mob == nil {
-					continue
-				}
-				// They only follow if they're in the same room as the player
-				if mob.Character.RoomId != originRoomId {
-					continue
-				}
-				if mob.Character.IsCharmed(actor.Character.Id) { // Charmed mobs follow
-					mob.Command(rest)
-				}
-			}
-
 			if !isSneaking {
 				// No pursuit on a walk: nobody who is fighting the actor lets it
 				// walk away (inFight), and fleeing escapes pursuers (Decision 6).
@@ -302,10 +286,6 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 					if mob.Character.Aggro != nil {
 						continue
 					}
-					if mob.Character.IsCharmed() {
-						continue
-					}
-
 					isHostile := mob.Hostile // Is it automatically hostile?
 					if !isHostile {
 						for _, groupName := range mob.Groups {

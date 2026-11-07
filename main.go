@@ -37,7 +37,6 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
-	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mapper"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
@@ -46,7 +45,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/skills"
-	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -184,7 +182,6 @@ func main() {
 	buffs.RegisterFlagFS(plugins.GetPluginRegistry())
 	mobs.RegisterFS(plugins.GetPluginRegistry())
 	usercommands.AddFunctionExporter(plugins.GetPluginRegistry())
-	accounts.AddFunctionExporter(plugins.GetPluginRegistry())
 	usercommands.SetRoomTagProvider(plugins.GetRegisteredRoomTags)
 	web.SetRoomTagProvider(plugins.GetRegisteredRoomTags)
 
@@ -227,8 +224,6 @@ func main() {
 	if err := rooms.LoadEndings(); err != nil {
 		mudlog.Error("LoadEndings", "error", err)
 	}
-	// A charmed companion that is resting is still the player's companion.
-	accounts.NPCExists = func(id ids.ID) bool { return mobs.MobInstanceExists(id) || rooms.IsResting(id) }
 
 	mudlog.Info(`========================`)
 
@@ -1450,7 +1445,6 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 // is missing. Derived from the loaders in loadAllDataFiles and their neighbours:
 //
 //	biomes         rooms.LoadBiomeDataFiles
-//	spells         spells.LoadSpellFiles
 //	rooms          rooms.LoadDataFiles (zone-config.yaml and room files)
 //	buffs-flags    buffs.LoadFlagDataFiles (a missing folder panics the load)
 //	buffs          buffs.LoadDataFiles
@@ -1458,7 +1452,6 @@ func handleSSHConnection(connDetails *connections.ConnectionDetails, reqs <-chan
 //	combat-messages items.LoadDataFiles
 //	races          races.LoadDataFiles
 //	skills         skills.LoadDataFiles
-//	professions    skills.LoadProfessionDataFiles
 //	mobs           mobs.LoadDataFiles
 //	mutators       mutators.LoadDataFiles
 //	templates      templates package (help, screens, prompts)
@@ -1480,11 +1473,9 @@ var requiredWorldFolders = []string{
 	"mobs",
 	"mutators",
 	"panel-layouts",
-	"professions",
 	"races",
 	"rooms",
 	"skills",
-	"spells",
 	"templates",
 	"users",
 }
@@ -1504,14 +1495,12 @@ func loadAllDataFiles(isReload bool) {
 	gametime.LoadGameTimeConfigs()
 	// Load biomes before rooms since rooms reference biomes
 	rooms.LoadBiomeDataFiles()
-	spells.LoadSpellFiles()
 	rooms.LoadDataFiles()
 	buffs.LoadFlagDataFiles() // Load buff flags before buffs so buff validation can check flags
 	buffs.LoadDataFiles()     // Load buffs before items for cost calculation reasons
 	items.LoadDataFiles()
 	races.LoadDataFiles()
-	skills.LoadDataFiles()           // skills before professions for cross-ref warnings
-	skills.LoadProfessionDataFiles() // professions reference skills
+	skills.LoadDataFiles()
 	mobs.LoadDataFiles()
 	templates.LoadAliases(plugins.GetPluginRegistry())
 	keywords.LoadAliases(plugins.GetPluginRegistry())

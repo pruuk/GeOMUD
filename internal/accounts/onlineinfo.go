@@ -5,7 +5,6 @@ type OnlineInfo struct {
 	CharacterName string
 	Level         int
 	Alignment     string
-	Profession    string
 	OnlineTime    int64
 	OnlineTimeStr string
 	IsAFK         bool

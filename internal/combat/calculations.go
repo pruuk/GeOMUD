@@ -3,12 +3,9 @@ package combat
 import (
 	"math"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/items"
-	"github.com/GoMudEngine/GoMud/internal/mobs"
-	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -171,22 +168,13 @@ func combatAttackCount(sourceChar characters.Character, targetChar characters.Ch
 }
 
 // critChance returns the integer crit probability in [CritChanceMin,
-// CritChanceMax] based on the Smarts stat delta. Buff flags are applied after.
+// CritChanceMax] based on the Smarts stat delta.
 // equal stats will result in 50%
-func critChance(atkSmarts, defSmarts int, hasAccuracy, targetHasBlink bool) int {
+func critChance(atkSmarts, defSmarts int) int {
 	cfg := configs.GetCombatConfig()
 	minChance := int(cfg.CritChanceMin)
 	maxChance := int(cfg.CritChanceMax)
 	actual := int(math.Floor(statDeltaProportional(atkSmarts, defSmarts) * float64(maxChance)))
-	if actual < minChance {
-		actual = minChance
-	}
-	if hasAccuracy {
-		actual *= 2
-	}
-	if targetHasBlink {
-		actual /= 2
-	}
 	if actual < minChance {
 		actual = minChance
 	}
@@ -201,8 +189,6 @@ func Crits(sourceChar characters.Character, targetChar characters.Character) boo
 	chance := critChance(
 		sourceChar.Stats.Smarts.ValueAdj,
 		targetChar.Stats.Smarts.ValueAdj,
-		sourceChar.HasBuffFlag("accuracy"),
-		targetChar.HasBuffFlag("blink"),
 	)
 	critRoll := util.Rand(100)
 	util.LogRoll(`Crits`, critRoll, chance)
@@ -301,77 +287,6 @@ func damagePercentOfMax(damage, dCount, dSides, dBonus int) int {
 		maxDmg = 1
 	}
 	return int(math.Ceil(float64(damage) / float64(maxDmg) * 100))
-}
-
-// tameSizeModifier returns the taming chance modifier based on the tamer's size.
-func tameSizeModifier(size races.Size) int {
-	switch size {
-	case races.Large:
-		return -25
-	case races.Small:
-		return 0
-	default:
-		return -10
-	}
-}
-
-// tameHealthBonus returns the taming bonus granted when the tamer is injured.
-// A tamer at full HP contributes 0; a tamer near death contributes up to 50.
-func tameHealthBonus(currentHP, maxHP int) float64 {
-	return 50 - math.Ceil(float64(currentHP)/float64(maxHP)*50)
-}
-
-// chanceToTame computes the raw taming probability from primitive parameters.
-func chanceToTame(
-	proficiency int,
-	levelDiff int,
-	currentHP int,
-	maxHP int,
-	tamerSize races.Size,
-	targetIsAggro bool,
-) int {
-	const (
-		modSkillMin     = 1
-		modSkillMax     = 100
-		modLevelDiffMin = -25
-		modLevelDiffMax = 25
-		factorIsAggro   = 0.50
-	)
-
-	if proficiency < modSkillMin {
-		proficiency = modSkillMin
-	} else if proficiency > modSkillMax {
-		proficiency = modSkillMax
-	}
-
-	if levelDiff > modLevelDiffMax {
-		levelDiff = modLevelDiffMax
-	} else if levelDiff < modLevelDiffMin {
-		levelDiff = modLevelDiffMin
-	}
-
-	sizeModifier := tameSizeModifier(tamerSize)
-	healthModifier := tameHealthBonus(currentHP, maxHP)
-
-	aggroModifier := 1.0
-	if targetIsAggro {
-		aggroModifier = factorIsAggro
-	}
-
-	return int(math.Ceil((float64(proficiency) + float64(levelDiff) + healthModifier + float64(sizeModifier)) * aggroModifier))
-}
-
-// ChanceToTame returns the probability that a user successfully tames a mob.
-func ChanceToTame(s *accounts.Account, t *mobs.Mob) int {
-	raceInfo := races.GetRace(s.Character.GetRaceId())
-	return chanceToTame(
-		s.Character.MobMastery.GetTame(int(t.MobId)),
-		s.Character.Level-t.Character.Level,
-		s.Character.Health,
-		s.Character.HealthMax.Value,
-		raceInfo.Size,
-		t.Character.IsAggro(s.Character.Id),
-	)
 }
 
 // AlignmentChange returns the alignment delta for a killer after slaying a target.
@@ -477,8 +392,6 @@ func expectedDPS(atkChar characters.Character, defChar characters.Character) flo
 	critPct := float64(critChance(
 		atkChar.Stats.Smarts.ValueAdj,
 		defChar.Stats.Smarts.ValueAdj,
-		false,
-		false,
 	)) / 100.0
 
 	// A hit that lands is still negated if the defender dodges.

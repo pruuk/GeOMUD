@@ -41,7 +41,6 @@ The `internal/characters` package is the core character system for GoMud, handli
 ### Combat and Interaction Systems
 - **Kill/Death statistics** (`kdstats.go`): PvP and PvE combat tracking
 - **Charm system** (`charminfo.go`): Mind control and pet mechanics
-- **Mob mastery** (`mobmastery.go`): Character proficiency with specific creature types
 - **Shop system** (`shop.go`): NPC merchant capabilities with restocking mechanics
 
 ### Character Presentation
@@ -55,7 +54,6 @@ The `internal/characters` package is the core character system for GoMud, handli
 - YAML-based character data storage
 - Automatic saving with configurable intervals
 - Character creation timestamps and history tracking
-- Short-term room history for map rendering (`roomHistory`, capped by memory capacity)
 - Permanent room visit tracking via `ZonesVisited` (chunked bitset, persisted to YAML)
 
 ### Dynamic Stat System

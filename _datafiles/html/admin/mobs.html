@@ -196,7 +196,6 @@
     }
     .shop-type-item   { background: var(--color-success-bg); color: var(--color-success-text); }
     .shop-type-mob    { background: var(--color-info-bg); color: var(--color-info-text); }
-    .shop-type-buff   { background: var(--color-method-put-bg); color: var(--color-method-put-text); }
     .shop-card-remove {
         position: absolute; top: 0.5rem; right: 0.6rem;
         background: none; border: none; cursor: pointer; font-size: 1.1rem;
@@ -339,17 +338,6 @@
                         <div class="field-hint">Groups this mob belongs to for ally/hate detection</div>
                     </div>
 
-                    <div class="field span2">
-                        <label>Hates (groups/races)</label>
-                        <div class="tags-wrap" id="hates-list"></div>
-                        <div style="display:flex; gap:0.4rem; align-items:center; margin-top:0.4rem;">
-                            <input type="text" class="tag-add-input" id="hates-input" placeholder="group or race"
-                                   onkeydown="if(event.key==='Enter'){addTag('hates-list','hates-input');}" />
-                            <button class="btn-add-sm" onclick="addTag('hates-list','hates-input')">+ Add</button>
-                        </div>
-                        <div class="field-hint">Groups or race names this mob will attack. Use * for all.</div>
-                    </div>
-
                     <div class="section-title" style="margin-top:0.5rem;">Commands</div>
 
                     <div class="field span2">
@@ -390,11 +378,6 @@
                         <select id="f-raceid">
                             <option value="0">- none -</option>
                         </select>
-                    </div>
-                    <div class="field" id="f-formrace-wrap" style="display:none;">
-                        <label>Current Form</label>
-                        <input type="text" id="f-formrace" readonly
-                               style="background:var(--color-border-faint); cursor:default;" />
                     </div>
 
                     <div class="field span2">
@@ -459,15 +442,6 @@
                         <div class="field-hint">Items the mob carries</div>
                     </div>
 
-                    <div class="section-title" style="margin-top:0.5rem;">Spellbook</div>
-
-                    <div class="field span2">
-                        <label>Known Spells</label>
-                        <div class="buff-ids-wrap" id="spellbook-list"></div>
-                        <button class="btn-add-sm" style="margin-top:0.4rem;" onclick="pickSpell()">+ Add Spell</button>
-                        <div class="field-hint">Spells this mob knows. Value indicates cast count (positive = enabled, negative = disabled).</div>
-                    </div>
-
                     <div class="section-title" style="margin-top:0.5rem;">Shop</div>
 
                     <div class="field span2">
@@ -475,7 +449,6 @@
                         <div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;">
                             <button class="btn-add-sm" onclick="addShopEntry('item')">+ Item</button>
                             <button class="btn-add-sm" onclick="addShopEntry('mob')">+ Mob for Hire</button>
-                            <button class="btn-add-sm" onclick="addShopEntry('buff')">+ Buff</button>
                         </div>
                         <div class="field-hint">Leave empty if not a shopkeeper. QuantityMax: 0 = always in stock, -1 = never restocks (temporary).</div>
                     </div>
@@ -788,14 +761,6 @@
         setVal('f-description', ch.Description || '');
         setVal('f-raceid', ch.RaceId || 0);
         applyRaceEquipDisabled(ch.RaceId || 0);
-        var formWrap = document.getElementById('f-formrace-wrap');
-        if (ch.FormRaceId > 0) {
-            var fr = allRaces[String(ch.FormRaceId)];
-            document.getElementById('f-formrace').value = fr ? fr.Name : 'Unknown (#' + ch.FormRaceId + ')';
-            formWrap.style.display = '';
-        } else {
-            formWrap.style.display = 'none';
-        }
         setVal('f-level', ch.Level || 1);
         setVal('f-hostile', mob.Hostile);
 
@@ -821,9 +786,8 @@
 
         setVal('f-gold', ch.Gold || 0);
 
-        // Groups, Hates
+        // Groups
         renderTags('groups-list', mob.Groups || []);
-        renderTags('hates-list', mob.Hates || []);
 
         // Commands
         setVal('f-idlecommands', (mob.IdleCommands || []).join('\n'));
@@ -832,9 +796,6 @@
 
         // Buff IDs
         renderBuffChips('buffids-list', mob.BuffIds || []);
-
-        // Spellbook
-        renderSpellChips('spellbook-list', ch.SpellBook || {});
 
         // Stats
         const st = ch.Stats || {};
@@ -889,7 +850,7 @@
     };
 
     // -------------------------------------------------------------------------
-    // Tags (groups, hates)
+    // Tags (groups)
     // -------------------------------------------------------------------------
     function renderTags(listId, values) {
         const list = document.getElementById(listId);
@@ -957,54 +918,6 @@
     }
 
     // -------------------------------------------------------------------------
-    // Spell chips (spellbook)
-    // -------------------------------------------------------------------------
-    function renderSpellChips(listId, spellBook) {
-        const list = document.getElementById(listId);
-        list.innerHTML = '';
-        for (const [id, val] of Object.entries(spellBook)) {
-            appendSpellChip(list, id, val);
-        }
-    }
-
-    function appendSpellChip(list, spellId, val) {
-        const chip = document.createElement('span');
-        chip.className = 'buff-chip';
-        chip.dataset.id = spellId;
-        chip.dataset.spellId = spellId;
-        chip.dataset.val = val;
-        const label = esc(spellId);
-        chip.innerHTML = `${label} <button title="Remove" onclick="this.closest('.buff-chip').remove()">&times;</button>`;
-        list.appendChild(chip);
-    }
-
-    window.pickSpell = function () {
-        const listEl = document.getElementById('spellbook-list');
-        const existing = collectSpellBook();
-        const existingIds = Object.keys(existing);
-        Picker.open({
-            ...PickerConfigs.spells,
-            multi:    true,
-            selected: existingIds,
-            onSelect: (spells) => {
-                listEl.innerHTML = '';
-                for (const spell of spells) {
-                    const prev = existing[spell.SpellId];
-                    appendSpellChip(listEl, spell.SpellId, prev !== undefined ? prev : 1);
-                }
-            },
-        });
-    };
-
-    function collectSpellBook() {
-        const book = {};
-        document.querySelectorAll('#spellbook-list .buff-chip').forEach(c => {
-            book[c.dataset.id] = parseInt(c.dataset.val, 10) || 1;
-        });
-        return book;
-    }
-
-    // -------------------------------------------------------------------------
     // Inventory items
     // -------------------------------------------------------------------------
     function renderItemRows(items) {
@@ -1049,7 +962,6 @@
     // Shop entries
     // -------------------------------------------------------------------------
     function detectShopType(entry) {
-        if (entry.BuffId)   return 'buff';
         if (entry.MobId)    return 'mob';
         return 'item';
     }
@@ -1063,11 +975,6 @@
             const res = await AdminAPI.get('/admin/api/v1/items');
             for (const e of (res.ok && res.data && res.data.data) || [])
                 _shopNameCache['item:' + e.ItemId] = e.Name;
-        } else if (type === 'buff') {
-            const res = await AdminAPI.get('/admin/api/v1/buffs');
-            const specs = (res.ok && res.data && res.data.data && res.data.data.specs) || {};
-            for (const e of Object.values(specs))
-                _shopNameCache['buff:' + e.BuffId] = e.Name;
         } else if (type === 'mob') {
             const res = await AdminAPI.get('/admin/api/v1/mobs');
             for (const e of (res.ok && res.data && res.data.data) || [])
@@ -1079,7 +986,6 @@
     const shopTypeMeta = {
         item: { label: 'Item',         badge: 'shop-type-item', idField: 'ItemId',  idLabel: 'Item' },
         mob:  { label: 'Mob for Hire', badge: 'shop-type-mob',  idField: 'MobId',   idLabel: 'Mob' },
-        buff: { label: 'Buff',         badge: 'shop-type-buff', idField: 'BuffId',  idLabel: 'Buff' },
     };
 
     const restockOptions = [
@@ -1131,8 +1037,7 @@
         btn.textContent = 'Pick…';
 
         const pickerConfig = type === 'item' ? PickerConfigs.items
-            : type === 'mob'  ? PickerConfigs.mobs
-            : PickerConfigs.buffs;
+            : PickerConfigs.mobs;
 
         btn.addEventListener('click', () => {
             Picker.open({
@@ -1347,7 +1252,6 @@
             ItemDropChance: parseInt(document.getElementById('f-itemdropchance').value, 10) || 0,
             EliteChance:    parseInt(document.getElementById('f-elitechance').value, 10) || 0,
             Groups:         collectTags('groups-list'),
-            Hates:          collectTags('hates-list'),
             BuffIds:        collectBuffIds('buffids-list'),
             IdleCommands:   textToArray('f-idlecommands'),
             AngryCommands:  textToArray('f-angrycommands'),
@@ -1377,7 +1281,6 @@
                 }()),
                 Items:     collectItems(),
                 Shop:      collectShop(),
-                SpellBook: collectSpellBook(),
             },
         };
 

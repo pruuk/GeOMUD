@@ -9,7 +9,6 @@ Sent on login and whenever core character attributes change.
 
   <ansi fg="cyan">account</ansi>         <ansi fg="green">string</ansi>  - The player's account (login) username
   <ansi fg="cyan">name</ansi>            <ansi fg="green">string</ansi>  - The character's in-game name
-  <ansi fg="cyan">class</ansi>           <ansi fg="green">string</ansi>  - Derived profession/class based on skill ranks
   <ansi fg="cyan">race</ansi>            <ansi fg="green">string</ansi>  - Character race
   <ansi fg="cyan">alignment</ansi>       <ansi fg="green">string</ansi>  - Moral alignment label (e.g. "Good", "Evil")
   <ansi fg="cyan">level</ansi>           <ansi fg="yellow">number</ansi>  - Current character level
@@ -97,14 +96,6 @@ Sent when skills are gained or trained.
   <ansi fg="cyan">name</ansi>     <ansi fg="green">string</ansi>  - Skill name
   <ansi fg="cyan">level</ansi>    <ansi fg="yellow">number</ansi>  - Current skill rank (1-4)
   <ansi fg="cyan">maximum</ansi>  <ansi fg="red">bool</ansi>    - True if the skill is at maximum rank
-
-<ansi fg="yellow-bold">Char.Jobs</ansi>
-Sent when profession progress changes. Jobs are derived from skill rank combinations.
-
-  Each entry contains:
-  <ansi fg="cyan">name</ansi>         <ansi fg="green">string</ansi>  - Profession name
-  <ansi fg="cyan">proficiency</ansi>  <ansi fg="green">string</ansi>  - Proficiency title (e.g. "Apprentice", "Master")
-  <ansi fg="cyan">completion</ansi>   <ansi fg="yellow">number</ansi>  - Percentage progress toward the next proficiency tier (0-100)
 
 <ansi fg="yellow-bold">Char.Kills</ansi>
 Sent on login and updated whenever a mob or player kill or death is recorded.

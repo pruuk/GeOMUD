@@ -77,16 +77,9 @@
             padding-left: 10px;
         }
 
-        .online-col-profession {
+        .online-col-alignment {
             flex: 1;
             min-width: 0;
-            padding-left: 10px;
-            overflow: hidden;
-        }
-
-        .online-col-alignment {
-            width: 68px;
-            flex-shrink: 0;
             padding-left: 10px;
             overflow: hidden;
         }
@@ -160,24 +153,12 @@
             white-space: nowrap;
         }
 
-        .online-player-profession {
-            color: var(--t-online-prof);
-            font-family: Arial, sans-serif;
-            font-size: 0.75em;
-            flex: 1;
-            min-width: 0;
-            padding-left: 10px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
         .online-player-alignment {
             color: var(--t-text-secondary);
             font-family: Arial, sans-serif;
             font-size: 0.75em;
-            width: 68px;
-            flex-shrink: 0;
+            flex: 1;
+            min-width: 0;
             padding-left: 10px;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -242,7 +223,7 @@
         const colHeaders = document.createElement('div');
         colHeaders.id = 'online-col-headers';
 
-        [['online-col-lvl', 'Lvl'], ['online-col-name', 'Name'], ['online-col-profession', 'Profession'], ['online-col-alignment', 'Alignment'], ['online-col-time', 'Time'], ['online-col-role', 'Role']].forEach(function(col) {
+        [['online-col-lvl', 'Lvl'], ['online-col-name', 'Name'], ['online-col-alignment', 'Alignment'], ['online-col-time', 'Time'], ['online-col-role', 'Role']].forEach(function(col) {
             const cell = document.createElement('div');
             cell.className = col[0];
             const text = document.createElement('span');
@@ -324,10 +305,6 @@
             name.className = 'online-player-name';
             name.textContent = p.name || '';
 
-            const profession = document.createElement('span');
-            profession.className = 'online-player-profession';
-            profession.textContent = p.profession || '';
-
             const alignment = document.createElement('span');
             alignment.className = 'online-player-alignment';
             alignment.textContent = p.alignment || '';
@@ -342,7 +319,6 @@
 
             row.appendChild(lvl);
             row.appendChild(name);
-            row.appendChild(profession);
             row.appendChild(alignment);
             row.appendChild(time);
             row.appendChild(role);

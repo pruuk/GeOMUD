@@ -99,12 +99,12 @@
             <div class="curl-block"><span class="kw">curl</span> <span class="flag">-s</span> <span class="flag">-u</span> <span class="str">admin:password</span> \
      <span class="flag">-X</span> PATCH \
      <span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \
-     <span class="flag">-d</span> <span class="str">'{"TriggerCount":20,"Flags":["poison","hidden"]}'</span> \
+     <span class="flag">-d</span> <span class="str">'{"TriggerCount":20,"Flags":["hidden"]}'</span> \
      <span class="str">http://{{.CONFIG.FilePaths.WebDomain}}/admin/api/v1/buffs/1</span></div>
             <div class="response-examples">
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-ok">200</span> <span class="resp-label">Success</span></summary>
-                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"BuffId":1,"Name":"Fast Healing","TriggerRate":"1 round","TriggerCount":20,"Flags":["poison","hidden"]}}</div></div>
+                    <div class="resp-body"><div class="curl-block">{"success":true,"data":{"BuffId":1,"Name":"Fast Healing","TriggerRate":"1 round","TriggerCount":20,"Flags":["hidden"]}}</div></div>
                 </details>
                 <details class="resp-entry">
                     <summary><span class="method resp-label status-err">400</span> <span class="resp-label">Bad Request</span></summary>

@@ -13,7 +13,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/connections"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/prompt"
-	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/GoMudEngine/GoMud/internal/stats"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"golang.org/x/crypto/bcrypt"
@@ -606,7 +605,6 @@ func (u *Account) GetOnlineInfo() OnlineInfo {
 		u.Character.Name,
 		u.Character.Level,
 		u.Character.AlignmentName(),
-		skills.GetProfession(u.Character.GetAllSkillRanks()),
 		int64(oTime.Seconds()),
 		timeStr,
 		isAfk,

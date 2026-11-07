@@ -122,35 +122,24 @@ func TestShop_Destock(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name: "Destock with MobId and BuffId match",
+			name: "Destock with MobId match",
 			initialShop: Shop{
-				{ItemId: 7, MobId: 1, BuffId: 2, Quantity: 2, QuantityMax: 5},
+				{ItemId: 7, MobId: 1, Quantity: 2, QuantityMax: 5},
 			},
-			destockItem: ShopItem{ItemId: 7, MobId: 1, BuffId: 2},
+			destockItem: ShopItem{ItemId: 7, MobId: 1},
 			expectedShop: Shop{
-				{ItemId: 7, MobId: 1, BuffId: 2, Quantity: 1, QuantityMax: 5},
+				{ItemId: 7, MobId: 1, Quantity: 1, QuantityMax: 5},
 			},
 			expectedResult: true,
 		},
 		{
 			name: "Destock with MobId mismatch returns false",
 			initialShop: Shop{
-				{ItemId: 8, MobId: 1, BuffId: 2, Quantity: 2, QuantityMax: 5},
+				{ItemId: 8, MobId: 1, Quantity: 2, QuantityMax: 5},
 			},
-			destockItem: ShopItem{ItemId: 8, MobId: 2, BuffId: 2},
+			destockItem: ShopItem{ItemId: 8, MobId: 2},
 			expectedShop: Shop{
-				{ItemId: 8, MobId: 1, BuffId: 2, Quantity: 2, QuantityMax: 5},
-			},
-			expectedResult: false,
-		},
-		{
-			name: "Destock with BuffId mismatch returns false",
-			initialShop: Shop{
-				{ItemId: 9, MobId: 1, BuffId: 2, Quantity: 2, QuantityMax: 5},
-			},
-			destockItem: ShopItem{ItemId: 9, MobId: 1, BuffId: 3},
-			expectedShop: Shop{
-				{ItemId: 9, MobId: 1, BuffId: 2, Quantity: 2, QuantityMax: 5},
+				{ItemId: 8, MobId: 1, Quantity: 2, QuantityMax: 5},
 			},
 			expectedResult: false,
 		},
@@ -165,80 +154,8 @@ func TestShop_Destock(t *testing.T) {
 			for i := range tt.expectedShop {
 				assert.Equal(t, tt.expectedShop[i].ItemId, shop[i].ItemId)
 				assert.Equal(t, tt.expectedShop[i].MobId, shop[i].MobId)
-				assert.Equal(t, tt.expectedShop[i].BuffId, shop[i].BuffId)
 				assert.Equal(t, tt.expectedShop[i].Quantity, shop[i].Quantity)
 				assert.Equal(t, tt.expectedShop[i].QuantityMax, shop[i].QuantityMax)
-			}
-		})
-	}
-}
-func TestShop_GetInstock(t *testing.T) {
-	tests := []struct {
-		name         string
-		shop         Shop
-		expectedShop Shop
-	}{
-		{
-			name: "All items in stock",
-			shop: Shop{
-				{ItemId: 1, Quantity: 2, QuantityMax: 5},
-				{ItemId: 2, Quantity: 1, QuantityMax: 3},
-			},
-			expectedShop: Shop{
-				{ItemId: 1, Quantity: 2, QuantityMax: 5},
-				{ItemId: 2, Quantity: 1, QuantityMax: 3},
-			},
-		},
-		{
-			name: "Some items out of stock",
-			shop: Shop{
-				{ItemId: 1, Quantity: 0, QuantityMax: 5},
-				{ItemId: 2, Quantity: 3, QuantityMax: 3},
-			},
-			expectedShop: Shop{
-				{ItemId: 2, Quantity: 3, QuantityMax: 3},
-			},
-		},
-		{
-			name: "Unlimited stock item always in stock",
-			shop: Shop{
-				{ItemId: 1, Quantity: 0, QuantityMax: StockUnlimited},
-				{ItemId: 2, Quantity: 0, QuantityMax: 5},
-			},
-			expectedShop: Shop{
-				{ItemId: 1, Quantity: 0, QuantityMax: StockUnlimited},
-			},
-		},
-		{
-			name: "No items in stock",
-			shop: Shop{
-				{ItemId: 1, Quantity: 0, QuantityMax: 5},
-				{ItemId: 2, Quantity: 0, QuantityMax: 3},
-			},
-			expectedShop: Shop{},
-		},
-		{
-			name: "Mixed: in stock, out of stock, unlimited",
-			shop: Shop{
-				{ItemId: 1, Quantity: 0, QuantityMax: 5},
-				{ItemId: 2, Quantity: 2, QuantityMax: 3},
-				{ItemId: 3, Quantity: 0, QuantityMax: StockUnlimited},
-			},
-			expectedShop: Shop{
-				{ItemId: 2, Quantity: 2, QuantityMax: 3},
-				{ItemId: 3, Quantity: 0, QuantityMax: StockUnlimited},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.shop.GetInstock()
-			assert.Equal(t, len(tt.expectedShop), len(got))
-			for i := range tt.expectedShop {
-				assert.Equal(t, tt.expectedShop[i].ItemId, got[i].ItemId)
-				assert.Equal(t, tt.expectedShop[i].Quantity, got[i].Quantity)
-				assert.Equal(t, tt.expectedShop[i].QuantityMax, got[i].QuantityMax)
 			}
 		})
 	}

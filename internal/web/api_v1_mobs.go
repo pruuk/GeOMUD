@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -103,15 +102,6 @@ func apiV1PatchMob(w http.ResponseWriter, r *http.Request) {
 
 	updated := *existing
 
-	// Clear the map-typed character collections the editor fully manages before
-	// decoding. json.Unmarshal MERGES into existing maps rather than replacing
-	// them, so a removed spell would otherwise persist. Resetting on the copy
-	// gives the payload full replace semantics. (Character is a value on the
-	// Mob, so this does not disturb the live spec's map.) Only SpellBook is
-	// reset because that is the only map the mob editor submits — clearing
-	// Skills here would drop skills the editor never sends.
-	updated.Character.SpellBook = nil
-
 	if err := json.NewDecoder(r.Body).Decode(&updated); err != nil {
 		writeAPIError(w, http.StatusBadRequest, "malformed request body: "+err.Error())
 		return
@@ -174,10 +164,6 @@ func apiV1PutMobStock(w http.ResponseWriter, r *http.Request) {
 	}
 	if entry.MobId != 0 && mobs.GetMobSpec(mobs.MobId(entry.MobId)) == nil {
 		writeAPIError(w, http.StatusBadRequest, "mob_id does not exist: "+strconv.Itoa(entry.MobId))
-		return
-	}
-	if entry.BuffId != 0 && buffs.GetBuffSpec(entry.BuffId) == nil {
-		writeAPIError(w, http.StatusBadRequest, "buff_id does not exist: "+strconv.Itoa(entry.BuffId))
 		return
 	}
 

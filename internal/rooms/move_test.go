@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,6 +55,9 @@ func TestMoveToRoomMovesAnNPC(t *testing.T) {
 	a.AddMob(id)
 	events.ProcessEvents()
 	*changes = nil
+	// AddTestRoom marks both rooms visited this round; clear it so the
+	// lastVisited asserts below can only pass if the move marks them.
+	a.lastVisited, b.lastVisited = 0, 0
 
 	require.NoError(t, MoveToRoom(id, moveRoomB))
 	events.ProcessEvents()
@@ -65,8 +69,8 @@ func TestMoveToRoomMovesAnNPC(t *testing.T) {
 	require.Len(t, *changes, 1, "exactly one RoomChange per move")
 	assert.Equal(t, events.RoomChange{ActorId: id, FromRoomId: moveRoomA, ToRoomId: moveRoomB}, (*changes)[0])
 	assert.Contains(t, b.Containers, "chest", "no player arrived, so the room was not prepared")
-	assert.Empty(t, b.userVisitors, "an NPC leaves no user trail")
-	assert.Contains(t, a.mobVisitors, id)
+	assert.Equal(t, util.GetRoundCount(), a.lastVisited, "the old room is marked visited when the NPC leaves")
+	assert.Equal(t, util.GetRoundCount(), b.lastVisited, "the new room is marked visited when the NPC arrives")
 	assert.Equal(t, 1, roomManager.roomsWithMobs[moveRoomB])
 	assert.NotContains(t, roomManager.roomsWithUsers, moveRoomB)
 }
@@ -79,6 +83,9 @@ func TestMoveToRoomMovesAPlayer(t *testing.T) {
 	u := &accounts.Account{UserId: 9101, Character: c}
 	actors.Spawn(c, actors.NewConnectionController(u))
 	a.AddPlayer(u.UserId)
+	// AddTestRoom marks both rooms visited this round; clear it so the
+	// lastVisited asserts below can only pass if the move marks them.
+	a.lastVisited, b.lastVisited = 0, 0
 
 	require.NoError(t, MoveToRoom(c.Id, moveRoomB))
 	events.ProcessEvents()
@@ -88,8 +95,8 @@ func TestMoveToRoomMovesAPlayer(t *testing.T) {
 	assert.NotContains(t, a.GetBodies(), c.Id)
 	require.Len(t, *changes, 1)
 	assert.Equal(t, events.RoomChange{ActorId: c.Id, FromRoomId: moveRoomA, ToRoomId: moveRoomB}, (*changes)[0])
-	assert.Contains(t, a.userVisitors, u.UserId, "the trail is left in the old room")
-	assert.Contains(t, b.userVisitors, u.UserId)
+	assert.Equal(t, util.GetRoundCount(), a.lastVisited, "the old room is marked visited when the player leaves")
+	assert.Equal(t, util.GetRoundCount(), b.lastVisited, "the new room is marked visited when the player arrives")
 	assert.NotContains(t, b.Containers, "chest", "the first player arriving prepares the room")
 	assert.Equal(t, 1, roomManager.roomsWithUsers[moveRoomB])
 }

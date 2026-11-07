@@ -144,3 +144,31 @@ Each phase ends with `go build ./...` and `go test ./...` green (allowing the kn
    is not kept. Any new code that would add a player-only or mob-only path for something both do is
    wrong by this ruling. Done as its own phase, 4b, before the rules seam, so the `Ruleset` interface
    is built against one actor type. Until 4b, strip work keeps deleting mob-only code as planned.
+
+## Decisions (Calabe, 2026-11-06, Phase 5)
+
+Detail and options: `2026-11-06-phase-5-rulings.md`.
+
+5. **The reference ruleset ends as a bare minimum.** The goal is a ruleset seam an Earthdawn
+   ruleset can be layered onto later, with a working barebones MUD left for anyone who forks the
+   base. `diku-basic` is not a faithful copy of GoMud's rules. With decision 1, the rules move
+   behind the seam first (parity goldens prove the move), and then shrink to the minimum (goldens
+   change on purpose).
+6. **The engine knows health and nothing else of the rules.** Health and max health are engine
+   fields because the core needs alive or dead. Level, XP, mana, gold and stats are ruleset values;
+   the prompt, `who`, party and GMCP get them from the ruleset. A ruleset with no mana or no levels
+   needs no core edit.
+7. **The reference ruleset dies at 0 health, with no downed state.** The engine's death path is one
+   routine for every actor and asks the ruleset whether an actor is dead, so a later ruleset can add
+   a downed state (Earthdawn's unconsciousness rating) without a core edit.
+8. **Dead rules systems are deleted, not carried.** Spells, cast, charm, the dead skill code,
+   professions, `set shopstyle`, unused buff flags and references to buffs that don't ship. They
+   come back as Go when a ruleset wants them. Quit gets a plain message back.
+9. **The bare reference ruleset keeps gold and nothing else above the floor.** The floor is health,
+   a hit roll with weapon damage, health regen, death at 0 with a respawn, and races as names only.
+   Levels, XP, the stat block and racial stat differences go in the shrink (Earthdawn brings its
+   own). The guard test forbids the core from naming any ruleset value, not a fixed list of stats.
+10. **The bare reference ruleset has no movement cost and no carry limit.** Action points are a
+    ruleset value; the reference ruleset drops them, and encumbrance with them.
+11. **A death in the bare reference ruleset drops carried items and gold into a corpse; worn gear
+    stays.** No protection band, XP penalty, drop chances or permadeath. NPCs drop their loot.

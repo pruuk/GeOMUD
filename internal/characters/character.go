@@ -16,7 +16,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/skills"
-	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/statmods"
 	"github.com/GoMudEngine/GoMud/internal/stats"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -52,7 +51,6 @@ type Character struct {
 	RoomIdOnReset    int                            `yaml:"roomidonreset,omitempty"` // The room they are sent to if their RoomId isn't found.
 	Zone             string                         `yaml:"zone,omitempty"`          // The zone the character is in. The folder the room can be located in too.
 	RaceId           int                            `yaml:"raceid,omitempty"`        // Character race
-	FormRaceId       int                            `yaml:"formraceid,omitempty"`    // Temporary race override (0 = not transformed)
 	Stats            stats.Statistics               // Character stats
 	Level            int                            `yaml:"level,omitempty"`          // The level of the character
 	Experience       int                            `yaml:"experience,omitempty"`     // The experience of the character
@@ -65,9 +63,6 @@ type Character struct {
 	Gold             int                            `yaml:"gold,omitempty"`           // The gold the character is holding
 	Bank             int                            `yaml:"bank,omitempty"`           // The gold the character has in the bank
 	Shop             Shop                           `yaml:"shop,omitempty"`           // Definition of shop services/items this character stocks (or just has at the moment)
-	SpellBook        map[string]int                 `yaml:"spellbook,omitempty"`      // The spells the character has learned
-	Charmed          *CharmInfo                     `yaml:"-"`                        // If they are charmed, this is the info
-	CharmedMobs      []ids.ID                       `yaml:"charmedmobs,omitempty"`    // If they have charmed anyone, this is the list of their body IDs
 	Items            []items.Item                   `yaml:"items,omitempty"`          // The items the character is holding
 	Buffs            buffs.Buffs                    `yaml:"buffs,omitempty"`          // The buffs the character has active
 	Equipment        Worn                           `yaml:"equipment,omitempty"`      // The equipment the character is wearing
@@ -83,17 +78,15 @@ type Character struct {
 	KD               KDStats                        `yaml:"kd,omitempty"`             // Kill/Death stats
 	MiscData         map[string]any                 `yaml:"miscdata,omitempty"`       // Any random other data that needs to be stored
 	ExtraLives       int                            `yaml:"extralives,omitempty"`     // How many lives remain. If enabled, players can perma-die if they die at zero
-	MobMastery       MobMasteries                   `yaml:"mobmastery,omitempty"`     // Tracks particular masteries around a given mob
 	Created          time.Time                      `yaml:"created"`                  // When this character was created
 	Timers           map[string]gametime.RoundTimer `yaml:"timers,omitempty"`         // any special timers added to this character
 	ZonesVisited     map[string]RoomBitset          `yaml:"zonesvisited,omitempty"`   // permanent record of every room visited, keyed by zone name
-	roomHistory      []int                          // A stack FILO of the last X rooms the character has been in
-	PlayerDamage     map[int]int                    `yaml:"-"` // key = who, value = how much
-	LastPlayerDamage uint64                         `yaml:"-"` // last round a player damaged this character
-	KilledBy         ids.ID                         `yaml:"-"` // transient: the actor whose combat damage downed this player (NPC or player)
-	KillerMobIsElite bool                           `yaml:"-"` // transient: true if the killing mob was elite
-	KillerMobName    string                         `yaml:"-"` // transient: name of the mob that delivered the killing blow
-	KillerMobId      int                            `yaml:"-"` // transient: template id of the mob that delivered the killing blow, 0 if none
+	PlayerDamage     map[int]int                    `yaml:"-"`                        // key = who, value = how much
+	LastPlayerDamage uint64                         `yaml:"-"`                        // last round a player damaged this character
+	KilledBy         ids.ID                         `yaml:"-"`                        // transient: the actor whose combat damage downed this player (NPC or player)
+	KillerMobIsElite bool                           `yaml:"-"`                        // transient: true if the killing mob was elite
+	KillerMobName    string                         `yaml:"-"`                        // transient: name of the mob that delivered the killing blow
+	KillerMobId      int                            `yaml:"-"`                        // transient: template id of the mob that delivered the killing blow, 0 if none
 	permaBuffIds     []int                          // Buff Id's that are always present for this character
 	userId           int                            // User ID of the character if any
 }
@@ -125,13 +118,10 @@ func New() *Character {
 		Skills:         make(map[string]int),
 		Gold:           25,
 		Bank:           100,
-		SpellBook:      make(map[string]int),
-		CharmedMobs:    []ids.ID{},
 		Items:          []items.Item{},
 		Buffs:          buffs.New(),
 		Equipment:      Worn{},
 		MiscData:       make(map[string]any),
-		roomHistory:    make([]int, 0, 10),
 		KeyRing:        make(map[string]string),
 		Created:        time.Now(),
 		PlayerDamage:   map[int]int{},
@@ -142,16 +132,6 @@ func New() *Character {
 // returns description unless description is a hash
 // which points to another description location.
 func (c *Character) GetDescription() string {
-	if c.FormRaceId > 0 {
-		trueRace := races.GetRace(c.RaceId)
-		formRace := races.GetRace(c.FormRaceId)
-		if trueRace != nil && formRace != nil {
-			return strings.ReplaceAll(
-				strings.ReplaceAll(c.Description, trueRace.Name, formRace.Name),
-				strings.ToLower(trueRace.Name), strings.ToLower(formRace.Name),
-			)
-		}
-	}
 	return c.Description
 }
 
@@ -171,63 +151,6 @@ func (c *Character) TrackPlayerDamage(userId int, damageAmt int) {
 	c.PlayerDamage[userId] = c.PlayerDamage[userId] + damageAmt
 	c.LastPlayerDamage = roundNow
 
-}
-
-/*
-All spells should have a 10% minimum chance of success.
-*/
-func (c *Character) GetBaseCastSuccessChance(spellId string) int {
-
-	sp := spells.GetSpell(spellId)
-	if sp == nil {
-		return -1
-	}
-
-	// start with 100% chance of success
-	targetNumber := 100
-
-	// subtract spell difficulty
-	// 1-100
-	targetNumber -= sp.GetDifficulty()
-
-	// add spell level bonus
-	// 10-30
-	skillLevel := c.GetSkillLevel(`cast`)
-	//targetNumber += (skillLevel * 5)
-	//targetNumber -= 5 // cancel out the first level
-
-	// add the proficiency of the spell (more casts == better)
-	// 0-20
-	profFactor := 1.0
-	if skillLevel == 2 {
-		profFactor = 1.25 // .25 more than lvl 1
-	} else if skillLevel == 3 {
-		profFactor = 1.75 // .50 more than lvl 2
-	} else if skillLevel == 4 {
-		profFactor = 2.50 // .75 more than lvl 3
-	}
-	casts := c.SpellBook[spellId]
-	proficiency := int(math.Floor((float64(casts) / 50 * profFactor))) // after 50 casts proficiency is 1
-	if proficiency < 0 {
-		proficiency = 0
-	} else if proficiency > 20 {
-		proficiency = 20
-	}
-	targetNumber += proficiency
-
-	targetNumber += int(math.Floor(float64(c.Stats.Mysticism.ValueAdj) / 5))
-
-	// add by any stat mods for casting, or casting school
-	// 0-xx
-	targetNumber += c.StatMod(string(statmods.Casting)) + c.StatMod(string(statmods.CastingPrefix)+string(sp.School))
-
-	if targetNumber < 0 {
-		targetNumber = 0
-	} else if targetNumber > 100 {
-		targetNumber = 100
-	}
-
-	return targetNumber
 }
 
 func (c *Character) CarryCapacity() int {
@@ -378,63 +301,6 @@ func (c *Character) GetDefaultDiceRoll() (attacks int, dCount int, dSides int, b
 	return attacks, dCount, dSides, bonus, buffOnCrit
 }
 
-func (c *Character) GetSpells() map[string]int {
-	ret := make(map[string]int)
-	maps.Copy(ret, c.SpellBook)
-	return ret
-}
-
-func (c *Character) HasSpell(spellName string) bool {
-	if intVal, ok := c.SpellBook[spellName]; ok {
-		return intVal > 0
-	}
-	return false
-}
-
-func (c *Character) DisableSpell(spellName string) bool {
-	if intVal, ok := c.SpellBook[spellName]; ok {
-		if intVal > 0 {
-			c.SpellBook[spellName] = intVal * -1
-		}
-	}
-	return false
-}
-
-func (c *Character) EnableSpell(spellName string) bool {
-	if intVal, ok := c.SpellBook[spellName]; ok {
-		if intVal < 0 {
-			c.SpellBook[spellName] = intVal * -1
-		}
-	}
-	return false
-}
-
-func (c *Character) TrackSpellCast(spellName string) bool {
-	if intVal, ok := c.SpellBook[spellName]; ok {
-		if intVal > 0 {
-			intVal++
-			c.SpellBook[spellName] = intVal
-		}
-	}
-	return false
-}
-
-func (c *Character) LearnSpell(spellName string) bool {
-	if _, ok := c.SpellBook[spellName]; !ok {
-		c.SpellBook[spellName] = 1
-		return true
-	}
-	return false
-}
-
-func (c *Character) UnLearnSpell(spellName string) bool {
-	if _, ok := c.SpellBook[spellName]; !ok {
-		return false
-	}
-	delete(c.SpellBook, spellName)
-	return true
-}
-
 func (c *Character) GrantXP(xp int) (actualXP int, xpScale int) {
 
 	if xp == 0 {
@@ -460,69 +326,6 @@ func (c *Character) GrantXP(xp int) (actualXP int, xpScale int) {
 	mudlog.Debug(`GrantXP()`, `username`, c.Name, `xp`, xp, `xpscale`, xpScale, `actualXP`, actualXP)
 
 	return actualXP, xpScale
-}
-
-func (c *Character) TrackCharmed(mobId ids.ID, add bool) {
-	for pos, charmedId := range c.CharmedMobs {
-		if charmedId == mobId {
-			if !add {
-				c.CharmedMobs = slices.Delete(c.CharmedMobs, pos, pos+1)
-			}
-			return
-		}
-	}
-	c.CharmedMobs = append(c.CharmedMobs, mobId)
-}
-
-func (c *Character) GetCharmIds() []ids.ID {
-	return append([]ids.ID{}, c.CharmedMobs...)
-}
-
-func (c *Character) Charm(by ids.ID, rounds int, expireCommand string) {
-	c.SetAdjective(`charmed`, true)
-	c.Charmed = NewCharm(by, rounds, expireCommand)
-	if c.Aggro != nil && c.Aggro.Target == by {
-		c.Aggro = nil
-	}
-}
-
-func (c *Character) KnowsFirstAid() bool {
-	if r := races.GetRace(c.GetRaceId()); r != nil {
-		return r.KnowsFirstAid
-	}
-	return false
-}
-
-// GetCharmedBy returns the body ID of whoever charmed them, or the zero ID.
-func (c *Character) GetCharmedBy() ids.ID {
-	if c.Charmed != nil {
-		return c.Charmed.By
-	}
-	return ids.ID{}
-}
-
-func (c *Character) IsCharmed(by ...ids.ID) bool {
-
-	if c.Charmed == nil {
-		return false
-	}
-
-	if len(by) == 0 {
-		return true
-	}
-
-	return slices.Contains(by, c.Charmed.By)
-}
-
-// Returns the body ID of whoever had charmed them
-func (c *Character) RemoveCharm() ids.ID {
-	var charmedBy ids.ID
-	c.SetAdjective(`charmed`, false)
-	if c.Charmed != nil {
-		charmedBy = c.Charmed.By
-		c.Charmed = nil
-	}
-	return charmedBy
 }
 
 func (c *Character) GetRandomItem() (items.Item, bool) {
@@ -555,12 +358,6 @@ func (c *Character) GetHealthAppearance() string {
 	}
 
 	return fmt.Sprintf(`<ansi fg="username">%s</ansi> is in <ansi fg="%s">perfect health.</ansi>`, c.Name, className)
-}
-
-func (c *Character) GetAllSkillRanks() map[string]int {
-	retMap := make(map[string]int)
-	maps.Copy(retMap, c.Skills)
-	return retMap
 }
 
 // Returns an integer representing a % damage reduction
@@ -639,15 +436,6 @@ func (c *Character) GetAdjectives() []string {
 		retAdjectives = append(retAdjectives, `hidden`)
 	}
 
-	if c.HasBuffFlag("poison") {
-		retAdjectives = append(retAdjectives, `poisoned`)
-	}
-
-	if c.FormRaceId > 0 {
-		if r := races.GetRace(c.FormRaceId); r != nil {
-			retAdjectives = append(retAdjectives, strings.ToLower(r.Name)+` form`)
-		}
-	}
 	// End dynamic adjectives
 
 	retAdjectives = append(retAdjectives, c.Adjectives...)
@@ -880,74 +668,6 @@ func (c *Character) GetSkills() map[string]int {
 	return skillResults
 }
 
-// SetSkill sets a skill to an explicit level. Returns false (with a mudlog warning)
-// for unknown skills. Level 0 deletes the skill; otherwise the level is clamped to
-// the skill's configured maxlevel.
-func (c *Character) SetSkill(skillName string, level int) bool {
-	if c.Skills == nil {
-		c.Skills = make(map[string]int)
-	}
-	skillName = strings.ToLower(skillName)
-
-	if level <= 0 {
-		delete(c.Skills, skillName)
-		return true
-	}
-
-	if !skills.SkillExists(skillName) {
-		mudlog.Warn("SetSkill", "error", "unknown skill", "skill", skillName)
-		return false
-	}
-
-	if max := skills.MaxSkillLevel(skillName); level > max {
-		level = max
-	}
-
-	c.Skills[skillName] = level
-	return true
-}
-
-// Increases the skill training counter and returns the new value
-func (c *Character) TrainSkill(skillName string, targetLevel ...int) int {
-	if c.Skills == nil {
-		c.Skills = make(map[string]int)
-	}
-
-	skillName = strings.ToLower(skillName)
-
-	if !skills.SkillExists(skillName) {
-		mudlog.Warn("TrainSkill", "error", "unknown skill", "skill", skillName)
-		return 0
-	}
-
-	max := skills.MaxSkillLevel(skillName)
-
-	skillLevel := 0
-
-	if lvl, ok := c.Skills[skillName]; ok {
-		skillLevel = lvl
-	}
-
-	if len(targetLevel) > 0 {
-
-		if skillLevel < targetLevel[0] {
-			skillLevel = targetLevel[0]
-		}
-		if skillLevel > max {
-			skillLevel = max
-		}
-
-	} else if skillLevel < max {
-
-		skillLevel++
-
-	}
-
-	c.Skills[skillName] = skillLevel
-
-	return skillLevel
-}
-
 // Gets the current value of the skillname provided
 func (c *Character) GetSkillLevel(skillName string) int {
 	if c.Skills == nil {
@@ -967,35 +687,10 @@ func (c *Character) GetSkillLevel(skillName string) int {
 	return 0
 }
 
-func (c *Character) GetSkillLevelCost(currentLevel int) int {
-	return currentLevel
-}
-
-func (c *Character) GetMaxCharmedCreatures() int {
-	lvl := c.GetSkillLevel(`tame`)
-	return lvl + 1
-}
-
-func (c *Character) GetMemoryCapacity() int {
-	memCap := c.GetSkillLevel(`map`) * c.Stats.Smarts.ValueAdj
-	if memCap < 0 {
-		memCap = 0
-	}
-	return memCap + 5
-}
-
-func (c *Character) GetMapSprawlCapacity() int {
-	sprawlCap := c.GetSkillLevel(`map`) + (c.Stats.Smarts.ValueAdj >> 2)
-	if sprawlCap < 0 {
-		sprawlCap = 0
-	}
-	return sprawlCap
-}
-
 // ForgetTransient clears what the character was doing that is never saved
 // (yaml:"-" or unexported and not recalculated): who damaged it and by how
-// much, who killed it, and its room history. A rested NPC comes back without
-// them, whether it went through disk or not.
+// much, and who killed it. A rested NPC comes back without them, whether it
+// went through disk or not.
 func (c *Character) ForgetTransient() {
 	c.PlayerDamage = nil
 	c.LastPlayerDamage = 0
@@ -1003,7 +698,6 @@ func (c *Character) ForgetTransient() {
 	c.KillerMobIsElite = false
 	c.KillerMobName = ""
 	c.KillerMobId = 0
-	c.roomHistory = nil
 }
 
 // forgetKillerIfUp drops the record of who downed this character once its
@@ -1020,16 +714,6 @@ func (c *Character) forgetKillerIfUp() {
 	c.KillerMobIsElite = false
 	c.KillerMobName = ""
 	c.KillerMobId = 0
-}
-
-// Remember visiting a room. This may cause to forget an older room if the memory is full.
-func (c *Character) RememberRoom(roomId int) {
-	mapHistory := c.GetMemoryCapacity()
-	if len(c.roomHistory) >= mapHistory*2 {
-		// Prune out everything except {mapHistory}-1 items at the end
-		c.roomHistory = c.roomHistory[len(c.roomHistory)-(mapHistory-1):]
-	}
-	c.roomHistory = append(c.roomHistory, roomId)
 }
 
 // MarkVisitedRoom permanently records that this character has visited roomId
@@ -1131,10 +815,6 @@ func (c *Character) EndAggro() {
 	c.Aggro = nil
 }
 
-func (c *Character) IsAggro(target ids.ID) bool {
-	return c.Aggro != nil && !c.Aggro.Target.IsZero() && c.Aggro.Target == target
-}
-
 func (c *Character) IsDisabled() bool {
 	return c.Health <= 0
 }
@@ -1162,10 +842,6 @@ func (c *Character) AddBuff(buffId int, isPermanent bool, triggerCountOverride .
 	}
 	c.Validate()
 	return nil
-}
-
-func (c *Character) TrackBuffStarted(buffId int) {
-	c.Buffs.Started(buffId)
 }
 
 func (c *Character) GetBuffs(buffId ...int) []*buffs.Buff {
@@ -1237,25 +913,6 @@ func (c *Character) ApplyHealthChange(healthChange int) int {
 	c.forgetKillerIfUp()
 
 	return newHealth - oldHealth
-}
-
-func (c *Character) ApplyManaChange(manaChange int) int {
-	oldMana := c.Mana
-	c.Mana += manaChange
-	if c.Mana < 0 {
-		c.Mana = 0
-	} else if c.Mana > c.ManaMax.Value {
-		c.Mana = c.ManaMax.Value
-	}
-	return c.Mana - oldMana
-}
-
-func (c *Character) BarterPrice(startPrice int) int {
-	factor := (float64(c.Stats.Perception.ValueAdj) / 3) / 100 // 100 = 33% discount, 0 = 0% discount, 300 = 100% discount
-	if factor > .75 {
-		factor = .75
-	}
-	return int(factor * float64(startPrice))
 }
 
 func (c *Character) XPTNL() int {
@@ -1367,14 +1024,6 @@ func (c *Character) ManaPerRound() int {
 	*/
 }
 
-// Where 1000 = a full round
-func (c *Character) MovementCost() int {
-	modifier := 3                                // by default they should be able to move 3 times per round.
-	modifier += int(c.Level / 15)                // Every 15 levels, get an extra movement.
-	modifier += int(c.Stats.Speed.ValueAdj / 15) // Every 15 speed, get an extra movement
-	return int(1000 / modifier)
-}
-
 func (c *Character) StatMod(statName string) int {
 	return c.Equipment.StatMod(statName) + c.Buffs.StatMod(statName)
 }
@@ -1387,13 +1036,11 @@ func (c *Character) RecalculateStats() {
 	beforeManaMax := c.ManaMax
 	beforeStats := c.Stats
 
-	if trueRaceInfo := races.GetRace(c.RaceId); trueRaceInfo != nil {
-		c.TNLScale = trueRaceInfo.TNLScale
+	if raceInfo := races.GetRace(c.RaceId); raceInfo != nil {
+		c.TNLScale = raceInfo.TNLScale
 		if c.TNLScale == 0 {
 			c.TNLScale = 1.0
 		}
-	}
-	if raceInfo := races.GetRace(c.GetRaceId()); raceInfo != nil {
 		c.Stats.Strength.Base = raceInfo.Stats.Strength.Base
 		c.Stats.Speed.Base = raceInfo.Stats.Speed.Base
 		c.Stats.Smarts.Base = raceInfo.Stats.Smarts.Base
@@ -1526,10 +1173,6 @@ func (c *Character) Validate(recalcPermaBuffs ...bool) error {
 		c.Created = time.Now()
 	}
 
-	if c.SpellBook == nil {
-		c.SpellBook = make(map[string]int)
-	}
-
 	if c.Zone == "" {
 		c.Zone = startingZone
 	}
@@ -1646,9 +1289,6 @@ func (c *Character) Validate(recalcPermaBuffs ...bool) error {
 }
 
 func (c *Character) GetRaceId() int {
-	if c.FormRaceId > 0 {
-		return c.FormRaceId
-	}
 	return c.RaceId
 }
 
@@ -1657,39 +1297,6 @@ func (c *Character) Race() string {
 		return r.Name
 	}
 	return `Ghostly Spirit`
-}
-
-func (c *Character) RaceSize() string {
-	if r := races.GetRace(c.GetRaceId()); r != nil {
-		return string(r.Size)
-	}
-	return string(races.Medium)
-}
-
-func (c *Character) IsFormChanged() bool {
-	return c.FormRaceId > 0
-}
-
-func (c *Character) ApplyFormChange(newRaceId int) []items.Item {
-	if races.GetRace(newRaceId) == nil {
-		return nil
-	}
-
-	if c.IsFormChanged() {
-		c.RevertFormChange()
-	}
-
-	c.FormRaceId = newRaceId
-	c.Validate(true)
-
-	return nil
-}
-
-func (c *Character) RevertFormChange() []items.Item {
-	c.FormRaceId = 0
-	c.Validate(true)
-
-	return nil
 }
 
 func (c *Character) UpdateAlignment(amt int) {

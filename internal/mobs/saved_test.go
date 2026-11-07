@@ -40,8 +40,6 @@ func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
 	m.Character.SetPermaBuffs([]int{5, 6}) // as NewMobById sets from the template
 	target := ids.New(ids.NoCell)
 	m.Character.Aggro = &characters.Aggro{Target: target}
-	by := ids.New(ids.NoCell)
-	m.Character.Charmed = characters.NewCharm(by, 12, "")
 
 	b, err := yaml.Marshal(Snapshot(&m))
 	require.NoError(t, err)
@@ -63,8 +61,6 @@ func TestSnapshotRoundTripsWhatDecision13Keeps(t *testing.T) {
 	assert.Equal(t, []int{5, 6}, got.Character.PermaBuffIds(), "the template's permanent buffs")
 	require.NotNil(t, got.Character.Aggro)
 	assert.Equal(t, target, got.Character.Aggro.Target)
-	require.NotNil(t, got.Character.Charmed)
-	assert.Equal(t, by, got.Character.Charmed.By)
 	// what it was doing resets
 	assert.Zero(t, got.WanderCount)
 }
@@ -215,4 +211,19 @@ func TestRestoreRefusesAZeroId(t *testing.T) {
 	m.Character = *characters.New()
 	_, err := Restore(Snapshot(&m))
 	assert.Error(t, err)
+}
+
+// Charm was deleted in Phase 5.1. An NPC sidecar saved before that carries a
+// `charmed:` key and must decode as the loader decodes it (yaml.Unmarshal).
+func TestOldSavedNPCWithCharmedKeyStillDecodes(t *testing.T) {
+	const old = `homeroomid: 2
+elite: true
+charmed:
+  by: 5
+  roundsremaining: 12
+`
+	var got SavedNPC
+	require.NoError(t, yaml.Unmarshal([]byte(old), &got))
+	assert.Equal(t, 2, got.HomeRoomId)
+	assert.True(t, got.IsElite)
 }

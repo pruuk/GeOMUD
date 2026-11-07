@@ -3,7 +3,6 @@ package buffs
 import (
 	"fmt"
 	"math"
-	"strings"
 	"time"
 
 	"github.com/GoMudEngine/GoMud/internal/configs"
@@ -64,17 +63,6 @@ func (b *BuffSpec) VisibleNameDesc() (name, description string) {
 	return b.Name, b.Description
 }
 
-type BuffMessage struct {
-	User string
-	Room string
-}
-
-type BuffMessages struct {
-	Start  BuffMessage
-	Effect BuffMessage
-	End    BuffMessage
-}
-
 func GetBuffSpec(buffId int) *BuffSpec {
 	if buffId < 0 {
 		buffId *= -1
@@ -85,34 +73,6 @@ func GetBuffSpec(buffId int) *BuffSpec {
 	}
 
 	return nil
-}
-
-func GetAllBuffIds() []int {
-
-	var results []int = make([]int, 0, len(buffs))
-	for _, buff := range buffs {
-		results = append(results, buff.BuffId)
-	}
-
-	return results
-}
-
-// Searches for buffs whose name contains text and returns their Ids
-func SearchBuffs(searchTerm string) []int {
-
-	searchTerm = strings.TrimSpace(strings.ToLower(searchTerm))
-
-	var results []int = make([]int, 0, 2)
-
-	for _, buff := range buffs {
-		if strings.Contains(strings.ToLower(buff.Name), searchTerm) {
-			results = append(results, buff.BuffId)
-		} else if strings.Contains(strings.ToLower(buff.Description), searchTerm) {
-			results = append(results, buff.BuffId)
-		}
-	}
-
-	return results
 }
 
 // Presumably to ensure the datafile hasn't messed something up.

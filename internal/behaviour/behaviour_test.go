@@ -132,17 +132,6 @@ func TestWanderWithMaxWanderZeroQueuesNothing(t *testing.T) {
 	assert.Empty(t, got)
 }
 
-func TestWanderCharmedDoesNothing(t *testing.T) {
-	testRoom(t, 9131, testZone, map[string]int{"north": 9132})
-	testRoom(t, 9132, testZone, nil)
-	mob := testMob(t, 9131, 9131, 3)
-	mob.Character.Charm(mob.Character.Id, characters.CharmPermanent, "")
-
-	got := queuedInput(t, mob, func() { Wander(mob) })
-
-	assert.Empty(t, got)
-}
-
 func TestWanderPastMaxWanderPlansTheWayHome(t *testing.T) {
 	testRoom(t, 9141, testZone, map[string]int{"north": 9142})
 	testRoom(t, 9142, testZone, map[string]int{"south": 9141})

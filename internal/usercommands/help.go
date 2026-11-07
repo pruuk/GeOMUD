@@ -11,7 +11,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/keywords"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/spells"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -163,19 +162,6 @@ func GetHelpContents(input string) (string, error) {
 
 	if helpName == `races` {
 		helpVars = getRaceOptions(helpRest)
-	}
-
-	if helpName == `spell` {
-		sData := spells.GetSpell(helpRest)
-		if sData == nil {
-			sData = spells.FindSpellByName(helpRest)
-		}
-
-		if sData == nil {
-			helpName = `spells`
-		} else {
-			helpVars = *sData
-		}
 	}
 
 	returnText, err := templates.Process("help/"+helpName, helpVars, 0)

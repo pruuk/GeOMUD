@@ -209,7 +209,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 	defMob := mobs.GetInstance(d.Id)
 
 	// Group hatred follows kill credit (plan Decision 8): the attacker's
-	// account, or its charmer's.
+	// account.
 	if defMob != nil {
 		if acct := combat.CreditAccount(a); acct != nil {
 			c := configs.GetConfig()
@@ -454,16 +454,6 @@ func flee(a *actors.Actor, aRoom *rooms.Room) {
 
 	if err := rooms.MoveToRoom(a.Id, exitRoomId); err != nil {
 		return
-	}
-
-	// A charmed NPC fighting beside the fleer is in the fight too: it flees
-	// on its own roll.
-	for _, instId := range aRoom.GetMobs(rooms.FindCharmed) {
-		if mob := mobs.GetInstance(instId); mob != nil {
-			if mob.Character.IsCharmed(a.Id) {
-				mob.Command(`flee`)
-			}
-		}
 	}
 
 	// Only a player sees where they fled to; an NPC's look prepares nothing.

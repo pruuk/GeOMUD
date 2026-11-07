@@ -8,15 +8,14 @@ Players who are not in a party receive an empty <ansi fg="white-bold">Party</ans
 Full party state, sent on membership changes.
 
   <ansi fg="cyan">Leader</ansi>   <ansi fg="green">string</ansi>  - Name of the party leader ("None" if no leader)
-  <ansi fg="cyan">Members</ansi>  <ansi fg="magenta">array</ansi>   - Players and charmed companions currently in the party
+  <ansi fg="cyan">Members</ansi>  <ansi fg="magenta">array</ansi>   - Players currently in the party
   <ansi fg="cyan">Invited</ansi>  <ansi fg="magenta">array</ansi>   - Players who have been invited but have not yet joined
   <ansi fg="cyan">Vitals</ansi>   <ansi fg="blue-bold">object</ansi>  - Keyed by character name (see Party.Vitals below)
 
   Each entry in <ansi fg="white-bold">Members</ansi> and <ansi fg="white-bold">Invited</ansi> contains:
   <ansi fg="cyan">name</ansi>      <ansi fg="green">string</ansi>  - Character or mob name
-  <ansi fg="cyan">status</ansi>    <ansi fg="green">string</ansi>  - Membership state: "In Party", "Invited", or a charm indicator
-  <ansi fg="cyan">position</ansi>  <ansi fg="green">string</ansi>  - Tactical rank in the party (e.g. "frontrank", "backrank") or "-" for charmed mobs
-
+  <ansi fg="cyan">status</ansi>    <ansi fg="green">string</ansi>  - Membership state: "In Party" or "Invited"
+  <ansi fg="cyan">position</ansi>  <ansi fg="green">string</ansi>  - Tactical rank in the party (e.g. "frontrank", "backrank")
 <ansi fg="yellow-bold">Party.Vitals</ansi>
 Lightweight update sent whenever a member moves or their health changes. The payload is an object keyed by character name.
 

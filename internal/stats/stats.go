@@ -27,17 +27,6 @@ type StatInfo struct {
 	NoCap    bool `yaml:"-"`                  // When true, skip the stat cap compression in Recalculate
 }
 
-func (si *StatInfo) SetMod(mod ...int) {
-	if len(mod) == 0 {
-		si.Mods = 0
-		return
-	}
-	si.Mods = 0
-	for _, m := range mod {
-		si.Mods += m
-	}
-}
-
 // GainsForLevel returns the racial stat value at the given level, using the
 // configured progression formula:
 //
