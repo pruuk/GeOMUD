@@ -1,37 +1,29 @@
-# Status (updated 2026-10-28)
+# Status (updated 2026-11-06)
 
 ## Now
-- Phase 5 (rules seam), slice 1 on branch `strip/phase-5-1-dead-systems`. Inventories done
-  (`2026-11-06-phase-5-inventory.md`); Calabe's rulings recorded as decisions 5-9 in
-  `gomud_strip_plan.md` (detail `2026-11-06-phase-5-rulings.md`): bare ruleset (health, hit and
-  damage, regen, death at 0, respawn, gold), engine knows health only, dead systems deleted, for an
-  Earthdawn ruleset later; decisions 10-11: no movement cost or carry limit, death drops carried
-  items and gold to a corpse. Design: `2026-11-06-phase-5-rules-seam-design.md` (7 slices),
-  approved. Slice 1 (delete dead systems, plan `2026-11-06-phase-5-1-dead-systems-plan.md`) built
-  and reviewed; PR next. Then slice 2 (the seam and the fight).
-- Before Phase 5: Strip Phases 0-4 and Phase 4b (NPCs are players, slices 1-7) are merged
-  (`gomud_strip_plan.md`; spec `2026-10-27-phase-4b-npcs-are-players-design.md`, whose "Notes for
-  later slices" carry what Phase 4b leaves; slice plans in `docs/completed/`)
+- Nothing in flight. Phase 5 slice 1 (delete dead rules systems) merged (#29); plan in
+  `docs/completed/2026-11-06-phase-5-1-dead-systems-plan.md`
 
 ## Next
-1. Phase 5: rules seam. Read the spec's "Notes for later slices" first. Takes over the death
-   stand-in (revive at 1 health, portal out of room 75;
-   `docs/completed/2026-10-26-phase-4-scripting-surface.md`), `suicide`, the combat commands, the
-   `professions`/`skills`/`spells` world folders, `set shopstyle`, `help spell` and the loot goblin
-   config. Spells, scripted buffs and charm do nothing until then
-2. Phase 6: measure and tag. Also measure the Phase 0 engine (`2737986c`) on the trimmed world; docs
+1. Phase 5 slice 2: the seam and the fight (`internal/rules`, `internal/rules/dikubasic`, combat
+   moved verbatim, 9 combat goldens byte-identical, stub-ruleset test, `shoot` through `CanAttack`).
+   Plan first, with a verified facts table; read the design's "Notes for later slices" and inventory
+   N (`2026-11-06-phase-5-inventory.md`)
+2. Phase 5 slices 3-7 (`2026-11-06-phase-5-rules-seam-design.md`): round and death through the seam;
+   shrink to the bare ruleset (strip plan decisions 5-11); engine knows health only; timed affects;
+   close out
+3. Phase 6: measure and tag. Also measure the Phase 0 engine (`2737986c`) on the trimmed world; docs
    sweep, including the "early in development" line in `help about`
-3. Security pass before any public server: upstream CodeQL debt (unsalted SHA-256 passwords at
+4. Security pass before any public server: upstream CodeQL debt (unsalted SHA-256 passwords at
    `internal/util/util.go:384`, user-provided file paths at `util.go:706-752`, integer narrowing)
 
 ## Waiting on Calabe
-- Nothing
+- Go for slice 2
 
 ## Watch
 - 3 Go tests fail on Windows only (`geomud-verifying` lists them); Linux CI is the reference
 - Copyover runs only on Linux: the smoke copyover step (player and NPC IDs survive) is CI-only
-- Permadeath reroll and companion persistence are tested but never run live (permadeath off,
-  nothing charms); spec "Notes for later slices"
-- Phase 5 seam: `buffs` has 11 importing packages; `characters` imports six rules packages (buffs,
-  races, skills, spells, statmods, stats)
+- Permadeath reroll is tested but never run live (permadeath off); slice 4 deletes permadeath
+- Phase 5 seam: `buffs` has 11 importing packages; `characters` imports five rules packages (buffs,
+  races, skills, statmods, stats)
 - Known engine and world issues, most from upstream: `docs/known-issues.md`
