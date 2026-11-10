@@ -122,6 +122,20 @@ func TestNPCShootingAPlayerRefusedWhenPvPDisabled(t *testing.T) {
 	assert.Nil(t, npc.Character.Aggro, "a refused NPC shot starts no fight")
 }
 
+// Control for the test above: with PvP enabled the same NPC shot sets the
+// aggro, so a refusal there is the PvP rule, not a failed lookup.
+func TestNPCShootingAPlayerAllowedWhenPvPEnabled(t *testing.T) {
+	npc, _, here := goSetup(t) // "Rat" is in this room
+	giveBow(npc)
+	target := addFoundPlayer(t, 9203, "Target", rooms.LoadRoom(testNextRoomId))
+	setPvP(t, configs.PVPEnabled)
+
+	_, err := Shoot("Target north", npc, here, 0)
+	require.NoError(t, err)
+	require.NotNil(t, npc.Character.Aggro)
+	assert.Equal(t, target.Id, npc.Character.Aggro.Target)
+}
+
 // shoot asks the ruleset before shooting an NPC too. (pacifist is in
 // ruleset_stub_test.go, Task 5).
 func TestShootAtAnNPCAsksTheRuleset(t *testing.T) {
