@@ -361,6 +361,30 @@ changes the design above except Q1's outcome shape. Details, with line numbers, 
   `get <item> <word>` always tries a corpse; `actors.BodyReplaced` loses its caller and waits for
   slice 4; the ID guard's permadeath allowlist entry goes.
 
+**Plan review round 1 (controller decisions):**
+
+- **`get all <corpse>` works** (player-visible). Today `get.go:39` returns early whenever the first
+  word is `all`, so `get all <corpse>` and `get all from <corpse>` silently do nothing. With every
+  death's drops in a corpse, that is the main way back to your things. The early `all` branch applies
+  only when `all` is the whole command; `get all <corpse>` takes every item and the gold from the
+  corpse. Tested; the help pages describe it.
+- **`IsDeathRecoveryRoom` is false when no recovery room is set** (0 or less): with 0 it would match
+  room 0 and every empty ephemeral room (`ephemeral.go:92` records 0 as their original).
+- **The `Shadow Realm` check was live, not broken:** the shipped recovery zone is named "Shadow Realm"
+  (`rooms/shadow_realm/zone-config.yaml`, `75.yaml`), so `suicide.go:41` already covered the copies.
+  The helper replaces it for the reason of not naming a zone, not to fix it.
+- **Upstream's inert Death Recovery buff goes:** room 75's mutator still applies buff 24 (`24-death_recovery.yaml`),
+  which does nothing since its script was deleted. Ruling 2's regen rule replaces it, so buff 24 and
+  the mutator's reference to it are deleted in commit 5.
+- **Event order (Q1):** `AlignmentChanged` now queues before `MobDeath` as well as before
+  `GainExperience`. Both have only GMCP listeners; accepted.
+- **A ruleset may queue an event** (`dikubasic`'s alignment shift queues `AlignmentChanged`). The
+  no-send guard bans sends, not events; slice 4 deletes alignment, so this is not generalised.
+- **`suicide` with `revive-on-death`** revives the player at full health (the flag works for anyone
+  now). No shipped buff carries the flag; accepted.
+- **Help and docs** promise `get all <corpse>` only once the fix above lands; the help pages ride
+  in the docs commit after it.
+
 **Facts corrected while planning:** help pages are under `_datafiles/world/empty/templates/help/`;
 more health checks exist than the table lists (`NewRound_AutoHeal.go:68`, `remove.go:51`, and in
 `characters` `:464`, `:1204` and the remove-lock checks); `save_and_load.go:437` is another raw
