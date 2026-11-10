@@ -2,7 +2,7 @@
 
 ## Now
 - Phase 5 slice 2 (the seam and the fight) done on `strip/phase-5-2-seam-fight`; PR to merge once CI
-  is green. Spec and plan move to `docs/completed/` with the merge
+  is green. Spec and plan in `docs/completed/2026-11-10-phase-5-2-seam-fight-{spec,plan}.md`
 
 ## Next
 1. Phase 5 slice 3: round, regen and death through the seam (`Condition`, `Regen`, `RoundUpkeep`, one

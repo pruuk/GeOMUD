@@ -194,7 +194,7 @@ Each slice plan reads these first; a note leaves once a slice settles it.
   (inventory N section 6): only the -10 branch, NPCs never attacking, accounts-only alignment decay
   and the killer quirks remain, and slices 3-4 settle them (players-first turn order is now
   `dikubasic.TurnOrder`, slice 2; the pet hatred quirk went with charm in slice 1).
-- **From slice 2 (2026-11-10; spec `2026-11-10-phase-5-2-seam-fight-spec.md`).**
+- **From slice 2 (2026-11-10; spec `docs/completed/2026-11-10-phase-5-2-seam-fight-spec.md`).**
   - The weapon delay (`characters.SetAggro`, weapon plus offhand `WaitRounds`) is still engine code:
     `characters` cannot import `rules` (cycle via `actors`). It moves behind the ruleset with swing
     speed (Calabe 2026-11-10: weapon speed plus stats and skill set swings per round, possibly 0
