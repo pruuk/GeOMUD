@@ -1,7 +1,10 @@
 # Phase 5 slice 2: the seam and the fight (spec)
 
 Date: 2026-11-10. Written at `master` `c1ca8e7f`. Branch `strip/phase-5-2-seam-fight`.
-**Approved by Calabe 2026-11-10**, with ruling 5 (offhand breakage) added at review.
+**Approved by Calabe 2026-11-10**, with ruling 5 (offhand breakage) added at review. Corrected after
+approval by plan review round 1 (each correction says "review round 1"): three facts, one test file
+edit the move needs, two refusals and two silent cases made explicit, unit tests for the moved
+methods.
 Builds on `2026-11-06-phase-5-rules-seam-design.md` (slice 2 row, "Notes for later slices"),
 `2026-11-06-phase-5-rulings.md` and `2026-11-06-phase-5-inventory.md` N. Inventory N was written at
 `9131eac2`, before slice 1; every fact below was re-read at `c1ca8e7f`.
@@ -52,10 +55,12 @@ Read or grepped by the controller today.
 | `shoot` | NPC target `SetAggroRemote` :97; player target party check :113-120, `SetAggroRemote` :122; no `CanPvp`, no `AggroChanged` | read |
 | `CanPvp` | `rooms.go:2061-2089`, one caller (`attack.go:234`). Refusals: "Fighting is not allowed here." (attacker in room -1 or the recovery room, :2064), "PVP is disabled." (:2074), "Players must be at least level %d to PVP." (:2078), "This is not a PVP area." (limited and `!r.IsPvp()`, :2085) | read |
 | PvP config | key `GamePlay.PVP.Enabled`; values `enabled`, `disabled`, `off`, `limited` (`configs.go:17-20`); invalid or blank validates to `enabled`, `MinimumLevel` floor 0 (`config.gameplay.go:153-162`) | read |
-| Guards naming combat | `guards/combat_test.go`: `TestOneCombatPath` control on `internal/combat/combat.go` func `Attack` (:41); `TestCombatPackageDoesNotSend` scans `internal/combat/` (:69), control `scanned < 5` (:100). `goFiles` parses non-test files only (`guards_test.go:30`) | read |
+| Guards naming combat | `guards/combat_test.go`: `TestOneCombatPath` control on `internal/combat/combat.go` func `Attack` (:41); `TestCombatPackageDoesNotSend` scans `internal/combat/` (:69), control `scanned < 5` (:100). `goFiles` parses non-test files only (`guards_test.go:30`). `TestItemsAreInstantiatedOnlyFromTemplates` allowlists `"internal/combat/simulate.go\|newSimMob\|InstantiateItems"` (`guards_test.go:202`; review round 1). Comment naming `internal/combat/combat.go`: `cmd/smoke/fight.go:123` | read, `grep -rn 'internal/combat'` |
+| Moved test with a path | `weapon_rank_test.go:17` finds the repo root as `Dir(thisFile)/../..`; one directory deeper it needs `../../..` (review round 1) | read |
+| Config in tests | `configs.AddOverlayOverrides` skips keys already set (`configs.go:60-77`); tests that change a set key use the `setConfig` pattern (`reads_golden_test.go:561-583`: `Flatten(GetOverrides())`, `RestoreOverrides`) (review round 1) | read |
 | Combat goldens | 9: `flee_blocked`, `flee_success`, `hidden_attacker`, `mvm`, `mvp`, `observer`, `pvm_death`, `pvp`, `shoot_exit`. `pvm_death` takes 4 rounds and queues `Input rat: "suicide"` in round 4 | `ls`, grep |
 | Golden harness | `combat_golden_test.go`: `newCombatWorld(t, seed)` :65, `addPlayer` :197, `addNPC` :216, `weapon` :240, `start` :344, `rounds` :367; the record is `w.out`, per-round reads `w.reads`. `shoot_exit` sets its aggro directly, not through the command | read |
-| Test setup | `TestMain` in `hooks/actionpoints_test.go:22` and `usercommands/usercommands_test.go:25` (8 other packages have one; none runs combat). Helpers `goSetup` (`go_test.go:18`; room 92001, exit `north` to 92002), `addPlayer` (`combat_text_test.go:18`), `playerTexts` (`go_test.go:34`), `capture[T]` (`items_test.go:48`), `accounts.SetTestUser` | read |
+| Test setup | `TestMain` in `hooks/actionpoints_test.go:22` and `usercommands/usercommands_test.go:25` (10 others have one: actors, behaviour, buffs, characters, copyover, inputhandlers, messaging, mobs, rooms, root `world_test.go`; none runs combat; review round 1). Helpers `goSetup` (`go_test.go:18`; room 92001, exit `north` to 92002), `addPlayer` (`combat_text_test.go:18`), `playerTexts` (`go_test.go:34`), `capture[T]` (`items_test.go:48`), `accounts.SetTestUser` | read |
 | Boot | `main.go:206` `hooks.RegisterListeners()`; smoke builds and runs the real binary (`cmd/smoke/server.go:88`) | read |
 | Smoke fight strings | "rat has died.", "You gained ... experience points ... (combat)" (`cmd/smoke/fight.go:88-99`) | grep |
 | `BackStab` | declared `characters/aggro.go:11`, read only at `combat.go:213`; nothing sets it | grep |
@@ -106,7 +111,9 @@ A method that needs a random draw makes it itself, at the point in the sequence 
 makes it today.
 
 **`internal/rules/dikubasic`.** `internal/combat` moves here by `git mv`; only the package line and
-import paths change. Upstream's `AGENTS.md` and `CLAUDE.md` in that folder are deleted. A new
+import paths change, plus one `..` in `weapon_rank_test.go:17` (the folder is one level deeper) and
+the two places outside the package that name `internal/combat` by path (`guards_test.go:202`,
+`cmd/smoke/fight.go:123`). Upstream's `AGENTS.md` and `CLAUDE.md` in that folder are deleted. A new
 `ruleset.go` holds `type Ruleset struct{}`, `New()`, and the methods:
 
 - `ResolveAttack` is `calculateCombat`; `WaitLines` is `GetWaitMessages(items.Wait, ...)`;
@@ -117,7 +124,8 @@ import paths change. Upstream's `AGENTS.md` and `CLAUDE.md` in that folder are d
   input (already accounts first) it returns the input unchanged.
 - `CanAttack` allows any NPC target. For an account target it runs `CanPvp` with the attacker's room,
   then, when the defender is in another room, with the defender's room too (ruling 1). A missing
-  attacker room refuses with "Fighting is not allowed here."
+  attacker room, or a missing defender room for an account target in another room, refuses with
+  "Fighting is not allowed here." (review round 1: the defender case was undefined).
 - `combat.Attack` and `CreditAccount` are deleted (their work moves to the engine); `accountOf`
   stays for `TurnOrder` and `CanAttack`.
 
@@ -155,7 +163,9 @@ seven labels.
 
 **`attack`:** `CanAttack` for every target. NPC target: first thing once the NPC is found, before the
 party auto-attack. Player target: in place of `room.CanPvp`, at the same spot before the party check.
-The refusal is told to the attacker and the command returns, as today.
+The refusal is told to the attacker and the command returns, as today. A target found by name whose
+actor is missing (an account with no body, an NPC instance with no actor) is skipped silently, as an
+unknown account is today (review round 1; `CanAttack` needs the actor).
 
 **`shoot`** (own commit): `CanAttack` placed as in `attack`, and `AggroChanged` queued after each
 `SetAggroRemote`.
@@ -175,19 +185,29 @@ The refusal is told to the attacker and the command returns, as today.
 ## Testing and parity evidence
 
 - **Parity:** all 9 combat goldens and every reads golden byte-identical, no `-update` anywhere in
-  the slice; a golden diff stops the work for diagnosis. The moved unit tests run unchanged in
-  `dikubasic`. Smoke (`go run ./cmd/smoke`, `-bots 5`) passes its fight strings.
+  the slice; a golden diff stops the work for diagnosis. The moved unit tests run in `dikubasic`
+  (one path fix, above). Smoke (`go run ./cmd/smoke`, `-bots 5`) passes its fight strings.
 - **Stub rulesets** (each test file is the only change it needs):
   - one-shot: the `pvm_death` fixture under `ResolveAttack` = 1000 damage ends in round 1, not 4,
     with `suicide` queued and the stub's line read;
-  - reversed turn order: NPCs first, so Alice reads the guard's swing before her own in round 1;
-  - pacifist: `CanAttack` always refuses; `attack Rat` gives the refusal and no aggro.
+  - reversed turn order: NPCs first, so the guard resolves its attack before Alice in round 1
+    (asserted on the order of `ResolveAttack` calls, not on swing text, which varies with the seed;
+    review round 1);
+  - pacifist: `CanAttack` always refuses; `attack Rat` gives the refusal and no aggro;
+  - weapon search: `FindsWeapon` forced true makes an unarmed NPC carrying a weapon queue `equip`;
+    forced false, it does not (no golden reaches this path; review round 1);
+  - consider: `Consider` forced to 5 reads "Very Favorable".
 
   Each is shown to fail once with its `SetForTest` line removed.
 - **`shoot`**, test first: PvP disabled gives "PVP is disabled." and no aggro; PvP limited with the
   shooter in a PvP room and the target in a non-PvP room gives "This is not a PVP area." (the ruling 1
   case); PvP enabled queues exactly one `AggroChanged` with target and exit set; shooting an NPC
   queues `AggroChanged`.
+- **`dikubasic` unit tests** for the moved methods (review round 1: a mutation of `HatredRounds` or
+  `FindsWeapon` passed every existing test): `TurnOrder` partitions and keeps order; `FindsWeapon`
+  is always true at Perception 100 and always false at 0; `FleeEscapes` always escapes a blocker with
+  0 Speed; `HatredRounds` is `MinutesToRounds(2)` less Perception; `CanAttack` allows an NPC target.
+- **`attack`:** a player target with PvP disabled gives "PVP is disabled." and no aggro.
 - **Guards:** the import guard is shown to fail twice (an unlisted importer added; a stale entry
   added).
 - **`rules`:** `Get` panics when unset; `SetForTest` restores the previous ruleset.
@@ -202,7 +222,8 @@ The refusal is told to the attacker and the command returns, as today.
 4. The import guard.
 5. The stub-ruleset tests (test files only).
 6. `shoot` through `CanAttack` with `AggroChanged`, tests first. Player-visible: shooting a player
-   now obeys the PvP settings.
+   now obeys the PvP settings, and GMCP clients (Mudlet) see a shooter's aggro the same round
+   (`AggroChanged` drives `gmcp.Room.go:40` and `gmcp.Party.go:36`; review round 1).
 7. Docs: `PATCH_NOTES.md`, `status.md`, the phase design's "Notes for later slices".
 
 ## What this locks in
@@ -245,3 +266,5 @@ The refusal is told to the attacker and the command returns, as today.
 | `fightersWithAccountsFirst` is renamed `fighters` | Ordering is the ruleset's now, so the old name would lie | Keep the name; cosmetic |
 | Upstream `AGENTS.md`/`CLAUDE.md` in `internal/combat` are deleted in the move | Project `CLAUDE.md`: they go as their packages are stripped | Keep them in `dikubasic`; they describe GoMud, not us |
 | `BackStab` (never set) is left alone; slice 4 deletes the branch | Parity slice; the branch never runs | Delete now; no golden would change |
+| `CanAttack` refuses an account target in another room when that room is not loaded ("Fighting is not allowed here."), as it does for a missing attacker room (review round 1) | Undefined before; refusing matches the attacker case, and `shoot` only finds targets in a loaded room, so it should not fire | Allow it instead; one branch in `dikubasic` |
+| In `attack` and `shoot`, a target found by name whose actor is missing is skipped silently (review round 1) | `CanAttack` takes actors and must not get nil; an account with no body cannot be fought today either way, and an NPC instance always has an actor (`actors/wire.go:22`) | Tell "Your target can't be found."; a new line on a path nothing reaches |
