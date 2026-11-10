@@ -6,7 +6,6 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
-	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -16,6 +15,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -146,7 +146,7 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 
 					// Apply alignment changes
 					alignmentBefore := user.Character.AlignmentName()
-					alignmentAdj := combat.AlignmentChange(user.Character.Alignment, mob.Character.Alignment)
+					alignmentAdj := dikubasic.AlignmentChange(user.Character.Alignment, mob.Character.Alignment)
 					user.Character.UpdateAlignment(alignmentAdj)
 					alignmentAfter := user.Character.AlignmentName()
 
@@ -211,7 +211,7 @@ func npcDeath(actor *actors.Actor, mob *mobs.Mob, room *rooms.Room) (bool, error
 
 						// Apply alignment changes
 						alignmentBefore := user.Character.AlignmentName()
-						alignmentAdj := combat.AlignmentChange(user.Character.Alignment, mob.Character.Alignment)
+						alignmentAdj := dikubasic.AlignmentChange(user.Character.Alignment, mob.Character.Alignment)
 						user.Character.UpdateAlignment(alignmentAdj)
 						alignmentAfter := user.Character.AlignmentName()
 

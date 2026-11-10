@@ -38,7 +38,7 @@ func TestOneCombatPath(t *testing.T) {
 			if !ok {
 				continue
 			}
-			if path == "internal/combat/combat.go" && fd.Name.Name == "Attack" && fd.Recv == nil {
+			if path == "internal/rules/dikubasic/combat.go" && fd.Name.Name == "Attack" && fd.Recv == nil {
 				foundAttack = true
 			}
 			if path == "internal/hooks/NewRound_DoCombat.go" && fd.Name.Name == "DoCombat" {
@@ -47,14 +47,14 @@ func TestOneCombatPath(t *testing.T) {
 		}
 	}
 	if !foundAttack {
-		t.Error("control: func Attack not found in internal/combat/combat.go; the guard may be scanning the wrong place")
+		t.Error("control: func Attack not found in internal/rules/dikubasic/combat.go; the guard may be scanning the wrong place")
 	}
 	if !foundRound {
 		t.Error("control: func DoCombat not found in internal/hooks/NewRound_DoCombat.go; the guard may be scanning the wrong place")
 	}
 }
 
-// TestCombatPackageDoesNotSend enforces: internal/combat returns messages and
+// TestCombatPackageDoesNotSend enforces: internal/rules returns messages and
 // the round sends them. Nothing in the package sends text or builds an
 // events.Message.
 func TestCombatPackageDoesNotSend(t *testing.T) {
@@ -66,7 +66,7 @@ func TestCombatPackageDoesNotSend(t *testing.T) {
 	}
 	scanned := 0
 	for path, f := range goFiles(t) {
-		if !strings.HasPrefix(path, "internal/combat/") {
+		if !strings.HasPrefix(path, "internal/rules/") {
 			continue
 		}
 		scanned++
@@ -98,6 +98,6 @@ func TestCombatPackageDoesNotSend(t *testing.T) {
 	}
 	// Positive control: the combat package was parsed.
 	if scanned < 5 {
-		t.Errorf("control: scanned only %d internal/combat files; the guard may be scanning the wrong place", scanned)
+		t.Errorf("control: scanned only %d internal/rules files; the guard may be scanning the wrong place", scanned)
 	}
 }

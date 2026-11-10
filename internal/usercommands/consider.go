@@ -5,10 +5,10 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
-	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -42,12 +42,12 @@ func Consider(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 
 	if playerId > 0 {
 		u := accounts.GetByUserId(playerId)
-		odds = combat.CombatOdds(*actor.Character, *u.Character)
+		odds = dikubasic.CombatOdds(*actor.Character, *u.Character)
 		considerType = "user"
 		considerName = u.Character.Name
 	} else {
 		m := mobs.GetInstance(mobId)
-		odds = combat.CombatOdds(*actor.Character, m.Character)
+		odds = dikubasic.CombatOdds(*actor.Character, m.Character)
 		considerType = "mob"
 		considerName = m.Character.Name
 	}

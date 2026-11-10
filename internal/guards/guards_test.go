@@ -197,9 +197,9 @@ func TestIdsAreMadeOnlyAtCreation(t *testing.T) {
 // use, so a moved or renamed site fails rather than leaving a stale entry.
 func TestItemsAreInstantiatedOnlyFromTemplates(t *testing.T) {
 	allowed := map[string]string{
-		"internal/characters/itemids.go|InstantiateItems|FromTemplate": "an NPC's template items made new",
-		"internal/mobs/mobs.go|NewMobById|InstantiateItems":            "a new NPC instantiation",
-		"internal/combat/simulate.go|newSimMob|InstantiateItems":       "a simulated NPC instantiation",
+		"internal/characters/itemids.go|InstantiateItems|FromTemplate":    "an NPC's template items made new",
+		"internal/mobs/mobs.go|NewMobById|InstantiateItems":               "a new NPC instantiation",
+		"internal/rules/dikubasic/simulate.go|newSimMob|InstantiateItems": "a simulated NPC instantiation",
 	}
 	matched := map[string]int{}
 	guarded := func(name string) bool { return name == "FromTemplate" || name == "InstantiateItems" }

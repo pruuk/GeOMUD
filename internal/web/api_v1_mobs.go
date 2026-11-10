@@ -6,9 +6,9 @@ import (
 	"strconv"
 
 	"github.com/GoMudEngine/GoMud/internal/characters"
-	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 )
 
 // GET /admin/api/v1/mobs
@@ -21,7 +21,7 @@ func apiV1GetMobs(w http.ResponseWriter, r *http.Request) {
 
 // GET /admin/api/v1/mobs/ranks
 func apiV1GetMobRanks(w http.ResponseWriter, r *http.Request) {
-	byThreat, byLoot, byDefense := combat.RankMobs()
+	byThreat, byLoot, byDefense := dikubasic.RankMobs()
 	writeJSON(w, http.StatusOK, APIResponse[map[string]any]{
 		Success: true,
 		Data: map[string]any{

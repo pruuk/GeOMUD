@@ -1,4 +1,4 @@
-package combat
+package dikubasic
 
 /*
 func loadSimTestData(t *testing.T) {

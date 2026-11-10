@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/items"
+	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 )
 
 // GET /admin/api/v1/items/ranks/weapons
@@ -15,7 +15,7 @@ import (
 // adjusted DPS (two-handed and wait-round penalties applied), and by max
 // single-hit damage.
 func apiV1GetItemRanksWeapons(w http.ResponseWriter, r *http.Request) {
-	byDPS, byAdjDPS, byMaxDmg := combat.RankWeapons()
+	byDPS, byAdjDPS, byMaxDmg := dikubasic.RankWeapons()
 	writeJSON(w, http.StatusOK, APIResponse[map[string]any]{
 		Success: true,
 		Data: map[string]any{
@@ -31,7 +31,7 @@ func apiV1GetItemRanksWeapons(w http.ResponseWriter, r *http.Request) {
 // by adjusted defense (accounting for shield multiplier), and by unified
 // eHP-equivalent score (defense + stat weights + buffs).
 func apiV1GetItemRanksArmor(w http.ResponseWriter, r *http.Request) {
-	byDefense, byAdjDefense, byScore := combat.RankArmor()
+	byDefense, byAdjDefense, byScore := dikubasic.RankArmor()
 	writeJSON(w, http.StatusOK, APIResponse[map[string]any]{
 		Success: true,
 		Data: map[string]any{

@@ -8,7 +8,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
-	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -18,6 +17,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -164,7 +164,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 
 		a.Character.Aggro.RoundsWaiting--
 
-		for _, m := range combat.GetWaitMessages(items.Wait, a.Character, d.Character) {
+		for _, m := range dikubasic.GetWaitMessages(items.Wait, a.Character, d.Character) {
 			messaging.Send(m)
 		}
 
@@ -179,7 +179,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 
 	healthBefore := d.Character.Health
 
-	roundResult := combat.Attack(a, d)
+	roundResult := dikubasic.Attack(a, d)
 
 	for _, buffId := range roundResult.BuffTarget {
 		events.AddToQueue(events.Buff{ActorId: d.Id, BuffId: buffId, Source: `combat`})
@@ -211,7 +211,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 	// Group hatred follows kill credit (plan Decision 8): the attacker's
 	// account.
 	if defMob != nil {
-		if acct := combat.CreditAccount(a); acct != nil {
+		if acct := dikubasic.CreditAccount(a); acct != nil {
 			c := configs.GetConfig()
 			for _, groupName := range defMob.Groups {
 				mobs.MakeHostile(groupName, acct.UserId, c.Timing.MinutesToRounds(2)-a.Character.Stats.Perception.ValueAdj)

@@ -1,4 +1,4 @@
-package combat
+package dikubasic
 
 import "github.com/GoMudEngine/GoMud/internal/perception"
 
