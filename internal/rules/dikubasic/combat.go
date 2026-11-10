@@ -1,4 +1,4 @@
-package combat
+package dikubasic
 
 import (
 	"fmt"
@@ -15,39 +15,10 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/statmods"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
-
-// Attack performs one combat round of attacker's attacks on defender, for
-// any pair of actors. It applies the damage to the defender, credits the
-// attacker's account in the defender's PlayerDamage on
-// every attack, hit or miss (plan Decision 3), and runs the defender's
-// wimpy check when the defender has an account and took damage (Decision
-// 9). The result's Messages are the round's lines, one per swing, for the
-// caller to send in order.
-func Attack(attacker, defender *actors.Actor) AttackResult {
-	if attacker == nil || defender == nil {
-		return AttackResult{}
-	}
-
-	attackResult := calculateCombat(*attacker.Character, *defender.Character)
-
-	defender.Character.ApplyHealthChange(attackResult.DamageToTarget * -1)
-
-	// Remember who has hit him
-	if acct := CreditAccount(attacker); acct != nil {
-		defender.Character.TrackPlayerDamage(acct.UserId, attackResult.DamageToTarget)
-	}
-
-	if attackResult.DamageToTarget != 0 {
-		if acct := accountOf(defender); acct != nil {
-			acct.WimpyCheck()
-		}
-	}
-
-	return attackResult
-}
 
 // accountOf is the account driving a, or nil for an NPC.
 func accountOf(a *actors.Actor) *accounts.Account {
@@ -55,13 +26,6 @@ func accountOf(a *actors.Actor) *accounts.Account {
 		return ctrl.Account()
 	}
 	return nil
-}
-
-// CreditAccount is the account a's attacks are credited to: its own account,
-// or none for an NPC. Kill credit and group hatred both follow it (plan
-// Decisions 3 and 8).
-func CreditAccount(a *actors.Actor) *accounts.Account {
-	return accountOf(a)
 }
 
 // combatMessage is one combat line set as a world event: seen or heard by
@@ -179,9 +143,9 @@ func buildCombatMessages(
 	return fill.Replace(string(atk)), fill.Replace(string(def)), fill.Replace(string(atkRoom)), fill.Replace(string(defRoom))
 }
 
-func calculateCombat(sourceChar characters.Character, targetChar characters.Character) AttackResult {
+func calculateCombat(sourceChar characters.Character, targetChar characters.Character) rules.AttackResult {
 
-	attackResult := AttackResult{}
+	attackResult := rules.AttackResult{}
 
 	atkCount := combatAttackCount(sourceChar, targetChar)
 

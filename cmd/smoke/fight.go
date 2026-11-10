@@ -120,7 +120,7 @@ var ratWord = regexp.MustCompile(`\brat\b`)
 var promptPrefix = regexp.MustCompile(`^\[[^\]]*\]:`)
 
 // stripCombatMarks removes the leading marks combat puts on a line (from
-// internal/combat/combat.go, ansi stripped): "*[BACKSTAB]* " on a backstab
+// internal/rules/dikubasic/combat.go, ansi stripped): "*[BACKSTAB]* " on a backstab
 // and "*** " on a crit, in that order when both apply.
 func stripCombatMarks(line string) string {
 	for {

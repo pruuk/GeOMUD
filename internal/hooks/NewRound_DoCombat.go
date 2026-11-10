@@ -8,7 +8,6 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
-	"github.com/GoMudEngine/GoMud/internal/combat"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -18,6 +17,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
@@ -30,7 +30,7 @@ func DoCombat(e events.Event) events.ListenerReturn {
 	tStart := time.Now()
 
 	var affected []ids.ID
-	for _, a := range fightersWithAccountsFirst() {
+	for _, a := range rules.Get().TurnOrder(fighters()) {
 		affected = append(affected, combatTurn(a)...)
 	}
 
@@ -42,23 +42,22 @@ func DoCombat(e events.Event) events.ListenerReturn {
 	return events.Continue
 }
 
-// fightersWithAccountsFirst lists the actors that may take a combat turn:
-// those with an account first, then NPCs (plan Decision 5: a player still
-// swings before any NPC in the round). Each group comes from the same ID
-// source as before, so its order is map order, as it always was.
-func fightersWithAccountsFirst() []*actors.Actor {
-	fighters := []*actors.Actor{}
+// fighters lists every actor with a body that may take a combat turn: those
+// with an account, then NPCs, each from its own ID source (map order). The
+// ruleset puts them in turn order.
+func fighters() []*actors.Actor {
+	out := []*actors.Actor{}
 	for _, userId := range accounts.GetOnlineUserIds() {
 		if a := actors.ByUserId(userId); a != nil {
-			fighters = append(fighters, a)
+			out = append(out, a)
 		}
 	}
 	for _, mobId := range mobs.GetAllMobIds() {
 		if a := actors.Get(mobId); a != nil {
-			fighters = append(fighters, a)
+			out = append(out, a)
 		}
 	}
-	return fighters
+	return out
 }
 
 // accountOf is the account driving a, or nil for an NPC.
@@ -67,6 +66,28 @@ func accountOf(a *actors.Actor) *accounts.Account {
 		return ctrl.Account()
 	}
 	return nil
+}
+
+// attack runs one round of a's attacks on d: the ruleset works it out, the
+// engine applies the damage, credits a's account on every attack, hit or
+// miss, and runs the defender's wimpy check when it took damage.
+func attack(a, d *actors.Actor) rules.AttackResult {
+	result := rules.Get().ResolveAttack(a, d)
+
+	d.Character.ApplyHealthChange(result.DamageToTarget * -1)
+
+	// Remember who has hit him
+	if acct := accountOf(a); acct != nil {
+		d.Character.TrackPlayerDamage(acct.UserId, result.DamageToTarget)
+	}
+
+	if result.DamageToTarget != 0 {
+		if acct := accountOf(d); acct != nil {
+			acct.WimpyCheck()
+		}
+	}
+
+	return result
 }
 
 // endAggro ends a's fight and says so.
@@ -156,7 +177,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 	// An NPC with no weapon but something in its pack may look for a weapon
 	// (especially useful when disarmed).
 	if mob := mobs.GetInstance(a.Id); mob != nil {
-		lookForWeapon(mob)
+		lookForWeapon(a, mob)
 	}
 
 	if a.Character.Aggro.RoundsWaiting > 0 {
@@ -164,7 +185,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 
 		a.Character.Aggro.RoundsWaiting--
 
-		for _, m := range combat.GetWaitMessages(items.Wait, a.Character, d.Character) {
+		for _, m := range rules.Get().WaitLines(a, d) {
 			messaging.Send(m)
 		}
 
@@ -179,7 +200,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 
 	healthBefore := d.Character.Health
 
-	roundResult := combat.Attack(a, d)
+	roundResult := attack(a, d)
 
 	for _, buffId := range roundResult.BuffTarget {
 		events.AddToQueue(events.Buff{ActorId: d.Id, BuffId: buffId, Source: `combat`})
@@ -209,12 +230,12 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 	defMob := mobs.GetInstance(d.Id)
 
 	// Group hatred follows kill credit (plan Decision 8): the attacker's
-	// account.
+	// account. How long is the ruleset's.
 	if defMob != nil {
-		if acct := combat.CreditAccount(a); acct != nil {
-			c := configs.GetConfig()
+		if acct := accountOf(a); acct != nil {
+			hatred := rules.Get().HatredRounds(a)
 			for _, groupName := range defMob.Groups {
-				mobs.MakeHostile(groupName, acct.UserId, c.Timing.MinutesToRounds(2)-a.Character.Stats.Perception.ValueAdj)
+				mobs.MakeHostile(groupName, acct.UserId, hatred)
 			}
 		}
 	}
@@ -297,16 +318,12 @@ func combatCommand(mob *mobs.Mob) bool {
 
 // lookForWeapon has an NPC with no weapon and a non-empty pack maybe equip a
 // weapon from it (queued, so it takes effect later).
-func lookForWeapon(mob *mobs.Mob) {
+func lookForWeapon(a *actors.Actor, mob *mobs.Mob) {
 	if mob.Character.Equipment.Weapon.ItemId != 0 || len(mob.Character.Items) == 0 {
 		return
 	}
 
-	roll := util.Rand(100)
-
-	util.LogRoll(`Look for weapon`, roll, mob.Character.Stats.Perception.ValueAdj)
-
-	if roll < mob.Character.Stats.Perception.ValueAdj {
+	if rules.Get().FindsWeapon(a) {
 		possibleWeapons := []string{}
 		for _, itm := range mob.Character.Items {
 			iSpec := itm.GetSpec()
@@ -403,15 +420,7 @@ func flee(a *actors.Actor, aRoom *rooms.Room) {
 			continue
 		}
 
-		// Stat comparison accounts for up to 70% of chance to flee.
-		chanceIn100 := int(float64(a.Character.Stats.Speed.ValueAdj) / (float64(a.Character.Stats.Speed.ValueAdj) + float64(b.Character.Stats.Speed.ValueAdj)) * 70)
-		chanceIn100 += 30
-
-		roll := util.Rand(100)
-
-		util.LogRoll(`Flee`, roll, chanceIn100)
-
-		if roll >= chanceIn100 {
+		if !rules.Get().FleeEscapes(a, b) {
 			blocker = b
 			break
 		}

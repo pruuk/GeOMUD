@@ -1,4 +1,4 @@
-package combat
+package dikubasic
 
 import (
 	"os"
@@ -14,7 +14,7 @@ import (
 func loadTestData(t *testing.T) {
 	t.Helper()
 	_, thisFile, _, _ := runtime.Caller(0)
-	repoRoot := filepath.Join(filepath.Dir(thisFile), "..", "..")
+	repoRoot := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
 	if err := os.Chdir(repoRoot); err != nil {
 		t.Fatalf("Chdir to repo root: %v", err)
 	}

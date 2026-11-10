@@ -13,6 +13,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -186,8 +187,14 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 	if !attackMobId.IsZero() {
 
 		m := mobs.GetInstance(attackMobId)
+		d := actors.Get(attackMobId)
 
-		if m != nil {
+		if m != nil && d != nil {
+			if err := rules.Get().CanAttack(actor, d); err != nil {
+				Tell(actor, err.Error())
+				return true, nil
+			}
+
 			if user != nil {
 				if party := parties.Get(user.UserId); party != nil {
 					if party.IsLeader(user.UserId) {
@@ -229,10 +236,12 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 	} else if attackPlayerId > 0 {
 
-		if p := accounts.GetByUserId(attackPlayerId); p != nil {
+		p := accounts.GetByUserId(attackPlayerId)
+		d := actors.ByUserId(attackPlayerId)
+		if p != nil && d != nil {
 
-			if pvpErr := room.CanPvp(actor.Character, p.Character); pvpErr != nil {
-				Tell(actor, pvpErr.Error())
+			if err := rules.Get().CanAttack(actor, d); err != nil {
+				Tell(actor, err.Error())
 				return true, nil
 			}
 

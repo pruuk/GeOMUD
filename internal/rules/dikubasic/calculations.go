@@ -1,4 +1,4 @@
-package combat
+package dikubasic
 
 import (
 	"math"
