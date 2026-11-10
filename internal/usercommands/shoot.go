@@ -15,6 +15,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -91,10 +92,17 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	if !attackMobId.IsZero() {
 
 		m := mobs.GetInstance(attackMobId)
+		d := actors.Get(attackMobId)
 
-		if m != nil {
+		if m != nil && d != nil {
+
+			if err := rules.Get().CanAttack(actor, d); err != nil {
+				Tell(actor, err.Error())
+				return true, nil
+			}
 
 			actor.Character.SetAggroRemote(exitName, attackMobId, characters.Shooting)
+			events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 
 			Tell(actor,
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="mobname">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, m.Character.Name, exitName),
@@ -107,8 +115,14 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 	} else if attackPlayerId > 0 {
 
 		p := accounts.GetByUserId(attackPlayerId)
+		d := actors.ByUserId(attackPlayerId)
 
-		if p != nil {
+		if p != nil && d != nil {
+
+			if err := rules.Get().CanAttack(actor, d); err != nil {
+				Tell(actor, err.Error())
+				return true, nil
+			}
 
 			if user := actor.Controller().Account(); user != nil {
 				if partyInfo := parties.Get(user.UserId); partyInfo != nil {
@@ -120,6 +134,7 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 			}
 
 			actor.Character.SetAggroRemote(exitName, p.Character.Id, characters.Shooting)
+			events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 
 			Tell(actor,
 				fmt.Sprintf(`You prepare to shoot at <ansi fg="username">%s</ansi> through the <ansi fg="exit">%s</ansi> exit.`, p.Character.Name, exitName),
