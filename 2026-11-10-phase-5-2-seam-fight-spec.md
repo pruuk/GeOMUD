@@ -1,6 +1,7 @@
 # Phase 5 slice 2: the seam and the fight (spec)
 
 Date: 2026-11-10. Written at `master` `c1ca8e7f`. Branch `strip/phase-5-2-seam-fight`.
+**Approved by Calabe 2026-11-10**, with ruling 5 (offhand breakage) added at review.
 Builds on `2026-11-06-phase-5-rules-seam-design.md` (slice 2 row, "Notes for later slices"),
 `2026-11-06-phase-5-rulings.md` and `2026-11-06-phase-5-inventory.md` N. Inventory N was written at
 `9131eac2`, before slice 1; every fact below was re-read at `c1ca8e7f`.
@@ -28,6 +29,8 @@ Calabe, 2026-11-10, in brainstorming:
    heavy crossbow that must be wound). Out of scope; recorded below.
 4. **Targeting and aggro tracking** better than the single aggro flag: wanted later, out of scope for
    the slim base.
+5. **Offhand breakage goes** (the design's `BreaksOnHit`): not needed in a barebones MUD. Out of scope
+   for this slice, which keeps parity; it stays out of the seam and slice 4 deletes it.
 
 ## Facts verified against source (2026-11-10, `c1ca8e7f`)
 
@@ -78,7 +81,6 @@ type Ruleset interface {
 	WaitLines(attacker, defender *actors.Actor) []perception.Message
 	HatredRounds(attacker *actors.Actor) int
 	FindsWeapon(npc *actors.Actor) bool
-	OffhandBreaks(defender *actors.Actor, crit bool) bool
 	FleeEscapes(fleer, blocker *actors.Actor) bool
 	Consider(attacker, defender *actors.Actor) float64
 	CanAttack(attacker, defender *actors.Actor) error
@@ -96,7 +98,6 @@ func SetForTest(r Ruleset) (restore func()) // for t.Cleanup
 | `WaitLines` | Lines for a round the attacker spends waiting to swing |
 | `HatredRounds` | Rounds an NPC's groups hate the attacker's account after it attacks the NPC |
 | `FindsWeapon` | Whether an unarmed NPC carrying items looks for a weapon this round |
-| `OffhandBreaks` | Whether a hit breaks the defender's offhand item; called only when there is one |
 | `FleeEscapes` | Whether the fleer gets past one actor fighting it |
 | `Consider` | Odds: above 1 favours the attacker, 1 is even, 0 or less is hopeless |
 | `CanAttack` | nil, or the refusal the attacker reads |
@@ -110,7 +111,7 @@ import paths change. Upstream's `AGENTS.md` and `CLAUDE.md` in that folder are d
 
 - `ResolveAttack` is `calculateCombat`; `WaitLines` is `GetWaitMessages(items.Wait, ...)`;
   `Consider` is `CombatOdds`.
-- `HatredRounds`, `FindsWeapon`, `OffhandBreaks` and `FleeEscapes` hold the lines now inline in
+- `HatredRounds`, `FindsWeapon` and `FleeEscapes` hold the lines now inline in
   `DoCombat` (facts table), moved unchanged, `util.LogRoll` calls included.
 - `TurnOrder` is a stable partition: accounts first, then NPCs, each in the given order. On today's
   input (already accounts first) it returns the input unchanged.
@@ -125,8 +126,8 @@ import paths change. Upstream's `AGENTS.md` and `CLAUDE.md` in that folder are d
 ### What stays in the engine
 
 Applying damage, kill credit on every swing, the wimpy check, `KilledBy`, aggro and its events,
-target lookup and range, the hidden-target skip, flee movement, item and message handling for a
-broken offhand, NPC retaliation movement, every send, and (until slice 3) the health thresholds and
+target lookup and range, the hidden-target skip, flee movement, the whole offhand break check
+(`offhandBreakCheck`, untouched until slice 4 deletes it, ruling 5), NPC retaliation movement, every send, and (until slice 3) the health thresholds and
 `handleAffected`.
 
 ### The round after the change
@@ -143,8 +144,7 @@ broken offhand, NPC retaliation movement, every send, and (until slice 3) the he
    account, wimpy check on damage. Same statements, same order, as `combat.Attack` today.
 7. Crit buffs queued, lines sent in order, `KilledBy` recorded, unchanged.
 8. NPC defender and an attacker with an account: `HatredRounds(a)` once, applied to each group.
-9. On a hit with an offhand item present: `OffhandBreaks(d, crit)`; the engine moves the item and
-   sends the lines.
+9. On a hit: `offhandBreakCheck`, unchanged (ruling 5: not behind the seam; slice 4 deletes it).
 10. Vitals event, NPC retaliation, end or renew aggro, `handleAffected`: unchanged.
 
 **Flee:** for each body fighting the fleer, `FleeEscapes(fleer, blocker)`; the first `false` blocks.
@@ -221,6 +221,10 @@ The refusal is told to the attacker and the command returns, as today.
   The seam leaves room: `ResolveAttack` already decides the attack count, and carried progress needs
   the per-body value store planned for slice 5.
 - **Targeting and aggro tracking** beyond the single aggro flag (ruling 4).
+- **Deleting offhand breakage** (ruling 5): slice 4 removes `offhandBreakCheck`, the broken-item
+  swap (item 20), the item `BreakChance` field and `BreakTest` if nothing else reads them; the `pvp`
+  golden (shield break chance 90) changes then. Commit 7 adds this to the phase design's "Notes for
+  later slices".
 - Slice 3: health thresholds, regen, death, round upkeep.
 - NPC aggression and initiative (ruling 1A: they wait for the real ruleset).
 - Splitting `ResolveAttack` finer (not before parity holds).
@@ -229,9 +233,9 @@ The refusal is told to the attacker and the command returns, as today.
 
 | Decision | Why | If wrong |
 |---|---|---|
-| The interface is the fight only (the nine methods above); `Condition`, `Regen`, `RoundUpkeep`, `OnDeath` wait for slice 3 | The phase design gives slice 3 the round, regen and death | Slice 3 adds them anyway; nothing here blocks it |
+| The interface is the fight only (the eight methods above); `Condition`, `Regen`, `RoundUpkeep`, `OnDeath` wait for slice 3 | The phase design gives slice 3 the round, regen and death | Slice 3 adds them anyway; nothing here blocks it |
 | Two methods beyond the phase design's list: `WaitLines` and `FindsWeapon` | Both are rule code (the wait lines share the swing-line builder and draw RNG; the weapon search rolls against Perception); leaving them would keep the engine importing `dikubasic` or naming a stat | Fold or drop them in the slice 4 shrink |
-| The design's `BreaksOnHit` is named `OffhandBreaks`; `AttackDelay` is not in the interface | Only the offhand can break today; the delay cannot move this slice (import cycle, facts table) and ruling 3 replaces it later | Rename is one identifier; `AttackDelay` comes with swing speed |
+| The design's `BreaksOnHit` and `AttackDelay` are not in the interface. The offhand break check stays in the engine untouched (it reads item data, `BreakTest`, not a stat, so no `dikubasic` import is needed) | Ruling 5 deletes breakage in slice 4, so a method now would be added only to be removed; the delay cannot move this slice (import cycle, facts table) and ruling 3 replaces it later | Add `OffhandBreaks` as a method now; slice 4 deletes it with the mechanic. `AttackDelay` comes with swing speed |
 | Each rule method makes its own random draw, at today's point in the sequence | The goldens pin the draw order; a ruleset that does not roll should not be made to | Methods return chances and the engine rolls; same goldens |
 | `TurnOrder` receives every fighter in today's collection order and `dikubasic` partitions accounts first | Identity on today's input, so parity holds, while a stub can reorder | Engine sorts nothing either way; only the method body changes |
 | `CanAttack` is called for NPC targets too, and `dikubasic` allows them | One check for every attack (design: "one check for `attack` and `shoot`"); the pacifist stub proves NPC targets reach it | Call it for player targets only; the pacifist test changes |
