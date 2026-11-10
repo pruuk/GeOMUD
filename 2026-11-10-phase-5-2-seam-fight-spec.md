@@ -2,7 +2,8 @@
 
 Date: 2026-11-10. Written at `master` `c1ca8e7f`. Branch `strip/phase-5-2-seam-fight`.
 **Approved by Calabe 2026-11-10**, with ruling 5 (offhand breakage) added at review. Corrected after
-approval by plan review rounds 1 to 5 (each correction names its round): facts, one test file
+approval by plan review rounds 1 to 6 (each correction names its round; round 6 found nothing
+material): facts, one test file
 edit the move needs, refusals and silent cases made explicit (one new: an account target in the
 recovery room), NPC shooters named in the player-visible change, and tests for the moved methods and
 the rewired call sites.
@@ -58,7 +59,7 @@ Read or grepped by the controller today.
 | PvP config | key `GamePlay.PVP.Enabled`; values `enabled`, `disabled`, `off`, `limited` (`configs.go:17-20`); invalid or blank validates to `enabled`, `MinimumLevel` floor 0 (`config.gameplay.go:153-162`) | read |
 | Guards naming combat | `guards/combat_test.go`: `TestOneCombatPath` control on `internal/combat/combat.go` func `Attack` (:41); `TestCombatPackageDoesNotSend` scans `internal/combat/` (:69), control `scanned < 5` (:100). `goFiles` parses non-test files only (`guards_test.go:30`). `TestItemsAreInstantiatedOnlyFromTemplates` allowlists `"internal/combat/simulate.go\|newSimMob\|InstantiateItems"` (`guards_test.go:202`; review round 1). Comment naming `internal/combat/combat.go`: `cmd/smoke/fight.go:123` | read, `grep -rn 'internal/combat'` |
 | Moved test with a path | `weapon_rank_test.go:17` finds the repo root as `Dir(thisFile)/../..`; one directory deeper it needs `../../..` (review round 1) | read |
-| Config in tests | `configs.AddOverlayOverrides` skips keys already set (`configs.go:60-77`); tests that change a set key use the `setConfig` pattern (`reads_golden_test.go:562-587`: `Flatten(GetOverrides())`, `RestoreOverrides`) (review round 1; lines corrected round 2) | read |
+| Config in tests | `configs.AddOverlayOverrides` (`configs.go:60-83`) skips keys already set (:73-77); tests that change a set key use the `setConfig` pattern (`reads_golden_test.go:562-587`: `Flatten(GetOverrides())`, `RestoreOverrides`) (review round 1; lines corrected round 2) | read |
 | Combat goldens | 9: `flee_blocked`, `flee_success`, `hidden_attacker`, `mvm`, `mvp`, `observer`, `pvm_death`, `pvp`, `shoot_exit`. `pvm_death` takes 4 rounds and queues `Input rat: "suicide"` in round 4 | `ls`, grep |
 | Golden harness | `combat_golden_test.go`: `newCombatWorld(t, seed)` :65, `addPlayer` :197, `addNPC` :216, `weapon` :240, `start` :344, `rounds` :367; the record is `w.out`, per-round reads `w.reads`. `shoot_exit` sets its aggro directly, not through the command | read |
 | Test setup | `TestMain` in `hooks/actionpoints_test.go:22` and `usercommands/usercommands_test.go:25` (10 others have one: actors, behaviour, buffs, characters, copyover, inputhandlers, messaging, mobs, rooms, root `world_test.go`; none runs combat; review round 1). Helpers `goSetup` (`go_test.go:18`; room 92001, exit `north` to 92002), `addPlayer` (`combat_text_test.go:18`), `playerTexts` (`go_test.go:34`), `capture[T]` (`items_test.go:48`), `accounts.SetTestUser` | read |
@@ -209,7 +210,8 @@ unknown account is today (review round 1; `CanAttack` needs the actor).
     not its length);
   - weapon search: `FindsWeapon` forced true makes an unarmed NPC carrying a weapon queue `equip`;
     forced false, it does not (no golden reaches this path; review round 1);
-  - consider: `Consider` forced to 5 reads "Very Favorable".
+  - consider: `Consider` forced to 5 reads "Very Favorable", and considering a player names them in
+    the player colour (review round 6: the rewritten block's `considerType` line was untested).
 
   Each is shown to fail once with its `SetForTest` line removed.
 - **`shoot`**, test first: PvP disabled gives "PVP is disabled." and no aggro; PvP limited with the
@@ -220,7 +222,8 @@ unknown account is today (review round 1; `CanAttack` needs the actor).
   queues `AggroChanged`.
 - **`dikubasic` unit tests** for the moved methods (review round 1: a mutation of `HatredRounds` or
   `FindsWeapon` passed every existing test): `TurnOrder` partitions and keeps order; `FindsWeapon`
-  (Perception 50) and `FleeEscapes` (equal Speed, 65%) each match `util.Rand(100) < chance` drawn
+  (Perception 50) and `FleeEscapes` (Speed 10 against 30, 47%: unequal so a fleer/blocker swap
+  shows; review round 5) each match `util.Rand(100) < chance` drawn
   from the same seed over many seeds, and each makes exactly one draw (review round 2: boundary
   cases missed an off-by-one); `HatredRounds` is `MinutesToRounds(2)` less Perception; `CanAttack`
   allows an NPC target and refuses an account target in the recovery room, with the attacker in a
