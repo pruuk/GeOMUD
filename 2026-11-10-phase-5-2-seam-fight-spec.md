@@ -2,7 +2,7 @@
 
 Date: 2026-11-10. Written at `master` `c1ca8e7f`. Branch `strip/phase-5-2-seam-fight`.
 **Approved by Calabe 2026-11-10**, with ruling 5 (offhand breakage) added at review. Corrected after
-approval by plan review rounds 1 and 2 (each correction names its round): facts, one test file
+approval by plan review rounds 1 to 4 (each correction names its round): facts, one test file
 edit the move needs, refusals and silent cases made explicit (one new: an account target in the
 recovery room), NPC shooters named in the player-visible change, and tests for the moved methods and
 the rewired call sites.
@@ -114,8 +114,8 @@ makes it today.
 
 **`internal/rules/dikubasic`.** `internal/combat` moves here by `git mv`; only the package line and
 import paths change, plus one `..` in `weapon_rank_test.go:17` (the folder is one level deeper) and
-the two places outside the package that name `internal/combat` by path (`guards_test.go:202`,
-`cmd/smoke/fight.go:123`). Upstream's `AGENTS.md` and `CLAUDE.md` in that folder are deleted. A new
+the places outside the package that name `internal/combat` by path (`guards/combat_test.go` :41,
+:50, :57, :69, :101; `guards_test.go:202`; `cmd/smoke/fight.go:123`; list completed in review round 4). Upstream's `AGENTS.md` and `CLAUDE.md` in that folder are deleted. A new
 `ruleset.go` holds `type Ruleset struct{}`, `New()`, and the methods:
 
 - `ResolveAttack` is `calculateCombat`; `WaitLines` is `GetWaitMessages(items.Wait, ...)`;
@@ -170,6 +170,8 @@ seven labels.
 
 **`attack`:** `CanAttack` for every target. NPC target: first thing once the NPC is found, before the
 party auto-attack. Player target: in place of `room.CanPvp`, at the same spot before the party check.
+`CanAttack` loads the attacker's room by `attacker.Character.RoomId` where `attack` passed the
+command's `room` argument; the two are the same room on every path (review round 4).
 The refusal is told to the attacker and the command returns, as today. A target found by name whose
 actor is missing (an account with no body, an NPC instance with no actor) is skipped silently, as an
 unknown account is today (review round 1; `CanAttack` needs the actor).
@@ -228,7 +230,9 @@ unknown account is today (review round 1; `CanAttack` needs the actor).
 - **`shoot` details (review round 3):** `AggroChanged` carries the shooter's room; an NPC shooting a
   player is refused under PvP `disabled` (the NPC-shooter change the commit claims).
 - **Weapon search** stub records whom it is asked about: the NPC, not its target (review round 3).
-- **`attack`:** a player target with PvP disabled gives "PVP is disabled." and no aggro.
+- **`attack`:** a player target with PvP disabled gives "PVP is disabled." and no aggro; an NPC target
+  with PvP disabled is still fought (and likewise `shoot` at an NPC): this pins `CanAttack`'s argument
+  order, since swapped arguments would put a player's PvP rules on fighting a rat (review round 4).
 - **Guards:** the import guard is shown to fail twice (an unlisted importer added; a stale entry
   added).
 - **`rules`:** `Get` panics when unset; `SetForTest` restores the previous ruleset.
@@ -253,7 +257,11 @@ unknown account is today (review round 1; `CanAttack` needs the actor).
 
 - The engine reaches the rules only through `internal/rules`. A new rule question becomes a new
   interface method, never an import of a ruleset.
-- Rulesets return messages and never send (today's no-send guard, widened to every ruleset).
+- Rulesets return messages and never send. The guard checks what today's no-send guard checks (no
+  `Tell`, `SendText*`, `messaging.Send` or `events.Message` construction), now over all of
+  `internal/rules`; it does not ban `events.AddToQueue` or commands, and "changes no health" is a
+  contract, not a guard (`simulate.go` applies health to simulated copies) (wording corrected in
+  review round 4).
 - Rule A is the reference ruleset's PvP rule for any fight across rooms.
 - The interface takes `*actors.Actor`, so a ruleset sees the whole body (character, controller,
   account). Convenient, and wide; narrowing it later touches every method.
@@ -291,4 +299,5 @@ unknown account is today (review round 1; `CanAttack` needs the actor).
 | `BackStab` (never set) is left alone; slice 4 deletes the branch | Parity slice; the branch never runs | Delete now; no golden would change |
 | `CanAttack` refuses an account target in another room when that room is not loaded ("Fighting is not allowed here."), as it does for a missing attacker room (review round 1) | Undefined before; refusing matches the attacker case, and `shoot` only finds targets in a loaded room, so it should not fire | Allow it instead; one branch in `dikubasic` |
 | `CanAttack` refuses an account target in the death recovery room, compared by raw ID as `CanPvp` compares the attacker's (review round 2; room -1 dropped in round 3, unobservable) | Rule A means a safe room protects the people in it; `CanPvp` only guards the attacker's side | Drop the check; reachable only if an exit leads into the recovery room |
+| `dikubasic.CanAttack` checks in this order: NPC target allowed; target in the recovery room; attacker room loaded; `CanPvp` in the attacker's room; defender room loaded and `CanPvp` there. So shooting a player in the recovery room under PvP `disabled` reads "Fighting is not allowed here." rather than "PVP is disabled." (review round 4) | The room that forbids fighting outright is the more specific reason. The two missing-room branches are unreachable from today's commands and are not tested | Reorder; only the refusal text changes |
 | In `attack` and `shoot`, a target found by name whose actor is missing is skipped silently (review round 1) | `CanAttack` takes actors and must not get nil; an account with no body cannot be fought today either way, and an NPC instance always has an actor (`actors/wire.go:22`) | Tell "Your target can't be found."; a new line on a path nothing reaches |
