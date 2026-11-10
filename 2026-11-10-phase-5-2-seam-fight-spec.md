@@ -64,7 +64,8 @@ Read or grepped by the controller today.
 | Test setup | `TestMain` in `hooks/actionpoints_test.go:22` and `usercommands/usercommands_test.go:25` (10 others have one: actors, behaviour, buffs, characters, copyover, inputhandlers, messaging, mobs, rooms, root `world_test.go`; none runs combat; review round 1). Helpers `goSetup` (`go_test.go:18`; room 92001, exit `north` to 92002), `addPlayer` (`combat_text_test.go:18`), `playerTexts` (`go_test.go:34`), `capture[T]` (`items_test.go:48`), `accounts.SetTestUser` | read |
 | Boot | `main.go:206` `hooks.RegisterListeners()`; smoke builds and runs the real binary (`cmd/smoke/server.go:88`) | read |
 | Smoke fight strings | "rat has died.", "You gained ... experience points ... (combat)" (`cmd/smoke/fight.go:88-99`) | grep |
-| `BackStab` | declared `characters/aggro.go:11`, read only at `combat.go:213`; nothing sets it | grep |
+| `BackStab` | declared `characters/aggro.go:11`; read in non-test code only at `combat.go:213` (and in test code at `combat_golden_test.go:273`); nothing sets it | grep |
+| New bodies, room 0 | `characters.New()` starts a body in room -1 (`StartingRoomId`, `character.go:32`); `rooms.LoadRoom(0)` aliases to the start room (`save_and_load.go:81-85`) (review round 3) | read |
 
 ## Design
 
@@ -127,9 +128,10 @@ the two places outside the package that name `internal/combat` by path (`guards_
   then, when the defender is in another room, with the defender's room too (ruling 1). A missing
   attacker room, or a missing defender room for an account target in another room, refuses with
   "Fighting is not allowed here." (review round 1: the defender case was undefined). So does an
-  account target standing in room -1 or the death recovery room (review round 2: `CanPvp` checks only
-  the attacker's room against those, so without this a player in the recovery room could be shot
-  from next door under `enabled`).
+  account target standing in the death recovery room (review round 2: `CanPvp` checks only the
+  attacker's room against it, so without this a player in the recovery room could be shot from next
+  door under `enabled`. Round 3: room -1 is left out of this check because it can never be observed
+  there: a target in room -1 is already refused by the unloaded-room branch or by `CanPvp`).
 - `combat.Attack` and `CreditAccount` are deleted (their work moves to the engine); `accountOf`
   stays for `TurnOrder` and `CanAttack`.
 
@@ -153,7 +155,8 @@ target lookup and range, the hidden-target skip, flee movement, the whole offhan
 4. Wait rounds: count one down and send `WaitLines(a, d)`.
 5. Hidden target skip, unchanged.
 6. The engine's new `attack(a, d)`: `ResolveAttack`, apply `-DamageToTarget`, credit the attacker's
-   account, wimpy check on damage. Same statements, same order, as `combat.Attack` today.
+   account, wimpy check on damage. Same statements, same order, as `combat.Attack` today, less its
+   nil guard (`combatTurn` never passes nil).
 7. Crit buffs queued, lines sent in order, `KilledBy` recorded, unchanged.
 8. NPC defender and an attacker with an account: `HatredRounds(a)` once, applied to each group.
 9. On a hit: `offhandBreakCheck`, unchanged (ruling 5: not behind the seam; slice 4 deletes it).
@@ -216,9 +219,15 @@ unknown account is today (review round 1; `CanAttack` needs the actor).
   (Perception 50) and `FleeEscapes` (equal Speed, 65%) each match `util.Rand(100) < chance` drawn
   from the same seed over many seeds, and each makes exactly one draw (review round 2: boundary
   cases missed an off-by-one); `HatredRounds` is `MinutesToRounds(2)` less Perception; `CanAttack`
-  allows an NPC target and refuses an account target in room -1.
+  allows an NPC target and refuses an account target in the recovery room, with the attacker in a
+  loaded room and the recovery room set to a loaded non-zero ID so no other branch gives the same
+  refusal (review round 3: room 0 aliases to the start room, and new bodies start in room -1).
 - **Engine `attack`:** the defender's wimpy check still runs (a defender with wimpy above its health
-  percentage queues `flee` after taking damage; review round 2: removing it passed every test).
+  percentage queues `flee` after taking damage; review round 2: removing it passed every test), and
+  only when there was damage (a stub dealing 0 queues no `flee`; review round 3).
+- **`shoot` details (review round 3):** `AggroChanged` carries the shooter's room; an NPC shooting a
+  player is refused under PvP `disabled` (the NPC-shooter change the commit claims).
+- **Weapon search** stub records whom it is asked about: the NPC, not its target (review round 3).
 - **`attack`:** a player target with PvP disabled gives "PVP is disabled." and no aggro.
 - **Guards:** the import guard is shown to fail twice (an unlisted importer added; a stale entry
   added).
@@ -281,5 +290,5 @@ unknown account is today (review round 1; `CanAttack` needs the actor).
 | Upstream `AGENTS.md`/`CLAUDE.md` in `internal/combat` are deleted in the move | Project `CLAUDE.md`: they go as their packages are stripped | Keep them in `dikubasic`; they describe GoMud, not us |
 | `BackStab` (never set) is left alone; slice 4 deletes the branch | Parity slice; the branch never runs | Delete now; no golden would change |
 | `CanAttack` refuses an account target in another room when that room is not loaded ("Fighting is not allowed here."), as it does for a missing attacker room (review round 1) | Undefined before; refusing matches the attacker case, and `shoot` only finds targets in a loaded room, so it should not fire | Allow it instead; one branch in `dikubasic` |
-| `CanAttack` refuses an account target in room -1 or the death recovery room, compared by raw ID as `CanPvp` compares the attacker's (review round 2) | Rule A means a safe room protects the people in it; `CanPvp` only guards the attacker's side | Drop the check; reachable only if an exit leads into the recovery room |
+| `CanAttack` refuses an account target in the death recovery room, compared by raw ID as `CanPvp` compares the attacker's (review round 2; room -1 dropped in round 3, unobservable) | Rule A means a safe room protects the people in it; `CanPvp` only guards the attacker's side | Drop the check; reachable only if an exit leads into the recovery room |
 | In `attack` and `shoot`, a target found by name whose actor is missing is skipped silently (review round 1) | `CanAttack` takes actors and must not get nil; an account with no body cannot be fought today either way, and an NPC instance always has an actor (`actors/wire.go:22`) | Tell "Your target can't be found."; a new line on a path nothing reaches |
