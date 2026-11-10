@@ -320,6 +320,54 @@ the corpse; the plan fixes the exact steps against `script.go`.
 - Corpse looting rules (who may loot a player's corpse): unchanged.
 - `RoundUpkeep` and `ClampDamage`: no rule needs them yet.
 
+## Settled while planning (controller, 2026-11-10, after approval)
+
+The plan draft found these by reading the code; the controller took each recommendation. None
+changes the design above except Q1's outcome shape. Details, with line numbers, are in the plan's
+"Questions settled" section.
+
+- **Q1. Awards, not award lines.** `GrantXP` sends its own line, so a ruleset that granted XP would
+  send text and put "You gained N experience points!" before "has died." (today it comes after).
+  `DeathOutcome` carries `Awards []rules.Award{UserId, XP, Messages}`: `dikubasic` works out each
+  share and applies the alignment shift in today's order (`UpdateAlignment` may draw a random number);
+  the engine, after announcing the death, credits the kill, calls `GrantXP` and sends the award's
+  lines. Today's reading order and draw order hold. `DeathOutcome.Messages` above becomes this.
+- **Q2. A corpse holds exactly the drops** (player-visible). A corpse stores a copy of the body, and
+  `get` and the corpse panel also hand out or show that copy's worn gear. Unreachable today
+  (`CorpseItems: false`); with `CorpseItems` removed, anyone could take copies of a player's kept gear
+  or an NPC's unrolled worn items. `death.Die` stores the body copy with nothing carried, worn or held.
+- **Q3. Three more engine health checks go through `Condition`:** the downed gate in `TryCommand`
+  (`usercommands.go:281`, `IsDisabled`) and in `go` (`go.go:46`), and `remove.go:51`. Same answers
+  under `dikubasic`; without this a stub's `Downed` would not stop the actor acting, and the new guard
+  would fail on `remove.go`.
+- **Q4. Tests get a recovery room.** Package tests load no config, so `DeathRecoveryRoom` is 0, and
+  moving a player to room 0 panics in `CreateEphemeralRoomIds` (`ephemeral.go:144-146,188`; read, not
+  run). Fixtures that reach a player death use a test-only recovery room. The engine panic stays (the
+  shipped room is 75) and goes on the status Watch list.
+- **Q5. Smoke bot names are zero-padded** (`Smk%sc%03d`, `cmd/smoke/main.go:124,131`): the bot takes
+  its ring back from its corpse by name, and corpse lookup matches by prefix, so `c1` would match
+  `c10 corpse`.
+- **Q6. More goldens change in commit 6, all decided:** `mvp`, `pvp`, `hidden_attacker` (a downed
+  player now dies in the round), `mvm` (the rat's death now runs), and reads golden H's follow section
+  (the rat's gold is in its corpse, not on the floor). Four tests change with them
+  (`ruleset_stub_test.go`'s queued-`suicide` assert, `TestKilledByOutlivesTheKiller` moves under a
+  downed-state stub, the wimpy test and the upkeep test).
+- **Q7. Smaller choices the plan makes:** upkeep and the immediate buff trigger kill any actor the
+  ruleset calls dead; an account always respawns; respawn keeps `Mana = 0`; with corpses off, drops
+  use today's NPC floor lines for everyone; `MobItemDrop` fires for every NPC drop; reviving an account
+  sends vitals; `PlayerDrop` for accounts only; recovery regen applies to any actor there and always
+  rolls; commit 3 keeps the raw recovery compare (parity) and commit 5 switches to the helper;
+  `suicide` in the recovery room keeps its error return; help pages ride in commit 10;
+  `get <item> <word>` always tries a corpse; `actors.BodyReplaced` loses its caller and waits for
+  slice 4; the ID guard's permadeath allowlist entry goes.
+
+**Facts corrected while planning:** help pages are under `_datafiles/world/empty/templates/help/`;
+more health checks exist than the table lists (`NewRound_AutoHeal.go:68`, `remove.go:51`, and in
+`characters` `:464`, `:1204` and the remove-lock checks); `save_and_load.go:437` is another raw
+recovery compare (room loading only; left alone); the admin pages' ranges are wider and
+`users.html:366-369,592,1089` (Extra Lives) is missing; `configs_bench_test.go:28,174-176` name deleted
+knobs; `decayAlignment` is `:71-91`.
+
 ## Decisions taken without asking
 
 | Decision | Why | If wrong |
