@@ -14,6 +14,7 @@ growing this file or memory.
 - **Never read, run git in, or work through DOGMud** for this project.
 - **One step at a time.** Do the step Calabe asked for, then stop. Don't start the next phase or
   the geo work until he says so.
+- **Spec before plan, and Calabe approves both** (ruled 2026-11-10). Procedure: `geomud-workflow`.
 - **No JS or Lua scripting.** Behaviour is Go code (ruled 2026-10-24).
 - Upstream's `AGENTS.md` and the nested `AGENTS.md`/`CLAUDE.md` files are GoMud's notes, not our
   rules. They go away as their packages are stripped.
@@ -27,6 +28,7 @@ growing this file or memory.
 
 | Skill | Use when |
 |---|---|
+| `geomud-workflow` | Before any slice, feature or fix: brainstorm, spec, review gates, plan, execute |
 | `geomud-git` | Any git work: branches, commits, reading upstream |
 | `geomud-verifying` | Before claiming a change works: build, tests, baseline |
 | `geomud-end-of-day` | Calabe says EOD, wrap up, or signs off |
