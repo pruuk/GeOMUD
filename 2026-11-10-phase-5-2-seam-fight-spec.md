@@ -2,7 +2,7 @@
 
 Date: 2026-11-10. Written at `master` `c1ca8e7f`. Branch `strip/phase-5-2-seam-fight`.
 **Approved by Calabe 2026-11-10**, with ruling 5 (offhand breakage) added at review. Corrected after
-approval by plan review rounds 1 to 4 (each correction names its round): facts, one test file
+approval by plan review rounds 1 to 5 (each correction names its round): facts, one test file
 edit the move needs, refusals and silent cases made explicit (one new: an account target in the
 recovery room), NPC shooters named in the player-visible change, and tests for the moved methods and
 the rewired call sites.
@@ -214,7 +214,9 @@ unknown account is today (review round 1; `CanAttack` needs the actor).
   Each is shown to fail once with its `SetForTest` line removed.
 - **`shoot`**, test first: PvP disabled gives "PVP is disabled." and no aggro; PvP limited with the
   shooter in a PvP room and the target in a non-PvP room gives "This is not a PVP area." (the ruling 1
-  case); PvP enabled queues exactly one `AggroChanged` with target and exit set; shooting an NPC
+  case), and so does the reverse, shooter in a non-PvP room (ruling 1's other half; review round 5);
+  the recovery-room unit test runs under PvP `disabled`, so it also pins that the recovery-room check
+  comes first (review round 5); PvP enabled queues exactly one `AggroChanged` with target and exit set; shooting an NPC
   queues `AggroChanged`.
 - **`dikubasic` unit tests** for the moved methods (review round 1: a mutation of `HatredRounds` or
   `FindsWeapon` passed every existing test): `TurnOrder` partitions and keeps order; `FindsWeapon`
