@@ -108,3 +108,39 @@ func TestRulesetDoesNotSend(t *testing.T) {
 		t.Errorf("control: scanned only %d internal/rules files; the guard may be scanning the wrong place", scanned)
 	}
 }
+
+// TestOnlyBootNamesTheRuleset enforces the Phase 5 seam: the engine reaches
+// the rules through internal/rules (rules.Get()) and never imports the
+// reference ruleset; main.go picks it at boot. Each other importer is listed
+// with the slice that removes it. An entry that no longer imports the ruleset
+// fails, so the list cannot go stale, and main.go's entry is the positive
+// control that the walk reached the files.
+func TestOnlyBootNamesTheRuleset(t *testing.T) {
+	const ruleset = "github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
+	allowed := map[string]string{
+		"main.go": "boot: rules.Set(dikubasic.New())", "internal/usercommands/suicide_npc.go": "AlignmentChange; slice 3 moves death behind the ruleset",
+		"internal/web/api_v1_items.go": "weapon and armour rankings; slice 4 shrink",
+		"internal/web/api_v1_mobs.go":  "mob rankings; slice 4 shrink",
+	}
+	seen := map[string]bool{}
+	for path, f := range goFiles(t) {
+		if strings.HasPrefix(path, "internal/rules/dikubasic/") {
+			continue
+		}
+		for _, imp := range f.Imports {
+			if strings.Trim(imp.Path.Value, `"`) != ruleset {
+				continue
+			}
+			if _, ok := allowed[path]; ok {
+				seen[path] = true
+				continue
+			}
+			t.Errorf("%s imports %s; the engine reaches the rules through internal/rules (rules.Get())", path, ruleset)
+		}
+	}
+	for path, why := range allowed {
+		if !seen[path] {
+			t.Errorf("stale allowlist: %s (%s) no longer imports %s; remove it from the list", path, why, ruleset)
+		}
+	}
+}
