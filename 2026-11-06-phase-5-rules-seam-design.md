@@ -191,9 +191,28 @@ Each slice plan reads these first; a note leaves once a slice settles it.
   with their packages or are trimmed in slice 7's docs sweep. `AggroType` values shifted when
   `SpellCast` went (`Flee` 4 to 3); NPC sidecars save the int, so a pre-slice-1 local sidecar saved
   mid-flee loads as a plain attack (no shipped data). The spec's 4b note "Slice 5 inherits" is stale
-  (inventory N section 6): only the -10 branch, players-first turn order, NPCs never attacking,
-  accounts-only alignment decay and the pet hatred and killer quirks remain, and slices 2-4 settle
-  them.
+  (inventory N section 6): only the -10 branch, NPCs never attacking, accounts-only alignment decay
+  and the killer quirks remain, and slices 3-4 settle them (players-first turn order is now
+  `dikubasic.TurnOrder`, slice 2; the pet hatred quirk went with charm in slice 1).
+- **From slice 2 (2026-11-10; spec `2026-11-10-phase-5-2-seam-fight-spec.md`).**
+  - The weapon delay (`characters.SetAggro`, weapon plus offhand `WaitRounds`) is still engine code:
+    `characters` cannot import `rules` (cycle via `actors`). It moves behind the ruleset with swing
+    speed (Calabe 2026-11-10: weapon speed plus stats and skill set swings per round, possibly 0
+    with carried progress; out of scope until then).
+  - Three files still import `dikubasic`, allowlisted in `TestOnlyBootNamesTheRuleset` with their
+    slice: `usercommands/suicide_npc.go` (`AlignmentChange`, slice 3), `web/api_v1_items.go` and
+    `web/api_v1_mobs.go` (rankings, slice 4). Remove each from the allowlist when it goes.
+  - Slice 4 deletes offhand breakage (Calabe 2026-11-10): `offhandBreakCheck` in `DoCombat`, the
+    broken item 20, and `BreakChance`/`BreakTest` if nothing else reads them; the `pvp` golden
+    (shield break chance 90) changes then.
+  - Slice 4 deletes the `BackStab` branch in `calculateCombat` (nothing sets `BackStab`; its reset
+    acts on a copy of the character).
+  - Better targeting and aggro tracking than the single aggro flag is wanted later (Calabe
+    2026-11-10), outside the slim base.
+  - Test config helpers: `setConfig` (hooks), `setPvP` (usercommands) and an inline copy in
+    `dikubasic/ruleset_test.go` repeat one pattern, and each leaves restored keys pinned as explicit
+    overrides (a later `AddOverlayOverrides` on them in the same test binary is skipped). Nothing
+    trips it today; one `configs` test helper that removes the keys it added would replace all three.
 
 ## Out of scope
 
