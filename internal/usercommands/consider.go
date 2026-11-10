@@ -3,12 +3,10 @@ package usercommands
 import (
 	"fmt"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/events"
-	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
-	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -36,21 +34,22 @@ func Consider(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 		return true, nil
 	}
 
-	var odds float64
+	var target *actors.Actor
 	considerType := "mob"
-	considerName := "nobody"
-
 	if playerId > 0 {
-		u := accounts.GetByUserId(playerId)
-		odds = dikubasic.CombatOdds(*actor.Character, *u.Character)
+		target = actors.ByUserId(playerId)
 		considerType = "user"
-		considerName = u.Character.Name
 	} else {
-		m := mobs.GetInstance(mobId)
-		odds = dikubasic.CombatOdds(*actor.Character, m.Character)
-		considerType = "mob"
-		considerName = m.Character.Name
+		target = actors.Get(mobId)
 	}
+
+	if target == nil || target.Character == nil {
+		Tell(actor, `<ansi fg="mobname">`+lookAt+`</ansi> can't be found.`)
+		return true, nil
+	}
+
+	odds := rules.Get().Consider(actor, target)
+	considerName := target.Character.Name
 
 	// odds is defRoundsToKill / atkRoundsToKill.
 	// > 1.0 means the player kills the target faster than the target kills the player.

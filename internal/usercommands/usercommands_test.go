@@ -16,6 +16,8 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
+	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,6 +28,7 @@ func TestMain(m *testing.M) {
 	mudlog.SetupLogger(nil, "", "", false)
 	actors.Init()
 	messaging.Init()
+	rules.Set(dikubasic.New())
 	// TryCommand reads the keyword aliases, which need a data folder.
 	dataDir, err := filepath.Abs("../../_datafiles/world/empty")
 	if err != nil {

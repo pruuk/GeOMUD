@@ -44,6 +44,8 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/plugins"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
+	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/GoMudEngine/GoMud/internal/templates"
 	"github.com/GoMudEngine/GoMud/internal/term"
@@ -202,6 +204,9 @@ func main() {
 		Language:        textLang.Make(c.Translation.Language.String()),
 		LanguagePaths:   c.Translation.LanguagePaths,
 	})
+
+	// The reference ruleset. This is the one place the engine names a ruleset.
+	rules.Set(dikubasic.New())
 
 	hooks.RegisterListeners()
 
