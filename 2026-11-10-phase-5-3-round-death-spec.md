@@ -3,7 +3,8 @@
 Date: 2026-11-10. Written at `master` `a06e0f07` (slice 2 merged as #31). Branch
 `strip/phase-5-3-round-death`. Builds on `2026-11-06-phase-5-rules-seam-design.md` (slice 3 row,
 "Notes for later slices"), `gomud_strip_plan.md` decisions 1 and 5-11, and slice 2's spec
-(`docs/completed/2026-11-10-phase-5-2-seam-fight-spec.md`). Not yet reviewed by Calabe.
+(`docs/completed/2026-11-10-phase-5-2-seam-fight-spec.md`). **Approved by Calabe 2026-11-10**, with
+ruling 5 (help files) added at review.
 
 **Goal.** The engine asks the ruleset whether an actor is up, downed or dead, how much it
 regenerates, and what a death means; every actor dies through one engine routine. Round and regen
@@ -33,6 +34,9 @@ Calabe, 2026-11-10, in brainstorming:
    `ItemDropChance`, as today (option B).** This keeps one drop chance in the bare ruleset, by
    choice: builders keep a way to make rare drops.
 4. **`suicide` stays a player command, refused in a fight and in the recovery room (option A).**
+5. **Help files say that a corpse's contents are destroyed when it rots** (Calabe, at spec review).
+   Verified: `Room.UpdateCorpses` (`rooms.go:231-258`) removes a decayed corpse with its `Items`
+   and `Gold`, and nothing moves them out first.
 
 ## Facts verified against source (2026-11-10, `a06e0f07`)
 
@@ -65,6 +69,8 @@ Read or grepped by the controller today.
 | Reads golden H | `reads_golden_test.go:830-`: rat `suicide` after damage (alignment lines), corpse bury and crumble, alignment decay, `GrantXP`, Bob downed then `suicide` with the recovery room set to room B | read |
 | Combat golden | records queued `events.Input` (e.g. `Input rat: "suicide"`), never runs it; 11 tests | slice 2 spec; `grep -c 'func Test'` |
 | Free package name | `internal/death` does not exist | `ls` |
+| Help pages on death | `templates/help/death.template` (bleed out, die at -10, gear and XP loss, shadow realm portal) and `templates/help/health.template` (0 HP bleed, -10 death, "all gear you posess drops to the ground"); keyword `death` (`keywords.yaml:18`); no help page mentions corpses | `grep -rli 'corpse\|death' templates/help keywords.yaml`, read |
+| Corpse decay | `UpdateCorpses` (`rooms.go:231-258`) prunes a corpse once `CorpseDecayTime` (game time, shipped `1 hour`) has passed, announcing "A <name> corpse crumbles to dust."; its items and gold go with it | read |
 | `parties` imports | only `util` | `go list` |
 
 ## Design
@@ -186,6 +192,20 @@ change. The bleed-out and its "Somebody needs to provide aid!" line go.
 - **The import guard's allowlist** loses `usercommands/suicide_npc.go` (deleted; `AlignmentChange`
   is used only inside `dikubasic`).
 
+### Help pages (ruling 5)
+
+`help death` is rewritten for the new rules:
+
+- At 0 health you die.
+- What you drop: the items you carry and your gold go into your corpse; what you wear stays on you.
+- You come back in the recovery room at 1 health and heal fast there, then leave by the portal.
+- Your corpse holds your things until it crumbles to dust after a while. **When it crumbles,
+  everything still in it is destroyed**, so go back for it.
+- An NPC's corpse holds its loot the same way, and its contents are destroyed the same way.
+
+`help health` loses its bleed-out and -10 lines and points to `help death`. `help get` (or whichever
+page covers `get ... from`) mentions looting a corpse, if a page for `get` exists; the plan checks.
+
 ### Guards
 
 - **New AST guard `TestEngineAsksTheRulesetWhoIsDead`:** in `internal/hooks`, `internal/usercommands`
@@ -273,7 +293,9 @@ the corpse; the plan fixes the exact steps against `script.go`.
 7. `suicide` refuses in a fight and in the recovery room.
 8. Guards.
 9. Stub-ruleset tests.
-10. Docs: patch notes, status, design notes, strip plan decision 12, `geomud-verifying` count.
+10. Docs: help pages (ruling 5), patch notes, status, design notes, strip plan decision 12,
+    `geomud-verifying` count. The help pages are player-facing and could ride with commit 6
+    instead; the plan decides, and the reads goldens show any help text they cover.
 
 ## What this locks in
 
