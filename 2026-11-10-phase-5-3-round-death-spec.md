@@ -203,8 +203,9 @@ change. The bleed-out and its "Somebody needs to provide aid!" line go.
   everything still in it is destroyed**, so go back for it.
 - An NPC's corpse holds its loot the same way, and its contents are destroyed the same way.
 
-`help health` loses its bleed-out and -10 lines and points to `help death`. `help get` (or whichever
-page covers `get ... from`) mentions looting a corpse, if a page for `get` exists; the plan checks.
+`help health` loses its bleed-out and -10 lines and points to `help death`. `help get`
+(`templates/help/get.md`) mentions taking things from a corpse, and that its contents are destroyed
+when it crumbles.
 
 ### Guards
 
