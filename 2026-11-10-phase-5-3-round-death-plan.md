@@ -8,8 +8,9 @@ up, downed or dead (`Condition`), how much a body regenerates (`Regen`) and what
 parity; death goes straight to the bare rules, with a golden of today's death recorded first.
 
 **Architecture:** See the spec ("Design", and "Settled while planning"). This plan adds no design
-decision of its own. The questions found while planning are below; the controller accepted every
-recommendation, and the spec records each. Code in the tasks that follows one is marked "(Q*n*)".
+decision of its own: the questions found while planning are below, the controller accepted every
+recommendation, and the spec records each; the calls made while applying review round 2 are in the
+spec's "Decisions taken without asking". Code in the tasks that follows one is marked "(Q*n*)".
 
 **Tech stack:** Go, testify, combat and reads goldens in `internal/hooks`, `internal/guards` (Go syntax
 tree), `cmd/smoke`.
@@ -77,7 +78,10 @@ it also keeps a level-up's `SaveUser` out of the repo's data folder. The engine 
 name starts with the word (`rooms.go:945-990`, `util.go:373-397`): `Smk<tag>c1` matches
 `Smk<tag>c10 corpse`, so with `-bots 50` one bot can empty another's corpse and the other then fails.
 *Recommend:* pad the bot number to three digits (`cmd/smoke/main.go:124`, `:131`:
-`Smk%sc%03d`), so no bot name is a prefix of another.
+`Smk%sc%03d`), so no bot name is a prefix of another. (Still needed after Task 5b: a name still
+reaches every corpse whose name it begins, so `Smk<tag>c1` would count `Smk<tag>c10`'s corpse and
+body too. After Task 5b the bot still names its corpse by its own name: the one typing is not in its
+own name's count; Task 6 Step 12.)
 
 **Q6. The spec's list of expected golden changes is short.** It names the `suicide` input lines, the
 death fixtures and reads golden H's NPC- and player-death sections. Also changing in Task 6, all
@@ -163,11 +167,138 @@ player sees:
   `IsDisabled` call in a file not on a short allowlist). The two files on the allowlist call
   `items.Item.IsDisabled` (a disabled equipment slot), which is not a body's condition.
 
+## Plan review round 2: what this revision changed
+
+The spec's "Plan review round 2" items, each applied here (the spec marks each with this place):
+
+- **Blocker, the corpse panel drops its rows** (`look.panels.go:112-121`; no
+  `panel-layouts/character/equipment-look.yaml` exists, so the fallback always runs): Task 6 Step 7
+  makes the fallback create `equip`; `TestLookAtACorpseShowsWhatItHolds` (Step 11b) is its failing
+  test and gains a probe.
+- **Calabe's ruling, `bury` refuses a player's corpse that holds anything**: new **Task 5c**.
+- **Calabe's rulings on corpse names** (fix the lookup; then, replacing the two-list version, one
+  numbering per name with the living first and corpses newest first; and both ordinal forms, `2.rat`
+  and `rat#2`, in the one parser `util.GetMatchNumber`): new **Task 5b** (the parser,
+  `util.FindMatchIndexIn`, `FindCorpseByRef` with `livingReach`, `FindCorpse` delegating, the
+  "still alive" refusal in `get` and `bury`, `bury` removing the corpse it found); the `get` caller
+  test rides in Task 6 Step 11b, where `get` first reaches corpses. Then two more rulings: the one
+  typing is not in their own name's living count for a corpse (Task 5b, with `look bob` by Bob
+  reaching his corpse), and a player's refusal line takes no "The"; and a hidden body is in no
+  viewer's name list, for every name lookup; then admins always perceive the hidden, and one
+  visibility rule everywhere (new **Task 5a**: `rooms.Perceives`, the room view's check plus the
+  admin reveal, now asked by the room view, `FindByName` for all 12 callers, the corpse count,
+  messaging's `canSee` through `PerceivesWith`, GMCP's room contents and combat's "can't see them";
+  the sneaking actors' own silences, darkness and the unread `Unseen` field are left alone, with the
+  reasons in Task 5a and the spec). Goldens: none change in 5a, 5b or 5c (see each task); Task 6
+  still changes exactly nine.
+- **Major, `-count=16` over the `TestCombatGoldenFleeSuccess` repeat flake**: Task 6 Step 11b(c) now
+  runs only the tests that make deaths, one package at a time.
+- **Minor, `remove.go` probes**: Task 3 Step 9(b) probes keep a `rules` use so they compile.
+- **Minor, Task 6 Step 8's absence grep**: moved to Step 13 (after Steps 11 and 12 clear their hits);
+  its control is now a new Step 0 (129 lines in 19 files before the task).
+- **Minor, Task 5's grep list**: names `ruleset.go`'s own `recoveryRegen` comment.
+- **Minor, surviving mutations**, each now killed by a named test and probe: respawn health and NPC
+  respawn (`TestStubRulesetDecidesTheRespawn`, Task 9); the gold clamp and the "item not held" guard
+  (`TestStubRulesetCannotDropWhatTheBodyLacks`, Task 9); `PlayerDeath`'s killer fields and the death
+  event-log line (`TestRespawnStartsClean`, Task 6 Step 11b); `CleanupMobSpawns`
+  (`TestDeathFreesTheNPCsSpawnSlot`, Task 6 Step 11b); NPC regen in the recovery room and the
+  recovery line's `Senses`/`Range` (Task 5); container precedence in `namesACorpse`
+  (`TestGetAllWithoutACorpseTakesTheFloor`, Task 6 Step 11b).
+- **Minor, the death guard's scope**: Task 8 checks each prefix reaches a file.
+- **Minor, two fixture comments**: Task 6 Step 11 gives their new text.
+- **Minor, `suicide` staying `AllowedWhenDowned`**: Task 7 Step 3b words the registry comment; the
+  spec's design says it in one sentence.
+- **Minor, `RegenResult.Changes()` and the `IsDisabled` ban**: in the spec's "Decisions taken without
+  asking".
+
+## Plan review round 3: what this revision changed
+
+- **M1, `Char.Enemies`** and **M2, a say's `Comm.Channel` sender**: Task 5a's table rows, Step 6's
+  round 3 hunks, tests in `modules/gmcp/visibility_test.go`.
+- **The site search redone** (every path that hands a viewer a body's name, ID or presence, not only
+  the places that named hidden): Task 5a's table now lists each with file:line, moved or left alone
+  with a reason. Besides M1 and M2 it moved GMCP's leave notice and room refreshes, untargeted
+  `attack`, the walk-in "notices you" line and the follow lines.
+- **Calabe's follow ruling** (following does not cancel hiding; a line whose only content is a hidden
+  body's presence is dropped for a viewer who does not perceive it, while a line that carries news the
+  viewer gets anyway keeps "Someone"): the target's "is following you" and "stopped following you"
+  are dropped (`TestHiddenFollowerIsNotAnnounced`, two probes); the follower's own "You are no longer
+  following someone" is kept; a say's GMCP `Sender: "Someone"` is kept (the say text arrives anyway,
+  as "Someone says"). Every other round 3 site already drops (`Char.Enemies`, the leave notice and
+  refreshes, the walk-in notice, untargeted picks).
+- **m1** (no test reached the room view or GMCP's room contents): `TestRoomViewListsOnlyWhatTheViewerPerceives`
+  and `TestRoomContentsListOnlyWhatTheViewerPerceives`, each with a probe (Task 5a Step 7).
+- **m2** (untargeted `attack` picks a hidden body): Task 5a, `TestUntargetedAttackPicksOnlyWhatTheAttackerPerceives`.
+- **m3** (Task 6 Step 13's knob grep hits a comment Step 11b writes): the look test's comment reworded.
+- **m4** (the corpse lookup no longer needs `UserId > 0` or `MobId > 0`): the look test's stale comment
+  reworded; the call is in the spec's decisions table.
+- **m5** (the sort probe cannot kill the same-round bury test): Task 5b Step 9's prediction fixed.
+- **m6** (Task 1 Step 12's predictions): `hp=1/7` in `death_player` and `death_pvp`, no Remove lines in
+  `death_player`.
+- **m7** (the deferred silences ruling said `bury`; it is `trash`): fixed in the spec.
+- **m8** (help text): `get.md` says what a name reaches, Bobby and the no-corpse case included; the
+  `item-names.template` anchor names its line.
+
+## Plan review round 4: what this revision changed
+
+- **M1** `follow lose` uses `seenName`: Task 5a table and Step 6 hunk, `TestFollowLoseNamesOnlyAPerceivedLeader`.
+- **M2** presence-only lines dropped for viewers who do not perceive the body (`rooms.NotPerceiving`,
+  Task 5a Step 3, passed as `Exclude`): Task 5a's "Presence-only lines" table lists each line and its
+  verdict; Step 6 hunks and the recovery-line bullet; Task 6 Step 3's revive;
+  `TestPresenceLinesReachOnlyThoseWhoPerceive`.
+- **Minors:** Task 5b's `RemoveCorpseRef` test looks up `rat`; Task 5a Step 7's always-true probe
+  names the two goldens it changes; tests and probes for `aggroChangedHandler`, the old-room loop and
+  the NPC-follower and NPC-leader follow lines (`TestFollowExpiryFollowsTheRule`); `seenName`'s
+  comment placed above it; distinct IDs in `TestPerceivesAnUnhiddenBodyAndItself`.
+
+## Before plan review round 5: what this revision changed
+
+- **Every moved presence line has its own test and probe.** Task 5a Step 1:
+  `TestEachPresenceLineReachesOnlyThoseWhoPerceive`, one subtest per call site (teleport, the
+  teleport party loop, flee, drop), and `TestRecoveryLineExcludesThoseWhoDoNotPerceive` in
+  `dikubasic`; Step 7 probes delete each site's `Exclude` in turn. Task 6 Step 11b:
+  `TestReviveOfAHiddenBodyReachesOnlyThoseWhoPerceive`, with its probe in the revive bullet.
+- **Run:** the four hooks subtests pass on a scratch worktree with Task 5a applied, and each probe
+  fails its own subtest only. Task 5b's `RemoveCorpseRef` test passes with 5b applied and fails
+  under its probe. The recovery test ran against a stand-in (Tasks 3 and 5 not applied); the revive
+  test is unrun (the `death` package is Task 6's).
+
+## Plan review round 5: what this revision changed
+
+Round 5 ran the whole plan, Tasks 1 to 10: everything builds and the nine predicted goldens hold.
+M1 is the controller's application of Calabe's principle ("what a viewer cannot perceive does not
+exist for them; no reply reveals it"), not a Calabe ruling; he may overrule.
+
+- **M1** the world death notice named a hidden killer to everyone. Task 6 Step 3's
+  `recordPlayerDeath` now names, per reader, only the killers that reader perceives (`namesKiller`:
+  `rooms.Perceives`, and a hidden killer in another room only to an admin); with none left the
+  `(killed by ...)` part goes, never "someone". The notice was one `events.Broadcast` string; Step 3a
+  adds `messaging.NotifyEach`, one `UserId` message per active account. Test
+  `TestDeathNoticeNamesOnlyTheKillersEachReaderPerceives` (Task 6 Step 11b) with three probes; the
+  `hidden_attacker` prediction (Step 16) now has only Alice reading `(killed by Alice)`.
+- **Minor 8 not applied:** a fight's victim already perceives the fight through the attacker's hit
+  lines, so the refusal reveals nothing; counting only perceived attackers would let quit escape an
+  unseen attacker. `inFight` counts every attacker, as today (site table row).
+- **Minors:** Task 5 Step 4's `Range` probe widens the range (deleting the line cannot fail:
+  `Room` is the zero value); `death_player`'s testsword remove, drop and `ItemOwnership Alice item=93101`
+  in Task 1 Step 12 and Task 6 Step 16; `get.md`'s stash line gains two trailing spaces (rendered
+  through `markdown.NewParser`); the Task 3 Step 8 and Task 6 Step 11b(b) probes compile (`_ =`);
+  `bury.template`'s lines go after line 7; the presence table's three stray site rows moved back to
+  the site table; `DeathOutcome.Messages` dropped (Q1: awards carry the lines).
+- **Run on a scratch copy at `65bbc144`:** today's `suicide.go` sending the notice through
+  `NotifyEach` with `namesKiller` passes the notice test written for the reads world, its three
+  probes fail as stated, and `go test ./... -count=1` shows only the 3 known Windows failures
+  (goldens unchanged). The `get.md` render was run. Task 6's form of the notice test is unrun (the
+  `death` package is Task 6's).
+
 ## Where the spec's facts table is wrong or short (checked at `225c08ba`)
 
 - **Help pages** live at `_datafiles/world/empty/templates/help/` (`death.template`, `health.template`,
   `get.md`), not `templates/help/`. `keywords.yaml` is `_datafiles/world/empty/keywords.yaml` (`:18`
-  correct). `death.template` and `config.yaml` have CRLF line ends; `health.template` and `get.md` LF.
+  correct). Line ends (rechecked at `65bbc144`, `git ls-files --eol`): `death.template`,
+  `health.template`, `get.md`, `config.yaml`, `75.yaml` and `bury.template` are all LF in git and CRLF
+  in this checkout (`core.autocrlf=true`), so the working-tree edits below keep CRLF and git stores
+  LF. (The earlier "`health.template` and `get.md` LF" was wrong.)
 - **Health thresholds:** missing `hooks/NewRound_AutoHeal.go:68` (`Health > 0`) and
   `usercommands/remove.go:51` (`Health > 0`, inside the guarded set; Q3). The `characters` list also
   misses `:464` (`Health > 0`, health percentage) and `:1204` (`< -10`) and the remove-lock checks
@@ -211,7 +342,7 @@ player sees:
 | Corpse panel call; panel | `look.go:412-414`; `look.panels.go:110-157` |
 | `Corpse` fields | `rooms/corpse.go:9-17` |
 | `CanPvp` | `rooms/rooms.go:2061-2089` (check `:2063`) |
-| `UpdateCorpses`; `FindCorpseByRef` | `rooms.go:231-258`; `:945-990` |
+| `UpdateCorpses`; `FindCorpseByRef` | `rooms.go:231-258`; `:945-993` (before Task 5b rewrites it) |
 | `GetOriginalRoom`; `IsEphemeralRoomId`; empty-copy log | `rooms/ephemeral.go:284-289`; `:212-214`; `:185-189` |
 | Ephemeral chunks: limit 100; `FindEphemeralRoomIds`; `TryEphemeralCleanup` (frees a chunk only when no player is in it) | `ephemeral.go:14`; `:55-65`; `:216-262` |
 | Room player bookkeeping (`PlayerCt`, `GetPlayers`, `RemovePlayer`) | `rooms.go:1054`, `:1158`, `:1807-1815` |
@@ -254,6 +385,37 @@ player sees:
 | Test mains | `hooks/actionpoints_test.go:24-38`; `usercommands/usercommands_test.go:27-41`; `rooms/rooms_test.go:40-55` |
 | Test helpers | `goSetup` (`go_test.go:18-31`), `playerTexts` (`:34-43`), `capture[T]` (`items_test.go:48-63`), `setup` (`usercommands_test.go:45-83`) |
 | Upstream recovery buff | `git show 57255ee4^:_datafiles/world/empty/buffs/24-death_recovery.js` |
+
+Added for plan review round 2 (verified 2026-11-11 at `65bbc144`):
+
+| What | Where |
+|---|---|
+| `GetMatchNumber`; `FindMatchIn`; `stringMatch` | `internal/util/util.go:298-314`; `:316-368`; `:373-397` |
+| `FindMatchIn` tests | `util_test.go:533-561` (`TestFindMatchIn`) |
+| `RemoveCorpse` (matches owner, name and round; first wins) | `rooms.go:209-229` |
+| `FindCorpse`; `FindCorpseByRef` (each de-duplicates names); `FindContainerByName` | `rooms.go:893-943`; `:945-993`; `:1464-1482` |
+| Callers of the two lookups (all of them: `grep -rn 'FindCorpse' --include=*.go .`) | `get.go:92` (`ByRef`), `get.go:422`, `look.go:394`, `modules/cleanup/cleanup.go:141`; tests `rooms_test.go:178-214` |
+| Living lookup: `FindByName`; `findPlayerByName`; `findMobByName` (its `#`/`@` guard; its `name#k` list) | `rooms.go:1334-1341`; `:1343-1387`; `:1389-1435` (`:1391-1397`; `:1417`) |
+| `FindByName` callers (12, `grep -rn '\.FindByName(' --include=*.go . \| grep -v _test`); each takes the player when both come back | e.g. `look.go:76-84`, `consider.go:23-40`, `attack.go:164` |
+| `GetMatchNumber` callers | `util.go:322` (in `FindMatchIn`), `items/items.go:604`; tests `util_test.go:509-531` |
+| `Corpse.RoundCreated` | `rooms/corpse.go:13` (`uint64`) |
+| Character names: shipped `NameRejectRegex` | `_datafiles/config.yaml:578` (`^[a-zA-Z0-9_]+$`), read by `accounts.ValidateName` (`users.go:517`) |
+| Help on ordinals | `_datafiles/world/empty/templates/help/item-names.template:13-15` (the `#N` form) |
+| Hidden and its reveal: buff flags `hidden`, `see-hidden` | `_datafiles/world/empty/buffs-flags/hidden.yaml`, `see-hidden.yaml`; the only `see-hidden` readers are `rooms/roomdetails.go:253`, `:269` |
+| Room view hides a body per viewer | `roomdetails.go:252-256` (players), `:268-272` (NPCs) |
+| Other hidden checks with no reveal (moved onto `Perceives` in Task 5a) | `modules/gmcp/gmcp.Room.go:346`, `:374`; `messaging/perceive.go:43-55` (`canSee`); `hooks/NewRound_DoCombat.go:195-199` |
+| Admin role and the permission test that lets it through | `accounts/userrecord.go:27` (`RoleAdmin`), `:386-389` (`HasRolePermission`); admin commands gated at `usercommands.go:326` |
+| Messaging's flag seam (its tests fake `hidden`) | `messaging/perceive.go:28-31`; `messaging_test.go:42` |
+| `FindAll` returns every body unfiltered | `GetMobs` `rooms.go:1083-1085`; `GetPlayers` `:1175-1177` |
+| Self checks after `FindByName` | `consider.go:24-26`, `attack.go:167-172`; none in `look`, `give`, `show` |
+| Global name lookups (not of a room's bodies) | `whisper.go:34`, `party.go:104`, `admin.locate.go:34`, `admin.teleport.go:47`, `:77`, `admin.visit.go:60` (`accounts.GetByCharacterName`) |
+| `look.go`'s unused third copy of the de-duplicated name lists | `look.go:367-392` (built, never read) |
+| `bury` | `modules/cleanup/cleanup.go:132-168` (lookup `:141`, `RemoveCorpse` `:143`); registered `:58`; help `modules/cleanup/files/datafiles/templates/help/bury.template` (8 lines) |
+| The reads harness runs module commands | `reads_golden_test.go:72` (imports `modules/cleanup`); `newReadsWorld` `:256`, `trio` `:403`, `run` `:456` |
+| Corpse panel fallback names `inv`, rows go to `equip`; the equipment panel's fallback names `equip` | `look.panels.go:112-121`; `:55-61` (`buildInventoryLookPanel`). `_datafiles/world/empty/panel-layouts/` holds only `character/inventory.yaml`, so both fallbacks always run |
+| NPC ending: home-room slot settling | `rooms.go:668-676` (`CleanupMobSpawns`); `rooms/npcstore.go:492-558` (`slotNPC`, `settleSlot`) |
+| `PlayerDeath` fields; `UserLog` | `events/eventtypes.go:220-228`; `accounts/userlog.go:14-21` (`Category`, `What`) |
+| `TestCombatGoldenFleeSuccess` repeat flake | `combat_golden_test.go:468`; `status.md:24-25` (Watch) |
 
 If a line has moved when you get there, find the code by its text and say so in the report.
 
@@ -749,9 +911,13 @@ func TestCombatGoldenDeathPvP(t *testing.T) {
   `MobItemDrop mob=93201 room=93001 zone=goldenzone item=N` note per dropped item, the corpse line,
   `MobDeath rat`, and Alice's `kd=1/0/0/0/1/0 pk=[] pd=[]` (one mob kill, one elite kill).
   `death_player`: the `PlayerDrop`, the `== heal N` bleed-out sections, `Ran Alice: "suicide"`,
-  "has DIED!" (with no `\r` at the line end), the Remove and Drop lines, "You lost 100 experience
-  points", the corpse, `room=copy-of-93003 hp=1/12`, `kd=0/1/0/0/0/1` (a mob death, an elite death).
-  `death_pvp`: the same for Bob with "(killed by Alice)", Bob's `kd=0/0/0/1/0/0 pk=[] pd=[9301:Alice=1]`
+  "has DIED!" (with no `\r` at the line end), the Drop lines (a Remove line comes before each worn
+  item a roll drops; at seed 303 `death_player` has one: `You remove your <ansi fg="item">testsword</ansi> and return it to your backpack.`
+  then `You drop the <ansi fg="item">testsword</ansi>.` and the note `ItemOwnership Alice item=93101`,
+  plan review round 5's run; round 3's "has none" was wrong), "You lost 100 experience points", the corpse, `room=copy-of-93003 hp=1/7` (round
+  3's run: the respawned level 2 body's maximum is 7, not the 12 `addPlayer` set: report the value
+  the record holds and do not change the fixture), `kd=0/1/0/0/0/1` (a mob death, an elite death).
+  `death_pvp`: the same for Bob (`hp=1/7` too, round 3's run) with "(killed by Alice)", Bob's `kd=0/0/0/1/0/0 pk=[] pd=[9301:Alice=1]`
   and Alice's `kd=0/0/1/0/0/0 pk=[9302:Bob=1] pd=[]`. If a `kd=` differs from these, report the
   record's value and why (read `suicide.go:56-109` and `suicide_npc.go:97-118`); do not change the
   fixture. If neither player fixture dropped any item by chance (all draws missed), say so: the
@@ -1347,7 +1513,9 @@ func bleeds(a *actors.Actor, round uint64) bool {
   `usercommands` test mains do (`actionpoints_test.go:28`, `usercommands_test.go:31`). The ruleset
   guard `TestOnlyBootNamesTheRuleset` reads no `_test.go` file (`goFiles`, `guards_test.go:31`), so
   this import needs no allowlist entry. Check: `go test . -count=1` prints `ok`; with the `rules.Set`
-  line deleted it panics with `rules: no ruleset is set` (paste the line, restore).
+  line replaced by `_, _ = rules.Get, dikubasic.New // probe: no ruleset set` (deleting it alone
+  leaves both imports unused, and the package does not compile) it panics with
+  `rules: no ruleset is set` (paste the line, restore).
 
 - [ ] **Step 9: Tests for the rewired checks.** Two of the rewired checks are reached by no test
   today. Both tests pass on today's code too (the rewiring keeps behaviour), so their probes are what
@@ -1422,9 +1590,11 @@ func TestCursedItemComesOffOnlyABodyThatIsNotUp(t *testing.T) {
 
   Check before relying on it: the curse refusal needs `GetSkillLevel("enchant")` under
   `skills.MaxSkillLevel("enchant")`, which is `DefaultMaxLevel` 4 with no skill data loaded
-  (`skills/skill.go:22`, `:116-121`); a new character has no skills. Probes: at `remove.go:51` replace
-  `rules.Get().Condition(actor) == rules.Up` with `true` (the not-up assert fails), then with `false`
-  (the up assert fails). Paste the two lines, restore.
+  (`skills/skill.go:22`, `:116-121`); a new character has no skills. Probes (each keeps a `rules.`
+  call, the file's only one, so the import stays used and the probe compiles): at `remove.go:51`
+  replace `rules.Get().Condition(actor) == rules.Up` with `rules.Get() != nil` (always true: the
+  not-up assert fails), then with `rules.Get() == nil` (always false: the up assert fails). Paste the
+  two lines, restore.
 
 - [ ] **Step 10: Prove the engine packages ask the ruleset.**
   `grep -nE '\.Health *(<=|>=|<|>|==|!=) *-?[0-9]' internal/hooks/*.go internal/usercommands/*.go | grep -v _test.go`
@@ -1522,6 +1692,14 @@ func TestRegenInTheRecoveryRoomRollsD10HealthAndMana(t *testing.T) {
 			require.Equal(t, next, util.Rand(1000), "room %d seed %d: full, still two draws", roomId, seed)
 		}
 	}
+
+	// Any actor there heals, an NPC too (Q7h; outside it, accounts only).
+	n := npc(t, 0, 0)
+	n.Character.RoomId = copyId
+	n.Character.HealthMax.Value, n.Character.ManaMax.Value = 100, 100
+	n.Character.Health, n.Character.Mana = 1, 0
+	util.SeedRandForTest(1)
+	require.True(t, New().Regen(n, 1).Changes(), "an NPC in the recovery room heals")
 }
 
 // The amounts are what Heal will apply (capped at the maximums), and the
@@ -1545,6 +1723,8 @@ func TestRegenInTheRecoveryRoomSaysWhatItHealed(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf(`The shadow realm heals you for <ansi fg="healing">%d damage</ansi> and restores <ansi fg="mana-100">%d mana</ansi>!`, got.Health, got.Mana), got.Messages[0].ActorText)
 	assert.Equal(t, perception.WorldEvent, got.Messages[1].Kind)
 	assert.Equal(t, a.Id, got.Messages[1].Actor)
+	assert.Equal(t, perception.Sight, got.Messages[1].Senses, "the room sees it")
+	assert.Equal(t, perception.Room, got.Messages[1].Range, "the room, not further")
 	assert.Equal(t, `{actor} is recovering from a recent death.`, got.Messages[1].ObserverText)
 
 	// Capped at the maximums: one point short heals exactly one point, and
@@ -1647,9 +1827,15 @@ func recoveryRegen(a *actors.Actor) rules.RegenResult {
     mana-cap assert fails the same way);
   - add `if c.Health >= c.HealthMax.Value && c.Mana >= c.ManaMax.Value { return rules.RegenResult{} }`
     as the first statement after `c := a.Character` (the full-health "still two draws" assert fails);
-  - change `{actor} is recovering` to `{actor} recovers` (the line test fails).
+  - change `{actor} is recovering` to `{actor} recovers` (the line test fails);
+  - make the recovery rule accounts only, `if accountOf(a) != nil && rooms.IsDeathRecoveryRoom(a.Character.RoomId) {`
+    (the d10 test's NPC assert fails);
+  - delete the room line's `Senses:` line (the `Senses` assert fails); set its `Range:` to
+    `perception.Nearby` (the `Range` assert fails). Deleting the `Range:` line is no probe: `Room` is
+    `Range`'s zero value (`perception.go:49`), so the line could go and every test still passes
+    (plan review round 5).
 
-  Paste the six lines.
+  Paste the nine lines.
 
 - [ ] **Step 5: Upstream's inert buff and its mutator go** (spec, plan review round 1). Buff 24
   (`_datafiles/world/empty/buffs/24-death_recovery.yaml`) is a name, a description and a trigger rate
@@ -1668,6 +1854,8 @@ func recoveryRegen(a *actors.Actor) rules.RegenResult {
     `2026-11-06-phase-5-rulings.md`, `docs/completed/2026-10-26-phase-4-scripting-surface.md`,
     `docs/completed/2026-10-28-phase-4b-5-inventory.md`; left as written), the spec and this plan,
     `2026-11-06-phase-5-rules-seam-design.md:153` (its slice 6 sentence, removed in Task 10),
+    `internal/rules/dikubasic/ruleset.go` (this task's own `recoveryRegen` comment, "deleted Death
+    Recovery buff (24-death_recovery.js)", which names the deleted script on purpose),
     `internal/usercommands/suicide.go:302` (a comment Task 6 deletes) and
     `_datafiles/html/admin/config-wizard.html:1398` (`'Death Recovery Room ID'`, the room setting, which
     stays). `_datafiles/html/admin/mutators-api.html:78`, `:83` use `[24]` as an example buff ID in an
@@ -1680,6 +1868,2390 @@ func recoveryRegen(a *actors.Actor) rules.RegenResult {
   changes, stop and report. Commit the two Go files, `75.yaml` and the two removals (`git rm` staged
   them):
   `Phase 5.3: the recovery room heals 1d10 health and mana a round (upstream's Death Recovery, as a ruleset rule); its inert buff and mutator go`.
+
+### Task 5a: One visibility rule (`rooms.Perceives`) for the room view, name lookups, messages, GMCP and combat (Sonnet)
+
+Calabe's rulings (spec, plan review round 2, 2026-11-11):
+
+- **A hidden character is not perceivable until revealed to the viewer:** it is not in the list the
+  viewer's names are matched against, takes no ordinal, cannot be named, and no reply reveals it.
+  Every name lookup, living and corpse.
+- **Admins always perceive hidden characters,** in the one shared check, not per command.
+- **One visibility rule everywhere:** every place that decides whether a viewer perceives a
+  character asks the same function, so `see-hidden` and admins reveal hidden characters in GMCP and
+  in messages too.
+
+**How hidden, reveal and admin work today (read at `65bbc144`).** Hidden is the buff flag `hidden`
+on the body (`_datafiles/world/empty/buffs-flags/hidden.yaml`). Reveal to a viewer is the viewer's
+buff flag `see-hidden` (`buffs-flags/see-hidden.yaml`); its only readers are `roomdetails.go:253`
+and `:269`. There is no per-viewer reveal list. An admin is an account whose `Role` is
+`accounts.RoleAdmin` (`accounts/userrecord.go:27`, `RoleAdmin string = "admin"`); the codebase's own
+permission test lets it through first, `if u.Role == RoleAdmin { return true }`
+(`HasRolePermission`, `userrecord.go:386-389`), and admin commands are gated through that
+(`usercommands.go:326`). A body's account is `actors.AccountOf(id)` (`actors/registry.go:70`), which
+`rooms` already uses (`findPlayerByName`, `rooms.go:1353`).
+
+**Every path that hands a viewer a character's name, ID or presence** (plan review round 3: a grep
+for hidden-related words cannot find a path that never checked hidden, so the search also covers
+every place that enumerates a room's bodies, every GMCP module and payload, every
+`events.Communication` producer and consumer, every untargeted target pick and every line that
+names one body to another). The searches, at `65bbc144`:
+`grep -rn '"hidden"\|`hidden`\|see-hidden\|nightvision\|GetVisibility()\|Unseen\|invisib' --include=*.go internal modules | grep -v _test`
+(nothing named invisible or blind exists);
+`grep -rln 'GetPlayers(\|GetMobs(\|GetBodies(\|playerIds()\|mobIds()' --include=*.go internal modules *.go | grep -v _test`
+(15 files, each read);
+`grep -n 'GetMobs\|GetPlayers\|\.Name\b\|Id.String()\|GetAllActiveUsers\|GetOnlineUserIds' modules/gmcp/*.go`;
+`grep -rn 'events.Communication{' --include=*.go internal modules` (producers `say.go:40`,
+`broadcast.go:28`, `party.go:609`, `whisper.go:60`; one consumer, `gmcp.Comm.go:32`);
+`grep -rn 'messaging.Tell(\|messaging.ToAccount(' --include=*.go internal modules` and
+`grep -rnE '(ObserverText|TargetText|TargetRoomText|FarText):.*Character\.Name' --include=*.go internal modules`
+(lines that name a body to someone other than the actor).
+
+| Where | What it checks today | This task |
+|---|---|---|
+| `rooms/roomdetails.go:252-256`, `:268-272` (room view) | hidden unless the viewer has `see-hidden` | calls `Perceives`; gains the admin reveal |
+| `rooms.go:1334-1435` (`FindByName`, `findPlayerByName`, `findMobByName`) | nothing: every body, hidden or not, by name or ID | filters by `Perceives(viewer, ·)` |
+| `modules/gmcp/gmcp.Room.go:346` (players), `:374` (NPCs) in `GetRoomNode(user, ...)` (`:267`) | hidden from everyone, no reveal | calls `Perceives(user.Character, ·)`; gains `see-hidden` and admin |
+| `messaging/perceive.go:43-55` (`canSee`: whether a receiver reads an actor's or target's name or "someone") | self always; far: no one; hidden: no one, no reveal; else light (`canSeeIn`: room visibility or `nightvision`) | the hidden clause calls `rooms.PerceivesWith(hasFlag, ...)`; far and light stay as they are |
+| `hooks/NewRound_DoCombat.go:195-199` ("Can't see them, can't fight them") | a hidden defender cannot be fought by anyone | calls `Perceives(attacker, defender)`; an admin or `see-hidden` attacker can fight one |
+| Sneaking actors' own lines: `go.go:197`, `:214`, `:273`, `:330`; `look.go:56`, `:91`, `:122`, `:256`, `:293`, `:332`; `read.go:39`; `modules/cleanup/cleanup.go:100` | a hidden actor's action is not announced to the room at all (no message is sent) | **left alone** (spec, decisions): this decides whether a line exists, not who perceives the actor; sending it through messaging would show every other viewer "Someone ...", which widens what players perceive |
+| Darkness: `look.go:28-31`, `:239` (the looker's own room view and looking through an exit); `messaging/perceive.go:33-39` (`canSeeIn`) | light or `nightvision` | **left alone**: a rule about the viewer's light, not about the character; `Perceives` is the hidden rule only, and `canSee` keeps light and distance (stricter, sense-based) |
+| `RoomChange.Unseen` set at `rooms/roommanager.go:429`, `rooms.go:691` | hidden mover | **left alone**: no reader anywhere (`grep -rn '\.Unseen'` prints nothing) and no viewer |
+| `characters/character.go:435`, `formattedname.go:28` (the "hidden" adjective), `accounts/userrecord.prompt.go:244` (`{h}` in one's own prompt) | how a hidden body is drawn, once perceived; one's own state | **left alone**: not a perception decision |
+| GMCP room contents and name lookups in a dark room | list or match bodies regardless of light | **left alone**: adding light would narrow what clients and commands see today, beyond these rulings |
+| `modules/gmcp/gmcp.Char.go:455-466` (`Char.Enemies`: every NPC fighting in the viewer's room, with Id and Name) | nothing | **moved** (round 3, M1): a hidden enemy is listed only to a viewer who perceives it |
+| `modules/gmcp/gmcp.Comm.go:48-50`, `:80-83`, `:105-117` (`Comm.Channel` for a `say`, sent to every player in the speaker's room with `Sender` = the speaker's name and `Source` player or mob) | nothing: names a hidden speaker the text shows as "Someone" | **moved** (round 3, M2): per receiver, `Sender` is the name only when the receiver perceives the speaker; otherwise `Someone`, as messaging shows it, and `Source` is empty |
+| `gmcp.Comm.go` for `party`, `broadcast`, `whisper` | the channel's own audience | **left alone**: not room presence; the speaker addresses the audience by name on purpose (the text names them too: `party.go:603`, `whisper.go:57`, broadcast) |
+| `modules/gmcp/gmcp.Room.go:112-152` (`despawnHandler`: `Room.RemovePlayer "<name>"` to every player in the room when a player leaves the game; produced at `world.go:188`, `:203`, `:406`) | nothing | **moved**: only to a viewer who perceives the leaver |
+| `gmcp.Room.go:154-215` (`roomChangeHandler`) and `:85-110` (`aggroChangedHandler`): a contents refresh to every player in the room when a body moves or changes its fight | nothing: the refresh itself tells a client something moved | **moved**: no refresh to a viewer who does not perceive the body (`perceivesBody`) |
+| `gmcp.Room.go:57-83` (`itemOwnershipHandler`) | an items refresh | **left alone**: about items, names no body |
+| `modules/gmcp/gmcp.Game.go:69-83` (`Game.Who`: every active player) and `usercommands/online.go:45` | global online lists | **left alone**: not scoped to a room; hidden is presence in a room |
+| `modules/gmcp/gmcp.Party.go:235-274` | party members' names and vitals | **left alone**: party membership, not room presence |
+| `usercommands/attack.go:48-150` (untargeted `attack`: whoever is fighting you or your party, `*`, `*mob`, `*user`) | picks hidden bodies; the attacker then reads "You can't seem to find your target." | **moved** (round 3, m2): every pick skips a body the attacker does not perceive (`othersOf`, `perceivedPlayers`) |
+| `usercommands/go.go:280-300` (walking in: "<NPC> notices you as you enter!" for each hostile NPC) | names a hidden hostile NPC | **moved**: only an NPC the mover perceives |
+| `modules/follow/follow.go:203-222`, `:465-475`, `:501` (follow lines: "X is following you", "X stopped following you", "You are no longer following X") | name a hidden follower or leader | **moved** (Calabe, 2026-11-11: following does not cancel hiding): the target's lines, "X is following you" and "X stopped following you", carry nothing but the follower's presence, so a target who does not perceive the follower gets **no line**; the follower's own "You are no longer following X" carries news it gets anyway (its follow ended), so it is kept, with "someone" for a leader it does not perceive (`seenName`) |
+| `usercommands/give.go:70`, `show.go:48` (lines naming the giver to the receiver) | the giver's name | **left alone**: both cancel the giver's hidden first, so the giver is seen |
+| `usercommands/party.go:123` (`party invite`: "X invited you"), `whisper.go:57` | the sender's name | **left alone**: the sender addresses the receiver by name on purpose, as on the party and whisper channels |
+| `modules/follow/follow.go:436-452` (`follow lose`: "You are no longer following X" to each follower; also run by a followed player's teleport, `:296`) | names the leader with its real name | **moved** (round 4, M1): the follower's own line, kept, with "someone" for a leader it does not perceive (`seenName`) |
+| `usercommands/who.go:18` | `GetDetails` | covered by the room view row |
+| `usercommands/go.go:353-370` (`inFight`: the actor has an aggro target, or a body in its room targets it), read by `go.go:25` ("You can't do that! You are in combat!"), `quit.go:18` ("You're too busy to quit right now!") and, from Task 7, `suicide` ("You're too busy to die right now!") | counts every attacker in the room, hidden or not | **left alone** (round 5, minor 8 not applied): a fight's victim already perceives the fight through the attacker's hit lines ("Someone stabs you..."), so the refusal reveals nothing; counting only perceived attackers would let `quit` escape an unseen attacker |
+| `hooks/NewRound_DoCombat.go:414` (flee blockers), `rooms.go:1236-1270` (`ArePlayersAttacking`, `AreMobsAttacking`) | whether a body fights the actor | **left alone**: game mechanics, no name or ID reaches anyone; lines they cause go through messaging |
+| `messaging/messaging.go`, `wire.go:54` (who receives a message) | receivers | **left alone**: delivery; what each receiver reads is `canSee`'s, moved above |
+| `rooms.go:194`, `:382`, `:406`, `:430`, `:1880`; `roommanager.go:198`, `:218`, `:495`, `:527`; `NewTurn_PruneBuffs.go:32`; `admin.teleport.go:122`; `web/api_v1_mobs.go` | light, buffs, spawns, cleanup, admin tools | **left alone**: no viewer is told of a body |
+
+**Presence-only lines** (round 4, M2: every room-scoped line or template that names an actor for an
+arrival, departure, login, logout, spawn, death, recovery or wake, tested against Calabe's
+principle: a line whose only content is a hidden body's presence is dropped for a viewer who does
+not perceive it, `Exclude: rooms.NotPerceiving(body)`; a line that carries news the viewer gets
+anyway keeps messaging's "Someone"). Searched with
+`grep -rn 'ObserverText' --include=*.go internal modules | grep -v _test` (46 in `usercommands`, each
+read) and the templates under `_datafiles/world/empty/templates/` (`player-despawn.template` is the
+only room line among them):
+
+| Line | Verdict |
+|---|---|
+| `hooks/PlayerDespawn_HandleLeave.go:53-60`, template `player-despawn` ("... drag {actor} away!"), on leaving the game | **drop** |
+| `usercommands/quit.go:23-30` ("{actor} sits down and begins to meditate."), logging out | **drop** |
+| `usercommands/admin.teleport.go:109-115`, `:136-142` ("{actor} appears in a flash of light!") | **drop** |
+| `hooks/NewRound_DoCombat.go:452-459` ("{actor} flees to the X exit!"), a departure | **drop** |
+| `hooks/PlayerDrop_HandlePlayerDrop.go:37-45` ("{actor} drops to the ground!"), becoming downed | **drop** |
+| `dikubasic` `recoveryRegen` (Task 5: "{actor} is recovering from a recent death.") | **drop** (Step 6) |
+| `death.Die`'s revive line (Task 6: "{actor} is suddenly revived in a shower of sparks!") | **drop** (Task 6 Step 3) |
+| `death.Die`'s "{actor} has died." (Task 6) | **keep "Someone"**: the corpse it leaves (named after the dead) is news the viewer gets anyway |
+| `go.go:203`, `:231`, `:337` (leave, arrive, bump) | **already silenced** for a hidden mover (the deferred sneaking silences) |
+| `start.go:211-219` ("{actor} enters from somewhere."), a new character's first arrival | **left alone**: a character just made carries no buffs, so it cannot be hidden |
+| Login (`PlayerSpawn_HandleJoin.go`, `world.go` `enterWorld`), spawns (`SpawnInfo.Message` is read nowhere), wake (no sleep or wake command exists) | **no room line exists** |
+| The world notice "*** X has DIED! ***" (Task 6 `recordPlayerDeath`) | **sent to all, as today**: a global notice of the dead by name, not room presence. Its "(killed by ...)" part names, per receiver, only the killers that receiver perceives (round 5, M1; Task 6 Step 3) |
+
+Six sites change in production code (the five files above and the recovery line) plus the revive in
+Task 6's new code: within the round's bound of about 8.
+
+**No import cycle.** `rooms` imports neither `messaging`, `hooks`, `usercommands` nor `modules/gmcp`
+(`go list -deps ./internal/rooms` lists none of them), while `messaging` (`perceive.go:7`), `hooks`
+(`NewRound_DoCombat.go:19`) and `modules/gmcp` (`gmcp.Room.go:15`) already import `rooms`. The admin
+test needs `actors` and `accounts`, both already imported by `rooms.go` (`:10-11`). So every caller
+reaches the one function by an import it already has.
+
+**Messaging's test seam.** `messaging` reads buff flags through a package seam, `hasFlag`
+(`perceive.go:28-31`), which its tests replace (`messaging_test.go:42`) to fake `hidden` without
+buff specs. So the rule is `rooms.PerceivesWith(flag, viewer, subject)`, taking the flag reader;
+`rooms.Perceives` is it with the bodies' own `HasBuffFlag`, and `canSee` passes `hasFlag`. One rule,
+one body of code.
+
+**Living lookups do not filter today.** `FindByName` (`rooms.go:1334-1341`) passes `FindAll` to
+`GetPlayers` (`:1158`) and `GetMobs` (`:1065`), which then return every body in the room
+(`:1083-1085`, `:1175-1177`), hidden or not, and `findPlayerByName` / `findMobByName`
+(`:1343-1387`, `:1389-1435`) match every name, and every ID token, they are given. So today
+`look rat`, `attack rat` and the rest reach a hidden rat.
+
+**What changes for each `FindByName` caller** (all 12 have a viewer: every one is a command run by a
+body; none is viewer-less; `grep -rn '\.FindByName(' --include=*.go . | grep -v _test` lists them):
+
+| Caller | Today | After (for a viewer who is neither admin nor `see-hidden`) |
+|---|---|---|
+| `look.go:76` (look at a body) | finds a hidden body | a hidden body is not found: the look goes on to items, exits and corpses, as for any unmatched word |
+| `consider.go:23` | likewise | "<name> can't be found." |
+| `attack.go:164` | attacks a hidden body by name | "You attack the darkness!" |
+| `shoot.go:72` (the adjacent room) | likewise | likewise, judged by the shooter's own perception |
+| `give.go:66`, `show.go:44` | give or show to a hidden body | not found (their existing not-found replies) |
+| `party.go:102` (`SameRoomOnly`) | invites a hidden player | not found ("<name> not found.") |
+| `modules/follow/follow.go:419` | follows a hidden body | not found (follow's existing reply) |
+| `admin.command.go:43`, `admin.grant.go:49`, `admin.mute.go:30`, `:61` | an admin reaches a hidden body | unchanged: these run only for admins (or mods granted them), and an admin perceives every hidden body; a mod without `see-hidden` does not |
+
+An NPC running a command (its own idle commands or an admin's `command`) is the viewer too: without
+`see-hidden` it cannot name a hidden player. Lookups that are not of a room's bodies are outside the
+rule and unchanged: `whisper` (`whisper.go:34`), `party invite` when not `SameRoomOnly`
+(`party.go:104`) and the admin `locate`, `teleport` and `visit` (`admin.locate.go:34`,
+`admin.teleport.go:47`, `:77`, `admin.visit.go:60`) all find an online player by name anywhere
+(`accounts.GetByCharacterName`). Target-less picks (`attack` with no name, `attack.go:48-150`) are
+not name lookups, but they hand the attacker a body: they skip a body it does not perceive (the
+table's attack row).
+
+**Size:** `rooms.go`, `roomdetails.go`, the 12 call sites in 10 files, `rooms_test.go` (4 calls),
+then for the two newer rulings `messaging/perceive.go`, `modules/gmcp/gmcp.Room.go`,
+`hooks/NewRound_DoCombat.go`, and for round 3 `modules/gmcp/gmcp.Char.go`, `gmcp.Comm.go` and
+`usercommands/go.go` (`attack.go` and `follow.go` are already in the set); tests: 5 new test files.
+Round 3 adds 3 production files and 2 test files; round 4 adds `PlayerDespawn_HandleLeave.go`,
+`PlayerDrop_HandlePlayerDrop.go`, `quit.go`, `admin.teleport.go` and `dikubasic/ruleset.go` (the
+presence-only lines) and no test file.
+
+**Files:** modify `internal/rooms/rooms.go`, `internal/rooms/roomdetails.go`,
+`internal/rooms/rooms_test.go`, `internal/messaging/perceive.go`, `modules/gmcp/gmcp.Room.go`,
+`modules/gmcp/gmcp.Char.go`, `modules/gmcp/gmcp.Comm.go`, `internal/hooks/NewRound_DoCombat.go`,
+`internal/hooks/PlayerDespawn_HandleLeave.go`, `internal/hooks/PlayerDrop_HandlePlayerDrop.go`,
+`internal/rules/dikubasic/ruleset.go`, `internal/rules/dikubasic/ruleset_test.go`,
+`internal/usercommands/admin.command.go`, `admin.grant.go`, `admin.mute.go`, `admin.teleport.go`,
+`attack.go`, `consider.go`, `give.go`, `go.go`, `look.go`, `party.go`, `quit.go`, `shoot.go`,
+`show.go`, `modules/follow/follow.go`; create `internal/hooks/reads_corpse_test.go` (its name must sort after
+`combat_golden_test.go`: see Task 5b), `internal/hooks/perceive_combat_test.go`,
+`internal/messaging/reveal_test.go`, `internal/usercommands/perceive_test.go`,
+`modules/gmcp/visibility_test.go` (the first test file in `modules/gmcp`: the ok-package count
+becomes 41, Task 10).
+
+- [ ] **Step 1: Write the failing tests.** Create `internal/hooks/reads_corpse_test.go`:
+
+```go
+package hooks
+
+import (
+	"testing"
+
+	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/stretchr/testify/assert"
+)
+
+// readsSeeHiddenBuf is the test buff carrying see-hidden.
+const readsSeeHiddenBuf = 93910
+
+// A hidden body is not in the list a viewer's names are matched against
+// (Calabe, 2026-11-11): no ordinal, no name, not by ID either. A viewer
+// with see-hidden perceives it, as does an admin; a body always perceives
+// itself.
+func TestHiddenBodiesAreNotInTheViewersNames(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, bob, cid, rat := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+	w.hide(&rat.Character)
+	w.hide(bob.Character)
+
+	playerId, mobId := room.FindByName(ann.Character, "rat")
+	assert.Zero(t, playerId)
+	assert.True(t, mobId.IsZero(), "the hidden rat cannot be named")
+	playerId, _ = room.FindByName(ann.Character, "bob")
+	assert.Zero(t, playerId, "nor the hidden Bob")
+	_, mobId = room.FindByName(ann.Character, rat.Character.Id.String())
+	assert.True(t, mobId.IsZero(), "not by its ID either")
+	playerId, _ = room.FindByName(bob.Character, "bob")
+	assert.Equal(t, bob.UserId, playerId, "Bob perceives himself")
+
+	w.admin(cid) // an admin perceives the hidden (reads_golden_test.go:381)
+	_, mobId = room.FindByName(cid.Character, "rat")
+	assert.Equal(t, rat.Character.Id, mobId, "an admin perceives it")
+
+	w.flag(ann.Character, readsSeeHiddenBuf, "see-hidden")
+	_, mobId = room.FindByName(ann.Character, "rat")
+	assert.Equal(t, rat.Character.Id, mobId, "see-hidden perceives it, as the room view does")
+}
+```
+
+  Append to the same file (add `"strings"` to its imports): the follow lines and the room view.
+
+```go
+// Following does not cancel hiding (Calabe, 2026-11-11): a hidden follower
+// the target does not perceive is not announced, not even as "Someone",
+// starting or stopping; the follower still reads its own lines. An admin
+// target perceives it and reads them as before (reads golden H's follow
+// section shows the unhidden lines).
+func TestHiddenFollowerIsNotAnnounced(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, bob, _, _ := w.trio()
+	w.hide(bob.Character)
+
+	w.run("Bob", "follow Ann")
+	w.run("Bob", "follow stop")
+	out := w.out.String()
+	assert.NotContains(t, out, `Ann: <ansi fg="username">Bob</ansi> is following you.`)
+	assert.NotContains(t, out, `following you.`, "no line to Ann at all, not even as someone")
+	assert.Contains(t, out, `Bob: You start following <ansi fg="username">Ann</ansi>.`)
+	assert.Contains(t, out, `Bob: You are no longer following <ansi fg="username">Ann</ansi>.`)
+
+	w.admin(ann)
+	w.run("Bob", "follow Ann")
+	w.run("Bob", "follow stop")
+	out = w.out.String()
+	assert.Contains(t, out, `Ann: <ansi fg="username">Bob</ansi> is following you.`, "an admin perceives Bob")
+	assert.Contains(t, out, `Ann: <ansi fg="username">Bob</ansi> stopped following you.`)
+}
+
+// The room view lists a hidden player or NPC only to a viewer who perceives
+// it (rooms.Perceives): see-hidden or an admin.
+func TestRoomViewListsOnlyWhatTheViewerPerceives(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, bob, _, rat := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+	w.hide(bob.Character)
+	w.hide(&rat.Character)
+
+	d := rooms.GetDetails(room, ann)
+	assert.NotContains(t, strings.Join(d.VisiblePlayers, ","), "Bob", "Ann does not perceive hidden Bob")
+	assert.NotContains(t, strings.Join(d.VisibleMobs, ","), "rat", "nor the hidden rat")
+
+	w.admin(ann)
+	d = rooms.GetDetails(room, ann)
+	assert.Contains(t, strings.Join(d.VisiblePlayers, ","), "Bob", "an admin does")
+	assert.Contains(t, strings.Join(d.VisibleMobs, ","), "rat")
+}
+```
+
+  Append to the same file (add `github.com/GoMudEngine/GoMud/internal/events` and
+  `github.com/GoMudEngine/GoMud/internal/ids` to its imports): `follow lose`, a follow running out
+  (an NPC follower, an NPC leader), and the presence-only lines (round 4).
+
+```go
+// follow lose (also run by a leader's teleport) tells each follower its
+// follow ended: a leader the follower does not perceive is "someone".
+func TestFollowLoseNamesOnlyAPerceivedLeader(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, _, _, _ := w.trio()
+	w.run("Bob", "follow Ann")
+	w.hide(ann.Character)
+	w.run("Ann", "follow lose")
+	out := w.out.String()
+	assert.Contains(t, out, `Bob: You are no longer following someone.`)
+	assert.NotContains(t, out, `Bob: You are no longer following <ansi fg="username">Ann</ansi>.`)
+}
+
+// When a follow runs out: an NPC follower's "stopped following you" is only
+// its presence, so a target who does not perceive it reads nothing; a player
+// following an NPC it does not perceive reads "someone".
+func TestFollowExpiryFollowsTheRule(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	_, _, _, rat := w.trio()
+	w.run("rat", "follow Ann")
+	w.run("Bob", "follow rat")
+	w.hide(&rat.Character)
+	w.do("NewRound far in the future", func() { events.AddToQueue(events.NewRound{RoundNumber: 1 << 40}) })
+	out := w.out.String()
+	assert.NotContains(t, out, `Ann: <ansi fg="mobname">rat</ansi> stopped following you.`, "Ann does not perceive the hidden rat")
+	assert.NotContains(t, out, `stopped following you`)
+	assert.Contains(t, out, `Bob: You are no longer following someone.`)
+}
+
+// A line that is only a body's presence (starting to quit, leaving the
+// game) reaches only viewers who perceive it (rooms.NotPerceiving).
+func TestPresenceLinesReachOnlyThoseWhoPerceive(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, bob, _, rat := w.trio()
+	dan := w.addPlayer("Dan", readsRoomA)
+	w.admin(bob)
+	w.hide(ann.Character)
+
+	assert.ElementsMatch(t, []ids.ID{dan.Character.Id, rat.Character.Id}, rooms.NotPerceiving(ann.Character),
+		"Dan and the rat do not perceive Ann; Bob, an admin, does")
+
+	w.run("Ann", "quit")
+	out := w.out.String()
+	assert.Contains(t, out, `Bob: <ansi fg="username">Ann</ansi> sits down and begins to meditate.`)
+	assert.NotContains(t, out, `Dan: `, "nothing to Dan, not even someone")
+
+	w.do("Ann leaves the game", func() { HandleLeave(events.PlayerDespawn{UserId: ann.UserId, RoomId: readsRoomA}) })
+	out = w.out.String()
+	assert.Contains(t, out, `Bob: Suddenly and without warning`)
+	assert.NotContains(t, out, `Dan: `, "still nothing to Dan")
+}
+```
+
+  Append to the same file (add `github.com/GoMudEngine/GoMud/internal/actors`,
+  `github.com/GoMudEngine/GoMud/internal/characters`, `github.com/GoMudEngine/GoMud/internal/parties`
+  and `github.com/stretchr/testify/require` to its imports): one case per remaining presence-line
+  call site in this task's hooks and commands, so a site that forgets its `Exclude` fails its own
+  case (plan review round 5). The recovery line has its own test (`dikubasic`, below) and the revive
+  line its own in Task 6.
+
+```go
+// linesTo is what the record shows the named player reading.
+func linesTo(out, who string) string {
+	got := []string{}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, who+": ") {
+			got = append(got, line)
+		}
+	}
+	return strings.Join(got, "\n")
+}
+
+// Each presence-only line, one call site per case (round 5): a hidden body's
+// line reaches an admin (Eve) and never a viewer who does not perceive it
+// (Dan), not even as "someone".
+func TestEachPresenceLineReachesOnlyThoseWhoPerceive(t *testing.T) {
+	for _, tc := range []struct {
+		name, line string
+		run        func(w *readsWorld, ann, zed *characters.Character)
+	}{
+		{"teleport", "appears in a flash of light", func(w *readsWorld, ann, _ *characters.Character) {
+			w.run("Ann", "teleport 93102") // Ann, an admin, into room B
+		}},
+		{"teleport party", "appears in a flash of light", func(w *readsWorld, _, _ *characters.Character) {
+			w.run("Ann", "teleport 93102") // the leader moves Zed, the hidden member, too
+		}},
+		{"flee", "flees to the", func(w *readsWorld, ann, _ *characters.Character) {
+			w.do("Ann flees", func() { flee(actors.Get(ann.Id), rooms.LoadRoom(readsRoomA)) })
+		}},
+		{"drop", `<ansi fg="red">drops to the ground!</ansi>`, func(w *readsWorld, ann, _ *characters.Character) {
+			w.do("Ann drops", func() { HandlePlayerDrop(events.PlayerDrop{UserId: w.players["Ann"].UserId, RoomId: readsRoomA}) })
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newReadsWorld(t, 1)
+			ann, _, _, rat := w.trio()
+			zed := w.addPlayer("Zed", readsRoomA)
+			w.admin(ann)
+			hidden := ann.Character
+			watchRoom := readsRoomA
+			switch tc.name {
+			case "teleport", "teleport party":
+				watchRoom = readsRoomB
+			case "flee":
+				ann.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+			}
+			if tc.name == "teleport party" {
+				p := parties.New(ann.UserId)
+				require.NotNil(t, p)
+				require.True(t, p.InvitePlayer(zed.UserId))
+				require.True(t, p.AcceptInvite(zed.UserId))
+				t.Cleanup(p.Disband)
+				hidden = zed.Character
+			}
+			dan := w.addPlayer("Dan", watchRoom)
+			eve := w.addPlayer("Eve", watchRoom)
+			w.admin(eve)
+			_, _ = dan, eve
+			w.hide(hidden)
+
+			tc.run(w, ann.Character, zed.Character)
+			out := w.out.String()
+			assert.Contains(t, linesTo(out, "Eve"), hidden.Name+`</ansi> `+tc.line, "an admin perceives the hidden body")
+			for _, line := range strings.Split(linesTo(out, "Dan"), "\n") {
+				if !strings.Contains(line, tc.line) {
+					continue
+				}
+				assert.NotContains(t, line, hidden.Name, "Dan does not read the hidden body's line")
+				assert.NotContains(t, line, "Someone", "not even as someone")
+			}
+		})
+	}
+}
+```
+
+  Append to `internal/rules/dikubasic/ruleset_test.go` (add `github.com/GoMudEngine/GoMud/internal/buffs`
+  to its imports; `accounts`, `actors`, `ids` and `rooms` are there, and `testRoom` and
+  `recoveryCopy` are Task 2's): the recovery room's line, through `Regen`, Task 5's code.
+
+```go
+// The recovery room's line is only the body's presence (round 5): a viewer
+// there who does not perceive the hidden body is excluded from it; an admin
+// is not, nor is anyone while the body is not hidden.
+func TestRecoveryLineExcludesThoseWhoDoNotPerceive(t *testing.T) {
+	const recovery = 94009
+	testRoom(t, recovery, "regenzone")
+	recoveryCopy(t, recovery, "regenzone")
+	r := rooms.LoadRoom(recovery)
+	a, dan, eve := player(t, 9651), player(t, 9652), player(t, 9653)
+	for userId, p := range map[int]*actors.Actor{9651: a, 9652: dan, 9653: eve} {
+		p.Character.RoomId = recovery
+		r.AddPlayer(userId)
+	}
+	actors.AccountOf(eve.Id).Role = accounts.RoleAdmin
+	a.Character.HealthMax.Value, a.Character.ManaMax.Value = 100, 100
+	reseed(t)
+
+	a.Character.Health, a.Character.Mana = 1, 0
+	got := New().Regen(a, 1)
+	require.Len(t, got.Messages, 2)
+	assert.Empty(t, got.Messages[1].Exclude, "unhidden: everyone perceives it")
+
+	const hiddenBuff = 96209
+	t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{
+		BuffId: hiddenBuff, Name: "test hidden", TriggerRate: "1 round", TriggerCount: 1000,
+		Flags: []string{"hidden"},
+	}))
+	require.NoError(t, a.Character.AddBuff(hiddenBuff, true))
+	require.True(t, a.Character.HasBuffFlag("hidden"))
+
+	// AddBuff runs Validate, which recomputes the maximums: set them again.
+	a.Character.HealthMax.Value, a.Character.ManaMax.Value = 100, 100
+	a.Character.Health, a.Character.Mana = 1, 0
+	got = New().Regen(a, 2)
+	require.Len(t, got.Messages, 2)
+	assert.Equal(t, []ids.ID{dan.Id}, got.Messages[1].Exclude, "Dan does not perceive the hidden body; Eve, an admin, does")
+}
+```
+
+  Create `internal/usercommands/perceive_test.go` (untargeted `attack` and walking in):
+
+```go
+package usercommands
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
+	"github.com/GoMudEngine/GoMud/internal/buffs"
+	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+const hiddenTestBuffId = 92910
+
+// hideBody gives a the hidden flag through a test buff.
+func hideBody(t *testing.T, a *actors.Actor) {
+	t.Helper()
+	t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{
+		BuffId: hiddenTestBuffId, Name: "test hidden", TriggerRate: "1 round", TriggerCount: 1000,
+		Flags: []string{"hidden"},
+	}))
+	if a.Character.Buffs.List == nil { // a bare test NPC has no buff maps yet
+		a.Character.Buffs = buffs.New()
+	}
+	require.NoError(t, a.Character.AddBuff(hiddenTestBuffId, true))
+	require.True(t, a.Character.HasBuffFlag("hidden"))
+}
+
+// Walking in, a player is told only of the hostile NPCs it perceives: a
+// hidden one is not named ("notices you"), unless the player is an admin.
+func TestEnteringNamesOnlyTheHostilesTheMoverPerceives(t *testing.T) {
+	_, player, here := goSetup(t)
+	lurker := mobs.NewTestInstance(mobs.Mob{Hostile: true})
+	lurker.Character.Name = "Lurker"
+	lurker.Character.Health = 10
+	id := lurker.Character.Id
+	t.Cleanup(func() { mobs.Rest(id) })
+	rooms.LoadRoom(testNextRoomId).AddMob(id)
+	hideBody(t, actors.Get(id))
+
+	walk := func(admin bool) string {
+		player.Controller().Account().Role = accounts.RoleUser
+		if admin {
+			player.Controller().Account().Role = accounts.RoleAdmin
+		}
+		told := playerTexts(t, player, func() {
+			_, err := Go("north", player, here, 0)
+			require.NoError(t, err)
+		})
+		_, err := Go("south", player, rooms.LoadRoom(testNextRoomId), 0)
+		require.NoError(t, err)
+		player.Character.ActionPoints = 100
+		return strings.Join(told, "")
+	}
+	assert.NotContains(t, walk(false), "Lurker", "the hidden Lurker is not named")
+	assert.Contains(t, walk(true), "Lurker", "an admin perceives it (the control: the line exists)")
+}
+
+// An untargeted attack never picks a body the attacker does not perceive
+// (the one visibility rule): the hidden Rat fighting the player is not
+// picked, nor picked at random; an admin picks it.
+func TestUntargetedAttackPicksOnlyWhatTheAttackerPerceives(t *testing.T) {
+	npc, player, room := goSetup(t)
+	user := player.Controller().Account()
+	accounts.SetTestUser(user) // the room's fight lists find the player's account by body
+	t.Cleanup(func() { accounts.RemoveTestUser(user.UserId) })
+	npc.Character.SetAggro(player.Id, characters.DefaultAttack)
+	hideBody(t, npc)
+
+	for _, rest := range []string{``, `*`, `*mob`} {
+		told := playerTexts(t, player, func() {
+			_, err := Attack(rest, player, room, 0)
+			require.NoError(t, err)
+		})
+		assert.Nil(t, player.Character.Aggro, "%q: no target picked", rest)
+		if rest == `` {
+			assert.Equal(t, []string{"You attack the darkness!\n"}, told)
+		}
+	}
+
+	// The control: the same pick with the Rat perceived (an admin perceives
+	// it) does attack it, so the refusals above are the rule's.
+	user.Role = accounts.RoleAdmin
+	_, err := Attack(``, player, room, 0)
+	require.NoError(t, err)
+	require.NotNil(t, player.Character.Aggro, "an admin perceives the Rat and attacks it")
+	assert.Equal(t, npc.Id, player.Character.Aggro.Target)
+}
+```
+
+  Create `modules/gmcp/visibility_test.go`, the package's first test file (its `TestMain` sets up
+  the logger and the actor registry, as `usercommands_test.go:27-41` does):
+
+```go
+package gmcp
+
+import (
+	"os"
+	"testing"
+
+	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/actors"
+	"github.com/GoMudEngine/GoMud/internal/buffs"
+	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/events"
+	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestMain(m *testing.M) {
+	mudlog.SetupLogger(nil, "", "", false)
+	actors.Init()
+	os.Exit(m.Run())
+}
+
+const (
+	visRoom      = 95001
+	visHiddenBuf = 95901
+	visSeeBuf    = 95902
+)
+
+// visWorld is one room for the GMCP visibility tests; events queued while
+// setting it up are dropped.
+func visWorld(t *testing.T) *rooms.Room {
+	t.Helper()
+	actors.Reset()
+	accounts.ResetActiveUsers()
+	r := rooms.NewEmptyRoom()
+	r.RoomId, r.Zone, r.Title = visRoom, "gmcpzone", "GMCP Room"
+	rooms.AddTestRoom(r)
+	t.Cleanup(func() {
+		rooms.RemoveTestRoom(visRoom)
+		accounts.ResetActiveUsers()
+		actors.Reset()
+	})
+	return r
+}
+
+func visPlayer(t *testing.T, r *rooms.Room, userId int, name string) *accounts.Account {
+	t.Helper()
+	c := characters.New()
+	c.Id = ids.New(ids.NoCell)
+	c.Name, c.RoomId, c.Zone = name, r.RoomId, r.Zone
+	u := &accounts.Account{UserId: userId, Username: name, Character: c, Role: accounts.RoleUser}
+	require.NotNil(t, actors.Spawn(c, actors.NewConnectionController(u)))
+	accounts.SetTestUser(u)
+	r.AddPlayer(userId)
+	return u
+}
+
+func visMob(t *testing.T, r *rooms.Room, name string) *mobs.Mob {
+	t.Helper()
+	m := mobs.Mob{MobId: 95201}
+	m.Character = *characters.New()
+	m.Character.Name = name
+	inst := mobs.NewTestInstance(m)
+	id := inst.Character.Id
+	t.Cleanup(func() { mobs.Rest(id) })
+	r.AddMob(id)
+	return inst
+}
+
+// visFlag gives c a test buff carrying one flag.
+func visFlag(t *testing.T, c *characters.Character, buffId int, flag string) {
+	t.Helper()
+	t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{
+		BuffId: buffId, Name: "test " + flag, TriggerRate: "1 round", TriggerCount: 1000, Flags: []string{flag},
+	}))
+	require.NoError(t, c.AddBuff(buffId, true))
+	require.True(t, c.HasBuffFlag(flag))
+}
+
+// outs collects the GMCPOut and GMCPRoomUpdate events fn queues.
+func outs(t *testing.T, fn func()) (sent []GMCPOut, updates []GMCPRoomUpdate) {
+	t.Helper()
+	events.ProcessEvents()
+	a := events.RegisterListener(GMCPOut{}, func(e events.Event) events.ListenerReturn {
+		sent = append(sent, e.(GMCPOut))
+		return events.Cancel // not on to a connection
+	}, events.First)
+	b := events.RegisterListener(GMCPRoomUpdate{}, func(e events.Event) events.ListenerReturn {
+		updates = append(updates, e.(GMCPRoomUpdate))
+		return events.Cancel
+	}, events.First)
+	defer events.UnregisterListener(GMCPOut{}, a)
+	defer events.UnregisterListener(GMCPRoomUpdate{}, b)
+	fn()
+	events.ProcessEvents()
+	return sent, updates
+}
+
+func names(list []GMCPRoomModule_Payload_Contents_Character) []string {
+	out := []string{}
+	for _, c := range list {
+		out = append(out, c.Name)
+	}
+	return out
+}
+
+// The room contents list a hidden body only to a viewer who perceives it
+// (rooms.Perceives): see-hidden, an admin, never anyone else.
+func TestRoomContentsListOnlyWhatTheViewerPerceives(t *testing.T) {
+	r := visWorld(t)
+	ann := visPlayer(t, r, 9501, "Ann")
+	bob := visPlayer(t, r, 9502, "Bob")
+	ada := visPlayer(t, r, 9503, "Ada")
+	ada.Role = accounts.RoleAdmin
+	rat := visMob(t, r, "rat")
+	visFlag(t, bob.Character, visHiddenBuf, "hidden")
+	visFlag(t, &rat.Character, visHiddenBuf, "hidden")
+	g := &GMCPRoomModule{}
+
+	players, _ := g.GetRoomNode(ann, `Room.Info.Contents.Players`)
+	npcs, _ := g.GetRoomNode(ann, `Room.Info.Contents.Npcs`)
+	assert.Equal(t, []string{"Ada"}, names(players.([]GMCPRoomModule_Payload_Contents_Character)), "Ann does not perceive hidden Bob")
+	assert.Empty(t, npcs.([]GMCPRoomModule_Payload_Contents_Character), "nor the hidden rat")
+
+	players, _ = g.GetRoomNode(ada, `Room.Info.Contents.Players`)
+	npcs, _ = g.GetRoomNode(ada, `Room.Info.Contents.Npcs`)
+	assert.Equal(t, []string{"Ann", "Bob"}, names(players.([]GMCPRoomModule_Payload_Contents_Character)), "an admin perceives Bob")
+	assert.Equal(t, []string{"rat"}, names(npcs.([]GMCPRoomModule_Payload_Contents_Character)), "and the rat")
+
+	visFlag(t, ann.Character, visSeeBuf, "see-hidden")
+	npcs, _ = g.GetRoomNode(ann, `Room.Info.Contents.Npcs`)
+	assert.Equal(t, []string{"rat"}, names(npcs.([]GMCPRoomModule_Payload_Contents_Character)), "see-hidden perceives it")
+}
+
+// Char.Enemies lists a hidden enemy only to a viewer who perceives it.
+func TestEnemiesListOnlyWhatTheViewerPerceives(t *testing.T) {
+	r := visWorld(t)
+	ann := visPlayer(t, r, 9501, "Ann")
+	rat := visMob(t, r, "rat")
+	rat.Character.SetAggro(ann.Character.Id, characters.DefaultAttack)
+	visFlag(t, &rat.Character, visHiddenBuf, "hidden")
+	g := &GMCPCharModule{}
+
+	enemies, _ := g.GetCharNode(ann, `Char.Enemies`)
+	assert.Empty(t, enemies.([]GMCPCharModule_Enemy), "Ann does not perceive the hidden rat fighting her")
+
+	ann.Role = accounts.RoleAdmin
+	enemies, _ = g.GetCharNode(ann, `Char.Enemies`)
+	require.Len(t, enemies.([]GMCPCharModule_Enemy), 1, "an admin does")
+	assert.Equal(t, "rat", enemies.([]GMCPCharModule_Enemy)[0].Name)
+}
+
+// A say names its speaker on Comm.Channel only to a receiver who perceives
+// it; to anyone else the sender reads "Someone", as the text does.
+func TestSayNamesItsSpeakerOnlyToThoseWhoPerceiveIt(t *testing.T) {
+	r := visWorld(t)
+	ann := visPlayer(t, r, 9501, "Ann")
+	sneak := visPlayer(t, r, 9502, "Sneak")
+	ada := visPlayer(t, r, 9503, "Ada")
+	ada.Role = accounts.RoleAdmin
+	visFlag(t, sneak.Character, visHiddenBuf, "hidden")
+
+	sent, _ := outs(t, func() {
+		(&GMCPCommModule{}).onComm(events.Communication{SourceActorId: sneak.Character.Id, CommType: `say`, Name: "Sneak", Message: "hi"})
+	})
+	senders := map[int]GMCPCommModule_Payload{}
+	for _, o := range sent {
+		senders[o.UserId] = o.Payload.(GMCPCommModule_Payload)
+	}
+	require.Len(t, senders, 3)
+	assert.Equal(t, "Someone", senders[ann.UserId].Sender, "Ann does not perceive Sneak")
+	assert.Empty(t, senders[ann.UserId].Source, "nor learns whether it is a player")
+	assert.Equal(t, "Sneak", senders[ada.UserId].Sender, "an admin does")
+	assert.Equal(t, "player", senders[ada.UserId].Source)
+	assert.Equal(t, "Sneak", senders[sneak.UserId].Sender, "Sneak perceives itself")
+}
+
+// Leaving the game and moving name or announce a body only to viewers who
+// perceive it.
+func TestRoomEventsReachOnlyThoseWhoPerceiveTheBody(t *testing.T) {
+	r := visWorld(t)
+	ann := visPlayer(t, r, 9501, "Ann")
+	ada := visPlayer(t, r, 9502, "Ada")
+	ada.Role = accounts.RoleAdmin
+	sneak := visPlayer(t, r, 9503, "Sneak")
+	visFlag(t, sneak.Character, visHiddenBuf, "hidden")
+	g := &GMCPRoomModule{}
+
+	sent, _ := outs(t, func() {
+		g.despawnHandler(events.PlayerDespawn{UserId: sneak.UserId, RoomId: r.RoomId, CharacterName: "Sneak"})
+	})
+	to := []int{}
+	for _, o := range sent {
+		to = append(to, o.UserId)
+	}
+	assert.Equal(t, []int{ada.UserId}, to, "only the admin reads Room.RemovePlayer for the hidden Sneak")
+
+	_, updates := outs(t, func() {
+		g.roomChangeHandler(events.RoomChange{ActorId: sneak.Character.Id, ToRoomId: r.RoomId})
+	})
+	to = []int{}
+	for _, u := range updates {
+		if u.Identifier == `Room.Info.Contents.Players` {
+			to = append(to, u.UserId)
+		}
+	}
+	assert.Equal(t, []int{ada.UserId}, to, "only the admin's room list is refreshed for the hidden mover")
+	assert.NotContains(t, to, ann.UserId)
+
+	// The room left behind: the same rule (its own loop).
+	_, updates = outs(t, func() {
+		g.roomChangeHandler(events.RoomChange{ActorId: sneak.Character.Id, FromRoomId: r.RoomId})
+	})
+	to = []int{}
+	for _, u := range updates {
+		if u.Identifier == `Room.Info.Contents.Players` { // the mover gets its own Room.Info
+			to = append(to, u.UserId)
+		}
+	}
+	assert.Equal(t, []int{ada.UserId}, to, "only the admin's list is refreshed in the room left")
+
+	// A fight change: the same rule.
+	_, updates = outs(t, func() {
+		g.aggroChangedHandler(events.AggroChanged{ActorId: sneak.Character.Id, RoomId: r.RoomId})
+	})
+	to = []int{}
+	for _, u := range updates {
+		to = append(to, u.UserId)
+	}
+	assert.ElementsMatch(t, []int{ada.UserId, sneak.UserId}, to, "the admin and Sneak itself, not Ann")
+}
+```
+
+  Create `internal/hooks/perceive_combat_test.go` (a combat-world test; its name also sorts after
+  `combat_golden_test.go`):
+
+```go
+package hooks
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/stretchr/testify/require"
+)
+
+// A hidden defender cannot be fought by an attacker who does not perceive
+// it; an admin perceives it (the one visibility rule, Calabe 2026-11-11).
+func TestCombatAsksTheOneVisibilityRule(t *testing.T) {
+	for _, admin := range []bool{false, true} {
+		t.Run(fmt.Sprintf("admin=%v", admin), func(t *testing.T) {
+			w := newCombatWorld(t, 111)
+			alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
+			rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "seen-rats")
+			w.hide(&rat.Character)
+			if admin {
+				alice.Role = accounts.RoleAdmin
+			}
+			alice.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+			w.start()
+			w.rounds(1)
+			if admin {
+				require.NotContains(t, w.reads[alice.UserId], "You can't seem to find your target.", "an admin finds it")
+			} else {
+				require.Contains(t, w.reads[alice.UserId], "You can't seem to find your target.")
+			}
+		})
+	}
+}
+```
+
+  Create `internal/messaging/reveal_test.go` (the package's own world: `hasFlag` fakes the flags,
+  `messaging_test.go:37-56`):
+
+```go
+package messaging
+
+import (
+	"testing"
+
+	"github.com/GoMudEngine/GoMud/internal/accounts"
+	"github.com/stretchr/testify/assert"
+)
+
+// One visibility rule (Calabe, 2026-11-11): a hidden speaker reads by name
+// to an admin and to a receiver with see-hidden, and as "Someone" to anyone
+// else. Darkness still hides it from them all: the reveal is of hidden, not
+// of light (canSee keeps its light and distance rules).
+func TestHiddenIsRevealedToAdminsAndSeeHidden(t *testing.T) {
+	w := newWorld(t)
+	square := w.room(1, "town", nil)
+	sneak, _ := w.body(square, "Sneak", true)
+	w.flags[sneak]["hidden"] = true
+	_, bobRec := w.body(square, "Bob", true)
+	_, adminRec := w.body(square, "Ada", true)
+	adminRec.acc.Role = accounts.RoleAdmin
+	seer, seerRec := w.body(square, "Seer", true)
+	w.flags[seer]["see-hidden"] = true
+
+	Send(say(sneak))
+	assert.Equal(t, []string{`Someone says, "hi"`}, texts(bobRec))
+	assert.Equal(t, []string{`<ansi fg="username">Sneak</ansi> says, "hi"`}, texts(adminRec), "an admin perceives the hidden")
+	assert.Equal(t, []string{`<ansi fg="username">Sneak</ansi> says, "hi"`}, texts(seerRec), "see-hidden perceives the hidden")
+
+	cave := w.room(2, "caves", nil)
+	w.light[2] = 0
+	dark, _ := w.body(cave, "Dark", true)
+	w.flags[dark]["hidden"] = true
+	_, caveAdminRec := w.body(cave, "Cad", true)
+	caveAdminRec.acc.Role = accounts.RoleAdmin
+	Send(say(dark))
+	assert.Equal(t, []string{`Someone says, "hi"`}, texts(caveAdminRec), "darkness still hides it from an admin")
+}
+```
+
+  and append to `internal/rooms/rooms_test.go` (the hidden cases need loaded buff specs, so they
+  are in the hooks test above):
+
+```go
+// Perceives: a body perceives an unhidden body, and itself; so does a nil
+// viewer. The two bodies have distinct IDs, so self and other differ.
+func TestPerceivesAnUnhiddenBodyAndItself(t *testing.T) {
+	viewer, other := characters.New(), characters.New()
+	viewer.Id, other.Id = ids.New(ids.NoCell), ids.New(ids.NoCell)
+	require.NotEqual(t, viewer.Id, other.Id)
+	assert.True(t, Perceives(viewer, other))
+	assert.True(t, Perceives(nil, other))
+	assert.True(t, Perceives(viewer, viewer))
+}
+```
+
+- [ ] **Step 2: Run; they fail.** The hooks and rooms tests fail to compile (`FindByName` takes no
+  viewer; `undefined: Perceives`). `go test ./internal/messaging -run HiddenIsRevealed -count=1`
+  fails on the admin and see-hidden asserts (today's `canSee` reveals the hidden to no one);
+  `go test ./internal/hooks -run OneVisibility -count=1` (with the reads test commented out for a
+  moment) fails on `admin=true`. `go test ./modules/gmcp ./internal/usercommands -run 'Perceive|Speaker|Untargeted|Entering' -count=1`
+  fails in each test (today each site either names or picks the hidden body, or, for GMCP's room
+  list, hides it from the admin too). `go test ./internal/rules/dikubasic -run RecoveryLine -count=1`
+  compiles (the test names nothing new) and fails on the hidden assert: Dan is not excluded.
+
+- [ ] **Step 3: `rooms.go`.** `FindByName` (`:1334-1341`, the whole function) becomes:
+
+```go
+// PerceivesWith is the one visibility rule (Calabe, 2026-11-11): whether
+// viewer perceives subject, a body, with buff flags read through flag. A
+// body always perceives itself; an unhidden body is perceived; a hidden one
+// only by an admin (accounts.RoleAdmin, the role HasRolePermission lets
+// through) or a viewer with see-hidden. A nil viewer perceives no hidden
+// body. Light and distance are not part of it: messaging's canSee keeps
+// them. Perceives is this with the bodies' own buff flags; messaging passes
+// its test seam.
+func PerceivesWith(flag func(c *characters.Character, flag string) bool, viewer, subject *characters.Character) bool {
+	if viewer != nil && viewer.Id == subject.Id {
+		return true
+	}
+	if !flag(subject, "hidden") {
+		return true
+	}
+	if viewer == nil {
+		return false
+	}
+	if acc := actors.AccountOf(viewer.Id); acc != nil && acc.Role == accounts.RoleAdmin {
+		return true
+	}
+	return flag(viewer, "see-hidden")
+}
+
+// Perceives is PerceivesWith reading the bodies' own buff flags. Every
+// place that decides whether a viewer perceives a body asks it: the room
+// view, the name lookups, GMCP's room contents and combat; messaging asks
+// PerceivesWith.
+func Perceives(viewer, subject *characters.Character) bool {
+	return PerceivesWith(func(c *characters.Character, flag string) bool { return c.HasBuffFlag(flag) }, viewer, subject)
+}
+
+// NotPerceiving lists the bodies in subject's room that do not perceive
+// subject (Perceives). A line whose only content is subject's presence
+// (arriving, leaving the game, starting to meditate, dropping, reviving)
+// excludes them: no reply reveals a hidden body (Calabe, 2026-11-11).
+func NotPerceiving(subject *characters.Character) []ids.ID {
+	r := LoadRoom(subject.RoomId)
+	if r == nil {
+		return nil
+	}
+	out := []ids.ID{}
+	for _, id := range r.GetBodies() {
+		if id == subject.Id {
+			continue
+		}
+		if a := actors.Get(id); a != nil && a.Character != nil && !Perceives(a.Character, subject) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// FindByName finds the player and the NPC in the room that searchName
+// names for viewer: a body viewer does not perceive (Perceives) is not in
+// the lists, so it takes no ordinal and cannot be named, by name or ID.
+// Players and NPCs are numbered apart; a caller takes the player when both
+// come back.
+func (r *Room) FindByName(viewer *characters.Character, searchName string, findTypes ...FindFlag) (playerId int, mobId ids.ID) {
+	return r.findByName(func(c *characters.Character) bool { return Perceives(viewer, c) }, searchName, findTypes...)
+}
+
+// findByName is FindByName with the bodies it may match given by sees.
+func (r *Room) findByName(sees func(*characters.Character) bool, searchName string, findTypes ...FindFlag) (playerId int, mobId ids.ID) {
+	if len(findTypes) < 1 {
+		findTypes = []FindFlag{FindAll}
+	}
+	mobId, _ = r.findMobByName(sees, searchName, findTypes...)
+	playerId, _ = r.findPlayerByName(sees, searchName, findTypes...)
+	return playerId, mobId
+}
+```
+
+  In `findPlayerByName` (`:1343`) and `findMobByName` (`:1389`) add the first parameter
+  `sees func(*characters.Character) bool`. In `findPlayerByName`: the ID-token branch's
+  `if acc := actors.AccountOf(idMatch); acc != nil {` becomes
+  `if acc := actors.AccountOf(idMatch); acc != nil && sees(acc.Character) {`, and in the name loop
+  `if u == nil {` becomes `if u == nil || !sees(u.Character) {`. In `findMobByName`: the ID-token
+  loop body `if mId == idMatch { return mId, nil }` becomes:
+
+```go
+			if mId != idMatch {
+				continue
+			}
+			if m := mobs.GetInstance(mId); m == nil || sees(&m.Character) {
+				return mId, nil
+			}
+```
+
+  (a body with no instance is returned as today), and after the name loop's
+  `continue // body with no instance (disconnect race)` block add:
+
+```go
+		if !sees(&m.Character) {
+			continue // the viewer does not perceive it: no ordinal, no name
+		}
+```
+
+- [ ] **Step 4: `roomdetails.go`.** The two inline checks become the shared one:
+  `:252-256` (`if player.Character.HasBuffFlag("hidden") { ... see-hidden ... }`) becomes
+  `if !Perceives(user.Character, player.Character) { // Don't show them if they are sneaking` /
+  `continue` / `}`, and `:268-272` likewise with `&mob.Character`. Same rule plus the admin reveal.
+
+- [ ] **Step 5: The `FindByName` callers.** In each of the 12 calls insert `actor.Character, ` as the
+  first argument (`room.FindByName(rest)` becomes `room.FindByName(actor.Character, rest)`;
+  ``adjacentRoom.FindByName(strings.Join(args, ` `))`` likewise). Every one runs inside a command
+  whose body is `actor`. In `rooms_test.go` the four calls (`:81`, `:85`, `:90`, `:112`) take `nil, `.
+
+- [ ] **Step 6: Messages, GMCP and combat ask the same rule.**
+  - `messaging/perceive.go` `canSee` (`:40-55`): its comment's `a hidden body is unseen;` becomes
+    `a body the receiver does not perceive (rooms.PerceivesWith, the one visibility rule: hidden
+    unless the receiver is an admin or has see-hidden) is unseen;`, and
+    `if far || hasFlag(subject.Character, "hidden") {` becomes
+    `if far || !rooms.PerceivesWith(hasFlag, receiver.Character, subject.Character) {`. The self
+    check before it, and the light check after it (`canSeeIn`), stay: a hidden speaker in the dark
+    still reads "Someone" to an admin.
+  - `modules/gmcp/gmcp.Room.go`: `:346` `if u.Character.HasBuffFlag("hidden") {` becomes
+    `if !rooms.Perceives(user.Character, u.Character) {`, and `:374`
+    `if mob.Character.HasBuffFlag("hidden") {` becomes `if !rooms.Perceives(user.Character, &mob.Character) {`
+    (`user` is `GetRoomNode`'s viewer, `:267`).
+  - `hooks/NewRound_DoCombat.go:195-196`: `// Can't see them, can't fight them.` /
+    `if d.Character.HasBuffFlag("hidden") {` become
+    `// Can't see them, can't fight them (the one visibility rule).` /
+    `if !rooms.Perceives(a.Character, d.Character) {`.
+
+  - **The round 3 and round 4 sites** (the table's **moved** rows: `Char.Enemies`, the say on
+    `Comm.Channel`, the leave, move and fight refreshes, untargeted `attack`, the walk-in notice, the
+    follow lines including `follow lose`, and the presence-only lines: leaving the game, starting to
+    quit, appearing by teleport, fleeing, dropping). Each hunk below is the exact change, made with
+    Edit (match the context lines, not the line numbers: Steps 3 to 5 have moved some). The two
+    `GetRoomNode` hunks at the end of `gmcp.Room.go` are this step's second bullet above, shown again
+    in place; the `NewRound_DoCombat.go` hunk is only the flee line (the "Can't see them" change is the
+    third bullet above). Every file here already imports `rooms`; `follow.go` gains `characters`.
+  - **The recovery room's line** (Task 5's `recoveryRegen`, `internal/rules/dikubasic/ruleset.go`):
+    the room line `{actor} is recovering from a recent death.` is only the body's presence, so after
+    its `ObserverText:` line add `Exclude: rooms.NotPerceiving(c),` (`c` is `a.Character` there;
+    `rooms` is imported). The copy is private, so another viewer is rare, but the room itself and an
+    admin's visit are not.
+
+```diff
+diff --git a/internal/hooks/NewRound_DoCombat.go b/internal/hooks/NewRound_DoCombat.go
+index 4173b48f..bf94e0be 100644
+--- a/internal/hooks/NewRound_DoCombat.go
++++ b/internal/hooks/NewRound_DoCombat.go
+@@ -457,6 +457,7 @@ func flee(a *actors.Actor, aRoom *rooms.Room) {
+ 		Range:        perception.Room,
+ 		ActorText:    fmt.Sprintf(`You flee to the <ansi fg="exit">%s</ansi> exit!`, exitName),
+ 		ObserverText: fmt.Sprintf(`{actor} flees to the <ansi fg="exit">%s</ansi> exit!`, exitName),
++		Exclude:      rooms.NotPerceiving(a.Character), // a leaving: only its presence
+ 	})
+ 
+ 	endAggro(a)
+diff --git a/internal/hooks/PlayerDespawn_HandleLeave.go b/internal/hooks/PlayerDespawn_HandleLeave.go
+index 2c36a656..b191a467 100644
+--- a/internal/hooks/PlayerDespawn_HandleLeave.go
++++ b/internal/hooks/PlayerDespawn_HandleLeave.go
+@@ -49,7 +49,8 @@ func HandleLeave(e events.Event) events.ListenerReturn {
+ 
+ 	if _, ok := room.RemovePlayer(evt.UserId); ok {
+ 		// The leaving body is already out of the room's list; the template
+-		// names it with {actor}, so an observer who cannot see reads "someone".
++		// names it with {actor}. The line is only its presence, so a viewer
++		// who does not perceive it reads nothing (rooms.NotPerceiving).
+ 		tplTxt, _ := templates.Process("player-despawn", nil)
+ 		messaging.Send(perception.Message{
+ 			Kind:         perception.WorldEvent,
+@@ -57,6 +58,7 @@ func HandleLeave(e events.Event) events.ListenerReturn {
+ 			Senses:       perception.Sight | perception.Sound,
+ 			Range:        perception.Room,
+ 			ObserverText: tplTxt,
++			Exclude:      rooms.NotPerceiving(user.Character),
+ 		})
+ 	}
+ 
+diff --git a/internal/hooks/PlayerDrop_HandlePlayerDrop.go b/internal/hooks/PlayerDrop_HandlePlayerDrop.go
+index 52420e4f..0f02a0af 100644
+--- a/internal/hooks/PlayerDrop_HandlePlayerDrop.go
++++ b/internal/hooks/PlayerDrop_HandlePlayerDrop.go
+@@ -42,6 +42,7 @@ func HandlePlayerDrop(e events.Event) events.ListenerReturn {
+ 		Range:        perception.Room,
+ 		ActorText:    `<ansi fg="red">you drop to the ground!</ansi>`,
+ 		ObserverText: `{actor} <ansi fg="red">drops to the ground!</ansi>`,
++		Exclude:      rooms.NotPerceiving(user.Character), // only its presence
+ 	})
+ 
+ 	return events.Continue
+diff --git a/internal/usercommands/admin.teleport.go b/internal/usercommands/admin.teleport.go
+index bcc1c23b..34569935 100644
+--- a/internal/usercommands/admin.teleport.go
++++ b/internal/usercommands/admin.teleport.go
+@@ -112,6 +112,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
+ 				Senses:       perception.Sight | perception.Sound,
+ 				Range:        perception.Room,
+ 				ObserverText: `{actor} appears in a flash of light!`,
++				Exclude:      rooms.NotPerceiving(targetUser.Character), // only its presence
+ 			})
+ 
+ 			if party := parties.Get(targetUser.UserId); party != nil {
+@@ -139,6 +140,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
+ 								Senses:       perception.Sight | perception.Sound,
+ 								Range:        perception.Room,
+ 								ObserverText: `{actor} appears in a flash of light!`,
++								Exclude:      rooms.NotPerceiving(partyUser.Character), // only its presence
+ 							})
+ 
+ 							if partyActor := actors.ByUserId(partyUser.UserId); partyActor != nil {
+diff --git a/internal/usercommands/attack.go b/internal/usercommands/attack.go
+index 3e9d2805..6e9d24fe 100644
+--- a/internal/usercommands/attack.go
++++ b/internal/usercommands/attack.go
+@@ -22,9 +22,30 @@ import (
+ func othersOf(actor *actors.Actor, bodyIds []ids.ID) []ids.ID {
+ 	out := make([]ids.ID, 0, len(bodyIds))
+ 	for _, id := range bodyIds {
+-		if id != actor.Id {
+-			out = append(out, id)
++		if id == actor.Id {
++			continue
+ 		}
++		// Never a body the attacker does not perceive (rooms.Perceives).
++		if b := actors.Get(id); b != nil && b.Character != nil && !rooms.Perceives(actor.Character, b.Character) {
++			continue
++		}
++		out = append(out, id)
++	}
++	return out
++}
++
++// perceivedPlayers is the room's players less the attacker and less every
++// player it does not perceive (rooms.Perceives).
++func perceivedPlayers(actor *actors.Actor, room *rooms.Room, selfUserId int) []int {
++	out := []int{}
++	for _, userId := range room.GetPlayers() {
++		if userId == selfUserId {
++			continue
++		}
++		if u := accounts.GetByUserId(userId); u == nil || !rooms.Perceives(actor.Character, u.Character) {
++			continue
++		}
++		out = append(out, userId)
+ 	}
+ 	return out
+ }
+@@ -47,7 +68,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
+ 		// If no argument supplied, attack whoever is attacking the player currently.
+ 		for _, mId := range room.GetMobs(rooms.FindFightingPlayer) {
+ 			m := mobs.GetInstance(mId)
+-			if m.Character.Aggro == nil {
++			if m == nil || m.Character.Aggro == nil || !rooms.Perceives(actor.Character, &m.Character) {
+ 				continue
+ 			}
+ 
+@@ -67,7 +88,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
+ 		if attackMobId.IsZero() {
+ 			for _, uId := range room.GetPlayers(rooms.FindFightingPlayer) {
+ 				u := accounts.GetByUserId(uId)
+-				if u == nil || u.Character.Aggro == nil {
++				if u == nil || u.Character.Aggro == nil || !rooms.Perceives(actor.Character, u.Character) {
+ 					continue
+ 				}
+ 
+@@ -96,12 +117,15 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
+ 
+ 						target := partyUser.Character.Aggro.Target
+ 
+-						if mobs.GetInstance(target) != nil {
+-							attackMobId = target
+-							break
++						if tm := mobs.GetInstance(target); tm != nil {
++							if rooms.Perceives(actor.Character, &tm.Character) {
++								attackMobId = target
++								break
++							}
++							continue
+ 						}
+ 
+-						if tu := accounts.GetByBodyId(target); tu != nil {
++						if tu := accounts.GetByBodyId(target); tu != nil && rooms.Perceives(actor.Character, tu.Character) {
+ 							attackPlayerId = tu.UserId
+ 							break
+ 						}
+@@ -116,13 +140,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
+ 		if rest == `*` { // * ANYONE
+ 
+ 			allMobs := othersOf(actor, room.GetMobs())
+-			allPlayers := []int{}
+-			for _, userId := range room.GetPlayers() {
+-				if userId == selfUserId {
+-					continue
+-				}
+-				allPlayers = append(allPlayers, userId)
+-			}
++			allPlayers := perceivedPlayers(actor, room, selfUserId)
+ 
+ 			totalTargets := len(allMobs) + len(allPlayers)
+ 			if totalTargets == 0 {
+@@ -146,13 +164,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
+ 
+ 		} else { // *user etc. ANY PLAYER
+ 
+-			allPlayers := []int{}
+-			for _, userId := range room.GetPlayers() {
+-				if userId == selfUserId {
+-					continue
+-				}
+-				allPlayers = append(allPlayers, userId)
+-			}
++			allPlayers := perceivedPlayers(actor, room, selfUserId)
+ 
+ 			if len(allPlayers) > 0 {
+ 				attackPlayerId = allPlayers[util.Rand(len(allPlayers))]
+diff --git a/internal/usercommands/go.go b/internal/usercommands/go.go
+index 34c90c09..4ba1c00c 100644
+--- a/internal/usercommands/go.go
++++ b/internal/usercommands/go.go
+@@ -286,6 +286,10 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
+ 					if mob.Character.Aggro != nil {
+ 						continue
+ 					}
++					// The line names the NPC: only one the mover perceives.
++					if !rooms.Perceives(actor.Character, &mob.Character) {
++						continue
++					}
+ 					isHostile := mob.Hostile // Is it automatically hostile?
+ 					if !isHostile {
+ 						for _, groupName := range mob.Groups {
+diff --git a/internal/usercommands/quit.go b/internal/usercommands/quit.go
+index 097b5abb..9d07e608 100644
+--- a/internal/usercommands/quit.go
++++ b/internal/usercommands/quit.go
+@@ -27,6 +27,8 @@ func Quit(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
+ 		Range:        perception.Room,
+ 		ActorText:    "You sit down and begin your meditation.",
+ 		ObserverText: "{actor} sits down and begins to meditate.",
++		// Only the quitter's presence: none for a viewer who does not perceive it.
++		Exclude: rooms.NotPerceiving(actor.Character),
+ 	})
+ 	Tell(actor, "Your meditation must complete without interruption to quit gracefully.")
+ 	user.AddBuff(0, `quitting`)
+diff --git a/modules/follow/follow.go b/modules/follow/follow.go
+index e3ecdc5a..d50bb08e 100644
+--- a/modules/follow/follow.go
++++ b/modules/follow/follow.go
+@@ -8,6 +8,7 @@ import (
+ 	"github.com/GoMudEngine/GoMud/internal/accounts"
+ 	"github.com/GoMudEngine/GoMud/internal/actors"
+ 	"github.com/GoMudEngine/GoMud/internal/behaviour"
++	"github.com/GoMudEngine/GoMud/internal/characters"
+ 	"github.com/GoMudEngine/GoMud/internal/events"
+ 	"github.com/GoMudEngine/GoMud/internal/gametime"
+ 	"github.com/GoMudEngine/GoMud/internal/ids"
+@@ -200,14 +201,20 @@ func (f *FollowModule) onNewRound(e events.Event) events.ListenerReturn {
+ 
+ 			// user doing the following? Tell both users
+ 			if followSourceUser != nil {
+-				messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="username">%s</ansi> stopped following you.`, followSourceUser.Character.Name))
+-				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followTargetUser.Character.Name))
++				// A line only about the follower's presence: none for a target
++				// who does not perceive it (Calabe, 2026-11-11).
++				if rooms.Perceives(followTargetUser.Character, followSourceUser.Character) {
++					messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="username">%s</ansi> stopped following you.`, followSourceUser.Character.Name))
++				}
++				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following %s.`, seenName(followSourceUser.Character, followTargetUser.Character, `username`)))
+ 				continue
+ 			}
+ 
+ 			// mob doing the following? tell the target user
+ 			if followSourceMob != nil {
+-				messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> stopped following you.`, followSourceMob.Character.Name))
++				if rooms.Perceives(followTargetUser.Character, &followSourceMob.Character) {
++					messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> stopped following you.`, followSourceMob.Character.Name))
++				}
+ 				continue
+ 			}
+ 
+@@ -219,7 +226,7 @@ func (f *FollowModule) onNewRound(e events.Event) events.ListenerReturn {
+ 
+ 			// user doing the following? Tell the following user
+ 			if followSourceUser != nil {
+-				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followTargetMob.Character.Name))
++				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following %s.`, seenName(followSourceUser.Character, &followTargetMob.Character, `mobname`)))
+ 			}
+ 
+ 			continue
+@@ -373,6 +380,18 @@ func (f *FollowModule) onPlayerDeath(e events.Event) events.ListenerReturn {
+ // Commands
+ //
+ 
++// seenName is subject's name, in colour, as viewer reads it in a follow
++// line that tells viewer about its own follow: the name when viewer
++// perceives subject (rooms.Perceives, the one visibility rule), else
++// "someone", as messaging shows an unseen body. The line carries news the
++// viewer gets anyway (its follow ended), so it is kept.
++func seenName(viewer, subject *characters.Character, colour string) string {
++	if rooms.Perceives(viewer, subject) {
++		return fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, colour, subject.Name)
++	}
++	return `someone`
++}
++
+ // followCommand is the one follow command for players and NPCs. A follow key
+ // is the account's UserId for a player and the body's ID for an NPC.
+ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
+@@ -443,7 +462,10 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
+ 				}
+ 
+ 				if followerUser := accounts.GetByUserId(fId.userId); followerUser != nil {
+-					messaging.Tell(followerUser.Character.Id, fmt.Sprintf(`You are no longer following <ansi fg="%s">%s</ansi>.`, usercommands.NameColour(actor), actor.Character.Name))
++					// The follower's own line (its follow ended): "someone" for
++					// a leader it does not perceive. Also run by a leader's
++					// teleport (roomChangeHandler's "follow lose").
++					messaging.Tell(followerUser.Character.Id, fmt.Sprintf(`You are no longer following %s.`, seenName(followerUser.Character, actor.Character, usercommands.NameColour(actor))))
+ 				}
+ 			}
+ 
+@@ -462,8 +484,10 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
+ 		if wasFollowing.userId > 0 {
+ 
+ 			if followUser := accounts.GetByUserId(wasFollowing.userId); followUser != nil {
+-				messaging.Tell(followUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> stopped following you.`, usercommands.NameColour(actor), actor.Character.Name))
+-				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followUser.Character.Name))
++				if rooms.Perceives(followUser.Character, actor.Character) {
++					messaging.Tell(followUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> stopped following you.`, usercommands.NameColour(actor), actor.Character.Name))
++				}
++				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following %s.`, seenName(actor.Character, followUser.Character, `username`)))
+ 				return true, nil
+ 			}
+ 
+@@ -472,7 +496,7 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
+ 		if !wasFollowing.mobId.IsZero() {
+ 
+ 			if followMob := mobs.GetInstance(wasFollowing.mobId); followMob != nil {
+-				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followMob.Character.Name))
++				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following %s.`, seenName(actor.Character, &followMob.Character, `mobname`)))
+ 				return true, nil
+ 			}
+ 
+@@ -498,7 +522,11 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
+ 
+ 		usercommands.Tell(actor, fmt.Sprintf(`You start following <ansi fg="username">%s</ansi>.`, targetUser.Character.Name))
+ 
+-		messaging.Tell(targetUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> is following you.`, usercommands.NameColour(actor), actor.Character.Name))
++		// Shadowing: a follower the target does not perceive is not announced
++		// (following does not cancel hiding; Calabe, 2026-11-11).
++		if rooms.Perceives(targetUser.Character, actor.Character) {
++			messaging.Tell(targetUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> is following you.`, usercommands.NameColour(actor), actor.Character.Name))
++		}
+ 
+ 		return true, nil
+ 	}
+diff --git a/modules/gmcp/gmcp.Char.go b/modules/gmcp/gmcp.Char.go
+index d9025721..46d279ab 100644
+--- a/modules/gmcp/gmcp.Char.go
++++ b/modules/gmcp/gmcp.Char.go
+@@ -457,6 +457,10 @@ func (g *GMCPCharModule) GetCharNode(user *accounts.Account, gmcpModule string)
+ 				if mob == nil {
+ 					continue
+ 				}
++				// Only an enemy the viewer perceives (the one visibility rule).
++				if !rooms.Perceives(user.Character, &mob.Character) {
++					continue
++				}
+ 
+ 				e := GMCPCharModule_Enemy{
+ 					Id:      mob.Character.Id.String(),
+diff --git a/modules/gmcp/gmcp.Comm.go b/modules/gmcp/gmcp.Comm.go
+index f6b5f034..b18a126e 100644
+--- a/modules/gmcp/gmcp.Comm.go
++++ b/modules/gmcp/gmcp.Comm.go
+@@ -104,6 +104,14 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
+ 
+ 	}
+ 
++	// A say names its speaker only to a receiver who perceives it (the one
++	// visibility rule); to anyone else it is "Someone", as the text reads
++	// (messaging's canSee), with no player or mob source.
++	var speaker *actors.Actor
++	if evt.CommType == `say` {
++		speaker = actors.Get(evt.SourceActorId)
++	}
++
+ 	for _, userId := range sendToUserIds {
+ 
+ 		// Exclude user from receiving their own messages?
+@@ -111,10 +119,18 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
+ 		//continue
+ 		//}
+ 
++		out := payload
++		if speaker != nil && speaker.Character != nil {
++			if receiver := accounts.GetByUserId(userId); receiver == nil || !rooms.Perceives(receiver.Character, speaker.Character) {
++				out.Sender = `Someone`
++				out.Source = ``
++			}
++		}
++
+ 		events.AddToQueue(GMCPOut{
+ 			UserId:  userId,
+ 			Module:  `Comm.Channel`,
+-			Payload: payload,
++			Payload: out,
+ 		})
+ 
+ 	}
+diff --git a/modules/gmcp/gmcp.Room.go b/modules/gmcp/gmcp.Room.go
+index 32b475a0..e16971d5 100644
+--- a/modules/gmcp/gmcp.Room.go
++++ b/modules/gmcp/gmcp.Room.go
+@@ -82,6 +82,19 @@ func (g *GMCPRoomModule) itemOwnershipHandler(e events.Event) events.ListenerRet
+ 	return events.Continue
+ }
+ 
++// perceivesBody reports whether the account's body perceives the body
++// bodyId (rooms.Perceives, the one visibility rule). A body no longer in the
++// registry has nothing to hide, so it is perceived.
++func perceivesBody(viewer *accounts.Account, bodyId actors.ActorId) bool {
++	if viewer == nil {
++		return false
++	}
++	if a := actors.Get(bodyId); a != nil && a.Character != nil {
++		return rooms.Perceives(viewer.Character, a.Character)
++	}
++	return true
++}
++
+ func (g *GMCPRoomModule) aggroChangedHandler(e events.Event) events.ListenerReturn {
+ 
+ 	evt, typeOk := e.(events.AggroChanged)
+@@ -100,6 +113,10 @@ func (g *GMCPRoomModule) aggroChangedHandler(e events.Event) events.ListenerRetu
+ 	}
+ 
+ 	for _, uId := range room.GetPlayers() {
++		// A viewer who does not perceive the body gets no update about it.
++		if !perceivesBody(accounts.GetByUserId(uId), evt.ActorId) {
++			continue
++		}
+ 		events.AddToQueue(GMCPRoomUpdate{
+ 			UserId:     uId,
+ 			Identifier: identifier,
+@@ -127,6 +144,8 @@ func (g *GMCPRoomModule) despawnHandler(e events.Event) events.ListenerReturn {
+ 		return events.Continue
+ 	}
+ 
++	leaver := accounts.GetByUserId(evt.UserId)
++
+ 	//
+ 	// Send GMCP Updates for players leaving
+ 	//
+@@ -141,6 +160,11 @@ func (g *GMCPRoomModule) despawnHandler(e events.Event) events.ListenerReturn {
+ 			continue
+ 		}
+ 
++		// Only a viewer who perceives the leaver reads its name.
++		if leaver != nil && !rooms.Perceives(u.Character, leaver.Character) {
++			continue
++		}
++
+ 		events.AddToQueue(GMCPOut{
+ 			UserId:  uid,
+ 			Payload: fmt.Sprintf(`Room.RemovePlayer "%s"`, evt.CharacterName),
+@@ -175,7 +199,7 @@ func (g *GMCPRoomModule) roomChangeHandler(e events.Event) events.ListenerReturn
+ 	if evt.FromRoomId != 0 {
+ 		if oldRoom := rooms.LoadRoom(evt.FromRoomId); oldRoom != nil {
+ 			for _, uId := range oldRoom.GetPlayers() {
+-				if uId == moverUserId {
++				if uId == moverUserId || !perceivesBody(accounts.GetByUserId(uId), evt.ActorId) {
+ 					continue
+ 				}
+ 				events.AddToQueue(GMCPRoomUpdate{
+@@ -189,7 +213,7 @@ func (g *GMCPRoomModule) roomChangeHandler(e events.Event) events.ListenerReturn
+ 	if evt.ToRoomId != 0 {
+ 		if newRoom := rooms.LoadRoom(evt.ToRoomId); newRoom != nil {
+ 			for _, uId := range newRoom.GetPlayers() {
+-				if uId == moverUserId {
++				if uId == moverUserId || !perceivesBody(accounts.GetByUserId(uId), evt.ActorId) {
+ 					continue
+ 				}
+ 				events.AddToQueue(GMCPRoomUpdate{
+@@ -343,7 +367,7 @@ func (g *GMCPRoomModule) GetRoomNode(user *accounts.Account, gmcpModule string)
+ 				continue
+ 			}
+ 
+-			if u.Character.HasBuffFlag("hidden") {
++			if !rooms.Perceives(user.Character, u.Character) {
+ 				continue
+ 			}
+ 
+@@ -371,7 +395,7 @@ func (g *GMCPRoomModule) GetRoomNode(user *accounts.Account, gmcpModule string)
+ 				continue
+ 			}
+ 
+-			if mob.Character.HasBuffFlag("hidden") {
++			if !rooms.Perceives(user.Character, &mob.Character) {
+ 				continue
+ 			}
+ 
+```
+
+  After this step `grep -rn 'HasBuffFlag("hidden")\|see-hidden' --include=*.go internal modules | grep -v _test`
+  prints only the lines the table above leaves alone (the sneaking actors' own checks, `go.go:38`,
+  `:330`, `look.go:37`, `read.go:32`, `cleanup.go:89`; the adjective, `character.go:435`; the prompt,
+  `userrecord.prompt.go:244`; the two `Unseen` fields) and the comments and `"see-hidden"` of
+  `PerceivesWith` and `canSee` (12 lines on the scratch worktree). Control: the same command
+  before this task also prints `roomdetails.go:252`, `:268`, `gmcp.Room.go:346`, `:374` and
+  `NewRound_DoCombat.go:196`.
+
+- [ ] **Step 7: Run; they pass.** `go build ./...`; `go test ./internal/rooms ./internal/usercommands ./internal/messaging ./modules/gmcp ./internal/rules/dikubasic -count=1`
+  and `go test ./internal/hooks -count=1` (twice) print `ok`. Probes (paste each failure line,
+  restore):
+  - room view (`roomdetails.go:268`): put back `mob.Character.HasBuffFlag("hidden") && !user.Character.HasBuffFlag("see-hidden")`
+    as the skip condition: `TestRoomViewListsOnlyWhatTheViewerPerceives` fails (the admin does not
+    see the rat); likewise `:252` for players (the admin does not see Bob);
+  - GMCP room contents (`gmcp.Room.go`, the NPC list): put back `if mob.Character.HasBuffFlag("hidden") {`:
+    `TestRoomContentsListOnlyWhatTheViewerPerceives` fails ("and the rat", "see-hidden perceives
+    it"); likewise the players' list (`if u.Character.HasBuffFlag("hidden") {`: the admin does not
+    see Bob);
+  - `Char.Enemies`: make its new check `if false && ...`: `TestEnemiesListOnlyWhatTheViewerPerceives`
+    fails;
+  - `Comm.Channel`: make its receiver check `false && (...)`: `TestSayNamesItsSpeakerOnlyToThoseWhoPerceiveIt`
+    fails ("Ann does not perceive Sneak");
+  - `despawnHandler`: make its check `false && ...`: `TestRoomEventsReachOnlyThoseWhoPerceiveTheBody`
+    fails on `Room.RemovePlayer`; drop `|| !perceivesBody(...)` from a `roomChangeHandler` loop: the
+    same test fails on the refresh;
+  - untargeted `attack`: drop `|| !rooms.Perceives(actor.Character, &m.Character)` from the first
+    loop: `TestUntargetedAttackPicksOnlyWhatTheAttackerPerceives` fails (`"": no target picked`);
+  - walk-in notice (`go.go`): make its check `if false && ...`: `TestEnteringNamesOnlyTheHostilesTheMoverPerceives`
+    fails ("the hidden Lurker is not named");
+  - follow: make the "is following you" check `if true || rooms.Perceives(...)`:
+    `TestHiddenFollowerIsNotAnnounced` fails ("no line to Ann at all, not even as someone"); the same
+    for the `follow stop` check (`if rooms.Perceives(followUser.Character, actor.Character)`);
+  - make `PerceivesWith` return `true` after the self check: the hidden lookup test fails on its
+    first four asserts, and so do two goldens, because messaging's `canSee` asks the same rule:
+    `hidden_attacker.txt` line 11 (want "Someone watches you intently, waiting to strike.", got
+    "Alice watches ...") and `F-comms-party.txt` line 22 (want "Bob: Someone waves", got "Bob: Ann
+    waves"). Never `-update` on a probe (plan review round 4 corrected the earlier "no golden
+    changes");
+  - `follow lose` (`follow.go`, the `lostFollowers` loop): put back the real name,
+    ``fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, usercommands.NameColour(actor), actor.Character.Name)`` in
+    place of `seenName(...)`: `TestFollowLoseNamesOnlyAPerceivedLeader` fails;
+  - a follow running out: make the NPC follower's check `if true || rooms.Perceives(...)`:
+    `TestFollowExpiryFollowsTheRule` fails ("Ann does not perceive the hidden rat");
+  - presence lines: set `quit.go`'s `Exclude:` to `nil`: `TestPresenceLinesReachOnlyThoseWhoPerceive`
+    fails ("nothing to Dan"); restore, then set `HandleLeave`'s `Exclude:` to `nil`: it fails ("still
+    nothing to Dan");
+  - each other presence line, one at a time (round 5): delete the `Exclude:` line of
+    `admin.teleport.go`'s first "appears in a flash of light" message: `TestEachPresenceLineReachesOnlyThoseWhoPerceive/teleport`
+    fails, and only it; of its party loop's message: `/teleport_party` fails; of `flee`'s message in
+    `NewRound_DoCombat.go`: `/flee` fails; of `HandlePlayerDrop`'s message: `/drop` fails (each
+    "not even as someone"); of `recoveryRegen`'s room line: `TestRecoveryLineExcludesThoseWhoDoNotPerceive`
+    fails (`go test ./internal/rules/dikubasic -run RecoveryLine -count=1`);  - GMCP refreshes: make `aggroChangedHandler`'s check `if false && ...`: `TestRoomEventsReachOnlyThoseWhoPerceiveTheBody`
+    fails ("the admin and Sneak itself, not Ann"); drop `|| !perceivesBody(...)` from
+    `roomChangeHandler`'s old-room loop: it fails ("only the admin's list is refreshed in the room
+    left");
+  - make the admin `if` false (`if acc := ...; false && ...`): the messaging admin assert, the combat
+    `admin=true` subtest and the lookup test's admin assert fail;
+  - in `canSee` put back `hasFlag(subject.Character, "hidden")`: the messaging admin and see-hidden
+    asserts fail;
+  - drop `|| !sees(u.Character)`: the "hidden Bob" assert fails; drop the ID-token `sees` check in
+    `findMobByName`: the "by its ID" assert fails.
+
+  (Run on a scratch worktree at `65bbc144`: the tests pass, and the admin, `canSee`, room view (NPC),
+  GMCP NPC list, `Char.Enemies`, `Comm.Channel`, `despawnHandler`, untargeted `attack`, walk-in, both
+  follow probes, and round 4's always-true, `follow lose`, follow expiry, `quit`, `HandleLeave`,
+  `aggroChangedHandler` and old-room probes fail as stated; round 5's four per-site probes (both
+  teleport lines, flee, drop) each fail their own subtest only. The recovery-line test needs Tasks 3
+  and 5, so it ran against a stand-in carrying the same room line and `Exclude`: it passed, and
+  failed with the `Exclude` deleted; its `Regen` form is unrun; `go test ./internal/hooks -count=1` prints `ok` twice; `go test ./... -count=1`
+  shows only the 3 known Windows failures, 41 ok, `modules/gmcp` now among them.)
+
+- [ ] **Step 8:** Per-task check. **Goldens: none change.** Reads goldens A, B and C make Ann an
+  admin but hide no one; D, E, F and H hide Ann, and no one there is an admin or has `see-hidden`,
+  so every observer's line still reads "Someone" where it did; a body always perceives itself, and
+  Ann looks at, shows to and emotes with visible bodies only. The combat golden `hidden_attacker`
+  hides the attacker, not the defender, and no observer is an admin. GMCP output is in no golden.
+  Reads golden H's follow section hides no one: Ann perceives Bob, so her lines are sent as before,
+  and `seenName` writes a perceived name exactly as the old lines did (`<ansi fg="username">Ann</ansi>`). No golden runs an untargeted `attack` on a hidden
+  body or walks into a room holding a hidden hostile NPC. (Run on the scratch worktree: every golden
+  byte-identical, with the filter on and switched off.) Commit the files in **Files**:
+  `Phase 5.3: one visibility rule (rooms.Perceives): hidden, see-hidden and admins, for the room view, name lookups, messages, GMCP, follow, untargeted attack and combat`.
+
+### Task 5b: Both ordinal forms, and one numbering per name: the living, then corpses newest first (Opus)
+
+Calabe's rulings (spec, plan review round 2, 2026-11-11):
+
+- **Both ordinal forms, everywhere, one parser.** `2.rat` and `rat#2` are the second rat for every
+  command that takes a name. `util.GetMatchNumber` (`util.go:298-314`) learns the dot form; no
+  second parser. Its two callers are the two name matchers, so every name lookup gets it:
+  `util.FindMatchIn` (`util.go:322`; rooms' players, NPCs, containers, exits, corpses, party members,
+  zone names, NPC templates) and `items.FindMatchIn` (`items.go:604`; every item lookup).
+  `grep -rn 'GetMatchNumber' --include=*.go .` lists exactly those two, its definition (`util.go:298`),
+  `util_test.go` and a comment in `findMobByName` (`rooms.go:1393`).
+- **One numbering per name: the living first, then corpses newest first.** With a live rat and two
+  dead rats, 1 is the live rat, 2 the rat killed most recently, 3 the rat that died first. Recency
+  is `Corpse.RoundCreated`, newest first (of two from one round, the one added later). The dead
+  character's name reaches its corpse (`rat` reaches `rat corpse`). Players and NPCs follow the same
+  rule (no player-first ranking of corpses). Living lookups number exactly as today; only corpse
+  lookups change, counting past the living. A corpse command whose ordinal lands on a living
+  character refuses and does not skip to the next corpse: "The rat is still alive." for an NPC,
+  "Bob is still alive." for a player (a player's name never takes "The").
+- **The person typing is not in their own name's living count** when they loot or look at a corpse:
+  Bob's `get all bob` or `look bob` reaches Bob's newest corpse; other players' numbering is
+  unchanged (to Ann, Bob is still 1).
+- **The living counted are those the viewer perceives** (Task 5a): a hidden body takes no ordinal,
+  so a corpse lookup counts past it unseen, and no refusal ever names it.
+
+**How the living are numbered today (read at `65bbc144`), which the corpse numbering counts past.**
+`FindByName` (`rooms.go:1334-1341`) asks two lookups apart and returns both results:
+`findPlayerByName` (`:1343-1387`) matches the names of the room's players in the order they came
+into the room (`GetPlayers`, `:1158`, `r.playerIds()`); `findMobByName` (`:1389-1435`) matches the
+room's NPCs in the order they came in (`GetMobs`, `:1065`, `r.mobIds()`), listing each as `name#k`
+with k its position among all the room's NPCs (`:1417`), which only makes the map keys unique:
+`GetMatchNumber` strips the ordinal from the search, never from the list, so the search's ordinal
+counts matching NPCs, and an NPC is never an exact match (its listed name holds `#k`). Both refuse a
+search starting with `#` or `@` (`:1345-1351`, `:1391-1397`: a bare `#2` would match every name by
+position); the dot form needs no such guard, because the parser leaves a nameless `2.` as typed.
+Both take an ID token first (`ids.Parse`, `0x<16 hex>:0x<16 hex>`, `ids.go:54-64`; it has no dot,
+and `0x` is not digits-then-dot, so the dot form never reads one). Every caller of
+`FindByName` (12, `grep -rn '\.FindByName(' --include=*.go . | grep -v _test`) takes the player when
+both come back (for example `look.go:76-84`, `consider.go:23-40`). So **ordinal n reaches someone
+living exactly when n is at most the number of matching players or at most the number of matching
+NPCs**: the living count is the larger of the two, players and NPCs each numbered from 1, and for an
+ordinal both reach, the player is the one it names. The corpse lookup asks the same lookup
+(`findByName`, Task 5a) for this count (`livingReach`), so it cannot drift from it, with the bodies
+it may match narrowed to those the viewer perceives, less the viewer itself.
+
+**`look bob` typed by Bob, today:** `findPlayerByName` lists every player in the room, Bob
+included, and `look` has no self check (`look.go:76-84`), so Bob looks at himself. After this task
+Bob looks at himself only when no corpse answers to his name; with one, `look bob` shows his newest
+corpse (Step 7). `consider` already drops a self match (`consider.go:24-26`) and `attack` refuses
+one (`attack.go:167-169`); `give` and `show` have no self check today and keep none. Living lookups
+for other commands are unchanged: the viewer stays in their own list there, so no living number
+moves.
+
+**What else Task 5b does (from the earlier round 2 revision, kept):** `util.FindMatchIn` returns the
+matched text, which cannot tell two corpses of one name apart, so its loop moves unchanged into
+`util.FindMatchIndexIn` (positions) and `FindMatchIn` wraps it: one matcher still. `FindCorpse` (a
+copy) delegates to `FindCorpseByRef`; `look.go`'s unused third copy of the name lists goes; `bury`
+removes the corpse it found (`RemoveCorpseRef`; `RemoveCorpse` matches owner, name and round, so of
+two rats killed in one round it would remove the first). Comes before Task 6 so the death commit
+lands on the new lookup.
+
+**World data holds no name the dot form would misread** (2026-11-11, `65bbc144`):
+`grep -rniE "^\s*-?\s*(name|namesimple|title|zonename|zone|displayname)\s*:\s*[\"']?[0-9]+\." _datafiles modules --include=*.yaml`
+(names, titles, zones) and `grep -rnE "^\s*-?\s*[\"']?[0-9]+\.[^:]*[\"']?\s*:" _datafiles modules --include=*.yaml`
+(map keys: nouns, exits, containers) each print 0 lines over the 100 YAML files. Controls: both
+patterns print the planted line from a scratch file holding `  2.rat: a rat` and `name: 3.sword`;
+the first with `\w+` in place of the key list prints 19 lines (`config.yaml:199`
+`EquipmentDropChance: 0.25` among them). Character names cannot hold a dot: the shipped
+`NameRejectRegex` is `^[a-zA-Z0-9_]+$` (`config.yaml:578`, read by `accounts.ValidateName`,
+`users.go:517`).
+
+**Files:** modify `internal/util/util.go`, `internal/rooms/rooms.go`, `internal/rooms/rooms_test.go`
+(`TestRoom_FindCorpse`'s four calls take a nil viewer), `internal/usercommands/get.go`,
+`internal/usercommands/look.go`, `modules/cleanup/cleanup.go`, `internal/hooks/reads_corpse_test.go`
+(Task 5a's); create `internal/util/matchnumber_test.go`, `internal/util/findmatchindex_test.go`,
+`internal/rooms/corpselookup_test.go`.
+
+**The hooks test file's name must sort after `combat_golden_test.go`.** Go runs a package's tests in
+file order, and any reads-world test that runs before `TestCombatGoldenFleeSuccess` sets off its known
+order flake (`status.md` Watch): on the scratch worktree a file named `bury_test.go` made
+`go test ./internal/hooks -count=1` fail on that test, and the same tests in `reads_corpse_test.go`
+pass twice in a row. Do not rename it to sort earlier.
+
+- [ ] **Step 1: Write the failing tests.** Create `internal/util/matchnumber_test.go`:
+
+```go
+package util
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+// Both ordinal forms, one parser (Calabe, 2026-11-11): "2.rat" and "rat#2"
+// are the second rat. A dot counts only between digits and a name that does
+// not start with a digit; anything else stays as typed.
+func TestGetMatchNumberReadsBothOrdinalForms(t *testing.T) {
+	for _, tt := range []struct {
+		input string
+		name  string
+		num   int
+	}{
+		{"2.rat", "rat", 2},
+		{"rat#2", "rat", 2},
+		{"0.rat", "rat", 1}, // as rat#0: below 1 is 1
+		{"rat", "rat", 1},
+		{"1.5", "1.5", 1},   // a number, not the fifth "5"
+		{".rat", ".rat", 1}, // no digits before the dot
+		{"2.", "2.", 1},     // no name after the dot
+		{"12.Rat Corpse", "rat corpse", 12},
+		{"2.rat#3", "2.rat", 3}, // "#N" is read first
+		{"a2.rat", "a2.rat", 1}, // not all digits before the dot
+	} {
+		name, num := GetMatchNumber(tt.input)
+		assert.Equal(t, tt.name, name, "%q: name", tt.input)
+		assert.Equal(t, tt.num, num, "%q: number", tt.input)
+	}
+}
+```
+
+  Create `internal/util/findmatchindex_test.go`:
+
+```go
+package util
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+// FindMatchIndexIn tells repeated items apart by position (two corpses of
+// one name): "#N" picks the Nth, and an exact match wins over a prefix that
+// comes before it.
+func TestFindMatchIndexInTellsRepeatsApart(t *testing.T) {
+	list := []string{"rat corpsewing corpse", "rat corpse", "rat corpse"}
+	for _, tt := range []struct {
+		search       string
+		match, close int
+	}{
+		{"rat", -1, 0},
+		{"rat#1", -1, 0},
+		{"rat#2", -1, 1},
+		{"rat#3", -1, 2},
+		{"rat#4", -1, -1},
+		{"rat corpse", 1, 0},
+		{"rat corpse#2", 2, 1},
+		{"", -1, -1},
+	} {
+		match, close := FindMatchIndexIn(tt.search, list...)
+		assert.Equal(t, tt.match, match, "%q: match", tt.search)
+		assert.Equal(t, tt.close, close, "%q: close match", tt.search)
+	}
+}
+```
+
+  Create `internal/rooms/corpselookup_test.go` (no one living: a bare `Room` has no bodies; the
+  viewer is nil):
+
+```go
+package rooms
+
+import (
+	"testing"
+
+	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// corpseOf is a corpse for the lookup tests; gold tells them apart.
+func corpseOf(name string, userId, mobId int, round uint64, gold int) Corpse {
+	return Corpse{UserId: userId, MobId: mobId, Character: characters.Character{Name: name}, RoundCreated: round, Gold: gold}
+}
+
+// With nobody living in the room, a name numbers its corpses newest first
+// (RoundCreated; of two from one round, the later added), crumbled ones
+// left out, and both ordinal forms work (Calabe, 2026-11-11). FindCorpse
+// finds the same corpse.
+func TestFindCorpseByRefNumbersCorpsesNewestFirst(t *testing.T) {
+	r := &Room{}
+	crumbled := corpseOf("rat", 0, 7, 9, 9)
+	crumbled.Prunable = true
+	r.AddCorpse(corpseOf("rat", 0, 7, 5, 1))
+	r.AddCorpse(corpseOf("rat", 0, 7, 8, 3)) // the newest
+	r.AddCorpse(crumbled)
+	r.AddCorpse(corpseOf("rat", 0, 7, 5, 2)) // same round as gold 1, added later
+
+	for search, gold := range map[string]int{
+		"rat": 3, "rat#1": 3, "1.rat": 3,
+		"rat#2": 2, "2.rat": 2,
+		"rat#3": 1, "3.rat": 1,
+		"rat corpse": 3, "rat corpse#2": 2, "2.rat corpse": 2,
+	} {
+		c, refusal := r.FindCorpseByRef(nil, search)
+		require.NotNil(t, c, search)
+		assert.Empty(t, refusal, search)
+		assert.Equal(t, gold, c.Gold, search)
+		v, ok := r.FindCorpse(nil, search)
+		require.True(t, ok, search)
+		assert.Equal(t, gold, v.Gold, "FindCorpse %s", search)
+	}
+	c, refusal := r.FindCorpseByRef(nil, "4.rat")
+	assert.Nil(t, c, "three live rat corpses, not four (the crumbled one is not a candidate)")
+	assert.Empty(t, refusal)
+}
+
+// Players' and NPCs' corpses share one numbering (no player-first ranking),
+// and a corpse named exactly wins over one the name only begins.
+func TestFindCorpseByRefOneListExactFirst(t *testing.T) {
+	r := &Room{}
+	r.AddCorpse(corpseOf("rat", 0, 7, 5, 1))
+	r.AddCorpse(corpseOf("Ratty", 9, 0, 6, 2))          // a player's, newer
+	r.AddCorpse(corpseOf("rat corpsewing", 0, 8, 7, 3)) // newest; "rat corpsewing corpse" begins with "rat corpse"
+
+	c, _ := r.FindCorpseByRef(nil, "rat")
+	require.NotNil(t, c)
+	assert.Equal(t, 3, c.Gold, "the newest corpse the name begins")
+	c, _ = r.FindCorpseByRef(nil, "2.rat")
+	require.NotNil(t, c)
+	assert.Equal(t, 2, c.Gold, "the player's corpse is the second: one list")
+	c, _ = r.FindCorpseByRef(nil, "rat corpse")
+	require.NotNil(t, c)
+	assert.Equal(t, 1, c.Gold, "exact over a prefix that comes first")
+}
+
+// RemoveCorpseRef removes the very corpse it is given, though another has
+// the same owner, name and round (RemoveCorpse takes the first of those).
+func TestRemoveCorpseRefRemovesTheCorpseFound(t *testing.T) {
+	r := &Room{}
+	r.AddCorpse(corpseOf("rat", 0, 7, 5, 1))
+	r.AddCorpse(corpseOf("rat", 0, 7, 5, 2))
+
+	// "rat" is the newest: of two from one round, the one added later.
+	// RemoveCorpse, matching owner, name and round, would take the first.
+	c, _ := r.FindCorpseByRef(nil, "rat")
+	require.NotNil(t, c)
+	require.Equal(t, 2, c.Gold)
+	require.True(t, r.RemoveCorpseRef(c))
+	require.Len(t, r.Corpses, 1)
+	assert.Equal(t, 1, r.Corpses[0].Gold, "the one named went, the other stayed")
+	assert.False(t, r.RemoveCorpseRef(&Corpse{}), "a corpse not in the room")
+}
+```
+
+  Append to `internal/hooks/reads_corpse_test.go` (Task 5a's file; add
+  `github.com/GoMudEngine/GoMud/internal/characters` and `github.com/stretchr/testify/require` to its
+  imports). The reads harness runs module commands (it imports `modules/cleanup`,
+  `reads_golden_test.go:72`); `trio` puts Ann, Bob and the live rat in room A and Cid in C
+  (`:403-412`):
+
+```go
+// ratCorpses puts two rat corpses in room A: the older (round 5) holds 1
+// gold, the newer (round 7) 2.
+func ratCorpses(room *rooms.Room) {
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 5, Gold: 1})
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 7, Gold: 2})
+}
+
+// One numbering per name, the living first (Calabe, 2026-11-11). Room A
+// holds the live rat, a live player Ratty and two rat corpses. Players and
+// NPCs are numbered apart (FindByName) and a command takes the player when
+// both match, so 1 reaches the living (Ratty, then the rat) and the corpses
+// start at 2: 2 is the newest, 3 the older. A player's name takes no "The".
+// The person typing is not in their own name's count: Ann's "ann" is her
+// newest corpse; Bob's "ann" is Ann.
+func TestCorpseNumbersCountPastTheLiving(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, bob, _, _ := w.trio()
+	w.addPlayer("Ratty", readsRoomA)
+	room := rooms.LoadRoom(readsRoomA)
+	ratCorpses(room)
+	room.AddCorpse(rooms.Corpse{UserId: ann.UserId, Character: characters.Character{Name: "Ann"}, RoundCreated: 6, Gold: 3})
+
+	c, refusal := room.FindCorpseByRef(ann.Character, "rat")
+	assert.Nil(t, c)
+	assert.Equal(t, "Ratty is still alive.", refusal, "1 is the living; the player when a player and an NPC both match")
+	for search, gold := range map[string]int{"2.rat": 2, "rat#2": 2, "3.rat": 1, "rat corpse": 2, "ann": 3} {
+		c, refusal := room.FindCorpseByRef(ann.Character, search)
+		require.NotNil(t, c, search)
+		assert.Empty(t, refusal, search)
+		assert.Equal(t, gold, c.Gold, search)
+	}
+	c, refusal = room.FindCorpseByRef(ann.Character, "4.rat")
+	assert.Nil(t, c, "two rat corpses only")
+	assert.Empty(t, refusal)
+
+	c, refusal = room.FindCorpseByRef(bob.Character, "ann")
+	assert.Nil(t, c)
+	assert.Equal(t, "Ann is still alive.", refusal, "to Bob, Ann is alive and first")
+	c, _ = room.FindCorpseByRef(bob.Character, "2.ann")
+	require.NotNil(t, c)
+	assert.Equal(t, 3, c.Gold)
+
+	c, refusal = room.FindCorpseByRef(ann.Character, "bob")
+	assert.Nil(t, c, "no corpse answers to bob: nothing, not a refusal")
+	assert.Empty(t, refusal)
+}
+
+// A hidden body takes no ordinal in a corpse lookup either, and nothing
+// says it is there; a viewer with see-hidden counts it.
+func TestHiddenBodiesTakeNoCorpseOrdinal(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, _, _, rat := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+	ratCorpses(room)
+	w.hide(&rat.Character)
+
+	c, refusal := room.FindCorpseByRef(ann.Character, "rat")
+	require.NotNil(t, c, "the hidden rat takes no ordinal: 1 is the newest corpse")
+	assert.Empty(t, refusal, "and nothing says it is there")
+	assert.Equal(t, 2, c.Gold)
+
+	w.flag(ann.Character, readsSeeHiddenBuf, "see-hidden")
+	c, refusal = room.FindCorpseByRef(ann.Character, "rat")
+	assert.Nil(t, c)
+	assert.Equal(t, "The rat is still alive.", refusal)
+}
+
+// bury numbers as the lookup does: an ordinal on the living is refused, not
+// skipped; "2.rat" buries the newest rat corpse, here the later of two from
+// the same round (which RemoveCorpse, matching owner, name and round, would
+// mistake for the first).
+func TestBuryBuriesTheCorpseItNames(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	w.trio() // the rat is alive in room A
+	room := rooms.LoadRoom(readsRoomA)
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 5, Gold: 1})
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 5, Gold: 2})
+
+	w.run("Ann", "bury rat")
+	require.Len(t, room.Corpses, 2, "the live rat is not a corpse")
+	w.run("Ann", "bury 2.rat")
+
+	require.Len(t, room.Corpses, 1)
+	require.Equal(t, 1, room.Corpses[0].Gold, "the newest rat corpse was buried, the older stays")
+	out := w.out.String()
+	require.Contains(t, out, `Ann: The rat is still alive.`)
+	require.Contains(t, out, `Ann: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.`)
+}
+
+// Bob looking at "bob" sees his newest corpse when one is here (the person
+// typing is not in their own name's count for a corpse); with none, he looks
+// at himself, as before.
+func TestLookAtYourOwnNameFindsYourCorpse(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	_, bob, _, _ := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+
+	w.run("Bob", "look bob")
+	before := w.out.String()
+	require.NotContains(t, before, "Bob: You look at the", "no corpse yet: Bob looks at himself")
+
+	room.AddCorpse(rooms.Corpse{UserId: bob.UserId, Character: characters.Character{Name: "Bob"}, RoundCreated: 5})
+	w.run("Bob", "look bob")
+	require.Contains(t, w.out.String()[len(before):], `Bob: You look at the <ansi fg="user-corpse">Bob corpse</ansi>.`)
+}
+```
+
+- [ ] **Step 2: Run; they fail.** `go test ./internal/util ./internal/rooms -count=1` and
+  `go test ./internal/hooks -run 'CorpseNumbers|CorpseOrdinal|Bury|LookAtYour' -count=1` fail to
+  compile (`undefined: FindMatchIndexIn`, `undefined: RemoveCorpseRef`, and `FindCorpseByRef` takes
+  no viewer and returns `bool`). Comment out the new hooks tests' bodies and the util index test for
+  a moment:
+  `go test ./internal/util -run GetMatchNumberReadsBoth -count=1` fails at `2.rat` (no dot form
+  today). Restore.
+
+- [ ] **Step 3: `util.go`, the parser.** `GetMatchNumber` (`:296-314`, from its comment
+  `// accepts an input and splits it along a # if any.` through its closing brace) becomes:
+
+```go
+// GetMatchNumber splits an ordinal off a name: "rat#2" and "2.rat" are both
+// the second rat (Calabe, 2026-11-11: both forms, for every name, in this one
+// parser). A "#N" suffix is read first. Otherwise a prefix of digits and a dot
+// counts when a name follows that does not start with a digit, so "1.5" stays
+// a number and ".rat" and "2." stay as typed. An ordinal below 1 is 1; with
+// none, the number is 1. The name comes back trimmed and lower case.
+func GetMatchNumber(input string) (string, int) {
+	// Clean up the input
+	input = strings.TrimSpace(strings.ToLower(input))
+
+	// "rat#2": the left is the name, the right the number
+	if strings.Contains(input, "#") {
+		parts := strings.Split(input, "#")
+		input = parts[0]
+		inputNumber, _ := strconv.Atoi(strings.Join(parts[1:], "#"))
+		if inputNumber < 1 {
+			inputNumber = 1
+		}
+		return input, inputNumber
+	}
+
+	// "2.rat": digits, a dot, then a name that does not start with a digit
+	if dot := strings.IndexByte(input, '.'); dot > 0 {
+		digits, name := input[:dot], strings.TrimSpace(input[dot+1:])
+		if strings.Trim(digits, "0123456789") == `` && name != `` && (name[0] < '0' || name[0] > '9') {
+			inputNumber, _ := strconv.Atoi(digits)
+			if inputNumber < 1 {
+				inputNumber = 1
+			}
+			return name, inputNumber
+		}
+	}
+
+	return input, 1
+}
+```
+
+  The existing `TestGetMatchNumber` (`util_test.go:509-531`) still passes unchanged.
+
+- [ ] **Step 4: `util.go`, the matcher by position.** `FindMatchIn` (`:316-368` before Step 3; find
+  it by text) becomes the two functions below. The loop is today's, moved: positions instead of
+  text, and the contains-fallback condition `len(closeMatch) == 0` becomes `closeMatch < 0` (the same
+  for every non-empty item).
+
+```go
+func FindMatchIn(searchName string, items ...string) (match string, closeMatch string) {
+
+	matchIdx, closeMatchIdx := FindMatchIndexIn(searchName, items...)
+	if matchIdx >= 0 {
+		match = items[matchIdx]
+	}
+	if closeMatchIdx >= 0 {
+		closeMatch = items[closeMatchIdx]
+	}
+	return match, closeMatch
+}
+
+// FindMatchIndexIn is FindMatchIn by position: it returns the index in items
+// of the match and of the close match, -1 for none. Items may repeat (two
+// corpses of one name, rooms.FindCorpseByRef); the index tells them apart
+// where the text cannot. FindMatchIn is this, returning the items.
+func FindMatchIndexIn(searchName string, items ...string) (match int, closeMatch int) {
+
+	match, closeMatch = -1, -1
+
+	if searchName == `` {
+		return match, closeMatch // No match
+	}
+
+	searchName, searchNumber := GetMatchNumber(searchName)
+
+	var matchCt int = 0
+	var closeMatchCt int = 0
+
+	for idx, i := range items {
+
+		part, full := stringMatch(searchName, i, false)
+
+		if part {
+			closeMatchCt++
+			if closeMatchCt == searchNumber {
+				closeMatch = idx
+			}
+		}
+
+		if full {
+			matchCt++
+			if matchCt == searchNumber {
+				match = idx
+				break
+			}
+		}
+
+	}
+
+	// If no "starts with" or "exact" matches are found, try and find the first item that contain the supplied name
+	// Note: Can't have an exact match if there was never a close match
+	if closeMatch < 0 {
+		closeMatchCt = 0
+		for idx, i := range items {
+			part, _ := stringMatch(searchName, i, true)
+
+			if part {
+				closeMatchCt++
+				if closeMatchCt == searchNumber {
+					closeMatch = idx
+					break
+				}
+			}
+
+		}
+
+	}
+
+	return match, closeMatch
+}
+```
+
+- [ ] **Step 5: `rooms.go`.** Add `"cmp"` and `"slices"` to the imports (neither is there today).
+  `FindCorpse` and `FindCorpseByRef` (`:893-993` at `65bbc144`, both whole functions; Task 5a moved
+  nothing above them) become the four functions below. Both lookups now take the viewer, the body
+  typing; `livingReach` and the refusal ask Task 5a's `findByName`.
+
+```go
+// FindCorpse is FindCorpseByRef's corpse, as a copy. An ordinal that lands
+// on someone living finds none.
+func (r *Room) FindCorpse(viewer *characters.Character, searchName string) (Corpse, bool) {
+	if c, _ := r.FindCorpseByRef(viewer, searchName); c != nil {
+		return *c, true
+	}
+	return Corpse{}, false
+}
+
+// FindCorpseByRef finds the corpse searchName names for viewer, the body
+// typing it. A name has one numbering (Calabe, 2026-11-11): first the
+// living viewer perceives (Perceives), numbered as FindByName numbers them
+// but without viewer itself, then the corpses that have not crumbled,
+// newest first (RoundCreated; of two from one round, the later added).
+// Players and NPCs follow the same rule. "rat" reaches a "rat corpse", and
+// util.FindMatchIndexIn matches "<name> corpse" exactly before by a prefix.
+// When the ordinal lands on someone living, corpse is nil and refusal is
+// the line to tell viewer ("Bob is still alive." for a player, "The rat is
+// still alive." for an NPC); the caller does not skip ahead. When no corpse
+// answers to the name at all, both are empty, and the caller goes on as for
+// any word that names no corpse.
+func (r *Room) FindCorpseByRef(viewer *characters.Character, searchName string) (corpse *Corpse, refusal string) {
+
+	name, number := util.GetMatchNumber(searchName)
+	if name == `` {
+		return nil, ``
+	}
+
+	order := []int{}
+	for idx := len(r.Corpses) - 1; idx >= 0; idx-- {
+		if !r.Corpses[idx].Prunable {
+			order = append(order, idx)
+		}
+	}
+	slices.SortStableFunc(order, func(a, b int) int {
+		return cmp.Compare(r.Corpses[b].RoundCreated, r.Corpses[a].RoundCreated)
+	})
+	names := make([]string, len(order))
+	for i, idx := range order {
+		names[i] = r.Corpses[idx].Character.Name + ` corpse`
+	}
+
+	if match, closeMatch := util.FindMatchIndexIn(name, names...); match < 0 && closeMatch < 0 {
+		return nil, ``
+	}
+
+	// The living viewer perceives, less viewer itself (Calabe, 2026-11-11:
+	// the person typing is not in their own name's living count).
+	sees := func(c *characters.Character) bool {
+		return (viewer == nil || c.Id != viewer.Id) && Perceives(viewer, c)
+	}
+	living := r.livingReach(sees, name)
+	if number <= living {
+		playerId, mobId := r.findByName(sees, fmt.Sprintf(`%s#%d`, name, number))
+		if u := accounts.GetByUserId(playerId); playerId > 0 && u != nil {
+			return nil, fmt.Sprintf(`%s is still alive.`, u.Character.Name)
+		}
+		if m := mobs.GetInstance(mobId); m != nil {
+			return nil, fmt.Sprintf(`The %s is still alive.`, m.Character.Name)
+		}
+		return nil, fmt.Sprintf(`The %s is still alive.`, name)
+	}
+
+	match, closeMatch := util.FindMatchIndexIn(fmt.Sprintf(`%s#%d`, name, number-living), names...)
+	if match >= 0 {
+		return &r.Corpses[order[match]], ``
+	}
+	if closeMatch >= 0 {
+		return &r.Corpses[order[closeMatch]], ``
+	}
+	return nil, ``
+}
+
+// livingReach is how many ordinals of name reach a living body sees allows,
+// as FindByName numbers them: players and NPCs apart, each in the order
+// they came into the room, a caller taking the player when both match. So
+// ordinals 1 up to the larger of the two counts reach someone living.
+// Asked through the same lookup, so it cannot drift from it.
+func (r *Room) livingReach(sees func(*characters.Character) bool, name string) int {
+	for n := 1; ; n++ {
+		playerId, mobId := r.findByName(sees, fmt.Sprintf(`%s#%d`, name, n))
+		if playerId == 0 && mobId.IsZero() {
+			return n - 1
+		}
+	}
+}
+
+// RemoveCorpseRef removes the corpse c points at (one FindCorpseByRef
+// returned). RemoveCorpse compares owner, name and round, so of two corpses
+// alike in those (two rats killed in one round) it would take the first.
+func (r *Room) RemoveCorpseRef(c *Corpse) bool {
+	for idx := range r.Corpses {
+		if &r.Corpses[idx] == c {
+			r.Corpses = append(r.Corpses[:idx], r.Corpses[idx+1:]...)
+			return true
+		}
+	}
+	return false
+}
+```
+
+  Notes for the controller's read. `livingReach` ends: ordinal n reaches someone only while n is at
+  most the count of names that contain a word starting with the search (the matcher's widest pass),
+  which is finite and grows with n never. The lookup re-encodes the ordinal as `name#k`; `#` is read
+  before the dot, so a literal name like `1.5` survives the round trip (`1.5#1`). The viewer is left
+  out only here, in the corpse count; `FindByName` keeps the viewer in its own list, so no living
+  number moves for any command. `RemoveCorpse` stays (its tests use it); it has no production caller
+  after Step 8. In `rooms_test.go`, `TestRoom_FindCorpse`'s four `r.FindCorpse("...")` calls
+  (`:197`, `:202`, `:207`, `:212`) take `nil, ` first; they pass unchanged otherwise.
+
+- [ ] **Step 6: `get.go`.** Its corpse source (`:91-93`) reads the new result. From
+  `if c, ok := room.FindCorpseByRef(args[len(args)-1]); ok {` through `corpseRef = c` becomes:
+
+```go
+			c, refusal := room.FindCorpseByRef(actor.Character, args[len(args)-1])
+			if refusal != `` {
+				// The ordinal names someone living, not a corpse (one
+				// numbering, the living first): refuse, do not skip ahead.
+				Tell(actor, refusal)
+				return true, nil
+			}
+			if c != nil {
+				corpseRef = c
+```
+
+  (The rest of that block is unchanged. It stays behind the `CorpseItems` gate until Task 6; Task 6
+  Step 11b tests it through `get`.) `get.go:422`'s `room.FindCorpse(rest)` becomes
+  `room.FindCorpse(actor.Character, rest)`.
+
+- [ ] **Step 7: `look.go`.** Two edits.
+  - Inside `if len(room.Corpses) > 0 {` (`:365`), delete `:367-393` (from
+    `mobCorpseLookup := map[string]int{}` through the blank line after the loop's closing brace), so
+    the block opens with `if corpse, corpseFound := room.FindCorpse(actor.Character, rest); corpseFound {`
+    (the viewer added). The deleted lists were built and never read
+    (`grep -n 'mobCorpses\|playerCorpses\|CorpseLookup' internal/usercommands/look.go` prints only
+    `:367-389` today, all assignments).
+  - After `playerId, mobId := room.FindByName(actor.Character, lookAt)` (`:76`, Task 5a) add:
+
+```go
+	// Your own name reaches your corpse when one answers to it: the person
+	// typing is not in their own name's living count when they look at a
+	// corpse (Calabe, 2026-11-11). With none, you look at yourself, as
+	// before.
+	if playerId > 0 && playerId == UserIdOf(actor) {
+		if _, ok := room.FindCorpse(actor.Character, lookAt); ok {
+			playerId, mobId = 0, ids.ID{}
+		}
+	}
+```
+
+    (`UserIdOf` is the helper `consider.go:24` uses; `ids` is imported, `look.go:12`.) The look then
+    goes on as for an unmatched word and reaches the corpse block. `look` needs no "still alive"
+    refusal: it shows the living first, as today.
+
+- [ ] **Step 8: `bury`.** In `modules/cleanup/cleanup.go` (`:141-163`), from
+  `if corpse, corpseFound := room.FindCorpse(rest); corpseFound {` through that `if`'s closing brace
+  becomes:
+
+```go
+	found, refusal := room.FindCorpseByRef(actor.Character, rest)
+	if refusal != `` {
+		// The ordinal names someone living, not a corpse (one numbering,
+		// the living first): refuse, do not skip ahead.
+		usercommands.Tell(actor, refusal)
+		return true, nil
+	}
+
+	if found != nil {
+
+		// Removing the corpse shifts the room's list, so what is said about
+		// it is read first.
+		corpse := *found
+
+		// The very corpse found (of two alike, the one named; RemoveCorpse
+		// would take the first).
+		if room.RemoveCorpseRef(found) {
+
+			corpseColor := `mob-corpse`
+			if corpse.UserId > 0 {
+				corpseColor = `user-corpse`
+			}
+
+			messaging.Send(perception.Message{
+				Kind:         perception.WorldEvent,
+				Actor:        actor.Id,
+				Senses:       perception.Sight | perception.Sound,
+				Range:        perception.Room,
+				ActorText:    fmt.Sprintf(`You bury the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name),
+				ObserverText: fmt.Sprintf(`{actor} buries the <ansi fg="%s">%s corpse</ansi>.`, corpseColor, corpse.Character.Name),
+			})
+			return true, nil
+
+		}
+
+		return true, nil
+	}
+```
+
+  All callers of the two lookups, checked: `grep -rn 'FindCorpse' --include=*.go . | grep -v _test`
+  prints `get.go:92`, `get.go:422`, `look.go:394`, `cleanup.go:141` and the two definitions; each
+  now passes `actor.Character`.
+
+- [ ] **Step 9: Run; they pass.** `go test ./internal/util ./internal/rooms ./internal/items -count=1`
+  and `go test ./internal/hooks -count=1` (twice: the whole package, so the file-order note above is
+  exercised) print `ok` (`TestFindMatchIn`, `TestGetMatchNumber`, `TestRoom_FindCorpse` and the items
+  `FindMatchIn` tests unchanged and passing; every golden byte-identical). Probes, one at a time
+  (paste each failure line, restore):
+  - in `GetMatchNumber` delete the dot-form `if` block: the parser test fails at `2.rat`;
+  - in the dot-form condition drop `&& (name[0] < '0' || name[0] > '9')`: it fails at `1.5`;
+  - in `FindCorpseByRef`'s sort swap `a` and `b` (oldest first): the two rooms numbering tests and
+    `TestCorpseNumbersCountPastTheLiving` fail. `TestBuryBuriesTheCorpseItNames` does not: its two
+    corpses share round 5, so the stable sort keeps them later-added first either way (that test is
+    there for the `RemoveCorpse` probe below, which needs one round);
+  - after `living := r.livingReach(sees, name)` add `if number <= living { number = living + 1 }`
+    (skip ahead): the refusal asserts of `TestCorpseNumbersCountPastTheLiving` and the bury test's
+    "the live rat is not a corpse" fail;
+  - in `FindCorpseByRef`'s `sees`, drop `(viewer == nil || c.Id != viewer.Id) &&` (count the
+    viewer): `TestCorpseNumbersCountPastTheLiving` fails at `ann` and `TestLookAtYourOwnNameFindsYourCorpse`
+    fails (and, with Task 5c, its own-corpse refusal assert);
+  - in `look.go` make the new self check `if false && ...`: `TestLookAtYourOwnNameFindsYourCorpse`
+    fails;
+  - in the refusal, `u.Character.Name` to `"The "+u.Character.Name` in the player line: the
+    "Ratty is still alive." assert fails;
+  - in `FindMatchIndexIn`, `if matchCt == searchNumber {` to `if matchCt == 1 {`: the util index test
+    fails at `rat corpse#2`;
+  - in `bury`, `room.RemoveCorpseRef(found)` to `room.RemoveCorpse(corpse)`: `TestBuryBuriesTheCorpseItNames`
+    fails on the gold assert (its two corpses share a round);
+  - `RemoveCorpseRef`'s body to `return r.RemoveCorpse(*c)`: `TestRemoveCorpseRefRemovesTheCorpseFound`
+    fails on the gold assert.
+
+  (Code and tests were run on a scratch worktree at `65bbc144` with Tasks 5a and 5c applied: all
+  pass; the sort, skip-ahead, count-the-viewer, `look` self-check and `bury` probes fail as stated;
+  `go test ./internal/hooks -count=1` prints `ok` twice; `go test ./... -count=1` shows only the 3
+  known Windows failures, 40 ok.)
+
+- [ ] **Step 10:** Per-task check. **Goldens: none change.** No golden or smoke input holds a
+  digits-dot word (`grep` of every `w.run(` line in `reads_golden_test.go` for a dot, and of
+  `cmd/smoke/script.go` for `[0-9]\.`, prints nothing), so the parser changes no recorded read. The
+  only corpse lookup any golden runs is reads golden H's `bury rat`, after the rat's death has removed
+  it from the room (no one living answers to `rat`) with one corpse there: the same corpse; Ann, who
+  types it, is not a rat. Living lookups are `FindByName`, untouched by this task (Task 5a's viewer
+  filter is the only change to them). If one changes, stop and report. Commit the ten files in
+  **Files**:
+  `Phase 5.3: both ordinal forms (2.rat, rat#2); one numbering per name, the living then corpses newest first, less the one typing; bury buries the corpse it names`.
+
+### Task 5c: `bury` refuses a player's corpse that holds anything (Sonnet)
+
+Calabe's ruling (spec, plan review round 2, 2026-11-11): `bury` refuses a player's corpse that holds
+any item or gold, for every actor including its owner (NPCs run `bury` too:
+`cleanup-about.html:25`); an empty player corpse and every NPC corpse bury as today. Principle: no
+single command lets anyone destroy a player's belongings. The refusal text is the spec's (Decisions
+taken without asking).
+
+**Files:** modify `modules/cleanup/cleanup.go`, `internal/hooks/reads_corpse_test.go`.
+
+- [ ] **Step 1: Write the failing test.** Append to `internal/hooks/reads_corpse_test.go` (add
+  `github.com/GoMudEngine/GoMud/internal/items` to its imports; item 1 is the empty world's note,
+  as reads golden H uses it). The live rat leaves the room first, so `rat` names its corpse; Ann
+  names her own corpse `ann`, since she is not in her own name's count (Task 5b):
+
+```go
+// bury refuses a player's corpse that holds any item or gold, whoever asks,
+// its owner too: no single command destroys a player's belongings (Calabe,
+// 2026-11-11). An empty player corpse, and an NPC corpse with its loot,
+// bury as before.
+func TestBuryRefusesAPlayersCorpseThatHoldsAnything(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, _, _, rat := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+	room.RemoveMob(rat.Character.Id) // no live rat: "rat" is the corpse
+	room.AddCorpse(rooms.Corpse{UserId: ann.UserId, Character: characters.Character{Name: "Ann"}, Gold: 5})
+	room.AddCorpse(rooms.Corpse{UserId: 9398, Character: characters.Character{Name: "Zed"}, Items: []items.Item{items.New(1)}})
+	room.AddCorpse(rooms.Corpse{UserId: 9399, Character: characters.Character{Name: "Yan"}})
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, Gold: 25})
+
+	w.run("Ann", "bury ann") // her own name reaches her corpse (Task 5b)
+	w.run("Ann", "bury zed")
+	w.run("Ann", "bury yan")
+	w.run("Ann", "bury rat")
+
+	out := w.out.String()
+	require.Contains(t, out, `Ann: You can't bury the <ansi fg="user-corpse">Ann corpse</ansi> while it still holds something.`, "her own, holding gold")
+	require.Contains(t, out, `Ann: You can't bury the <ansi fg="user-corpse">Zed corpse</ansi> while it still holds something.`, "another's, holding an item")
+	require.Contains(t, out, `Ann: You bury the <ansi fg="user-corpse">Yan corpse</ansi>.`, "an empty player corpse")
+	require.Contains(t, out, `Ann: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.`, "an NPC corpse, loot and all")
+	left := []string{}
+	for _, c := range room.Corpses {
+		left = append(left, c.Character.Name)
+	}
+	require.Equal(t, []string{"Ann", "Zed"}, left, "the two holding something are still there")
+}
+```
+
+- [ ] **Step 2: Run; it fails.** `go test ./internal/hooks -run BuryRefuses -count=1`: the first
+  refusal assert fails (Ann's corpse is buried).
+
+- [ ] **Step 3: The refusal.** In `buryCommand`, after `corpse := *found` (Task 5b) and before the
+  `// The very corpse found` comment, add:
+
+```go
+		// No single command destroys a player's belongings (Calabe,
+		// 2026-11-11): a player's corpse that holds any item or gold is not
+		// buried, whoever asks, its owner too. An NPC corpse's loot goes
+		// with it.
+		if corpse.UserId > 0 && (len(corpse.Items) > 0 || corpse.Gold > 0) {
+			usercommands.Tell(actor, fmt.Sprintf(`You can't bury the <ansi fg="user-corpse">%s corpse</ansi> while it still holds something.`, corpse.Character.Name))
+			return true, nil
+		}
+```
+
+- [ ] **Step 4: Run; it passes**, with the Task 5b tests and the whole package
+  (`go test ./internal/hooks -count=1`). Probes, one at a time (paste each failure line, restore):
+  delete the `if` (the Ann and Zed asserts fail); `corpse.UserId > 0` alone (the Yan assert fails);
+  drop `|| corpse.Gold > 0` (the Ann assert fails); drop `corpse.UserId > 0 &&` (the rat assert
+  fails). (Code and test were run on the scratch worktree: both pass.)
+
+- [ ] **Step 5:** Per-task check. **Goldens: none change**: reads golden H buries an NPC corpse, which
+  still buries (after Task 6 it holds the rat's 25 gold and still buries). If one changes, stop and
+  report. Commit both files:
+  `Phase 5.3: bury refuses a player's corpse that holds anything (Calabe's ruling)`.
 
 ### Task 6: One death routine (Opus; the controller reads the diff and every golden hunk)
 
@@ -1695,7 +4267,8 @@ modify `internal/rules/rules.go`, `internal/rules/rules_test.go`, `internal/rule
 `internal/hooks/NewRound_ActorUpkeep.go`, `internal/hooks/Buff_ApplyBuffs.go`,
 `internal/configs/config.gameplay.go`, `internal/configs/configs_bench_test.go`,
 `internal/characters/character.go`, `internal/accounts/userrecord.go`, `internal/events/eventtypes.go`,
-`internal/templates/templatesfunctions.go`, `internal/guards/combat_test.go`, `internal/guards/guards_test.go`,
+`internal/templates/templatesfunctions.go`, `internal/messaging/interface.go` (Step 3a),
+`internal/guards/combat_test.go`, `internal/guards/guards_test.go`,
 `_datafiles/config.yaml`, `_datafiles/html/admin/config-wizard.html`, `_datafiles/html/admin/config.html`,
 `_datafiles/html/admin/users.html`, `cmd/smoke/script.go`, `cmd/smoke/main.go`,
 `internal/hooks/combat_golden_test.go`, `internal/hooks/attack_engine_test.go`,
@@ -1703,6 +4276,15 @@ modify `internal/rules/rules.go`, `internal/rules/rules_test.go`, `internal/rule
 create `internal/hooks/death_engine_test.go` and `internal/usercommands/death_test.go` (Step 11b).
 `internal/usercommands/suicide_npc_test.go` stays as it is: it runs `Suicide` on an NPC, which now
 goes through `death.Die`, and still passes.
+
+- [ ] **Step 0: The knob grep's control, before any edit.** Run the deleted-knob grep of Step 13 on the
+  tree as Task 5c left it, and count:
+  `grep -rnwE 'ExtraLives|LivesStart|LivesMax|LivesOnLevelUp|PermaDeath|ProtectionLevels|XPPenalty|EquipmentDropChance|AlwaysDropBackpack|CorpseItems|LivesGained|f-extralives' --exclude-dir=.git --exclude-dir=.claude --include=*.go --include=*.html --include=*.yaml --include=*.template . | wc -l`
+  prints 129, in 19 files (`... | cut -d: -f1 | sort -u | wc -l`): 117 lines in 18 files at
+  `65bbc144` (counted 2026-11-11), plus Task 1's 12 in `combat_golden_test.go` (`deathConfig`'s
+  comment, set and restore maps and `XPPenalty` assert, and the two `// above ProtectionLevels 1`
+  comments). Another count: stop and report (the grep that later proves absence must be shown able to
+  find these).
 
 - [ ] **Step 1: `rules.go`.** Add `github.com/GoMudEngine/GoMud/internal/items` to the imports. After
   `RegenResult` add:
@@ -1731,8 +4313,7 @@ type DeathOutcome struct {
 	DropItems []items.Item
 	DropGold  int
 
-	Awards   []Award              // the killers' shares, in order
-	Messages []perception.Message // further lines, sent after the awards
+	Awards []Award // the killers' shares, in order; their Messages are the outcome's lines
 }
 ```
 
@@ -2035,9 +4616,6 @@ func Die(victim *actors.Actor) {
 	for _, aw := range outcome.Awards {
 		award(aw, mob)
 	}
-	for _, m := range outcome.Messages {
-		messaging.Send(m)
-	}
 
 	clearKillersAggro(victim)
 
@@ -2092,6 +4670,9 @@ func revive(victim *actors.Actor, health int) {
 		Senses:       perception.Sight | perception.Sound,
 		Range:        perception.Room,
 		ObserverText: `{actor} is suddenly revived in a shower of sparks!`,
+		// Only the body's presence: none for a viewer who does not perceive
+		// it (Task 5a, rooms.NotPerceiving).
+		Exclude: rooms.NotPerceiving(victim.Character),
 	})
 
 	victim.Character.CancelBuffsWithFlag("revive-on-death")
@@ -2107,17 +4688,14 @@ func revive(victim *actors.Actor, health int) {
 func recordPlayerDeath(user *accounts.Account) {
 	c := user.Character
 
-	i := 0
-	dmgCt := len(c.PlayerDamage)
-
-	if dmgCt > 0 {
+	if len(c.PlayerDamage) > 0 {
 		c.KD.AddPvpDeath()
 	} else {
 		c.KD.AddMobDeath()
 	}
 
 	killedByUserIds := []int{}
-	killedBy := ``
+	killers := []*accounts.Account{}
 	for uid := range c.PlayerDamage {
 
 		if u := accounts.GetByUserId(uid); u != nil {
@@ -2125,28 +4703,23 @@ func recordPlayerDeath(user *accounts.Account) {
 			// Update PK stats
 			c.KD.AddPlayerDeath(u.UserId, u.Character.Name)
 			u.Character.KD.AddPlayerKill(user.UserId, c.Name)
-
-			if i > 0 {
-				if i < dmgCt-1 {
-					killedBy += `, `
-				} else {
-					killedBy += ` and `
-				}
-			}
-			killedBy += `<ansi fg="username">` + u.Character.Name + `</ansi>`
-			i++
+			killers = append(killers, u)
 		}
 
 		killedByUserIds = append(killedByUserIds, uid)
 	}
 
-	msg := fmt.Sprintf(`<ansi fg="magenta-bold">***</ansi> <ansi fg="username">%s</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>%s`, c.Name, term.CRLFStr)
-	if killedBy != `` {
-		msg = fmt.Sprintf(`<ansi fg="magenta-bold">***</ansi> <ansi fg="username">%s</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by %s) <ansi fg="magenta-bold">***</ansi>%s`, c.Name, killedBy, term.CRLFStr)
-	}
-
-	messaging.Notify(messaging.Notice{
-		Text: msg,
+	// The notice names, to each reader, only the killers that reader
+	// perceives; with none left it names no killer at all ("someone"
+	// would tell of an unseen killer). Plan review round 5, M1.
+	messaging.NotifyEach(func(reader *accounts.Account) string {
+		named := []string{}
+		for _, k := range killers {
+			if namesKiller(reader, k.Character) {
+				named = append(named, `<ansi fg="username">`+k.Character.Name+`</ansi>`)
+			}
+		}
+		return deathNotice(c.Name, named)
 	})
 
 	killerMobId := 0
@@ -2171,6 +4744,38 @@ func recordPlayerDeath(user *accounts.Account) {
 	})
 
 	user.EventLog.Add(`death`, fmt.Sprintf(`<ansi fg="username">%s</ansi> has <ansi fg="red-bold">DIED</ansi>`, c.Name))
+}
+
+// namesKiller reports whether the death notice names killer to reader: the
+// one visibility rule (rooms.Perceives), from where the reader is. Seeing a
+// hidden body takes being in its room, unless the reader is an admin, who
+// perceives hidden bodies anywhere; an unhidden killer is named to all, as
+// today.
+func namesKiller(reader *accounts.Account, killer *characters.Character) bool {
+	if reader.Character.RoomId != killer.RoomId && killer.HasBuffFlag("hidden") {
+		return reader.Role == accounts.RoleAdmin
+	}
+	return rooms.Perceives(reader.Character, killer)
+}
+
+// deathNotice is the world notice of name's death, naming the killers given
+// ("A", "A and B", "A, B and C"); with none it names no killer.
+func deathNotice(name string, killers []string) string {
+	if len(killers) == 0 {
+		return fmt.Sprintf(`<ansi fg="magenta-bold">***</ansi> <ansi fg="username">%s</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>%s`, name, term.CRLFStr)
+	}
+	killedBy := ``
+	for i, k := range killers {
+		if i > 0 {
+			if i < len(killers)-1 {
+				killedBy += `, `
+			} else {
+				killedBy += ` and `
+			}
+		}
+		killedBy += k
+	}
+	return fmt.Sprintf(`<ansi fg="magenta-bold">***</ansi> <ansi fg="username">%s</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by %s) <ansi fg="magenta-bold">***</ansi>%s`, name, killedBy, term.CRLFStr)
 }
 
 // recordMobDeath queues the MobDeath event.
@@ -2335,6 +4940,40 @@ func respawn(victim *actors.Actor, user *accounts.Account, health int) {
 
   Check before relying on it: `go list -deps ./internal/death | grep -E 'internal/(hooks|usercommands)$'`
   prints nothing.
+
+- [ ] **Step 3a: `messaging.NotifyEach`** (plan review round 5, M1: the death notice is read per
+  receiver). Today the notice is one `messaging.Notify`, an `events.Broadcast` of one string that
+  `WriteBroadcast` (`wire.go:104-161`) writes to every active account; it cannot vary by reader. Each
+  reader instead gets its own `events.Message` (`UserId`), which `WriteMessage` (`wire.go:24-45`)
+  writes with the same line refresh (`AnsiMoveCursorColumn` and `AnsiEraseLine`) and prompt redraw
+  (priority 100) as the broadcast; a screen-reader account gets the text stripped
+  (`util.StripCharsForScreenReaders`), as every message is (the broadcast sent it unstripped when no
+  screen-reader text was given). In `internal/messaging/interface.go` add `"sort"` to the imports and,
+  after `Notify` (`:66-72`):
+
+```go
+// NotifyEach is a notice whose text depends on who reads it (the death
+// notice names only the killers each reader perceives). Every active
+// account, in UserId order, gets text(account) as its own message: the same
+// line refresh and prompt redraw as Notify's broadcast, and stripped for a
+// screen reader as every message is. An empty text sends that account
+// nothing.
+func NotifyEach(text func(u *accounts.Account) string) {
+	all := accounts.GetAllActiveUsers()
+	sort.Slice(all, func(i, j int) bool { return all[i].UserId < all[j].UserId })
+	for _, u := range all {
+		if t := text(u); t != `` {
+			events.AddToQueue(events.Message{UserId: u.UserId, Text: t})
+		}
+	}
+}
+```
+
+  The goldens' recorder writes a `UserId` message and a broadcast alike (`r.read`, `reads_golden_test.go:143-196`),
+  and both expand in `UserId` order, so a notice that names the same killers to everyone records
+  exactly as before (run on a scratch copy with today's `suicide.go` sending its notice this way:
+  `go test ./... -count=1` showed only the 3 known Windows failures; reads golden H's notice lines
+  unchanged).
 
 - [ ] **Step 4: `suicide.go`** becomes, in full:
 
@@ -2502,6 +5141,26 @@ func AutoHeal(e events.Event) events.ListenerReturn {
   had only that use). `look.panels.go:110` comment becomes
   `// buildCorpseInventoryPanel renders the lootable contents of a corpse.`. `rooms/corpse.go:15-16`
   comments become `// What the body dropped (rules.DeathOutcome)` and `// The gold it dropped`.
+  (After Task 5b the `look.go` lines are `:385-387`: find them by their text.)
+
+  **The corpse panel's fallback (spec, plan review round 2, blocker).** `buildCorpseInventoryPanel`
+  loads `character/equipment-look`, which no data folder has (`_datafiles/world/empty/panel-layouts/`
+  holds only `character/inventory.yaml`), so its fallback always runs; the fallback builds a panel
+  named `inv` while every row is written to `equip`, and `Panel("equip")` then logs
+  `no panel with id "equip"` and returns a throwaway panel: `look <corpse>` shows an empty box.
+  Unreachable while `CorpseItems` was off. In `look.panels.go:115-116` the two lines
+  `layout.AddPanelsToSlot(layout.AddSlot(), "inv")` and
+  ``layout.Panel("inv").SetTitle(` <ansi fg="black-bold">.:</ansi><ansi fg="20">Inventory</ansi> `).SetWidth(78)``
+  become (as `buildInventoryLookPanel`'s fallback, `:57-59`):
+
+```go
+		layout.AddPanelsToSlot(layout.AddSlot(), "equip")
+		layout.Panel("equip").SetTitle(` <ansi fg="black-bold">.:</ansi><ansi fg="20">Inventory</ansi> `).SetWidth(78)
+```
+
+  `TestLookAtACorpseShowsWhatItHolds` (Step 11b) is its test. (Run on the scratch worktree with
+  `CorpseItems` forced on: before the edit the panel is an empty box and the log reads
+  `no panel with id "equip"`; after it the item is listed.)
 
 - [ ] **Step 7b: `get all <corpse>` works** (spec, plan review round 1; player-visible). Today
   `get.go:40` (`if args[0] == "all" {`) takes everything on the floor and returns whenever the first
@@ -2517,17 +5176,20 @@ func AutoHeal(e events.Event) events.ListenerReturn {
 	// "get all <corpse>" and "get all from <corpse>" take everything from
 	// that corpse (the corpse branch below). Every other "get all ..." takes
 	// everything on the floor, as it always has.
-	if args[0] == "all" && !namesACorpse(room, args) {
+	if args[0] == "all" && !namesACorpse(actor, room, args) {
 ```
 
   and after `Get` (after its closing brace, `:435`) add:
 
 ```go
 // namesACorpse reports whether args is "all <word>" or "all from <word>"
-// with <word> naming a corpse in the room. A container of the same name
-// wins, as it does for every get (the container lookup comes first,
-// :80-88), so then this is false and "get all" keeps its room-wide meaning.
-func namesACorpse(room *rooms.Room, args []string) bool {
+// with <word> a corpse's name for actor: it finds a corpse, or its ordinal
+// lands on someone living whom a corpse shares a name with (the corpse
+// branch below then refuses, "The rat is still alive."; Task 5b). A
+// container of the same name wins, as it does for every get (the container
+// lookup comes first, :80-88), so then this is false and "get all" keeps
+// its room-wide meaning.
+func namesACorpse(actor *actors.Actor, room *rooms.Room, args []string) bool {
 	if len(args) != 2 && !(len(args) == 3 && args[1] == "from") {
 		return false
 	}
@@ -2535,18 +5197,20 @@ func namesACorpse(room *rooms.Room, args []string) bool {
 	if room.FindContainerByName(word) != `` {
 		return false
 	}
-	_, ok := room.FindCorpseByRef(word)
-	return ok
+	c, refusal := room.FindCorpseByRef(actor.Character, word)
+	return c != nil || refusal != ``
 }
 ```
 
-  Nothing else in `get.go` changes: for a corpse word the lookup below finds the same corpse
-  (`:90-100`, now without the `CorpseItems` gate), strips an optional `from` (`:94-98`) and leaves
-  `rest == "all"` for the corpse branch. Every other `get all ...` takes the same branch as today (reads
-  golden D runs plain `get all`, `reads_golden_test.go:705`, and must stay byte-identical).
-  `FindCorpseByRef` is `rooms.go:945-990` (skips a prunable corpse); `FindContainerByName` is
-  `rooms.go:1464`. The tests are in Step 11b (`TestGetFromAPlayersCorpse`,
-  `TestGetAllWithoutACorpseTakesTheFloor`).
+  Nothing else in `get.go` changes: for a corpse word the lookup below finds the same corpse, or
+  refuses for the living (Task 5b's block, now without the `CorpseItems` gate), strips an optional
+  `from` and leaves `rest == "all"` for the corpse branch. A word no corpse answers to returns
+  nothing from the lookup, so every other `get all ...` takes the same branch as today (reads golden D
+  runs plain `get all`, `reads_golden_test.go:705`, and must stay byte-identical). `FindCorpseByRef`
+  is Task 5b's (one numbering per name: the living first, then corpses newest first);
+  `FindContainerByName` follows it in `rooms.go` (`:1458` after Task 5b). The tests are in Step 11b
+  (`TestGetFromAPlayersCorpse`, `TestGetAllWithoutACorpseTakesTheFloor`,
+  `TestGetAllCountsCorpsesPastTheLiving`).
 
 - [ ] **Step 8: Permadeath, lives and the deleted knobs.**
   - `configs/config.gameplay.go`: delete the `LivesStart`, `LivesMax`, `LivesOnLevelUp` fields
@@ -2612,19 +5276,9 @@ func namesACorpse(room *rooms.Room, args []string) bool {
   - `_datafiles/html/admin/users.html`: delete the Extra Lives field (`:366-369`, the
     `<div class="field">` holding `<label>Extra Lives</label>` through its `</div>`), `:592`
     (`setVal('f-extralives', ...)`) and `:1089` (`ExtraLives: ...`).
-  - Prove absence, whole words only (`-w`, so `get.go:134`'s `allCorpseItems`, a variable that
-    stays, does not match):
-    `grep -rnwE 'ExtraLives|LivesStart|LivesMax|LivesOnLevelUp|PermaDeath|ProtectionLevels|XPPenalty|EquipmentDropChance|AlwaysDropBackpack|CorpseItems|LivesGained|f-extralives' --exclude-dir=.git --exclude-dir=.claude --include=*.go --include=*.html --include=*.yaml --include=*.template .`
-    prints nothing. Controls: on the code before this task the same command printed 117 lines in 18
-    files (counted at `8b424308`, `get.go:90-91` among them and `get.go:134` not); after it, the same
-    command with `CorpsesEnabled` in place of the list prints hits.
-    The lower-case word is checked apart, because comments may still say it:
-    `grep -rnw 'permadeath' --exclude-dir=.git --exclude-dir=.claude --include=*.go --include=*.html --include=*.yaml --include=*.template .`
-    prints exactly these comment lines and nothing else: `internal/actors/registry.go:169` and `:180`
-    ("a permadeath reroll", Q7m), and in the new `internal/death/death.go` the `recordPlayerDeath`
-    comment (`suicide.go before slice 3, less permadeath`) and the `Die` comment (`there is no
-    permadeath (decision 11)`). A hit in code (a template func, a config key, a template name) is a
-    miss: fix it.
+  - The absence proof for these names runs in Step 13, after Step 11 (`deathConfig` and the death
+    fixtures' comments in `combat_golden_test.go`) and Step 12 (the smoke comment naming
+    `ProtectionLevels`) clear the last hits; run here it would still find them.
 
 - [ ] **Step 9: Guards' allowlists.** `guards/combat_test.go:122` (the `suicide_npc.go` entry of
   `TestOnlyBootNamesTheRuleset`): delete. `guards/guards_test.go:167` (`"internal/usercommands/suicide.go":
@@ -2896,9 +5550,29 @@ func deathConfig(t *testing.T) {
 }
 ```
 
-    The comments of `TestCombatGoldenDeathPlayer` and `TestCombatGoldenDeathPvP` lose "above the
-    protection band" / "drops by chance, XP penalty" and the `// above ProtectionLevels 1` comments
-    (the `Level`/`Experience` lines stay, so the record shows no XP is lost). `TestKilledByOutlivesTheKiller`
+    The two player fixtures' comments describe the new death. `TestCombatGoldenDeathPlayer`'s
+    comment (from `// An elite NPC kills a player above the protection band` through
+    `// books an elite death and leaves a corpse; she wakes in the recovery room.`) becomes:
+
+```go
+// An elite NPC kills a player (Phase 5 slice 3; recorded on the old death
+// first, Task 1). She dies in the round her health reaches 0; the gem she
+// carries and her gold go into her corpse; she keeps what she wears and her
+// XP; the elite death is booked; she wakes in the recovery room at 1 health.
+```
+
+    `TestCombatGoldenDeathPvP`'s comment (from `// A player kills a player (Phase 5 slice 3, recorded on the death before it`
+    through `// penalty, corpse, recovery room.`) becomes:
+
+```go
+// A player kills a player (Phase 5 slice 3; recorded on the old death first,
+// Task 1): the kill credit and the "killed by" notice; the gem Bob carries
+// and his gold go into his corpse; he keeps what he wears and his XP; he
+// wakes in the recovery room at 1 health.
+```
+
+    In both, the line comment `// above ProtectionLevels 1` on the `Level, Experience = 2, 1000` line
+    becomes `// the record shows no XP is lost` (the line stays). `TestKilledByOutlivesTheKiller`
     (`:540-559`, with its comment) becomes:
 
 ```go
@@ -2960,9 +5634,12 @@ func TestKilledByOutlivesTheKiller(t *testing.T) {
 package hooks
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
@@ -3112,8 +5789,91 @@ func TestReviveOnDeathWorksOnce(t *testing.T) {
 	require.Contains(t, notes, "PlayerDeath Alice", "the second death is a death")
 }
 
+// The revive line is only the body's presence (Task 5a's rule, plan review
+// round 5): a viewer who does not perceive the hidden body reads nothing,
+// not even "someone"; an admin reads it.
+func TestReviveOfAHiddenBodyReachesOnlyThoseWhoPerceive(t *testing.T) {
+	w := newCombatWorld(t, 111)
+	w.recoveryRoom()
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
+	bob := w.addPlayer(9302, "Bob", goldenRoomA, 10, 10, 10, 12)
+	eve := w.addPlayer(9303, "Eve", goldenRoomA, 10, 10, 10, 12)
+	eve.Role = accounts.RoleAdmin
+	w.flag(alice.Character, 93903, "revive-on-death")
+	w.hide(alice.Character)
+	w.start()
+
+	alice.Character.Health = 0
+	death.Die(actors.Get(alice.Character.Id))
+	events.ProcessEvents()
+	_, reads := w.taken()
+	require.Positive(t, alice.Character.Health, "revived")
+	require.Contains(t, strings.Join(reads[eve.UserId], "\n"), "is suddenly revived in a shower of sparks!", "an admin perceives the hidden body")
+	require.NotContains(t, strings.Join(reads[bob.UserId], "\n"), "is suddenly revived", "Bob does not perceive Alice: no line, not even as someone")
+}
+
+// The world death notice names, to each reader, only the killers that reader
+// perceives (plan review round 5, M1): a hidden killer (Alice) only to an
+// admin anywhere (Eve), a see-hidden reader in her room (Dan) and herself;
+// never "someone". An unhidden killer (Gus, in room B) is named to all.
+func TestDeathNoticeNamesOnlyTheKillersEachReaderPerceives(t *testing.T) {
+	w := newCombatWorld(t, 111)
+	w.recoveryRoom()
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
+	bob := w.addPlayer(9302, "Bob", goldenRoomA, 10, 10, 10, 12)
+	carol := w.addPlayer(9303, "Carol", goldenRoomB, 10, 10, 10, 12)
+	dan := w.addPlayer(9304, "Dan", goldenRoomA, 10, 10, 10, 12)
+	eve := w.addPlayer(9305, "Eve", goldenRoomB, 10, 10, 10, 12)
+	fay := w.addPlayer(9306, "Fay", goldenRoomB, 10, 10, 10, 12)
+	gus := w.addPlayer(9307, "Gus", goldenRoomB, 10, 10, 10, 12)
+	eve.Role = accounts.RoleAdmin
+	w.flag(dan.Character, 93905, "see-hidden")
+	w.flag(fay.Character, 93906, "see-hidden")
+	w.hide(alice.Character)
+	w.start()
+
+	die := func(u *accounts.Account, damage map[int]int) map[int][]string {
+		u.Character.PlayerDamage = damage
+		u.Character.Health = 0
+		death.Die(actors.Get(u.Character.Id))
+		events.ProcessEvents()
+		_, reads := w.taken()
+		return reads
+	}
+	notice := func(reads map[int][]string, u *accounts.Account) string {
+		for _, r := range reads[u.UserId] {
+			if strings.Contains(r, "DIED!") {
+				return r
+			}
+		}
+		require.Failf(t, "no notice", "%s read no death notice", u.Character.Name)
+		return ""
+	}
+	aliceName, gusName := `<ansi fg="username">Alice</ansi>`, `<ansi fg="username">Gus</ansi>`
+
+	reads := die(bob, map[int]int{alice.UserId: 5, gus.UserId: 3})
+	for _, u := range []*accounts.Account{alice, dan, eve} {
+		n := notice(reads, u)
+		require.Contains(t, n, aliceName, "%s perceives the hidden Alice", u.Character.Name)
+		require.Contains(t, n, gusName, u.Character.Name)
+	}
+	for _, u := range []*accounts.Account{bob, carol, fay, gus} {
+		n := notice(reads, u)
+		require.NotContains(t, n, aliceName, "%s does not perceive the hidden Alice", u.Character.Name)
+		require.Contains(t, n, "(killed by "+gusName+")", "%s: only the killer it perceives", u.Character.Name)
+		require.NotContains(t, strings.ToLower(n), "someone", u.Character.Name)
+	}
+
+	// With the only killer hidden, a reader who does not perceive her reads
+	// no "(killed by ...)" at all; an admin reads her name.
+	reads = die(gus, map[int]int{alice.UserId: 5})
+	require.NotContains(t, notice(reads, carol), "(killed by", "nothing to name, so no killed by")
+	require.Contains(t, notice(reads, eve), "(killed by "+aliceName+")")
+}
+
 // A respawn starts clean: no buffs, no mana (Q7c), no damage record, no
-// killer record; an elite killer is booked as an elite death first.
+// killer record; an elite killer is booked as an elite death first. The
+// PlayerDeath event names who killed her, and her event log records it.
 func TestRespawnStartsClean(t *testing.T) {
 	w := newCombatWorld(t, 303)
 	w.recoveryRoom()
@@ -3121,6 +5881,12 @@ func TestRespawnStartsClean(t *testing.T) {
 	guard := w.addNPC(93202, "guard", 1, goldenRoomA, 30, 30, 20, 10)
 	w.flag(alice.Character, 93904, "testmark") // any flagged buff: buffs.All cancels flagged buffs
 	w.start()
+	var deaths []events.PlayerDeath
+	id := events.RegisterListener(events.PlayerDeath{}, func(e events.Event) events.ListenerReturn {
+		deaths = append(deaths, e.(events.PlayerDeath))
+		return events.Continue
+	})
+	t.Cleanup(func() { events.UnregisterListener(events.PlayerDeath{}, id) })
 	c := alice.Character
 	require.Positive(t, c.ManaMax.Value, "the fixture needs room for mana")
 	c.Health, c.Mana = 0, c.ManaMax.Value
@@ -3138,13 +5904,45 @@ func TestRespawnStartsClean(t *testing.T) {
 	require.True(t, c.KilledBy.IsZero())
 	require.Zero(t, c.KillerMobId)
 	require.Equal(t, 1, c.KD.EliteDeaths["93202:guard"], "an elite killer's death is booked")
+
+	require.Len(t, deaths, 1)
+	require.Equal(t, 93202, deaths[0].KillerMobId, "the killer NPC")
+	require.Equal(t, []int{9302}, deaths[0].KilledByUsers, "the accounts credited with damage")
+	require.Equal(t, goldenRoomA, deaths[0].RoomId, "where she died, not where she woke")
+	require.NotEmpty(t, alice.EventLog)
+	last := alice.EventLog[len(alice.EventLog)-1]
+	require.Equal(t, "death", last.Category)
+	require.Contains(t, last.What, "DIED", "the event log records the death")
+}
+
+// An NPC's ending frees its spawn slot in its home room (CleanupMobSpawns),
+// so the slot can spawn again.
+func TestDeathFreesTheNPCsSpawnSlot(t *testing.T) {
+	w := newCombatWorld(t, 111)
+	w.recoveryRoom() // the temporary data folder: the ending ledger and the room's NPC file are written there
+	dataFolder := configs.GetFilePathsConfig().DataFiles.String()
+	t.Cleanup(func() { // registered after recoveryRoom's cleanups, so it runs first, in the temporary folder
+		require.NoError(t, os.RemoveAll(filepath.Join(dataFolder, "rooms.instances")))
+		require.NoError(t, rooms.LoadEndings())
+	})
+	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "slot-rats")
+	rat.SpawnSlot = 1 // a slot NPC: rooms.NPCEnded records its ending
+	home := rooms.LoadRoom(goldenRoomA) // addNPC makes the room it is put in its home (HomeRoomId)
+	home.SpawnInfo = []rooms.SpawnInfo{{MobId: 93201, InstanceId: rat.Character.Id}}
+	w.start()
+
+	death.Die(actors.Get(rat.Character.Id))
+	events.ProcessEvents()
+
+	require.Nil(t, mobs.GetInstance(rat.Character.Id), "the rat ended")
+	require.True(t, home.SpawnInfo[0].InstanceId.IsZero(), "its slot is free (CleanupMobSpawns)")
 }
 ```
 
   Check before relying on them: `buffs.All` cancels only buffs that carry a flag
   (`buffs.go:104-139`, the loop over `bSpec.Flags`), hence `testmark`; an unknown flag only logs a
   warning there. `KDStats.EliteDeaths` keys are `<mobId>:<name>` (`kdstats.go:104-110`). Run
-  `go test ./internal/hooks -run 'Upkeep|BuffTrigger|CorpsesOff|ReviveOnDeath|RespawnStartsClean' -count=1 -v`;
+  `go test ./internal/hooks -run 'Upkeep|BuffTrigger|CorpsesOff|ReviveOnDeath|RespawnStartsClean|SpawnSlot' -count=1 -v`;
   all pass. If `ManaMax` is 0 for the fixture, report it (do not drop the mana assert).
 
   Probes, one at a time (each named test fails; paste the line):
@@ -3160,11 +5958,23 @@ func TestRespawnStartsClean(t *testing.T) {
     `events.AddToQueue(events.ItemOwnership{...})` call (the `ItemOwnership` assert fails; the death
     goldens fail too, Step 16);
   - revive: in `revive` delete `victim.Character.CancelBuffsWithFlag("revive-on-death")` (the flag
-    assert fails); delete the `CharacterVitalsChanged` queue (the vitals assert fails);
+    assert fails); delete the `CharacterVitalsChanged` queue (the vitals assert fails); delete the
+    `Exclude: rooms.NotPerceiving(victim.Character),` line (`TestReviveOfAHiddenBodyReachesOnlyThoseWhoPerceive`
+    fails on Bob, "not even as someone");
+  - death notice (round 5, M1): make `namesKiller` return `true` first (`TestDeathNoticeNamesOnlyTheKillersEachReaderPerceives`
+    fails: Bob, Carol and Fay read Alice); replace its far condition with `false` (it fails on Fay,
+    a see-hidden reader in another room); make the far branch `return false` (it fails on Eve, the
+    admin). Each of the three ran against today's `suicide.go` sending the notice this way, on a
+    scratch copy, with the same test written for the reads world: each failed as stated;
   - respawn: in `respawn` delete `c.CancelBuffsWithFlag(buffs.All)` (the buff assert fails); delete
     `c.Mana = 0` (the mana assert fails); delete `clear(c.PlayerDamage)` (the damage assert fails); in
     `recordPlayerDeath` delete `c.KilledBy = ids.ID{}` (the killer assert fails); delete
-    `c.KD.AddEliteDeath(killerMobId, c.KillerMobName)` (the elite assert fails).
+    `c.KD.AddEliteDeath(killerMobId, c.KillerMobName)` (the elite assert fails); in its
+    `events.PlayerDeath{...}` delete `KillerMobId:   killerMobId,` (the killer NPC assert fails), then
+    `KilledByUsers: killedByUserIds,` (the credited accounts assert fails); delete the
+    `user.EventLog.Add(...)` line (the event-log asserts fail);
+  - spawn slot: in `end` delete the `if r := rooms.LoadRoom(mob.HomeRoomId); r != nil { r.CleanupMobSpawns() }`
+    block (`TestDeathFreesTheNPCsSpawnSlot`'s slot assert fails).
 
   (b) Create `internal/usercommands/death_test.go`. It holds the recovery-room helper Task 7's
   `suicide` tests also use:
@@ -3178,6 +5988,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/death"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -3307,10 +6118,14 @@ func TestGetFromAPlayersCorpse(t *testing.T) {
 // Any other "get all ..." keeps today's room-wide meaning (spec, plan review
 // round 1): a word that names no corpse, or more words than "all [from]
 // <corpse>" ("all junk bob" names Bob's corpse last), takes everything on
-// the floor and leaves Bob's corpse alone.
+// the floor and leaves Bob's corpse alone. So does a word that also names a
+// container ("bob" begins "bobchest"): the container wins, as for every get.
 func TestGetAllWithoutACorpseTakesTheFloor(t *testing.T) {
-	for _, command := range []string{"all ground", "all junk", "all from junk", "all junk bob"} {
-		t.Run(command, func(t *testing.T) {
+	for _, tc := range []struct{ command, container string }{
+		{"all ground", ""}, {"all junk", ""}, {"all from junk", ""}, {"all junk bob", ""},
+		{"all bob", "bobchest"},
+	} {
+		t.Run(tc.command+" "+tc.container, func(t *testing.T) {
 			npc, player, room := goSetup(t)
 			recoveryRoom(t, testNextRoomId)
 			corpsesOn(t)
@@ -3320,8 +6135,12 @@ func TestGetAllWithoutACorpseTakesTheFloor(t *testing.T) {
 			require.Len(t, room.Corpses, 1, "Bob's corpse is in the room")
 			room.AddItem(testItem(92732, "teststick", items.ItemSpec{Type: items.Object}), false)
 			room.Gold = 5
+			if tc.container != "" {
+				room.Containers = map[string]rooms.Container{tc.container: {}}
+				t.Cleanup(func() { room.Containers = nil })
+			}
 
-			_, err := Get(command, npc, room, 0)
+			_, err := Get(tc.command, npc, room, 0)
 			require.NoError(t, err)
 			assert.Equal(t, []int{92732}, itemIdsOf(npc.Character.Items), "the floor's item, not the corpse's")
 			assert.Equal(t, 5, npc.Character.Gold, "the floor's gold, not the corpse's")
@@ -3332,11 +6151,12 @@ func TestGetAllWithoutACorpseTakesTheFloor(t *testing.T) {
 	}
 }
 
-// The corpse panel shows what a corpse holds (the CorpseItems gate is gone).
+// The corpse panel shows what a corpse holds (look no longer gates it on a
+// config setting).
 func TestLookAtACorpseShowsWhatItHolds(t *testing.T) {
 	npc, player, room := goSetup(t)
 	corpsesOn(t)
-	mobs.GetInstance(npc.Id).MobId = 92801 // an NPC corpse is found by name only with a MobId (rooms.go:945-990)
+	mobs.GetInstance(npc.Id).MobId = 92801 // a real NPC's template ID, which its corpse records (death.Die)
 	npc.Character.Items = []items.Item{testItem(92731, "testpebble", items.ItemSpec{Type: items.Gemstone})}
 	death.Die(npc)
 	require.Len(t, room.Corpses, 1)
@@ -3347,14 +6167,38 @@ func TestLookAtACorpseShowsWhatItHolds(t *testing.T) {
 	})
 	assert.Contains(t, strings.Join(told, ""), "testpebble", "the panel lists the corpse's item")
 }
+
+// One numbering per name through get (Task 5b): goSetup's live NPC "Rat"
+// is 1, so "get all rat" is refused rather than skipped ahead; 2 is the
+// newest rat corpse and 3 the older, in both ordinal forms.
+func TestGetAllCountsCorpsesPastTheLiving(t *testing.T) {
+	_, player, room := goSetup(t)
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 5, Gold: 1})
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 7, Gold: 2})
+	gold := player.Character.Gold
+
+	told := playerTexts(t, player, func() {
+		_, err := Get("all rat", player, room, 0)
+		require.NoError(t, err)
+	})
+	assert.Equal(t, []string{"The Rat is still alive.\n"}, told, "1 is the living Rat")
+	assert.Equal(t, gold, player.Character.Gold, "nothing taken")
+
+	_, err := Get("all 2.rat", player, room, 0)
+	require.NoError(t, err)
+	assert.Equal(t, gold+2, player.Character.Gold, "2 is the newest corpse")
+	_, err = Get("all rat#3", player, room, 0)
+	require.NoError(t, err)
+	assert.Equal(t, gold+3, player.Character.Gold, "3 is the older")
+}
 ```
 
   Check before relying on them: `goSetup`'s NPC is a bare test NPC with 0 gold and no items, so what
   it holds afterwards came from the corpse; `StoreItem` has no capacity check
-  (`character.go:538-548`); corpse lookup is case-insensitive (`util.go` `stringMatch`); the look test
-  keeps the shipped data folder (no `recoveryRoom`, so the panel templates load). Run
-  `go test ./internal/usercommands -run 'FromAPlayersCorpse|WithoutACorpse|LookAtACorpse' -count=1 -v`;
-  all pass. (`get all ground`: today's code strips `ground` and runs the room-wide branch only because
+  (`character.go:538-548`); corpse lookup is case-insensitive (`util.go` `stringMatch`). The look test
+  exercises the panel's fallback: no data folder has the `character/equipment-look` layout, so the
+  fallback always runs (Step 7's fix). Run
+  `go test ./internal/usercommands -run 'Corpse' -count=1 -v`; all four pass. (`get all ground`: today's code strips `ground` and runs the room-wide branch only because
   `get.go:40` returns first; the new condition keeps that.)
 
   Probes, one at a time (paste each failure line):
@@ -3367,11 +6211,30 @@ func TestLookAtACorpseShowsWhatItHolds(t *testing.T) {
   - in `get.go` put back the gate as ``if containerName == `` && false {``: all three subtests fail;
   - in `death.Die` delete `corpse.UserId = user.UserId`: the `UserId` assert fails (the corpse could
     not be found by name);
-  - in `look.go` delete `Tell(actor, buildCorpseInventoryPanel(&corpse))`: the look test fails.
+  - in `look.go` delete `Tell(actor, buildCorpseInventoryPanel(&corpse))`: the look test fails;
+  - in `look.panels.go` put back the fallback's `"inv"` (both lines, Step 7): the look test fails;
+  - in `namesACorpse` delete the container check (``if room.FindContainerByName(word) != `` { return false }``):
+    the `all bob bobchest` subtest fails (the taker gets nothing from the floor);
+  - in `get.go` replace Task 5b's ``if refusal != `` { ... }`` block with `_ = refusal` (deleting it
+    alone leaves `refusal` unused, and `get.go` does not compile): `TestGetAllCountsCorpsesPastTheLiving`
+    fails on its refusal assert (no "still alive" line);
+  - in `namesACorpse` return `c != nil` only: the same test's refusal assert fails (`get all rat`
+    takes the room-wide branch instead).
 
-  (c) The recovery copies are freed: `go test ./internal/hooks ./internal/usercommands -count=16`
-  prints `ok` twice (every test death takes an ephemeral chunk; about ten player deaths a run in
-  `hooks` would exhaust the 100 chunks by the eleventh run without `freeCopies`).
+  (`TestGetAllCountsCorpsesPastTheLiving` was not run while writing this revision: it needs Task 6's
+  `get` changes. The lookup it calls was run, Task 5b.)
+
+  (c) The recovery copies are freed, scoped to the tests that make deaths (the whole `hooks` package
+  would run `TestCombatGoldenFleeSuccess`, which fails on repeats on the baseline too: `status.md`
+  Watch):
+  `go test ./internal/hooks -run 'Death|CombatGolden(MvP|PvP|HiddenAttacker)$|Wimpy|Respawn' -count=16`
+  prints `ok` (about ten player deaths a run: `MvP`, `PvP`, `HiddenAttacker`, `DeathPlayer`, `DeathPvP`,
+  the wimpy test, upkeep, corpses off, revive, respawn; 16 runs would exhaust the 100 ephemeral chunks
+  without `freeCopies`), and `go test ./internal/usercommands -run 'Corpse' -count=16` prints `ok`.
+  Check the pattern first: `go test ./internal/hooks -list '<the same pattern>'` lists no
+  `TestCombatGoldenFleeSuccess` (`-list` takes the pattern itself; it ignores `-run`). At `65bbc144`
+  it lists the two wimpy tests, `PvMToDeath`, `PvP`, `MvP` and `HiddenAttacker`; by this step it also
+  lists the three death goldens (Task 1) and this task's death engine tests.
 
   (d) The parts of `death.Die` the death goldens pin. Run these **after Step 15** (the goldens hold
   the new records then); each makes `go test ./internal/hooks -run 'TestCombatGoldenDeath' -count=1`
@@ -3398,7 +6261,8 @@ func TestLookAtACorpseShowsWhatItHolds(t *testing.T) {
 	// back at 1 health in a private copy of the recovery room (75, "Waiting
 	// room"), whose portal leads back to the start room. Walking out proves
 	// the bot is not downed (go is refused while downed); taking the ring
-	// from its own corpse proves the drop went into the corpse.
+	// from its own corpse proves the drop went into the corpse (its own name
+	// reaches its corpse: the one typing is not in its own name's count).
 	s.do("death: suicide", "suicide", b.char+" has DIED!")
 	s.do("death: in the recovery room", "look", recoveryRoomTitle)
 	s.do("death: walk out", "portal", startRoomTitle)
@@ -3411,7 +6275,11 @@ func TestLookAtACorpseShowsWhatItHolds(t *testing.T) {
   "Carrying:"); `get <item> <word>` finds the corpse by the last word (`get.go:90-100`, now without the
   `CorpseItems` gate) and says `You take the <item> from the <name> corpse.` (`get.go:241-250`; markup
   between the words is stripped by the smoke client, as for "You pick up the"). The shipped config has
-  `CorpsesEnabled: true`. If the get wording differs, use what `get.go` sends and say so.
+  `CorpsesEnabled: true`. If the get wording differs, use what `get.go` sends and say so. The bot
+  stands in the start room when it takes the ring (it walked out through the portal); its own name
+  skips itself (Task 5b) and reaches its newest corpse. Other bots in the room do not answer to it:
+  names are fixed width, so none is a prefix of another. A bot that is hidden is not counted either
+  (Task 5a); the smoke bots never hide.
 
 - [ ] **Step 13: Build.** `go build ./...`; `gofmt -w` every changed Go file. Prove the old death code
   is gone (the zone names were backtick literals):
@@ -3426,6 +6294,20 @@ grep -rn 'func Die' --include=*.go internal                              # contr
   registry line (`suicide`: `{Suicide, true, false}`) and comments; no `Command(` and no `InputText:`
   (control: `grep -rn 'equip %s' --include=*.go internal/hooks` prints `NewRound_DoCombat.go`). Task 8's
   guard makes this permanent.
+
+  Then the deleted knobs are gone (moved here from Step 8, which ran before Steps 11 and 12 cleared
+  their hits). Whole words only (`-w`, so `get.go`'s `allCorpseItems`, a variable that stays, does not
+  match):
+  `grep -rnwE 'ExtraLives|LivesStart|LivesMax|LivesOnLevelUp|PermaDeath|ProtectionLevels|XPPenalty|EquipmentDropChance|AlwaysDropBackpack|CorpseItems|LivesGained|f-extralives' --exclude-dir=.git --exclude-dir=.claude --include=*.go --include=*.html --include=*.yaml --include=*.template .`
+  prints nothing. Controls: Step 0 showed the same command printing 129 lines in 19 files before this
+  task; now the same command with `CorpsesEnabled` in place of the list prints hits.
+  The lower-case word is checked apart, because comments may still say it:
+  `grep -rnw 'permadeath' --exclude-dir=.git --exclude-dir=.claude --include=*.go --include=*.html --include=*.yaml --include=*.template .`
+  prints exactly these comment lines and nothing else: `internal/actors/registry.go:169` and `:180`
+  ("a permadeath reroll", Q7m), and in the new `internal/death/death.go` the `recordPlayerDeath`
+  comment (`suicide.go before slice 3, less permadeath`) and the `Die` comment (`there is no
+  permadeath (decision 11)`). A hit in code (a template func, a config key, a template name) is a
+  miss: fix it.
 
 - [ ] **Step 14: Which tests fail, before any `-update`.** `go test ./... -count=1 2>&1 | grep -vE '^ok|no test files'`:
   besides the 3 known Windows failures, exactly these fail, each on a golden difference:
@@ -3458,8 +6340,11 @@ grep -rn 'func Die' --include=*.go internal                              # contr
     the player went down (`mvp` round 6, `pvp` round 4, `hidden_attacker` round 6 today), the event
     `PlayerDrop <name> room=93001` becomes `PlayerDeath <name>` followed by
     `CharacterVitalsChanged <name>` (the respawn's); every player, the dead one included, reads the
-    world notice `*** <name> has DIED! ***` (`(killed by Alice)` in `pvp` and `hidden_attacker`, which
-    name the attacker as today's notice did), with no `\r` at the line end; the other players in room A
+    world notice `*** <name> has DIED! ***`, with no `\r` at the line end. In `pvp` every player's
+    notice reads `(killed by Alice)`, as today's did. In `hidden_attacker` Alice is hidden and no one
+    there is an admin or has `see-hidden`, so only Alice's own notice reads `(killed by Alice)`; Bob's
+    and Carol's read `*** Bob has DIED! ***` with no `(killed by ...)` part and no "someone" (plan
+    review round 5, M1; the notice is three `UserId` messages there, recorded as before); the other players in room A
     read `<name> has died.` (the dead player does not: the line has no actor text); **every** player
     in room A, the dead one included, reads `<ansi fg="yellow-bold">25 gold</ansi> drops to the ground.`
     (corpses are off in these fixtures, and the line is sent to the room before the respawn moves the
@@ -3484,16 +6369,17 @@ grep -rn 'func Die' --include=*.go internal                              # contr
   - `death_player.txt`, `death_pvp.txt` (decisions 7 and 11, ruling 1): the player dies in the
     combat round where it went down (no `PlayerDrop`; `PlayerDeath` and the respawn's
     `CharacterVitalsChanged` instead); every `== heal N` section goes (no bleed-out); the `Ran ...
-    "suicide"` line, the Remove and Drop lines and `You lost 100 experience points` go, and so do the
+    "suicide"` line, the Drop lines and the Remove lines (`death_player`: `You remove your <ansi fg="item">testsword</ansi> and return it to your backpack.`
+    and `You drop the <ansi fg="item">testsword</ansi>.`) and `You lost 100 experience points` go, and so do the
     `room 93001 floor:` and `floor gold:` lines. The `ItemOwnership <name> item=N gained=false` notes
     the old `drop` queued (`drop.go:108`, one per item its rolls dropped, in the heal section that ran
-    `suicide`) are replaced by exactly one, `ItemOwnership <name> item=93108 gained=false` (the carried
+    `suicide`; `death_player`'s is `ItemOwnership Alice item=93101`, the testsword) are replaced by exactly one, `ItemOwnership <name> item=93108 gained=false` (the carried
     gem, queued by `takeDrops`), in the death round after `PlayerDeath <name>` and before the respawn's
     `CharacterVitalsChanged <name>`; no worn item's note appears (worn gear stays). In `death_pvp` Alice reads
     `Bob has died.` in that round rather than in a heal section. The dead player's state line: no
     `items=` (the gem is in the corpse, whatever its 50% roll did today), `gold=0` (in the corpse,
-    not on the floor), `xp=1000` (no penalty), every worn item kept (`weapon=93101` stays in
-    `death_player`, `worn=` as at the start), the same `kd=` as today (`0/1/0/0/0/1` for Alice in
+    not on the floor), `xp=1000` (no penalty), every worn item kept (`weapon=93101` is back in
+    `death_player`, where today's record lost it to the drop; `worn=` as at the start), the same `kd=` as today (`0/1/0/0/0/1` for Alice in
     `death_player`, the elite death; `0/0/0/1/0/0 pk=[] pd=[9301:Alice=1]` for Bob and
     `0/0/1/0/0/0 pk=[9302:Bob=1] pd=[]` for Alice in `death_pvp`), and
     `room=copy-of-93003 hp=1/<max>`. The corpse line holds the carried gem and `gold=25`, `worn=`
@@ -3516,7 +6402,8 @@ grep -rn 'func Die' --include=*.go internal                              # contr
 
 ### Task 7: `suicide` refuses in a fight and in the recovery room (Sonnet)
 
-**Files:** modify `internal/usercommands/suicide.go`; create `internal/usercommands/suicide_test.go`.
+**Files:** modify `internal/usercommands/suicide.go`, `internal/usercommands/usercommands.go` (the
+registry comment, Step 3b); create `internal/usercommands/suicide_test.go`.
 
 - [ ] **Step 1: Write the failing tests** `internal/usercommands/suicide_test.go`:
 
@@ -3636,6 +6523,19 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 }
 ```
 
+- [ ] **Step 3b: The registry comment says how the two rules meet** (spec, plan review round 2).
+  `suicide` stays `AllowedWhenDowned` (`{Suicide, true, false}`), and the in-fight refusal runs
+  before anything else, so under a ruleset with a downed state a downed actor can end it only once
+  nobody is fighting it. In `usercommands.go`, the comment Task 6 Step 4 wrote above the `suicide`
+  entry (`// Death by one's own hand (death.Die). Allowed when downed, so a downed actor` /
+  `// can end it under a ruleset with a downed state.`) becomes:
+
+```go
+	// Death by one's own hand (death.Die). Allowed when downed, so under a
+	// ruleset with a downed state a downed actor can end it, though only once
+	// nobody is fighting it: Suicide refuses in a fight first.
+```
+
 - [ ] **Step 4: Run; they pass.** Probes: delete the `inFight` check (the fight test fails); replace
   `rooms.IsDeathRecoveryRoom(actor.Character.RoomId)` with
   `actor.Character.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)` (add the `configs`
@@ -3644,7 +6544,7 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
   lines.
 - [ ] **Step 5:** Per-task check (goldens unchanged: no golden runs `suicide` in a fight or the recovery
   room). `go test ./internal/usercommands -run Suicide -count=16` prints `ok` (each test's copies are
-  freed). Commit both files: `Phase 5.3: suicide is refused in a fight and in the recovery room (and its copies)`.
+  freed). Commit the three files in **Files**: `Phase 5.3: suicide is refused in a fight and in the recovery room (and its copies)`.
 
 ### Task 8: Guards (Sonnet)
 
@@ -3700,13 +6600,14 @@ func parsePlanted(t *testing.T) *ast.File {
 	return f
 }
 
-func inDeathScope(path string) bool {
+// deathPrefix is the deathScanned prefix path is under, or "".
+func deathPrefix(path string) string {
 	for _, p := range deathScanned {
 		if strings.HasPrefix(path, p) {
-			return true
+			return p
 		}
 	}
-	return false
+	return ""
 }
 
 // TestEngineAsksTheRulesetWhoIsDead enforces Phase 5 slice 3: the engine
@@ -3714,11 +6615,14 @@ func inDeathScope(path string) bool {
 // disabled; it asks rules.Get().Condition.
 func TestEngineAsksTheRulesetWhoIsDead(t *testing.T) {
 	files, healthCompares := 0, 0
+	reached := map[string]int{}
 	itemCalls := map[string]bool{}
 	for path, f := range goFiles(t) {
-		if !inDeathScope(path) {
+		p := deathPrefix(path)
+		if p == "" {
 			continue
 		}
+		reached[p]++
 		files++
 		literal, compares := healthLiteralCompares(f)
 		healthCompares += compares
@@ -3746,6 +6650,13 @@ func TestEngineAsksTheRulesetWhoIsDead(t *testing.T) {
 	// comparison (with a variable: the regen pass's change check) ...
 	if files < 50 {
 		t.Errorf("control: scanned only %d files under %v; the guard may be scanning the wrong place", files, deathScanned)
+	}
+	// ... every prefix reached a file (a typo in one, or a package that
+	// moved, would otherwise go unseen behind the other two) ...
+	for _, p := range deathScanned {
+		if reached[p] == 0 {
+			t.Errorf("control: no file under %s; a scope prefix reaches nothing", p)
+		}
 	}
 	if healthCompares == 0 {
 		t.Error("control: no .Health comparison seen in the scanned packages; the guard may not be matching")
@@ -3949,14 +6860,17 @@ func zzProbe(a *actors.Actor, c *characters.Character, m *mobs.Mob) bool {
     reads the planted body call as an item's, and the IsDisabled control fails;
   - add `"internal/usercommands/go.go": "probe",` to `itemIsDisabled`: the stale-allowlist check fails
     (`go.go` calls no `IsDisabled` since Task 3);
-  - `files < 50` to `files < 5000`: the walk control fails.
+  - `files < 50` to `files < 5000`: the walk control fails;
+  - in `deathScanned`, `"internal/death/"` to `"internal/deaths/"`: the per-prefix control fails
+    (`no file under internal/deaths/`) though the walk control still passes (`hooks` has 22 non-test
+    files and `usercommands` 68 at `65bbc144`).
 - [ ] **Step 4:** Per-task check; `git status --short` shows only `internal/guards/death_test.go`.
   Commit it: `Phase 5.3: guards: the engine asks the ruleset who is dead (no health literal, no body IsDisabled); nothing queues suicide`.
 
 ### Task 9: Stub-ruleset tests (Sonnet)
 
-Test files only: a ruleset can add a downed state, revive, fix the drops and set regen with no engine
-edit.
+Test files only: a ruleset can add a downed state, revive, fix the drops, set the respawn and set
+regen with no engine edit, and cannot drop what the body lacks.
 
 **Files:** modify `internal/hooks/ruleset_stub_test.go`, `internal/usercommands/ruleset_stub_test.go`.
 
@@ -4091,9 +7005,82 @@ func TestStubRulesetDecidesRegen(t *testing.T) {
 	require.Contains(t, strings.Join(reads, ""), "STUB REGEN")
 	require.Contains(t, notes, "CharacterVitalsChanged Alice")
 }
+
+// respawner is the active ruleset where every death respawns the body at 4
+// health.
+type respawner struct{ rules.Ruleset }
+
+func (respawner) OnDeath(v *actors.Actor) rules.DeathOutcome {
+	return rules.DeathOutcome{Respawn: true, RespawnHealth: 4}
+}
+
+// The engine respawns at the ruleset's health (not a fixed 1), and respawns
+// an NPC too when the ruleset says so: its body does not end.
+func TestStubRulesetDecidesTheRespawn(t *testing.T) {
+	w := newCombatWorld(t, 111)
+	w.recoveryRoom()
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
+	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "respawn-rats")
+	t.Cleanup(rules.SetForTest(respawner{rules.Get()}))
+	w.start()
+
+	for _, c := range []*characters.Character{alice.Character, &rat.Character} {
+		c.Health = 0
+		death.Die(actors.Get(c.Id))
+		events.ProcessEvents()
+		require.Equal(t, 4, c.Health, "%s respawns at the ruleset's health", c.Name)
+		require.Equal(t, goldenRoomC, rooms.GetOriginalRoom(c.RoomId), "%s is in a copy of the recovery room", c.Name)
+	}
+	require.NotNil(t, mobs.GetInstance(rat.Character.Id), "the rat's body did not end")
+}
+
+// overDrops is the active ruleset whose drops ask for more than the body
+// has: an item it does not hold, and gold.
+type overDrops struct {
+	rules.Ruleset
+	drops []items.Item
+	gold  int
+}
+
+func (o overDrops) OnDeath(v *actors.Actor) rules.DeathOutcome {
+	return rules.DeathOutcome{DropItems: o.drops, DropGold: o.gold}
+}
+
+// The engine drops only what the body has: an item it does not hold is not
+// made from nothing, and the gold is at most the body's and never below 0.
+func TestStubRulesetCannotDropWhatTheBodyLacks(t *testing.T) {
+	gem := trinket(93108, "testgem", items.Gemstone, items.Mundane)
+	phantom := trinket(93109, "testpebble", items.Gemstone, items.Mundane) // never held
+	for _, tc := range []struct{ gold, wantCorpse, wantBody int }{
+		{1000, 30, 0}, // more than it has: all of it
+		{-5, 0, 30},   // below 0: none
+	} {
+		t.Run(fmt.Sprint(tc.gold), func(t *testing.T) {
+			w := newCombatWorld(t, 111)
+			deathConfig(t) // corpses on
+			rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "overdrop-rats")
+			rat.Character.Items = []items.Item{gem}
+			rat.Character.Gold = 30
+			t.Cleanup(rules.SetForTest(overDrops{Ruleset: rules.Get(), drops: []items.Item{gem, phantom}, gold: tc.gold}))
+			w.start()
+
+			death.Die(actors.Get(rat.Character.Id))
+			events.ProcessEvents()
+
+			room := rooms.LoadRoom(goldenRoomA)
+			require.Len(t, room.Corpses, 1)
+			require.Equal(t, "93108", itemIds(room.Corpses[0].Items), "the held gem, not the phantom")
+			require.Equal(t, tc.wantCorpse, room.Corpses[0].Gold)
+			require.Equal(t, tc.wantBody, rat.Character.Gold)
+		})
+	}
+}
 ```
 
-  Add `"strings"` to the imports. (`downedAtZero` is in `combat_golden_test.go`, Task 6; `trinket`,
+  Add `"strings"` and `github.com/GoMudEngine/GoMud/internal/death` to the imports (`fmt`, `actors`,
+  `characters`, `items`, `mobs` and `rules` are there already: `ruleset_stub_test.go:3-15`). If the
+  respawned rat (an NPC in a recovery copy with no player, freed by `freeCopies`) upsets a later
+  test, report it; do not drop the NPC half. (`downedAtZero` is in `combat_golden_test.go`, Task 6; `trinket`,
   `itemIds`, `deathConfig` and `recoveryRoom` in the same file, Task 1.)
 
 - [ ] **Step 2: `internal/usercommands/ruleset_stub_test.go`.** Append:
@@ -4139,13 +7126,21 @@ func TestStubRulesetDownedActorCannotAct(t *testing.T) {
   - regen: in `AutoHeal` change `a.Character.Heal(r.Health, r.Mana)` to `a.Character.Heal(0, r.Mana)`;
     delete the `for _, m := range r.Messages` loop (the line assert fails); replace the `SetForTest`
     line with `_ = plusFive{}`.
+  - respawn: in `death.respawn` change `c.Health = health` to `c.Health = 1` (Alice's health assert
+    fails); in `death.Die` change `if !outcome.Respawn && mob != nil {` to `if mob != nil {` (the rat
+    ends: its health and instance asserts fail).
+  - what the body lacks: in `takeDrops` change `gold := min(max(outcome.DropGold, 0), c.Gold)` to
+    `gold := outcome.DropGold` (both subtests fail), then to `gold := min(outcome.DropGold, c.Gold)`
+    (the `-5` subtest fails); change `if c.RemoveItem(itm) || c.RemoveFromBody(itm) {` to
+    `if c.RemoveItem(itm) || c.RemoveFromBody(itm) || itm.ItemId > 0 {` (the phantom lands in the
+    corpse: the item assert fails).
   - downed actor (usercommands): `usercommands.go:281` to
     `userDisabled = actor.Character.IsDisabled() && rules.Get() != nil` (asks the body again; the
     `rules.Get()` call keeps the file's only `rules` use, so it compiles; the `get` assert fails);
     `go.go:46` to `if actor.Character.IsDisabled() && rules.Get() != nil {` (the same; the `north` assert
     fails).
 - [ ] **Step 5:** Per-task check. Commit the two test files:
-  `Phase 5.3: stub rulesets add a downed state, revive, fix the drops and set regen with no engine edit`.
+  `Phase 5.3: stub rulesets add a downed state, revive, fix the drops, set the respawn and set regen with no engine edit`.
   `git show --stat HEAD` lists only the two `_test.go` files.
 
 ### Task 10: Verify, review, docs, PR (controller)
@@ -4183,7 +7178,11 @@ destroyed the same way when it crumbles.
   In `health.template`, the two paragraphs `At <ansi fg="red">0 HP</ansi>, you will drop to the floor and slowly bleed out.`
   and `At <ansi fg="red">-10 HP</ansi>, you will die. When you die, all gear you posess drops to the ground.`
   become one: `At <ansi fg="red">0 HP</ansi>, you die. See <ansi fg="command">help death</ansi>.`.
-  In `get.md`, after the `~get stick from stash~` usage pair add:
+  In `get.md`, end the stash line (`  This would get a stick stashed in the area and put it in your backpack.`)
+  with two spaces, as every other usage line ends: `internal/markdown` joins a line to the next unless
+  it ends in two spaces, so without them the stash line and `~get all bob~` render as one line
+  (rendered through `markdown.NewParser` on a scratch copy, plan review round 5). Then, after that
+  usage pair, add:
 
 ```text
   ~get all bob~  
@@ -4194,10 +7193,51 @@ destroyed the same way when it crumbles.
 A corpse holds what its owner dropped until it crumbles to dust. When it crumbles, everything still in it is destroyed.
 ```
 
+  and, after that paragraph, a blank line and then this one:
+
+```text
+A name counts the living first, then corpses from the newest. With a live rat and two rat corpses here, ~get all 2.rat~ takes everything from the newest corpse and ~get all 3.rat~ from the older (~rat#2~ works too); ~get all rat~ is refused, since the rat is alive. Your own name skips you, so ~get all~ and your name finds your newest corpse, unless someone here has a name that starts with yours (Bobby, for Bob): they come first, and your corpse is then ~get all 2.bob~. With no corpse of that name here, ~get all~ and a name takes everything on the floor, as plain ~get all~ does. Someone you cannot see is not counted.
+```
+
   (These lines describe Task 6 Step 7b: `get all <corpse>`, `get all from <corpse>` and
   `get <item> <corpse>` are each tested in `TestGetFromAPlayersCorpse`; plain `get all` stays the
   room-wide take (reads golden D), and so do the other forms (`TestGetAllWithoutACorpseTakesTheFloor`). `death.template` above says
-  the same in words; the `config.yaml` comment, Task 6 Step 8, names the same three forms.)
+  the same in words; the `config.yaml` comment, Task 6 Step 8, names the same three forms. The
+  numbering line is `TestGetAllCountsCorpsesPastTheLiving` and Task 5b's
+  `TestCorpseNumbersCountPastTheLiving` (`ann` typed by Ann is her own corpse; `rat` refused while
+  Ratty, whose name starts with it, is alive: the Bobby case); the floor case is
+  `TestGetAllWithoutACorpseTakesTheFloor`; the hidden line is `TestHiddenBodiesTakeNoCorpseOrdinal`.)
+
+  `_datafiles/world/empty/templates/help/item-names.template` (CRLF in this checkout, LF in git; 16
+  lines, the last of them blank): after line 15 (`example: <ansi fg="command">get heavy#2</ansi> would
+  get the second match: ...`) and before that final blank line, add (Task 5b's parser):
+
+```text
+
+You can also put the number first, with a dot: <ansi fg="command">get 2.heavy</ansi> is the same.
+Both forms work for any name: items, characters and corpses.
+```
+
+  so the file still ends with its one blank line.
+
+  `modules/cleanup/files/datafiles/templates/help/bury.template` (CRLF in this checkout, LF in git),
+  after line 7 (`  <ansi fg="command">bury rat corpse</ansi>`) and before line 8, the file's final
+  blank line (8 lines, the last blank), add the lines below, so the file still ends with its one
+  blank line:
+
+```text
+  <ansi fg="command">bury 2.rat</ansi>
+
+A name counts the living first, then corpses from the newest: with a live rat
+here, <ansi fg="command">bury 2.rat</ansi> buries the newest rat corpse
+(<ansi fg="command">bury rat#2</ansi> is the same), and
+<ansi fg="command">bury rat</ansi> is refused, since the rat is alive.
+
+A player's corpse that still holds anything cannot be buried, by anyone, its
+owner included. A creature's corpse is buried with whatever it holds.
+```
+
+  (Task 5b's `TestBuryBuriesTheCorpseItNames` and Task 5c's `TestBuryRefusesAPlayersCorpseThatHoldsAnything`.)
 
   Check: `go test ./internal/hooks -run TestReads -count=1` still `ok` (no reads golden covers these
   pages).
@@ -4214,7 +7254,23 @@ A corpse holds what its owner dropped until it crumbles to dust. When it crumble
   carry and your gold into your corpse and you keep what you wear, at any level; no XP loss, no lives,
   no permadeath; you come back at 1 health and the shadow realm heals 1d10 health and mana a round;
   corpses hold creatures' loot too, and anything left in a corpse is destroyed when it crumbles;
-  `get all <corpse>` (and `get all from <corpse>`) takes everything from a corpse; you
+  `get all <corpse>` (and `get all from <corpse>`) takes everything from a corpse, and `look <corpse>`
+  shows what it holds; every name takes a number either way (`2.rat` or `rat#2`); a name counts the
+  living first, then corpses from the newest (with a live rat, `get all 2.rat` empties the newest rat
+  corpse, and `get all rat` or `bury rat` says "The rat is still alive."; your own name, typed by
+  you, reaches your corpse, for `get` and `look` alike); you can no longer name, target or count a
+  hidden character you cannot see (`look`, `attack`, `consider`, `give`, `show`, `follow`,
+  `party invite`, `shoot`); seeing hidden (`see-hidden`) now also shows hidden characters by name in
+  messages and in the GMCP room list, and lets you fight one; admins always see hidden characters,
+  everywhere; following does not cancel hiding: a hidden character can shadow you, and you are not
+  told it started or stopped following unless you can see it; a hidden character you cannot see is
+  "Someone" as the sender of a say on GMCP (as in the text), is left out of GMCP's enemy list, sends no GMCP room refresh or leave notice, is never
+  picked by an untargeted `attack`, and a hidden hostile NPC no longer announces that it notices you;
+  a hidden character you cannot see is not named in the "has DIED! (killed by ...)" notice (with no
+  killer you can see, the notice names none); a hidden character
+  you cannot see leaving the game, starting to quit, appearing by teleport, fleeing, dropping,
+  recovering or reviving shows you no line at all;
+  nobody can `bury` a player's corpse that still holds anything (its owner included); you
   cannot `suicide` in a fight or in the recovery room; nobody can attack from inside the recovery room's
   copy; a creature with revive-on-death and a player with it both get up at full health; mana regen
   uses the mana amount. Admin: the death, lives and corpse-items settings and the Extra Lives field are
@@ -4222,9 +7278,11 @@ A corpse holds what its owner dropped until it crumbles to dust. When it crumble
 - [ ] `status.md`: slice 3 done; Watch: `CreateEphemeralRoomIds` panics when the recovery room is 0
   (Q4; unreachable with the shipped 75). `geomud-verifying`: the smoke flow's step 2 (death now drops
   the ring into the bot's corpse; the bot takes it back after the portal; bot names are
-  `Smk<tag>c000`...), and the ok-package count (`internal/death` has no test file, so it stays 40 unless
-  the run says otherwise: count it).
-- [ ] Commit the docs and help pages: `git add` the three help files, `PATCH_NOTES.md`, `status.md`,
+  `Smk<tag>c000`...), and the ok-package count: 41 (`modules/gmcp` gains its first test file in
+  Task 5a; `internal/death` has none), unless the run says otherwise: count it.
+- [ ] Commit the docs and help pages: `git add` the three help files,
+  `_datafiles/world/empty/templates/help/item-names.template`,
+  `modules/cleanup/files/datafiles/templates/help/bury.template`, `PATCH_NOTES.md`, `status.md`,
   `gomud_strip_plan.md`, `2026-11-06-phase-5-rules-seam-design.md`, `.claude/skills/geomud-verifying/SKILL.md`;
   message `Phase 5.3 done: help pages, patch notes, status, decision 12, notes for later slices`.
 - [ ] Push `strip/phase-5-3-round-death`, open the PR on `pruuk/GeOMUD` (`gh pr create --repo pruuk/GeOMUD`)

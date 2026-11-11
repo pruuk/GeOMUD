@@ -138,9 +138,10 @@ for every actor:
 2. **Revive:** set health, cancel `revive-on-death`, room "{actor} is suddenly revived in a shower
    of sparks!", stop.
 3. **Announce:** room "{actor} has died."; for an account, the world notice "*** X has DIED!
-   (killed by ...)" and the event log; KD bookkeeping (PvP or mob death, per-killer kills, elite
+   (killed by ...)", whose killer list each reader gets cut to the killers it perceives (none left:
+   no "(killed by ...)" part; plan review round 5), and the event log; KD bookkeeping (PvP or mob death, per-killer kills, elite
    kills and deaths; the `Training` exemption goes); `PlayerDeath` (without `Permanent`) or
-   `MobDeath`; send `outcome.Messages`.
+   `MobDeath`; carry out `outcome.Awards`, each with its lines (Q1: no separate `Messages`).
 4. **Clear aggro** of every credited account's body targeting the victim (today NPC deaths only).
 5. **Drops:** `outcome.DropItems` and `DropGold` leave the body. If corpses are enabled they go
    into the corpse; if not, onto the floor. `MobItemDrop` is still queued per NPC item.
@@ -174,9 +175,36 @@ change. The bleed-out and its "Somebody needs to provide aid!" line go.
 - Refuses in a fight (`inFight`): "You're too busy to die right now!"
 - Refuses in the recovery room: "You're already dead!" (today's text, now recognising the copy).
 - Otherwise calls `death.Die`.
-- It stays `AllowedWhenDowned`, so a downed actor under a downed-state ruleset can still end it.
+- It stays `AllowedWhenDowned`, so a downed actor under a downed-state ruleset can still end it. The
+  in-fight refusal comes first, so that actor can end it only once nobody is fighting it.
 
 **`Heal` is fixed** (`c.Mana += mana`) in its own commit.
+
+### Corpses (Calabe, 2026-11-11, plan review round 2)
+
+- **Both ordinal forms, for every name:** `2.rat` and `rat#2` are the second rat, for items,
+  characters and corpses alike, read by the one parser `util.GetMatchNumber`.
+- **One numbering per name: the living first, then corpses newest first.** With a live rat and two
+  dead rats, 1 is the live rat, 2 the rat killed most recently, 3 the rat that died first. The
+  living are numbered as today (`FindByName`, unchanged); corpses count past them, newest first by
+  `RoundCreated`, players' and NPCs' corpses alike. A dead character's name reaches its corpse, and
+  an exact `<name> corpse` wins over a prefix. The person typing is not in their own name's living
+  count for a corpse: Bob's `get all bob` and `look bob` reach his newest corpse. A corpse command
+  (`get ... <corpse>`, `bury`) whose ordinal lands on someone living refuses ("The rat is still
+  alive."; a player's name takes no "The": "Bob is still alive.") and does not skip ahead.
+- **One visibility rule, `rooms.Perceives`:** a hidden body is perceived only by itself, an admin, or
+  a viewer with `see-hidden`. The room view, every lookup of a room's bodies (`FindByName` and its 12
+  callers), the corpse count, messages (`canSee`, which keeps its light and distance rules), GMCP's
+  room contents and combat all ask it. A hidden body the viewer does not perceive takes no ordinal,
+  cannot be named and no reply reveals it. The corpse lookup
+  reuses the existing matcher (`util.FindMatchIn`'s loop, exposed by position as
+  `util.FindMatchIndexIn`) and serves every caller (`get`, `look`, `bury`).
+- **`bury` refuses a player's corpse that holds any item or gold,** for every actor, its owner
+  included: "You can't bury the <name> corpse while it still holds something." An empty player
+  corpse and every NPC corpse (with its loot) bury as before. Principle: no single command lets
+  anyone destroy a player's belongings.
+- **`look <corpse>` lists what the corpse holds** (the panel's fallback is fixed; it showed an empty
+  box).
 
 ### Deleted
 
@@ -205,7 +233,9 @@ change. The bleed-out and its "Somebody needs to provide aid!" line go.
 
 `help health` loses its bleed-out and -10 lines and points to `help death`. `help get`
 (`templates/help/get.md`) mentions taking things from a corpse, and that its contents are destroyed
-when it crumbles.
+when it crumbles. `help get` and `help bury` (the cleanup module's `bury.template`) name `rat#2` for
+the second of two same-named corpses, and `help bury` says a player's corpse that holds anything
+cannot be buried (round 2 rulings).
 
 ### Guards
 
@@ -271,6 +301,22 @@ the work. Expected:
 - `suicide`: refused in a fight, refused in the recovery room and its copy, dies otherwise.
 - `Heal`: mana regen uses the mana amount.
 - `IsDeathRecoveryRoom`: the room, a copy, another room.
+- Ordinal parser: `2.rat`, `rat#2`, `0.rat`, `rat`, `1.5`, `.rat`, `2.`.
+- Corpse numbering: corpses newest first in both forms, one list for players and NPCs, exact over
+  prefix; with the living present, 1 is the living (the player when a player and an NPC both match),
+  corpses start after them, an ordinal on the living is refused (`get`, `bury`; a player's name
+  without "The"), and the one typing is not counted in their own name (`look bob` by Bob shows his
+  corpse).
+- Hidden: a hidden body cannot be named or reached by ID, takes no corpse ordinal and is never in a
+  refusal; `see-hidden` and an admin perceive it; a body perceives itself. Messages: a hidden speaker
+  reads by name to an admin and to `see-hidden`, "Someone" to others, and "Someone" to an admin in
+  the dark. Combat: a hidden defender stops an attacker who does not perceive it, not an admin.
+  The room view, GMCP's room contents, `Char.Enemies`, a say's GMCP sender, GMCP's leave notice and
+  refreshes, untargeted `attack`, the walk-in notice and the follow lines each give a hidden body
+  only to a viewer who perceives it (round 3).
+- `bury`: refused for a player's corpse holding gold (its owner asking) or an item (another asking);
+  an empty player corpse and an NPC corpse with loot are buried.
+- `look <corpse>` lists the corpse's items.
 
 **Guards:** the health-comparison guard and the no-`suicide`-input guard each shown to fail with a
 planted violation.
@@ -289,7 +335,12 @@ the corpse; the plan fixes the exact steps against `script.go`.
    less the bleed-out). Goldens unchanged.
 4. The `Heal` fix.
 5. Recovery-room fast regen.
-6. One death routine: `internal/death`, `OnDeath`, XP and alignment into `dikubasic`; the deletions
+5a. One visibility rule (`rooms.Perceives`: hidden, `see-hidden`, admins) for the room view, name
+    lookups, messages, GMCP room contents and combat. Goldens unchanged.
+5b. Both ordinal forms in `util.GetMatchNumber`; one numbering per name (the living, then corpses
+    newest first); `bury` buries the corpse it names. Goldens unchanged.
+5c. `bury` refuses a player's corpse that holds anything. Goldens unchanged.
+6. One death routine (with the corpse panel's fix): `internal/death`, `OnDeath`, XP and alignment into `dikubasic`; the deletions
    above; bleed-out and the -10 branch. Goldens change; each diff summarised.
 7. `suicide` refuses in a fight and in the recovery room.
 8. Guards.
@@ -388,27 +439,65 @@ changes the design above except Q1's outcome shape. Details, with line numbers, 
 - **Help and docs** promise `get all <corpse>` only once the fix above lands; the help pages ride
   in the docs commit after it.
 
-**Plan review round 2 (2026-11-10): open; not yet applied to the plan.** The round ran Tasks 1-9 on
-a scratch copy: every task builds, 40 ok plus the 3 known failures, Task 6 changed exactly the nine
-predicted goldens, and draw order held. Open items:
+**Plan review round 2 (2026-11-10): every item applied to the plan 2026-11-11** (the plan's "Plan
+review round 2: what this revision changed" lists each with its task and step). The round ran Tasks
+1-9 on a scratch copy: every task builds, 40 ok plus the 3 known failures, Task 6 changed exactly the
+nine predicted goldens, and draw order held. Items:
 
 - **Blocker, controller decision (bug fix):** `look <corpse>` shows an empty box.
   `buildCorpseInventoryPanel` (`look.panels.go:112-121`) falls back to a panel named `inv` but writes
   every row to `equip`, so the rows are dropped. Unreachable while `CorpseItems` was false; fix the
-  fallback to create `equip` (as `buildEquipmentPanel` does at `:58-59`) in commit 6.
+  fallback to create `equip` (as `buildInventoryLookPanel`'s fallback does at `:57-59`; the name
+  `buildEquipmentPanel` first written here was wrong) in commit 6. The fallback always runs: no data
+  folder has the `character/equipment-look` layout (`panel-layouts/` holds only
+  `character/inventory.yaml`). **Applied:** plan Task 6 Step 7; its test is
+  `TestLookAtACorpseShowsWhatItHolds` (Step 11b), with a probe. Confirmed on a scratch worktree:
+  empty box and `no panel with id "equip"` before, the item listed after.
 - **For Calabe: `bury` on a full corpse.** `modules/cleanup/cleanup.go:141-160` removes a corpse with
   no check on its contents, and anyone may bury anyone's corpse. Once a player's corpse holds their
   carried items and gold, a stranger can destroy them in one command (reads golden H already buries a
   rat corpse holding 25 gold). Options: refuse to bury a corpse that holds anything; spill the
   contents to the floor first; only the owner may bury a player's corpse.
+  **Ruled by Calabe 2026-11-11: refuse if a player corpse.** `bury` refuses a player's corpse that
+  holds any item or gold, for every actor including its owner; an empty player corpse and every NPC
+  corpse bury as today (an NPC corpse's loot is destroyed with it). Principle: no single command lets
+  anyone destroy a player's belongings. (Calabe meant "a player's corpse is never buried"; he
+  ruled both readings acceptable and kept this one, so an empty player corpse may be buried.)
+  Enforced by a test in the plan (refused with contents, allowed
+  when empty, NPC corpse with contents still buried). **Applied:** plan Task 5c (commit 5c, before
+  the death commit), `TestBuryRefusesAPlayersCorpseThatHoldsAnything`; refusal text in "Decisions
+  taken without asking"; help `bury` and the patch notes say it (Task 10).
 - **For Calabe: two corpses with the same name.** `FindCorpseByRef` (`rooms.go:945-990`) lists each
   name once and the first corpse wins, so ordinals (`2.rat`) do not work and a bare name takes the
   first prefix match. Two rats killed in one room: the second rat's loot is unreachable until the
   first corpse crumbles; a player who dies twice in one room cannot reach the newer corpse. Options:
   fix the lookup (every corpse listed, ordinals, an exact "`<word>` corpse" match first), or accept
-  and document it.
+  and document it. **Ruled by Calabe 2026-11-11: fix the lookup in this slice.** Every live corpse
+  is a candidate (no de-duplication by name), and the existing ordinal syntax works: `rat#2`
+  (`util.GetMatchNumber`, `util.go:298`; the `2.rat` above was wrong, the codebase has no dot
+  ordinal). `util.FindMatchIn` (`util.go:316`) already does the ordinal and exact-before-prefix; the
+  de-duplication in `FindCorpseByRef` is what defeats it, so the fix reuses `FindMatchIn` and adds no
+  matcher of its own. Player corpses still rank before NPC corpses. The plan fixes it for every caller
+  of `FindCorpseByRef`/`FindCorpse`, with tests for two same-name corpses (bare name, `#1`, `#2`,
+  exact over prefix). **Applied:** plan Task 5b (commit 5b). `FindMatchIn` returns the matched text,
+  which cannot tell two corpses of one name apart, so its loop moves unchanged into
+  `util.FindMatchIndexIn` (positions) and `FindMatchIn` wraps it: one matcher still. `FindCorpse`
+  delegates to `FindCorpseByRef`; `look.go`'s unused third copy of the name lists goes. Callers
+  checked (`grep -rn 'FindCorpse' --include=*.go .`: `get.go:92`, `get.go:422`, `look.go:394`,
+  `cleanup.go:141`): only `bury` needed an edit, because `RemoveCorpse` matches owner, name and round
+  and would remove the first of two rats killed in one round; it now removes the corpse it found
+  (`RemoveCorpseRef`). Tests: `rooms` (bare, `#1`, `#2`, `#3` absent, exact over a prefix that comes
+  first, players first, a crumbled corpse skipped), `util` (`FindMatchIndexIn` over repeats), `bury
+  rat#2` (Task 5b) and `get all rat#2` (Task 6). **Goldens: none change** (the only golden lookup is
+  reads golden H's `bury rat` with one corpse in the room); Task 6 still changes exactly nine. Code,
+  tests and three probes were run on a scratch worktree at `65bbc144`: pass, and fail under the
+  probes. **Open, for Calabe:** see "#N counts within one kind" below. (Superseded the same day:
+  the two-list numbering and its player-first ranking were replaced by the rulings below, and Task
+  5b was reworked to them.)
 - **Major (plan):** two "prints ok" steps run `-count=16` over packages with the known
   `TestCombatGoldenFleeSuccess` repeat flake; scope them to the death tests or skip that test.
+  **Applied:** plan Task 6 Step 11b(c) runs `-run 'Death|CombatGolden(MvP|PvP|HiddenAttacker)$|Wimpy|Respawn'`
+  in `hooks` (checked with `-list`: no flee test) and `-run 'Corpse'` in `usercommands`.
 - **Minors (plan):** `remove.go` probes that do not compile; Task 6 Step 8's grep runs before the
   steps that clear its hits, and its control count is 129 lines in 19 files; Task 5's grep list misses
   its own new comment; mutations that survive (respawn ignoring `RespawnHealth`, ignoring
@@ -418,9 +507,281 @@ predicted goldens, and draw order held. Open items:
   prefixes need a per-prefix reach check; two fixture comments need new text; `RegenResult.Changes()`
   and the `IsDisabled` ban belong in "Decisions taken without asking"; `suicide` staying
   `AllowedWhenDowned` next to "refused in a fight" needs one sentence.
+  **Applied:** `remove.go` probes keep a `rules.` call (Task 3 Step 9b); the absence grep moved to
+  Task 6 Step 13 with a new Step 0 control (129 lines in 19 files, rechecked: 117 in 18 at
+  `65bbc144` plus Task 1's 12); Task 5 Step 5 names `ruleset.go`; each surviving mutation now has a
+  test and probe (Task 5: NPC regen, `Senses`/`Range` [round 5: the `Range` probe as written could
+  not fail; see the round 5 section]; Task 6 Step 11b: `PlayerDeath` fields and the
+  event log in `TestRespawnStartsClean`, `CleanupMobSpawns` in `TestDeathFreesTheNPCsSpawnSlot`,
+  container precedence in `TestGetAllWithoutACorpseTakesTheFloor`; Task 9: respawn health and NPC
+  respawn in `TestStubRulesetDecidesTheRespawn`, the gold clamp and the "item not held" guard in
+  `TestStubRulesetCannotDropWhatTheBodyLacks`); Task 8 checks each scope prefix reaches a file; Task
+  6 Step 11 gives the two fixture comments; the decisions table holds the two calls; the design's
+  `suicide` section and Task 7 Step 3b say the sentence.
 
-Next session: Calabe answers the two questions, the plan takes these fixes, and a fresh blind round 3
-runs.
+**Asked of Calabe (found applying round 2; answered by the ruling that follows): "#N" counts within one kind.** The lookup matches player
+corpses and NPC corpses as two lists, players first (today's ranking, kept by the ruling), so `#N`
+counts within a kind: with Ratty's corpse (a player) and two rat corpses, `rat` and `rat#1` find
+Ratty's, `rat#2` finds the second rat (not the first), and the first rat is reached as `rat corpse`.
+One combined list (players first) would make `#N` count across both, but would also change today's
+order when only a word inside a name matches (`contains` fallback). The plan implements the two
+lists. Options: keep it (rare: it needs a player corpse and NPC corpses sharing a prefix in one room),
+or count across one list.
+
+**Ruled by Calabe 2026-11-11 (replaces both options): one numbering, living first, then corpses
+newest first.** Principle: a name counts every living character in the room before any corpse, and
+corpses count from the most recent death back. With a live rat and two dead rats: 1 is the live rat,
+2 is the rat killed most recently, 3 is the rat that died first. The name of the dead character
+works as the name of its corpse (`rat` reaches rat corpses). Because the living come first, every
+lookup of a living target numbers exactly as today; only corpse lookups change, counting past the
+living matches. Recency is `Corpse.RoundCreated` (`corpse.go:13`), newest first. Applied by the
+controller as written below; the player-before-NPC ranking of corpses is dropped (see the decisions
+table). Calabe confirmed the controller's two calls the same day: players and NPCs share the rule
+(no player-first ranking), and a corpse command whose ordinal lands on a living character refuses
+("The rat is still alive.") instead of skipping to the next corpse.
+
+**Applied (2026-11-11):** plan Task 5b, reworked. **The living count** is read from today's code:
+`FindByName` (`rooms.go:1334-1341`) numbers players (`findPlayerByName`, in the order they came into
+the room) and NPCs (`findMobByName`, likewise; its internal `name#k` only keys a map) apart, and all
+12 callers take the player when both are found. So ordinal n reaches someone living exactly when n
+is at most the matching players or at most the matching NPCs: the living count is the larger of the
+two, and for an ordinal both reach, the player is the one named. `livingReach` asks `FindByName`
+itself, so living lookups cannot drift. A hidden NPC counts, as `FindByName` lists it for `look`
+today. Corpses then count from the newest (`RoundCreated` descending; of two from one round, the
+later added). The refusal: `get <item> <word>`, `get all <word>` and `bury` say "The <name> is still
+alive." with the living character's name; `look` needs none (it shows the living first, as today).
+Tests: `rooms` (newest first, both forms, one list, exact over prefix, crumbled skipped,
+`RemoveCorpseRef`), `hooks` (`TestCorpseNumbersCountPastTheLiving`: a live player Ratty and a live
+rat share 1, corpses at 2 and 3, Ann's own corpse at `2.ann`; `bury rat` refused, `bury 2.rat`),
+`usercommands` (`get all rat` refused, `2.rat`, `rat#3`; Task 6). Code, tests and four probes were run
+on a scratch worktree: pass, probes fail, full suite at the 3 known Windows failures. Found while
+running: the hooks test file must sort after `combat_golden_test.go`, because a reads-world test
+that runs before `TestCombatGoldenFleeSuccess` sets off that test's known order flake. (Superseded
+the same day by the two rulings below: a hidden NPC no longer counts, and Ann's own corpse is `ann`,
+not `2.ann`.)
+
+**Ruled by Calabe 2026-11-11: both ordinal forms, everywhere.** `2.rat` and `rat#2` both work, for
+every command that takes a name (items, characters, corpses). One parser: `util.GetMatchNumber`
+accepts both forms; no second parser.
+
+**Applied (2026-11-11):** plan Task 5b Step 3. Its two callers are the two name matchers
+(`util.FindMatchIn`, `util.go:322`; `items.FindMatchIn`, `items.go:604`), so every name lookup gets
+both forms; `findMobByName`'s `#`/`@` guard needs no dot twin (a nameless `2.` stays as typed), and
+ID tokens (`0x...:0x...`) never read as the dot form. World data: no name, title, zone or map key
+starts with digits and a dot (two greps over the 100 YAML files under `_datafiles` and `modules`, 0
+lines each; both shown able to match a planted line), and character names cannot hold a dot
+(`NameRejectRegex` `^[a-zA-Z0-9_]+$`). Parser tests: `2.rat`, `rat#2`, `0.rat`, `rat`, `1.5`, `.rat`,
+`2.`, and three more. `help item-names` gains the dot form (Task 10).
+
+**Ruled by Calabe 2026-11-11: the person typing is not in their own name's living count** when
+they loot or look at a corpse. `get all bob` typed by Bob reaches Bob's newest corpse; other
+players' numbering is unchanged. A player's name never takes "The" in the refusal line.
+
+**Ruled by Calabe 2026-11-11: a hidden character is not perceivable until revealed to the viewer.**
+Principle: what a viewer cannot perceive does not exist in the list of things that viewer's names
+are matched against. It takes no ordinal, cannot be named, and no reply (refusal or otherwise)
+reveals it. This applies to every name lookup, living and corpse, not only corpses.
+
+**Applied (2026-11-11), the person typing:** plan Task 5b. The corpse lookup takes the viewer and
+leaves it out of its own living count, for `get`, `bury` and `look`'s corpse branch; `FindByName`
+itself keeps the viewer, so no living number moves for any command. Today `look bob` typed by Bob
+matches Bob himself (`findPlayerByName` lists every player, and `look` has no self check), so he
+looks at himself; now he does only when no corpse answers to his name, and otherwise sees his newest
+corpse. `consider` already drops a self match and `attack` refuses one; `give` and `show` have no
+self check and keep none. The refusal names a player bare ("Bob is still alive.") and an NPC with
+"The". The smoke bot takes its ring back with its own name again.
+
+**Applied (2026-11-11), hidden:** plan Task 5a (new; before 5b). Hidden is the buff flag `hidden`;
+reveal to a viewer is the viewer's `see-hidden`; the room view applies both per viewer, inline
+(`roomdetails.go:252-256`, `:268-272`). The living lookups do not filter today (`FindByName` passes
+`FindAll`, and `GetMobs`/`GetPlayers` then return every body), so `look`, `attack` and the rest reach
+a hidden body. The room view's check becomes `rooms.Perceives(viewer, subject)` (a body perceives
+itself; a hidden one only a viewer with `see-hidden` perceives), used by the room view, by
+`FindByName` (now taking the viewer; all 12 callers pass the body typing, by name and by ID token),
+and by the corpse count. Size: the 12 callers in 10 files, `rooms.go`, `roomdetails.go`, 4 test
+calls: within the coordinator's bound. Every caller has a viewer (each is a command run by a body);
+the changes per caller are listed in Task 5a, and the two calls that needed a choice are in the
+decisions table (admins get no bypass; GMCP and messaging keep their own stricter checks).
+
+**Goldens after both:** none change in 5a, 5b or 5c; Task 6 still changes exactly nine. The goldens'
+hidden bodies are only ever the ones typing (a body perceives itself), and no golden command holds a
+digits-dot word. Run on a scratch worktree: every golden byte-identical, with and without the hidden
+filter; full suite at the 3 known Windows failures.
+
+**Ruled by Calabe 2026-11-11: admins always perceive hidden characters.** The bypass lives in the
+one shared check (`rooms.Perceives`), so an admin's room view, name lookups and messages all show
+hidden characters; no per-command bypass.
+
+**Ruled by Calabe 2026-11-11: one visibility rule everywhere.** GMCP room contents and messaging's
+`canSee` move onto the shared check in this slice, so `see-hidden` and admins reveal hidden
+characters there too. Principle: every place that decides whether a viewer perceives a character
+asks the same function.
+
+**Applied (2026-11-11), admins and one rule:** plan Task 5a, widened. The shared check is
+`rooms.PerceivesWith(flag, viewer, subject)` (a body perceives itself; an unhidden body is
+perceived; a hidden one only by an admin or a viewer with `see-hidden`; a nil viewer by no one), with
+`rooms.Perceives` reading the bodies' own buff flags. The admin test is the codebase's own: an
+account whose `Role` is `accounts.RoleAdmin` (`userrecord.go:27`), the role `HasRolePermission` lets
+through first (`userrecord.go:386-389`), found from the viewer by `actors.AccountOf`
+(`registry.go:70`). Every place that decides whether a viewer perceives a character was grepped and
+listed in Task 5a with file:line. **Moved onto the rule:** the room view (`roomdetails.go:252`,
+`:268`), the name lookups (`FindByName`), the corpse count, GMCP's room contents
+(`gmcp.Room.go:346`, `:374`), messaging's `canSee` hidden clause (`perceive.go:51`) and combat's
+"Can't see them, can't fight them" (`NewRound_DoCombat.go:196`). **Left alone, with reasons** (also in
+the decisions table): the sneaking actors' own silences (`go.go`, `look.go`, `read.go`,
+`cleanup.go`: whether a hidden actor's line is sent at all; sending it would show everyone else
+"Someone ...", a widening); darkness (`look.go:28-31`, `:239`; `canSeeIn`), a rule of the viewer's
+light that `canSee` keeps, so a hidden speaker in the dark still reads "Someone" to an admin; the
+`RoomChange.Unseen` field (no reader); the "hidden" adjective and the `{h}` prompt (drawing, not
+deciding). **Messaging's stricter parts kept:** a far receiver and a receiver in the dark see no
+one, as before; only the hidden clause gains the reveal. **No import cycle:** `rooms` imports none of
+`messaging`, `hooks`, `usercommands` or `modules/gmcp`, which already import `rooms`; the admin test
+uses `actors` and `accounts`, already imported by `rooms`; messaging passes its own test seam
+(`hasFlag`) to `PerceivesWith`, so its tests keep faking flags. Size: 4 production files and 2 test
+files beyond the first hidden ruling's set. **Goldens:** none change: reads goldens A to C make Ann
+an admin but hide no one; D, E, F and H hide Ann with no admin or `see-hidden` in the room; the
+combat golden `hidden_attacker` hides the attacker, not the defender; GMCP is in no golden. Run on a
+scratch worktree: identical, full suite at the 3 known Windows failures.
+
+**Ruled by Calabe 2026-11-11: combat follows the one rule.** An admin or a `see-hidden` attacker
+may fight a hidden defender they perceive (`NewRound_DoCombat.go:196` moves onto `Perceives`).
+
+**Ruled by Calabe 2026-11-11: sneaking actors' silences are deferred.** The lines a hidden actor's
+move, look, read and trash suppress (`go.go`, `look.go`, `read.go`, `cleanup.go`'s `trashCommand`,
+`:89-100`; "bury" was written here first, wrongly) stay silent to
+everyone, admins included, in this slice. Follow-up: GitHub issue pruuk/GeOMUD#33 (a messaging
+feature that sends a line only to viewers who perceive the actor).
+
+Both round 2 questions answered 2026-11-11 (above), and the rulings after them applied.
+
+**Plan review round 3 (2026-11-11): every finding applied to the plan** (the plan's "Plan review
+round 3: what this revision changed" lists each with its task and step). The root cause of the two
+majors: Task 5a's site list came from grepping hidden-related words, which cannot find a path that
+never checked hidden. The search was redone over every place that enumerates a room's bodies, every
+GMCP module, every `events.Communication` producer and consumer, every untargeted target pick and
+every line that names one body to another; Task 5a's table lists each site with file:line, moved or
+left alone with a reason.
+
+- **M1** `Char.Enemies` (`gmcp.Char.go:455-466`) sent a hidden enemy's Id and Name: filtered by
+  `Perceives`; tested.
+- **M2** a say's `Comm.Channel` (`gmcp.Comm.go`, from `say.go:40`) named a hidden speaker the text
+  shows as "Someone": per receiver, the name only when `Perceives` passes, else `Someone` with no
+  player or mob `Source`; tested. The other channels (party, broadcast, whisper) are left alone: their
+  speaker addresses the audience by name.
+- **Found by the redone search and moved under the same rulings:** GMCP's `Room.RemovePlayer` on
+  leaving the game (`gmcp.Room.go` `despawnHandler`) and its room refreshes on a move or a fight
+  change; the walk-in "<NPC> notices you as you enter!" line (`go.go:280-300`); the follow lines
+  (`follow.go:203-222`, `:465-475`, `:501`; see the follow ruling below). Each tested, with a probe.
+- **m1** tests for the room view (`roomdetails.go:252`, `:268`) and GMCP's room contents
+  (`gmcp.Room.go:346`, `:374`), with probes. **m2** untargeted `attack` (`attack.go:48-150`) skips a
+  body the attacker does not perceive; tested. **m3** the look test's comment no longer names a deleted
+  knob. **m4** see the decisions table (corpses with neither ID). **m5** Task 5b's sort probe
+  prediction fixed. **m6** Task 1's predictions: `hp=1/7`, no Remove lines in `death_player`. **m7**
+  the silences ruling names `trash`. **m8** `get.md` and the `item-names` anchor fixed.
+
+Code and tests for all of it were run on a scratch worktree: pass; each probe named in Task 5a Step 7
+fails; `go test ./internal/hooks -count=1` passes twice; the full suite shows the 3 known Windows
+failures and 41 ok (`modules/gmcp` gains its first test file). **Goldens:** none change (no golden
+hides a body from a viewer who reads GMCP, follows, attacks untargeted or walks into a hidden hostile;
+reads golden H's follow lines name an unhidden Bob exactly as before). Next: a fresh blind round 4.
+
+**Ruled by Calabe 2026-11-11: follow does not cancel hiding.** Shadowing someone is classic
+skullduggery. Principle (his hidden principle, applied to lines): what a viewer cannot perceive does
+not exist for them, and no reply reveals it, so **a line whose only content is a hidden body's
+presence is dropped for a viewer who does not perceive that body; a line that carries other news the
+viewer gets anyway keeps "Someone"**. Applied to each substitution round 3 had added (plan Task 5a):
+
+| Line | Its content | Now |
+|---|---|---|
+| "X is following you." (to the target) | the follower's presence only | **dropped** for a target who does not perceive the follower |
+| "X stopped following you." (to the target, on `follow stop` or when a follow breaks) | the follower's presence only | **dropped** likewise |
+| "You are no longer following X." (to the follower) | the follower's own follow ended, which it learns anyway | **kept**, "someone" for a leader it does not perceive |
+| A say's GMCP `Comm.Channel` `Sender` | the said text, which the receiver reads anyway ("Someone says ...") | **kept** as `Someone`, `Source` empty |
+
+Every other round 3 site already drops rather than substitutes (`Char.Enemies`, GMCP's leave notice
+and refreshes, the walk-in notice, untargeted `attack` picks). Messaging's "Someone" stays for lines
+that carry an act the viewer gets anyway (a say's words, an attack's blow, a death's corpse); a
+messaging line that only announces a hidden body's presence is dropped for viewers who do not
+perceive it (round 4: leaving the game, starting to quit, appearing by teleport, fleeing, dropping,
+reviving, recovering). Tested by `TestHiddenFollowerIsNotAnnounced` (a hidden Bob follows and stops:
+Ann reads nothing; made an admin, she reads both lines), with a probe on each target line; run on a
+scratch worktree: pass, both probes fail, `internal/hooks` passes twice, reads golden H unchanged.
+
+**Plan review round 4 (2026-11-11): every finding applied to the plan** (all follow from existing
+rulings; no new question):
+
+- **M1** `follow lose` (`follow.go:436-452`, also run by a followed player's teleport, `:296`) named a
+  leader the follower no longer perceives: the follower's own line now uses `seenName` ("someone");
+  `TestFollowLoseNamesOnlyAPerceivedLeader`, with a probe.
+- **M2** the `player-despawn` template line (`PlayerDespawn_HandleLeave.go:53-60`) read "drag someone
+  away" to viewers who could not perceive the leaver: it is only presence, so it is **dropped** for
+  them, as GMCP's `Room.RemovePlayer` already is. Mechanism: `rooms.NotPerceiving(body)` lists the
+  bodies in its room that do not perceive it, passed as the message's `Exclude`. The sweep of every
+  room-scoped line naming an actor for arrival, departure, login, logout, spawn, death, recovery or
+  wake (plan Task 5a's "Presence-only lines" table): **dropped** for unperceiving viewers: leaving
+  the game, starting to quit (`quit.go`), appearing by teleport (`admin.teleport.go`, two lines),
+  fleeing (`NewRound_DoCombat.go`), dropping downed (`PlayerDrop_HandlePlayerDrop.go`), the recovery
+  room's line (`recoveryRegen`), the revive (`death.Die`); **keeps "Someone"**: "has died." (the
+  corpse is news the viewer gets anyway); **already silenced**: walking in, out and into walls (the
+  deferred sneaking silences); **left alone**: a new character's first arrival (`start.go`, it cannot
+  be hidden yet) and the global death notice; **none exists**: login, spawn and wake lines. Six
+  production sites plus the revive in Task 6's new code. `TestPresenceLinesReachOnlyThoseWhoPerceive`
+  (`quit`, leaving the game, `NotPerceiving` itself), with a probe on each line.
+- **Minors:** Task 5b's `RemoveCorpseRef` test looks up `rat` (the newest, gold 2), so the probe that
+  puts back `RemoveCorpse` now kills it (reasoned: `RemoveCorpse` takes the first, gold 1; not re-run,
+  as the test needs Task 5b's lookup); Task 5a Step 7's always-true probe is now predicted to change
+  `hidden_attacker.txt` line 11 and `F-comms-party.txt` line 22 (both seen on the scratch run); tests
+  and probes for `aggroChangedHandler`, `roomChangeHandler`'s old-room loop and the follow lines for
+  an NPC follower and an NPC leader; `seenName`'s comment sits above its own function;
+  `TestPerceivesAnUnhiddenBodyAndItself` gives its two bodies distinct IDs.
+
+Run on a scratch worktree (Task 5a with the round 3 and round 4 changes): every new test passes, each
+named probe fails, `go test ./internal/hooks -count=1` passes twice, `go test ./... -count=1` shows
+the 3 known Windows failures and 41 ok. **Goldens:** none change (no golden hides a body that quits,
+leaves the game, flees, teleports, drops or follows; reads golden E's flee is by an unhidden Ann).
+Next: a fresh blind round 5.
+
+**Before round 5 (2026-11-11): every moved presence line has its own test and probe** (a site that
+forgets its `Exclude` would have passed the round 4 tests). `TestEachPresenceLineReachesOnlyThoseWhoPerceive`
+has one subtest per site (teleport, the teleport party loop, flee, drop); deleting each site's
+`Exclude` fails its own subtest only (run). The recovery line gets
+`TestRecoveryLineExcludesThoseWhoDoNotPerceive` in Task 5a (run against a stand-in, since Tasks 3
+and 5 were not applied; its `Regen` form is unrun), and the revive gets
+`TestReviveOfAHiddenBodyReachesOnlyThoseWhoPerceive` in Task 6 (unrun: the `death` package is Task
+6's). The `RemoveCorpseRef` minor above is now run, not reasoned: with Task 5b applied the test
+passes, and putting back `RemoveCorpse` fails it ("the one named went, the other stayed").
+
+**Plan review round 5 (2026-11-11): the whole plan ran, Tasks 1 to 10;** everything builds and the
+nine predicted goldens hold. M1 is **the controller's application of Calabe's principle** ("what a
+viewer cannot perceive does not exist for them; no reply reveals it"), **not a Calabe ruling**;
+Calabe may overrule it (its rows are in "Decisions taken without asking").
+
+- **M1, the death notice named a hidden killer.** "*** Bob has DIED! (killed by Alice) ***" went to
+  everyone while Bob and Carol only ever read "Someone stabs you" (the `hidden_attacker` golden
+  pinned it). Now each reader's "(killed by ...)" lists only the killers that reader perceives
+  (`rooms.Perceives`); with none left the part is dropped, never "someone", which would tell of an
+  unseen killer. Perceiving a hidden body takes being in its room: a reader elsewhere never perceives
+  a hidden killer, except an admin, who perceives hidden bodies anywhere. An unhidden killer is named
+  to all, as today. The notice was one `events.Broadcast` string; it becomes one `UserId` message per
+  active account (`messaging.NotifyEach`), written with the same line refresh and prompt redraw.
+  `hidden_attacker`: only Alice reads "(killed by Alice)"; Bob and Carol read the notice without it.
+  The PK records (`KD.PlayerDeaths`, "userid:name") still hold the hidden killer's name; nothing shows
+  them to a player (GMCP shows a player only their own kills).
+- **Minor 8, the fight refusals and a hidden attacker.** Not applied: a fight's victim already
+  perceives the fight through the attacker's hit lines, so the refusal reveals nothing; counting only
+  perceived attackers would let quit escape an unseen attacker.
+- **Minors:** Task 5's `Range` probe could not fail (`Room` is the zero value, `perception.go:49`):
+  it now widens the range; the round 2 note above is marked. `death_player` at seed 303 removes and
+  drops the testsword (`ItemOwnership Alice item=93101`): Tasks 1 and 6 now say so. `get.md`'s stash
+  line needs two trailing spaces or `internal/markdown` joins it to the next (rendered to check).
+  Two probes that did not compile now keep their names in use (`_ =`). `bury.template`'s new lines go
+  after line 7. Three site-table rows pasted into the presence table moved back.
+  `DeathOutcome.Messages` is dropped: Q1 made awards carry the lines, and nothing set or tested it.
+
+Run on a scratch copy: today's `suicide.go` sending its notice through `NotifyEach` passes the notice
+test written for the reads world, three probes fail as stated, and `go test ./... -count=1` shows only
+the 3 known Windows failures, every golden unchanged. Task 6's form of the notice test is unrun (it
+needs the `death` package).
 
 **Facts corrected while planning:** help pages are under `_datafiles/world/empty/templates/help/`;
 more health checks exist than the table lists (`NewRound_AutoHeal.go:68`, `remove.go:51`, and in
@@ -444,3 +805,45 @@ knobs; `decayAlignment` is `:71-91`.
 | Downed stays generic engine handling, reachable only by a stub ruleset | Decision 7 asks for the seam, not a downed `dikubasic` | Delete the downed handling; a later ruleset rebuilds it |
 | `PlayerDeath.Permanent` and `LevelUp.LivesGained` fields go with permadeath | No permadeath | Keep the fields, always false or zero |
 | The admin config pages lose the deleted knobs' entries | They would edit nothing | none |
+| `RegenResult.Changes()` (in `internal/rules`) holds the regen pass's "anything to apply" check | The regen pass is in a guarded package; written there as `r.Health != 0 \|\| r.Mana != 0` it compares `.Health` with a number and fails `TestEngineAsksTheRulesetWhoIsDead` | Inline the check and let the guard skip comparisons against 0 (weakens the guard) |
+| The death guard also bans a body's `IsDisabled` in the scanned packages (`X.Character.IsDisabled()`, or any `IsDisabled` call in a file not on a two-file allowlist of `items.Item.IsDisabled` callers, each with why; a stale entry fails) | `IsDisabled` is `Health <= 0`: a health check by another name that would bypass the ruleset's `Condition` (Q3) | Drop the ban; a later edit could reintroduce a body-health check the guard does not see |
+| `bury`'s refusal reads "You can't bury the <name> corpse while it still holds something." (told to the actor only; the room sees nothing) | Calabe asked the plan to pick it; it says why without urging anyone to loot another player's corpse | Reword in `cleanup.go` and its test |
+| The corpse lookup reuses the matcher by moving `util.FindMatchIn`'s loop, unchanged, into `util.FindMatchIndexIn` (positions); `FindMatchIn` wraps it | Calabe ruled "reuse `FindMatchIn`, no new matcher", but its text result cannot tell two corpses of one name apart; a position can. Every other caller sees the same results (`TestFindMatchIn` unchanged) | Map text back to a corpse some other way, which means re-implementing part of the match |
+| `FindCorpse` delegates to `FindCorpseByRef`, and `look.go`'s unused copy of the name lists goes | Three copies of one lookup is how the de-duplication bug lived on | none |
+| `bury` removes the corpse it found (`Room.RemoveCorpseRef`, by address); `RemoveCorpse` stays for its tests | `RemoveCorpse` matches owner, name and round, so with two rats killed in one round `bury rat#2` would bury the first | none |
+| The lookup fix and the `bury` refusal are commits 5b and 5c, before the death commit | The death commit then lands on a world where corpses hold belongings safely and every corpse is reachable | Move them after commit 6; no code changes |
+| The dot form is digits, a dot, then a name not starting with a digit; `#N` is read first; `0.rat` is 1 (as `rat#0`); `1.5`, `.rat` and `2.` stay as typed | Keeps decimals and stray dots literal; one rule shape with `#N`'s clamp. World data has no digits-dot name to misread | Accept `1.5` as the fifth "5", or refuse `0.` |
+| The living count is the larger of the matching players and the matching NPCs, asked of `FindByName` itself (`livingReach`); for an ordinal both reach, the player is the one named | That is the set of ordinals a living lookup reaches today (two lists, callers prefer the player), so living lookups number exactly as before | Sum them (players then NPCs as one list): living ordinals past the first kind would then differ from today's |
+| ~~A hidden NPC counts as living~~ (replaced 2026-11-11 by Calabe's hidden ruling: a hidden body is in no viewer's list) | | |
+| The refusal applies only when some corpse answers to the name; otherwise the lookup finds nothing and the command goes on as for any word | Keeps round 1's ruling that `get all <word>` with no corpse of that name stays room-wide, and `get <item> <word>` unchanged when no corpse is involved | Refuse whenever the ordinal lands on the living |
+| The refusal names the living character it landed on, as the viewer sees it: "The Rat is still alive." for an NPC named Rat, "Bob is still alive." for a player (Calabe ruled no "The" for players); told to the actor only | The ruling's text with the real name; the player when both kinds match | Use the typed word instead |
+| The person typing is left out of their own name's count only in corpse lookups; `FindByName` keeps them in its list | Calabe's ruling names looting and looking at a corpse; keeping living lookups as they are moves no living number for anyone | Leave the typer out of every lookup: `consider bob#2` by Bob and the like would renumber |
+| `look <own name>` shows the newest own corpse when one answers to the name, else the looker as today | The ruling ("`look bob` reaches his newest corpse") with today's self-look kept when there is no corpse | Always show the corpse branch's "not found" when no corpse |
+| `give` and `show` keep having no self check | Not in the rulings; unchanged behaviour | Add "You can't give to yourself" in a later slice |
+| The visibility check is the room view's (`hidden` unless the viewer has `see-hidden`), moved into `rooms.Perceives` and used by the room view, `FindByName` and the corpse count | Calabe asked to reuse the room view's check; one function keeps them from drifting | none |
+| ~~GMCP's room contents and messaging's `canSee` keep their own checks~~ (replaced 2026-11-11 by Calabe's one-rule ruling: both ask `Perceives`) | | |
+| ~~No admin bypass~~ (replaced 2026-11-11 by Calabe's ruling: admins always perceive hidden characters, in `Perceives`) | | |
+| The admin test is `actors.AccountOf(viewer.Id).Role == accounts.RoleAdmin`, the role `HasRolePermission` lets through first; mods are not included (a mod with `see-hidden` perceives as any viewer) | The ruling names admins; it is the codebase's own admin test | Include mods (`RoleMod`) |
+| The rule is `rooms.PerceivesWith(flag, viewer, subject)`; `Perceives` passes `HasBuffFlag`, messaging passes its `hasFlag` seam | Messaging's tests fake buff flags through that seam (`messaging_test.go:42`); one body of code, two flag readers | Change messaging's tests to real buffs and drop the seam from the call |
+| Messaging's `canSee` keeps its light and distance rules; only its hidden clause moves | They are rules of the viewer's senses, stricter than hidden; moving them would change what players read beyond the reveal | Fold light into `Perceives` (would also gate name lookups and GMCP by light: a narrowing) |
+| Combat's "Can't see them, can't fight them" asks `Perceives`: an admin or `see-hidden` attacker can now fight a hidden defender (**player-visible, flagged**) | It is a perception decision, and the ruling is one rule everywhere | Keep combat blocking every hidden defender (a second rule) |
+| The sneaking actors' own silences (`go.go:197`, `:214`, `:273`, `:330`; `look.go:56`, `:91`, `:122`, `:256`, `:293`, `:332`; `read.go:39`; `cleanup.go:100`) are left alone: a hidden actor's line is still not sent, so admins and `see-hidden` do not read it either (**flagged**) | Each decides whether a line exists, not who perceives the actor; sending it through messaging would show everyone else "Someone ...", a widening the ruling forbids | Add a message flag that drops the line for receivers who do not perceive the actor, then send it (new messaging behaviour) |
+| Darkness stays out of `Perceives` (room view's `look.go:28-31`, `:239`; messaging's `canSeeIn`); GMCP room contents and name lookups still ignore light, as today | Light is a separate rule of the viewer's room; adding it would narrow what clients and commands see today | Make light part of the one rule |
+| `RoomChange.Unseen` (`roommanager.go:429`, `rooms.go:691`) is left as is | Nothing reads it and it has no viewer | Delete it in a later slice |
+| Lookups of online players anywhere by name (`whisper`, `party invite` when not `SameRoomOnly`, admin `locate`, `teleport`, `visit`) are unchanged | They do not look up a room's bodies; hidden is room presence | Apply the rule when the target is in the viewer's room |
+| A nil viewer perceives no hidden body; only tests pass nil (every production caller has a body typing) | No viewer is no one in particular, who cannot see hidden | Treat nil as all-seeing |
+| A hidden body is unreachable by ID token too | "Cannot be named" includes the client's ID form; after Task 5a GMCP sends a hidden body's ID (room contents, `Char.Enemies`) only to a viewer who perceives it. (This row first said GMCP never lists a hidden body's ID; `Char.Enemies` did, round 3 M1.) | Allow IDs (a client holding an old ID could reach it) |
+| Of two corpses from one round, the one added later is newer | `RoundCreated` is a round number; the later `AddCorpse` is the later death | none |
+| `look` gets no refusal | It looks up the living first (`look.go:76`), so an ordinal on the living shows them, as today | none |
+| The smoke bot takes its ring with `get copper ring <its name>` | The one typing is not in its own name's count (Calabe, 2026-11-11), so its name reaches its corpse | none |
+| The new hooks test file is `reads_corpse_test.go`, sorting after `combat_golden_test.go` | A reads-world test before `TestCombatGoldenFleeSuccess` sets off its known order flake | Fix the flake (status Watch), then the name is free |
+| The corpse lookup lists every corpse that has not crumbled, without today's `UserId > 0` / `MobId > 0` test (`rooms.go:909-922`), so a corpse with neither ID is findable (round 3, m4) | The engine never makes one (`death.Die` sets `UserId` for an account, `MobId` for an NPC; a test NPC with template 0 is the only way), and a name is a name | Keep the test: a corpse with neither ID is unreachable by name, as today |
+| An unperceived say on GMCP reads `Sender: "Someone"` and an empty `Source` | The rulings: the receiver gets what messaging shows ("Someone says"); `Source` "player" or "mob" would tell it what kind of body hid | Keep `Source` |
+| GMCP sends a viewer no room refresh when a body it does not perceive moves or changes its fight, and no `Room.RemovePlayer` for one that leaves the game | A refresh or a leave notice is presence; the contents it would carry already leave the body out | Keep the refreshes (contents unchanged, only the timing tells) |
+| ~~Follow lines read "Someone"~~ (replaced 2026-11-11 by Calabe's follow ruling: the target's lines are dropped; the follower's own line keeps "someone") | | |
+| `party invite` and `whisper` still name a hidden sender | The sender addresses the receiver by name on purpose, as on the party and whisper channels; not room presence | Show "Someone" there too |
+| `give` and `show` are left as they are | Each cancels the giver's hidden before naming it | none |
+| The death notice's "(killed by ...)" names, per reader, only the killers that reader perceives; with none it is dropped, never "someone" (the controller's application of Calabe's principle, round 5 M1; not a Calabe ruling) | "No reply reveals" a body the reader does not perceive; "someone" would reveal an unseen killer's presence | Name every killer to everyone, as today, or write "someone" |
+| A hidden killer in another room is named only to an admin; a `see-hidden` reader elsewhere does not read it (round 5 M1) | `see-hidden` reveals what is in the reader's room; admins perceive hidden bodies everywhere (Calabe's admin ruling) | Let `see-hidden` reveal a hidden killer anywhere |
+| The per-reader notice is one `UserId` message per active account (`messaging.NotifyEach`), not a broadcast with a receiver list | Same bytes, line refresh and prompt redraw; no change to `events.Broadcast` or its writer; the goldens record it the same way. A screen-reader account now gets the notice stripped, as every message is | Add a receiver list to `events.Broadcast` |
+| `DeathOutcome.Messages` is dropped | Q1: awards carry the death's lines; nothing set or tested it | Restore it with a test |
