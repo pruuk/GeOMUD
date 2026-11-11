@@ -172,3 +172,7 @@ Detail and options: `2026-11-06-phase-5-rulings.md`.
     ruleset value; the reference ruleset drops them, and encumbrance with them.
 11. **A death in the bare reference ruleset drops carried items and gold into a corpse; worn gear
     stays.** No protection band, XP penalty, drop chances or permadeath. NPCs drop their loot.
+12. **Code the shrink deletes goes straight to its bare form.** "Move with parity, then shrink"
+    (decision 1) covers code that survives the shrink. Code the shrink deletes skips the parity move
+    and goes to its bare form, with a golden recorded first so the change is visible (Calabe,
+    2026-11-10, slice 3).

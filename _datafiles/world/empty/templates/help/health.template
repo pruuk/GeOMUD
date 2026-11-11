@@ -17,9 +17,7 @@ Health will change color to reflect how good/bad your health state is:
 <ansi fg="health-0">0%-9%</ansi>
 <ansi fg="health-dead">dead</ansi>
 
-At <ansi fg="red">0 HP</ansi>, you will drop to the floor and slowly bleed out.
-
-At <ansi fg="red">-10 HP</ansi>, you will die. When you die, all gear you posess drops to the ground.
+At <ansi fg="red">0 HP</ansi>, you die. See <ansi fg="command">help death</ansi>.
 
 Health is calculated based on: 
  - Level

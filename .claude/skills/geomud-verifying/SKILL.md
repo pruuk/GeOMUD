@@ -16,7 +16,8 @@ git diff --name-only -- '*.go' | xargs -r gofmt -l  # must print nothing
 ## Baseline (upstream `b3f55cc2`, 2026-10-24)
 
 - `go build ./...` passes.
-- `go test ./... -count=1` on Windows: 40 packages ok (2026-11-10, Phase 5 slice 2 moved `internal/combat` to `internal/rules/dikubasic` and added `internal/rules`). It was 39 after Phase 4b slice 4 added `internal/behaviour` and the first tests in `internal/hooks` and `internal/usercommands` (2026-10-28). It was 36 after Phase 4b slice 3 added `internal/perception` and `internal/messaging`. It was 34 after Phase 4b slice 2c deleted `internal/uuid`. It was 35 after Phase 4b slice 2 added `internal/ids` (2026-10-27), and 34 after Phase 4b slice 1 added `internal/actors` and `internal/guards`; `internal/users` became `internal/accounts`). It was 32 on 2026-10-26, after Phase 4's scripting removal; it was 33 before, and `internal/scripting` took its tests with it. Phase 1 took it from 36 by removing `telemetry`, `conversations`, `quests` and `pets`), 3 fail, all of which pass on Linux CI (PR #1 run,
+- `go test ./... -count=1` on Windows: 41 packages ok (2026-11-11, Phase 5 slice 3 gave
+  `modules/gmcp` its first test file; `internal/death` has none). It was 40 (2026-11-10, Phase 5 slice 2 moved `internal/combat` to `internal/rules/dikubasic` and added `internal/rules`). It was 39 after Phase 4b slice 4 added `internal/behaviour` and the first tests in `internal/hooks` and `internal/usercommands` (2026-10-28). It was 36 after Phase 4b slice 3 added `internal/perception` and `internal/messaging`. It was 34 after Phase 4b slice 2c deleted `internal/uuid`. It was 35 after Phase 4b slice 2 added `internal/ids` (2026-10-27), and 34 after Phase 4b slice 1 added `internal/actors` and `internal/guards`; `internal/users` became `internal/accounts`). It was 32 on 2026-10-26, after Phase 4's scripting removal; it was 33 before, and `internal/scripting` took its tests with it. Phase 1 took it from 36 by removing `telemetry`, `conversations`, `quests` and `pets`), 3 fail, all of which pass on Linux CI (PR #1 run,
   2026-10-24). Any other failure is new and is ours.
   - `scripts` `TestHTTPSSetupAutoModeLoadsDefaultAdminURLFromActiveOverride` (`https_setup_test.go:311`): cause not investigated
   - `internal/mobs` `TestLoadPluginMobs_MergesValidMob`: "filepath mismatch", `/` vs `\` in the expected path suffix
@@ -42,11 +43,12 @@ stops the server by PID. The repo's `_datafiles` are never written. Flow:
    rooms), lands in Town Square, then get, drop, get the ring (checking inventory and the floor
    each time), walks north and back, says something, quits, logs back in, checks it still holds
    the ring, dies (`suicide`), checks it is in the recovery room ("Waiting room"), walks out
-   through `portal` to Town Square and checks it still holds the ring, holds (`-hold`), and quits.
-   A drop the floor-item limit refuses is retried. `quit` is silent until the server hangs up (its
-   meditation messages were a JS script, gone since Phase 4); the step waits for the disconnect.
-   The death steps exercise the Phase 4 death stand-in (revive at 1 health, fixed exit from
-   room 75), recorded in `docs/completed/2026-10-26-phase-4-scripting-surface.md`.
+   through `portal` to Town Square, takes the ring back from its own corpse (`get copper ring
+   <its name>`; the death dropped it there) and checks it holds the ring again, holds (`-hold`),
+   and quits. A drop the floor-item limit refuses is retried. `quit` is silent until the server
+   hangs up (its meditation messages were a JS script, gone since Phase 4); the step waits for the
+   disconnect. The death steps exercise the slice 3 death (Phase 5): carried items and gold into
+   the corpse, respawn at 1 health in a private copy of room 75, whose portal leads out.
 
 Each bot's client also records the GMCP package names it receives (it lists Char, Room in
 `Core.Supports.Set`; the server sends `Comm.Channel` without being asked) and the bot fails unless

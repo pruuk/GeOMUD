@@ -5,4 +5,13 @@ The <ansi fg="command">bury</ansi> command cleans up corpses from the room.
 <ansi fg="yellow">Usage: </ansi>
 
   <ansi fg="command">bury rat corpse</ansi>
+  <ansi fg="command">bury 2.rat</ansi>
+
+A name counts the living first, then corpses from the newest: with a live rat
+here, <ansi fg="command">bury 2.rat</ansi> buries the newest rat corpse
+(<ansi fg="command">bury rat#2</ansi> is the same), and
+<ansi fg="command">bury rat</ansi> is refused, since the rat is alive.
+
+A player's corpse that still holds anything cannot be buried, by anyone, its
+owner included. A creature's corpse is buried with whatever it holds.
 
