@@ -11,10 +11,14 @@ package hooks
 // (reads_golden_test.go), the way the writers deliver them, so the record is
 // "what each player read". Text is kept as markup (before AnsiParse), so a
 // colour change shows. Queued commands (events.Input) are recorded, not run:
-// a "suicide" in the record means the round queued it.
+// a "suicide" in the record means the round queued it. The death fixtures
+// (runInputs, Phase 5 slice 3) also run them after recording, as the game
+// loop would, and a private copy of a room reads copy-of-<room>.
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -25,6 +29,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/exit"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -32,6 +37,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/stretchr/testify/require"
 )
@@ -39,6 +45,7 @@ import (
 const (
 	goldenRoomA     = 93001
 	goldenRoomB     = 93002
+	goldenRoomC     = 93003 // the death recovery room (recoveryRoom); no exit leads to it
 	goldenHiddenBuf = 93901
 )
 
@@ -58,6 +65,12 @@ type combatWorld struct {
 	// what the current round produced
 	reads  map[int][]string
 	events []string
+
+	// deaths turns on the death fixtures' extras (runInputs): the queued
+	// inputs are run, and state lines show gold, experience, worn items and
+	// the kill and death books.
+	deaths  bool
+	pending []events.Input
 
 	out strings.Builder
 }
@@ -104,12 +117,12 @@ func newCombatWorld(t *testing.T, seed int64) *combatWorld {
 	listeners = append(listeners,
 		events.RegisterListener(events.AggroChanged{}, func(e events.Event) events.ListenerReturn {
 			ev := e.(events.AggroChanged)
-			note(fmt.Sprintf("AggroChanged %s room=%d", w.name(ev.ActorId), ev.RoomId))
+			note(fmt.Sprintf("AggroChanged %s room=%s", w.name(ev.ActorId), roomName(ev.RoomId)))
 			return events.Continue
 		}),
 		events.RegisterListener(events.PlayerDrop{}, func(e events.Event) events.ListenerReturn {
 			ev := e.(events.PlayerDrop)
-			note(fmt.Sprintf("PlayerDrop %s room=%d", w.user(ev.UserId), ev.RoomId))
+			note(fmt.Sprintf("PlayerDrop %s room=%s", w.user(ev.UserId), roomName(ev.RoomId)))
 			return events.Continue
 		}),
 		events.RegisterListener(events.CharacterVitalsChanged{}, func(e events.Event) events.ListenerReturn {
@@ -137,10 +150,16 @@ func newCombatWorld(t *testing.T, seed int64) *combatWorld {
 			note(fmt.Sprintf("PlayerDeath %s", w.user(ev.UserId)))
 			return events.Continue
 		}),
+		events.RegisterListener(events.MobItemDrop{}, func(e events.Event) events.ListenerReturn {
+			ev := e.(events.MobItemDrop)
+			note(fmt.Sprintf("MobItemDrop mob=%d room=%s zone=%s item=%d", ev.MobId, roomName(ev.RoomId), ev.Zone, ev.ItemId))
+			return events.Continue
+		}),
 	)
 	t.Cleanup(func() {
 		zeros := []events.Event{events.AggroChanged{}, events.PlayerDrop{},
-			events.CharacterVitalsChanged{}, events.ItemOwnership{}, events.Buff{}, events.MobDeath{}, events.PlayerDeath{}}
+			events.CharacterVitalsChanged{}, events.ItemOwnership{}, events.Buff{}, events.MobDeath{}, events.PlayerDeath{},
+			events.MobItemDrop{}}
 		for i, z := range zeros {
 			events.UnregisterListener(z, listeners[i])
 		}
@@ -170,7 +189,9 @@ func (w *combatWorld) collect() {
 			w.events = append(w.events, e.text)
 			continue
 		}
-		text := strings.TrimSuffix(e.text, "\n")
+		// A world notice ends in CRLF (the player-death notice, suicide.go:88-90);
+		// the golden side drops its \r (compareGolden), so the record does too.
+		text := strings.TrimSuffix(strings.TrimSuffix(e.text, "\n"), "\r")
 		if n := strings.Count(text, "\n"); n > 0 {
 			// Combat lines are one line each; a multi-line text is a rendered
 			// screen (the look after a flee), recorded by its size only so the
@@ -294,7 +315,7 @@ func (w *combatWorld) damage(c *characters.Character) string {
 }
 
 func (w *combatWorld) state(c *characters.Character) string {
-	s := fmt.Sprintf("room=%d hp=%d/%d aggro=[%s] playerdamage=%s", c.RoomId, c.Health, c.HealthMax.Value, w.aggro(c), w.damage(c))
+	s := fmt.Sprintf("room=%s hp=%d/%d aggro=[%s] playerdamage=%s", roomName(c.RoomId), c.Health, c.HealthMax.Value, w.aggro(c), w.damage(c))
 	if !c.KilledBy.IsZero() {
 		s += fmt.Sprintf(" killedby=%s mob=%d elite=%t", w.name(c.KilledBy), c.KillerMobId, c.KillerMobIsElite)
 	}
@@ -310,6 +331,9 @@ func (w *combatWorld) state(c *characters.Character) string {
 			held = append(held, fmt.Sprint(it.ItemId))
 		}
 		s += " items=" + strings.Join(held, ",")
+	}
+	if w.deaths {
+		s += fmt.Sprintf(" gold=%d xp=%d worn=[%s] kd=%s", c.Gold, c.Experience, itemIds(c.GetAllWornItems()), kd(c.KD))
 	}
 	return s
 }
@@ -330,12 +354,23 @@ func (w *combatWorld) writeState() {
 		}
 	}
 	for _, rid := range []int{goldenRoomA, goldenRoomB} {
-		if r := rooms.LoadRoom(rid); r != nil && len(r.Items) > 0 {
+		r := rooms.LoadRoom(rid)
+		if r == nil {
+			continue
+		}
+		if len(r.Items) > 0 {
 			held := []string{}
 			for _, it := range r.Items {
 				held = append(held, fmt.Sprint(it.ItemId))
 			}
 			fmt.Fprintf(&w.out, "  room %d floor: %s\n", rid, strings.Join(held, ","))
+		}
+		if r.Gold > 0 {
+			fmt.Fprintf(&w.out, "  room %d floor gold: %d\n", rid, r.Gold)
+		}
+		for _, cp := range r.Corpses {
+			fmt.Fprintf(&w.out, "  room %d corpse %s: items=[%s] gold=%d worn=[%s]\n",
+				rid, cp.Character.Name, itemIds(cp.Items), cp.Gold, itemIds(cp.Character.GetAllWornItems()))
 		}
 	}
 }
@@ -344,6 +379,7 @@ func (w *combatWorld) writeState() {
 func (w *combatWorld) start() {
 	events.ProcessEvents()
 	w.rec.take()
+	w.pending = nil
 	fmt.Fprintf(&w.out, "== start\n")
 	w.writeState()
 }
@@ -370,27 +406,199 @@ func (w *combatWorld) rounds(max int) {
 		w.events = nil
 		DoCombat(events.NewRound{})
 		events.ProcessEvents()
+		w.drainInputs()
 		w.collect()
-
-		fmt.Fprintf(&w.out, "== round %d\n", i)
-		for _, u := range w.players {
-			fmt.Fprintf(&w.out, "-- %s reads\n", u.Character.Name)
-			for _, line := range w.reads[u.UserId] {
-				fmt.Fprintf(&w.out, "  %s\n", line)
-			}
-		}
-		fmt.Fprintf(&w.out, "-- events\n")
-		for _, e := range w.events {
-			fmt.Fprintf(&w.out, "  %s\n", e)
-		}
-		w.writeState()
+		w.record(fmt.Sprintf("round %d", i))
 	}
+}
+
+// record writes what the step just collected under "== <title>": each
+// player's reads, the events, then the state.
+func (w *combatWorld) record(title string) {
+	fmt.Fprintf(&w.out, "== %s\n", title)
+	for _, u := range w.players {
+		fmt.Fprintf(&w.out, "-- %s reads\n", u.Character.Name)
+		for _, line := range w.reads[u.UserId] {
+			fmt.Fprintf(&w.out, "  %s\n", line)
+		}
+	}
+	fmt.Fprintf(&w.out, "-- events\n")
+	for _, e := range w.events {
+		fmt.Fprintf(&w.out, "  %s\n", e)
+	}
+	w.writeState()
 }
 
 // check compares the record with the golden file, or writes it with -update.
 func (w *combatWorld) check(fixture string) {
 	w.t.Helper()
 	compareGolden(w.t, "combat-golden", fixture, w.out.String())
+}
+
+// roomName is a room ID for the record. A private copy (a death moves the
+// body into its own copy of the recovery room) reads copy-of-<room>: its ID
+// depends on which copies earlier tests made.
+func roomName(id int) string {
+	if rooms.IsEphemeralRoomId(id) {
+		return fmt.Sprintf("copy-of-%d", rooms.GetOriginalRoom(id))
+	}
+	return fmt.Sprint(id)
+}
+
+// itemIds lists the item IDs, comma separated.
+func itemIds(list []items.Item) string {
+	out := []string{}
+	for _, it := range list {
+		out = append(out, fmt.Sprint(it.ItemId))
+	}
+	return strings.Join(out, ",")
+}
+
+// kd is the kill and death books for the record: mob kills/mob deaths/PvP
+// kills/PvP deaths/elite kills/elite deaths, then whom the PvP kills and
+// deaths were against (userid:name=count, sorted).
+func kd(k characters.KDStats) string {
+	sum := func(m map[string]int) int {
+		n := 0
+		for _, v := range m {
+			n += v
+		}
+		return n
+	}
+	counts := func(m map[string]int) string {
+		keys := []string{}
+		for key := range m {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		out := []string{}
+		for _, key := range keys {
+			out = append(out, fmt.Sprintf("%s=%d", key, m[key]))
+		}
+		return strings.Join(out, ",")
+	}
+	return fmt.Sprintf("%d/%d/%d/%d/%d/%d pk=[%s] pd=[%s]", k.TotalKills, k.TotalDeaths, k.TotalPvpKills,
+		k.TotalPvpDeaths, sum(k.EliteKills), sum(k.EliteDeaths), counts(k.PlayerKills), counts(k.PlayerDeaths))
+}
+
+// freeCopies frees every private copy of roomId. Each copy a death makes
+// holds one of the 100 ephemeral chunks (rooms/ephemeral.go) until it is
+// freed, and a chunk is freed only when no player is in it, so the players
+// leave first; without this, repeated runs (-count=N) run out of chunks.
+func freeCopies(roomId int) {
+	for _, id := range rooms.FindEphemeralRoomIds(roomId) {
+		if r := rooms.LoadRoom(id); r != nil {
+			for _, userId := range r.GetPlayers() {
+				r.RemovePlayer(userId)
+			}
+		}
+		rooms.TryEphemeralCleanup(id)
+	}
+}
+
+// trinket is an item with its own spec, like weapon: a ring, a gem.
+func trinket(itemId int, name string, typ items.ItemType, subtype items.ItemSubType) items.Item {
+	spec := items.ItemSpec{ItemId: itemId, Name: name, NameSimple: name, Type: typ, Subtype: subtype}
+	return items.Item{ItemId: itemId, Id: ids.New(ids.NoCell), Spec: &spec}
+}
+
+// runInputs makes the record run what a step queues as input (events.Input)
+// as a command, after recording it, as the game loop would. The death
+// fixtures use it: until Phase 5 slice 3 a death is a queued "suicide". It
+// also turns on the state lines' gold, experience, worn items and books. Call it
+// before start.
+func (w *combatWorld) runInputs() {
+	w.t.Helper()
+	w.deaths = true
+	id := events.RegisterListener(events.Input{}, func(e events.Event) events.ListenerReturn {
+		w.pending = append(w.pending, e.(events.Input))
+		return events.Continue
+	})
+	w.t.Cleanup(func() { events.UnregisterListener(events.Input{}, id) })
+}
+
+// drainInputs runs the inputs runInputs collected, in order, each followed
+// by the events it queues (which may queue more). Without runInputs nothing
+// is collected and this does nothing.
+func (w *combatWorld) drainInputs() {
+	for len(w.pending) > 0 {
+		in := w.pending[0]
+		w.pending = w.pending[1:]
+		w.rec.note(fmt.Sprintf("Ran %s: %q", w.name(in.ActorId), in.InputText))
+		verb, rest, _ := strings.Cut(in.InputText, " ")
+		if _, err := usercommands.TryCommand(verb, rest, in.ActorId, in.Flags); err != nil {
+			w.rec.note(fmt.Sprintf("(error: %s)", bodyIdPattern.ReplaceAllString(err.Error(), "<id>")))
+		}
+		events.ProcessEvents()
+	}
+}
+
+// heal runs the regen pass (AutoHeal) as on rounds 3, 6, 9 and so on (the
+// old pass acts only on every third round), recording each as "== heal N",
+// until done reports true, at most max times. done is asked before each
+// pass, so a fixture whose death needs no pass records none.
+func (w *combatWorld) heal(max int, done func() bool) {
+	for i := 1; i <= max && !done(); i++ {
+		w.reads = map[int][]string{}
+		w.events = nil
+		AutoHeal(events.NewRound{RoundNumber: uint64(3 * i)})
+		events.ProcessEvents()
+		w.drainInputs()
+		w.collect()
+		w.record(fmt.Sprintf("heal %d", i))
+	}
+}
+
+// recoveryRoom makes room C the death recovery room for this fixture. A
+// death moves the body into a private copy made from the room's template
+// file, so the template is saved into a temporary data folder; the repo's
+// data folder is never written (a level up saves the account there too).
+// Every copy of the room a death made is freed afterwards (freeCopies).
+// Call it before start.
+func (w *combatWorld) recoveryRoom() {
+	w.t.Helper()
+	c := rooms.NewEmptyRoom()
+	c.RoomId, c.Zone, c.Title = goldenRoomC, "goldenzone", "Room C"
+	rooms.AddTestRoom(c)
+	w.t.Cleanup(func() { rooms.RemoveTestRoom(goldenRoomC) })
+	w.t.Cleanup(func() { freeCopies(goldenRoomC) })
+	tmp := w.t.TempDir()
+	setConfig(w.t,
+		map[string]any{"FilePaths.DataFiles": tmp, "SpecialRooms.DeathRecoveryRoom": goldenRoomC},
+		map[string]any{
+			"FilePaths.DataFiles":            configs.GetFilePathsConfig().DataFiles.String(),
+			"SpecialRooms.DeathRecoveryRoom": int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom),
+		})
+	require.Equal(w.t, goldenRoomC, int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom), "the override took")
+	require.NoError(w.t, os.MkdirAll(filepath.Join(tmp, "rooms", "goldenzone"), 0o755))
+	require.NoError(w.t, rooms.SaveRoomTemplate(*rooms.LoadRoom(goldenRoomC)))
+}
+
+// deathConfig sets today's death rules for one fixture with settings that
+// make each rule show (the test binary loads no config.yaml, so all are
+// zero otherwise): corpses on, drops on the floor beside them (CorpseItems
+// off, as shipped), half of a player's gear dropped by chance, a 10% XP
+// penalty, and levels up to 1 protected.
+func deathConfig(t *testing.T) {
+	t.Helper()
+	gp := configs.GetGamePlayConfig()
+	setConfig(t,
+		map[string]any{
+			"GamePlay.Death.CorpsesEnabled":      true,
+			"GamePlay.Death.CorpseItems":         false,
+			"GamePlay.Death.EquipmentDropChance": 0.5,
+			"GamePlay.Death.XPPenalty":           "10%",
+			"GamePlay.Death.ProtectionLevels":    1,
+		},
+		map[string]any{
+			"GamePlay.Death.CorpsesEnabled":      bool(gp.Death.CorpsesEnabled),
+			"GamePlay.Death.CorpseItems":         bool(gp.Death.CorpseItems),
+			"GamePlay.Death.EquipmentDropChance": float64(gp.Death.EquipmentDropChance),
+			"GamePlay.Death.XPPenalty":           string(gp.Death.XPPenalty),
+			"GamePlay.Death.ProtectionLevels":    int(gp.Death.ProtectionLevels),
+		})
+	require.True(t, bool(configs.GetGamePlayConfig().Death.CorpsesEnabled), "the override took")
+	require.Equal(t, "10%", string(configs.GetGamePlayConfig().Death.XPPenalty), "the override took")
 }
 
 // A player kills an NPC.
@@ -520,6 +728,92 @@ func TestCombatGoldenHiddenAttacker(t *testing.T) {
 	w.start()
 	w.rounds(6)
 	w.check("hidden_attacker")
+}
+
+// A player kills an elite NPC that carries an item and gold and wears two
+// (Phase 5 slice 3, recorded on the death before it moved): XP with the
+// elite bonus, alignment, the kill on the books, drops by the NPC's
+// ItemDropChance (MobItemDrop each), corpse, and the NPC's ending (it leaves
+// the room; its slot's ending is written to the endings ledger).
+func TestCombatGoldenDeathNPC(t *testing.T) {
+	w := newCombatWorld(t, 111)
+	w.recoveryRoom() // the temporary data folder: a level up saves the account
+	deathConfig(t)
+	w.runInputs()
+	dataFolder := configs.GetFilePathsConfig().DataFiles.String()
+	t.Cleanup(func() { // registered after recoveryRoom's cleanups, so it runs first, in the temporary folder
+		require.NoError(t, os.RemoveAll(filepath.Join(dataFolder, "rooms.instances")))
+		require.NoError(t, rooms.LoadEndings()) // no ledger file: the ledger in memory is empty again
+	})
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 5, 30, 20, 10)
+	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
+	alice.Character.Alignment = 19 // neutral; killing the evil rat shifts her to lawful
+	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "golden-rats-death")
+	rat.ItemDropChance = 50
+	rat.IsElite = true // the elite XP bonus and the elite kill
+	rat.SpawnSlot = 1  // a slot NPC: rooms.NPCEnded writes its ending to the ledger
+	rat.Character.Alignment = -100
+	rat.Character.Equipment.Weapon = weapon(93106, "testclub", items.Bludgeoning, 1, 4, 0)
+	rat.Character.Equipment.Ring = trinket(93107, "testring", items.Ring, items.Wearable)
+	rat.Character.Items = []items.Item{trinket(93108, "testgem", items.Gemstone, items.Mundane)}
+	rat.Character.Gold = 30
+	alice.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+	w.start()
+	w.rounds(20)
+	w.check("death_npc")
+	require.Nil(t, mobs.GetInstance(rat.Character.Id), "the fixture must reach the rat's death")
+	require.NotContains(t, rooms.LoadRoom(goldenRoomA).GetMobs(), rat.Character.Id, "the rat left the room")
+	ledger, err := os.ReadFile(filepath.Join(dataFolder, "rooms.instances", "npcs.endings.yaml"))
+	require.NoError(t, err, "the rat's ending was recorded (rooms.NPCEnded)")
+	require.Contains(t, string(ledger), rat.Character.Id.String())
+}
+
+// An elite NPC kills a player above the protection band (Phase 5 slice 3,
+// recorded on the death before it moved). Today she goes down, bleeds out
+// over the regen passes, and her death drops gear by chance, costs XP,
+// books an elite death and leaves a corpse; she wakes in the recovery room.
+func TestCombatGoldenDeathPlayer(t *testing.T) {
+	w := newCombatWorld(t, 303)
+	w.recoveryRoom()
+	deathConfig(t)
+	w.runInputs()
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
+	alice.Character.Level, alice.Character.Experience = 2, 1000 // above ProtectionLevels 1
+	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
+	alice.Character.Equipment.Ring = trinket(93107, "testring", items.Ring, items.Wearable)
+	alice.Character.Items = []items.Item{trinket(93108, "testgem", items.Gemstone, items.Mundane)}
+	guard := w.addNPC(93202, "guard", 1, goldenRoomA, 30, 30, 20, 10)
+	guard.IsElite = true // her death is booked as an elite death
+	guard.Character.SetAggro(alice.Character.Id, characters.DefaultAttack)
+	w.start()
+	w.rounds(20)
+	dead := func() bool { return rooms.IsEphemeralRoomId(alice.Character.RoomId) }
+	w.heal(20, dead)
+	w.check("death_player")
+	require.True(t, dead(), "the fixture must reach Alice's death")
+}
+
+// A player kills a player (Phase 5 slice 3, recorded on the death before it
+// moved): the kill credit and "killed by" notice, drops by chance, XP
+// penalty, corpse, recovery room.
+func TestCombatGoldenDeathPvP(t *testing.T) {
+	w := newCombatWorld(t, 202)
+	w.recoveryRoom()
+	deathConfig(t)
+	w.runInputs()
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
+	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
+	bob := w.addPlayer(9302, "Bob", goldenRoomA, 10, 10, 10, 15)
+	bob.Character.Level, bob.Character.Experience = 2, 1000 // above ProtectionLevels 1
+	bob.Character.Equipment.Ring = trinket(93107, "testring", items.Ring, items.Wearable)
+	bob.Character.Items = []items.Item{trinket(93108, "testgem", items.Gemstone, items.Mundane)}
+	alice.Character.SetAggro(bob.Character.Id, characters.DefaultAttack)
+	w.start()
+	w.rounds(20)
+	dead := func() bool { return rooms.IsEphemeralRoomId(bob.Character.RoomId) }
+	w.heal(20, dead)
+	w.check("death_pvp")
+	require.True(t, dead(), "the fixture must reach Bob's death")
 }
 
 // A bow that waits a round, shot through an exit: the shooter's wait line
