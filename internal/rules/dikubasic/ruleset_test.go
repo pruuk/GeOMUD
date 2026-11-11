@@ -1,6 +1,7 @@
 package dikubasic
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -231,7 +233,7 @@ func TestConditionIsDeadAtZeroOrBelow(t *testing.T) {
 }
 
 // Parity with the old AutoHeal (NewRound_AutoHeal.go before slice 3).
-func TestRegenIsTheOldAutoHeal(t *testing.T) {
+func TestRegenOutsideTheRecoveryRoomIsTheOldAutoHeal(t *testing.T) {
 	const here, recovery = 94005, 94006
 	setConfig(t,
 		map[string]any{"SpecialRooms.DeathRecoveryRoom": recovery},
@@ -251,14 +253,108 @@ func TestRegenIsTheOldAutoHeal(t *testing.T) {
 	assert.Equal(t, none, New().Regen(a, 3), "never in a fight")
 	a.Character.Aggro = nil
 
-	a.Character.RoomId = recovery
-	assert.Equal(t, none, New().Regen(a, 3), "not in the recovery room")
-	a.Character.RoomId = here
-
 	a.Character.Health = 0
 	assert.Equal(t, none, New().Regen(a, 3), "never while down")
 
 	n := npc(t, 0, 0)
 	n.Character.RoomId, n.Character.Health = here, 5
 	assert.Equal(t, none, New().Regen(n, 3), "accounts only")
+}
+
+// reseed puts the shared random source back on a clock seed after a test.
+func reseed(t *testing.T) {
+	t.Cleanup(func() { util.SeedRandForTest(time.Now().UnixNano()) })
+}
+
+// The recovery room (and each private copy of it) heals 1d10 health and
+// 1d10 mana every round, health first, drawn from the shared source.
+func TestRegenInTheRecoveryRoomRollsD10HealthAndMana(t *testing.T) {
+	const recovery = 94007
+	testRoom(t, recovery, "regenzone")
+	copyId := recoveryCopy(t, recovery, "regenzone")
+	a := player(t, 9622)
+	a.Character.HealthMax.Value, a.Character.ManaMax.Value = 100, 100
+	reseed(t)
+	for _, roomId := range []int{recovery, copyId} {
+		a.Character.RoomId = roomId
+		for seed := int64(1); seed <= 200; seed++ {
+			a.Character.Health, a.Character.Mana = 1, 0
+			util.SeedRandForTest(seed)
+			h := util.Rand(10) + 1
+			m := util.Rand(10) + 1
+			next := util.Rand(1000)
+
+			util.SeedRandForTest(seed)
+			got := New().Regen(a, uint64(seed)) // every round, not only every 3rd
+			require.Equal(t, h, got.Health, "room %d seed %d", roomId, seed)
+			require.Equal(t, m, got.Mana, "room %d seed %d", roomId, seed)
+			require.Equal(t, next, util.Rand(1000), "room %d seed %d: two draws", roomId, seed)
+			require.Equal(t, 1, a.Character.Health, "the ruleset changes no health")
+
+			// At full health and mana nothing heals, and the two dice are
+			// still drawn, as upstream's buff drew them (Q7h).
+			a.Character.Health, a.Character.Mana = 100, 100
+			util.SeedRandForTest(seed)
+			require.Equal(t, rules.RegenResult{}, New().Regen(a, uint64(seed)), "room %d seed %d: full", roomId, seed)
+			require.Equal(t, next, util.Rand(1000), "room %d seed %d: full, still two draws", roomId, seed)
+		}
+	}
+
+	// Any actor there heals, an NPC too (Q7h; outside it, accounts only).
+	n := npc(t, 0, 0)
+	n.Character.RoomId = copyId
+	n.Character.HealthMax.Value, n.Character.ManaMax.Value = 100, 100
+	n.Character.Health, n.Character.Mana = 1, 0
+	util.SeedRandForTest(1)
+	require.True(t, New().Regen(n, 1).Changes(), "an NPC in the recovery room heals")
+}
+
+// The amounts are what Heal will apply (capped at the maximums), and the
+// lines are upstream's buff's: one for the actor, one for the room.
+func TestRegenInTheRecoveryRoomSaysWhatItHealed(t *testing.T) {
+	const recovery = 94008
+	testRoom(t, recovery, "regenzone")
+	recoveryCopy(t, recovery, "regenzone")
+	a := player(t, 9623)
+	a.Character.RoomId = recovery
+	a.Character.HealthMax.Value, a.Character.ManaMax.Value = 100, 100
+	reseed(t)
+	util.SeedRandForTest(1)
+
+	a.Character.Health, a.Character.Mana = 1, 0
+	got := New().Regen(a, 1)
+	require.Len(t, got.Messages, 2)
+	assert.Equal(t, perception.Interface, got.Messages[0].Kind)
+	assert.Equal(t, perception.ActorOnly, got.Messages[0].Audience)
+	assert.Equal(t, a.Id, got.Messages[0].Actor)
+	assert.Equal(t, fmt.Sprintf(`The shadow realm heals you for <ansi fg="healing">%d damage</ansi> and restores <ansi fg="mana-100">%d mana</ansi>!`, got.Health, got.Mana), got.Messages[0].ActorText)
+	assert.Equal(t, perception.WorldEvent, got.Messages[1].Kind)
+	assert.Equal(t, a.Id, got.Messages[1].Actor)
+	assert.Equal(t, perception.Sight, got.Messages[1].Senses, "the room sees it")
+	assert.Equal(t, perception.Room, got.Messages[1].Range, "the room, not further")
+	assert.Equal(t, `{actor} is recovering from a recent death.`, got.Messages[1].ObserverText)
+
+	// Capped at the maximums: one point short heals exactly one point, and
+	// says so, whatever the dice (over 20 seeds, most of the d10s roll above 1).
+	for seed := int64(1); seed <= 20; seed++ {
+		util.SeedRandForTest(seed)
+		a.Character.Health, a.Character.Mana = 99, 100
+		got = New().Regen(a, 2)
+		require.Equal(t, 1, got.Health, "seed %d: capped at the health maximum", seed)
+		require.Zero(t, got.Mana, "seed %d: mana is full", seed)
+		require.NotEmpty(t, got.Messages)
+		require.Equal(t, `The shadow realm heals you for <ansi fg="healing">1 damage</ansi>!`, got.Messages[0].ActorText)
+
+		util.SeedRandForTest(seed)
+		a.Character.Health, a.Character.Mana = 100, 99
+		got = New().Regen(a, 3)
+		require.Zero(t, got.Health, "seed %d: health is full", seed)
+		require.Equal(t, 1, got.Mana, "seed %d: capped at the mana maximum", seed)
+		require.NotEmpty(t, got.Messages)
+		require.Equal(t, `The shadow realm restores <ansi fg="mana-100">1 mana</ansi>!`, got.Messages[0].ActorText)
+	}
+
+	a.Character.Health, a.Character.Mana = 100, 100
+	got = New().Regen(a, 4)
+	assert.Equal(t, rules.RegenResult{}, got, "nothing to heal: no lines")
 }

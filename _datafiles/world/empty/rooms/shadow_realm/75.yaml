@@ -15,8 +15,6 @@ description: You find yourself in the heart of the Shadow Realm, a place suspend
 exits:
   portal:
     roomid: 1
-mutators:
-- mutatorid: death-recovery
 mapx: 0
 mapy: 0
 mapz: 0
