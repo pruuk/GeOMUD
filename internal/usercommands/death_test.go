@@ -186,6 +186,36 @@ func TestLookAtACorpseShowsWhatItHolds(t *testing.T) {
 	assert.Contains(t, strings.Join(told, ""), "testpebble", "the panel lists the corpse's item")
 }
 
+// A floor item named by the whole phrase wins over a corpse its last word
+// names (whole-branch review M1): "get iron key" beside a Keymaster corpse
+// picks up the floor's iron key, with or without a living Keymaster in the
+// room. A phrase no floor item answers to still reaches the corpse.
+func TestGetFloorItemWhoseLastWordNamesACorpse(t *testing.T) {
+	for _, living := range []bool{false, true} {
+		t.Run(map[bool]string{false: "no living keymaster", true: "living keymaster"}[living], func(t *testing.T) {
+			npc, player, room := goSetup(t)
+			if living {
+				npc.Character.Name = "Keymaster"
+			}
+			room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "Keymaster"}, RoundCreated: 5,
+				Items: []items.Item{testItem(92733, "testgem", items.ItemSpec{Type: items.Gemstone})}})
+			room.AddItem(testItem(92734, "iron key", items.ItemSpec{Type: items.Object}), false)
+
+			_, err := Get("iron key", player, room, 0)
+			require.NoError(t, err)
+			assert.Equal(t, []int{92734}, itemIdsOf(player.Character.Items), "the floor's iron key")
+			assert.Empty(t, room.Items, "the floor is empty")
+			assert.Equal(t, []int{92733}, itemIdsOf(room.Corpses[0].Items), "the corpse is untouched")
+
+			if !living {
+				_, err = Get("testgem keymaster", player, room, 0)
+				require.NoError(t, err)
+				assert.Equal(t, []int{92734, 92733}, itemIdsOf(player.Character.Items), "the corpse's item")
+			}
+		})
+	}
+}
+
 // One numbering per name through get (Task 5b): goSetup's live NPC "Rat"
 // is 1, so "get all rat" is refused rather than skipped ahead; 2 is the
 // newest rat corpse and 3 the older, in both ordinal forms.

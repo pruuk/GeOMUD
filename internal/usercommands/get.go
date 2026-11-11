@@ -89,8 +89,11 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			}
 		}
 
-		// Look for a corpse as the source
-		if containerName == `` {
+		// Look for a corpse as the source, unless the whole phrase names an
+		// item on the floor: "get iron key" beside a Keymaster corpse picks
+		// up the key (whole-branch review M1).
+		_, onFloor := room.FindOnFloor(rest, getFromStash)
+		if containerName == `` && !onFloor {
 			c, refusal := room.FindCorpseByRef(actor.Character, args[len(args)-1])
 			if refusal != `` {
 				// The ordinal names someone living, not a corpse (one
