@@ -388,6 +388,40 @@ changes the design above except Q1's outcome shape. Details, with line numbers, 
 - **Help and docs** promise `get all <corpse>` only once the fix above lands; the help pages ride
   in the docs commit after it.
 
+**Plan review round 2 (2026-11-10): open; not yet applied to the plan.** The round ran Tasks 1-9 on
+a scratch copy: every task builds, 40 ok plus the 3 known failures, Task 6 changed exactly the nine
+predicted goldens, and draw order held. Open items:
+
+- **Blocker, controller decision (bug fix):** `look <corpse>` shows an empty box.
+  `buildCorpseInventoryPanel` (`look.panels.go:112-121`) falls back to a panel named `inv` but writes
+  every row to `equip`, so the rows are dropped. Unreachable while `CorpseItems` was false; fix the
+  fallback to create `equip` (as `buildEquipmentPanel` does at `:58-59`) in commit 6.
+- **For Calabe: `bury` on a full corpse.** `modules/cleanup/cleanup.go:141-160` removes a corpse with
+  no check on its contents, and anyone may bury anyone's corpse. Once a player's corpse holds their
+  carried items and gold, a stranger can destroy them in one command (reads golden H already buries a
+  rat corpse holding 25 gold). Options: refuse to bury a corpse that holds anything; spill the
+  contents to the floor first; only the owner may bury a player's corpse.
+- **For Calabe: two corpses with the same name.** `FindCorpseByRef` (`rooms.go:945-990`) lists each
+  name once and the first corpse wins, so ordinals (`2.rat`) do not work and a bare name takes the
+  first prefix match. Two rats killed in one room: the second rat's loot is unreachable until the
+  first corpse crumbles; a player who dies twice in one room cannot reach the newer corpse. Options:
+  fix the lookup (every corpse listed, ordinals, an exact "`<word>` corpse" match first), or accept
+  and document it.
+- **Major (plan):** two "prints ok" steps run `-count=16` over packages with the known
+  `TestCombatGoldenFleeSuccess` repeat flake; scope them to the death tests or skip that test.
+- **Minors (plan):** `remove.go` probes that do not compile; Task 6 Step 8's grep runs before the
+  steps that clear its hits, and its control count is 129 lines in 19 files; Task 5's grep list misses
+  its own new comment; mutations that survive (respawn ignoring `RespawnHealth`, ignoring
+  `Respawn: false` for NPCs, the drop gold clamp, the "item not held" guard, `PlayerDeath` killer
+  fields, the death event-log line, `CleanupMobSpawns`, NPC regen in the recovery room, container
+  precedence in `namesACorpse`, the recovery line's `Range`/`Senses`); the death guard's scope
+  prefixes need a per-prefix reach check; two fixture comments need new text; `RegenResult.Changes()`
+  and the `IsDisabled` ban belong in "Decisions taken without asking"; `suicide` staying
+  `AllowedWhenDowned` next to "refused in a fight" needs one sentence.
+
+Next session: Calabe answers the two questions, the plan takes these fixes, and a fresh blind round 3
+runs.
+
 **Facts corrected while planning:** help pages are under `_datafiles/world/empty/templates/help/`;
 more health checks exist than the table lists (`NewRound_AutoHeal.go:68`, `remove.go:51`, and in
 `characters` `:464`, `:1204` and the remove-lock checks); `save_and_load.go:437` is another raw
