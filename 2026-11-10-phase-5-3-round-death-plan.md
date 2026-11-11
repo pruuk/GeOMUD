@@ -4248,6 +4248,54 @@ func TestBuryRefusesAPlayersCorpseThatHoldsAnything(t *testing.T) {
   drop `|| corpse.Gold > 0` (the Ann assert fails); drop `corpse.UserId > 0 &&` (the rat assert
   fails). (Code and test were run on the scratch worktree: both pass.)
 
+- [ ] **Step 4b: Back-to-back burials (Calabe, plan approval 2026-11-11).** Commands and the round
+  tick run one at a time on `MainWorker` under `util.LockMud()` (`world.go:316-380`), so two `bury`
+  commands never interleave: the second resolves its name afresh against what is left. Append to
+  `internal/hooks/reads_corpse_test.go`:
+
+```go
+// Two players bury in turn: the second bury resolves its name against what
+// is left, so it takes the next match or reads the not-found line. A corpse
+// that has crumbled (Prunable) is never found. Commands and the round tick
+// run one at a time (MainWorker, util.LockMud), so this order is the only one.
+func TestBuryAfterTheCorpseIsGone(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	_, _, _, rat := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+	room.RemoveMob(rat.Character.Id) // no live rat: "rat" is a corpse
+	room.AddCorpse(rooms.Corpse{UserId: 9399, Character: characters.Character{Name: "Yan"}})
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 3})
+	room.AddCorpse(rooms.Corpse{MobId: 8, Character: characters.Character{Name: "rat"}, RoundCreated: 5})
+	room.AddCorpse(rooms.Corpse{UserId: 9398, Character: characters.Character{Name: "Xan"}, Prunable: true})
+
+	w.run("Ann", "bury yan")
+	w.run("Bob", "bury yan") // already gone
+	w.run("Ann", "bury rat") // the newest rat (round 5)
+	w.run("Bob", "bury rat") // the other rat (round 3)
+	w.run("Ann", "bury rat") // none left
+	w.run("Bob", "bury xan") // crumbled, never a candidate
+
+	out := w.out.String()
+	require.Contains(t, out, `Ann: You bury the <ansi fg="user-corpse">Yan corpse</ansi>.`)
+	require.Contains(t, out, `Bob: You don't see a yan around for burying.`, "the second bury finds it gone")
+	require.Contains(t, out, `Ann: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.`)
+	require.Contains(t, out, `Bob: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.`, "the next rat, resolved afresh")
+	require.Contains(t, out, `Ann: You don't see a rat around for burying.`, "no rat left")
+	require.Contains(t, out, `Bob: You don't see a xan around for burying.`, "a crumbled corpse is not found")
+	left := []string{}
+	for _, c := range room.Corpses {
+		left = append(left, c.Character.Name)
+	}
+	require.Equal(t, []string{"Xan"}, left, "only the crumbled corpse remains, for UpdateCorpses to remove")
+}
+```
+
+  Run `go test ./internal/hooks -run 'BuryAfterTheCorpseIsGone|BuryRefuses' -count=1`: both pass
+  (no code change; this pins existing behaviour). Probes, one at a time (paste each failure line,
+  restore): in `bury`, skip `RemoveCorpseRef` (the "already gone" assert fails); in
+  `FindCorpseByRef`, drop the `Prunable` skip (the crumbled assert fails). If a not-found line's
+  wording differs from `cleanup.go`'s `You don't see a %s around for burying.`, stop and report.
+
 - [ ] **Step 5:** Per-task check. **Goldens: none change**: reads golden H buries an NPC corpse, which
   still buries (after Task 6 it holds the rat's 25 gold and still buries). If one changes, stop and
   report. Commit both files:

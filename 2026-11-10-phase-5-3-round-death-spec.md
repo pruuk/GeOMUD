@@ -792,6 +792,12 @@ and the tests earlier rounds could not run (recovery line in its `Regen` form, r
 needed `_ =` lines to compile; Task 5's cap probes fail first at the d10 test's full-health assert.
 One unrecorded choice added to the decisions table (`perceivesBody`). Review stops here: six rounds.
 
+**Calabe at plan review (2026-11-11):** asked about two burials of one corpse and burying a corpse
+that just rotted. Commands and the round tick run one at a time (`MainWorker` under
+`util.LockMud()`, `world.go:316-380`), so the second command resolves its name afresh, and a crumbled
+corpse is never a candidate. Task 5c Step 4b pins this with a test (added after round 6, not
+reviewed blind). **Plan approved by Calabe 2026-11-11** with that test added.
+
 **Facts corrected while planning:** help pages are under `_datafiles/world/empty/templates/help/`;
 more health checks exist than the table lists (`NewRound_AutoHeal.go:68`, `remove.go:51`, and in
 `characters` `:464`, `:1204` and the remove-lock checks); `save_and_load.go:437` is another raw
