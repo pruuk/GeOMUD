@@ -184,8 +184,9 @@ var (
 		`show`:        {Show, true, false},
 		`spawn`:       {Spawn, false, true}, // Admin only
 
-		// Death by one's own hand (death.Die). Allowed when downed, so a downed actor
-		// can end it under a ruleset with a downed state.
+		// Death by one's own hand (death.Die). Allowed when downed, so under a
+		// ruleset with a downed state a downed actor can end it, though only once
+		// nobody is fighting it: Suicide refuses in a fight first.
 		`suicide`:  {Suicide, true, false},
 		`syslogs`:  {SysLogs, true, true},  // Admin only
 		`teleport`: {Teleport, true, true}, // Admin only
