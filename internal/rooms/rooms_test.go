@@ -194,22 +194,22 @@ func TestRoom_FindCorpse(t *testing.T) {
 	r.AddCorpse(mobCorpse)
 
 	// Exact search
-	found, ok := r.FindCorpse("PlayerOne corpse")
+	found, ok := r.FindCorpse(nil, "PlayerOne corpse")
 	assert.True(t, ok, "Expected to find player corpse by exact name")
 	assert.Equal(t, "PlayerOne", found.Character.Name, "Expected found corpse to match the correct character")
 
 	// Searching for mob
-	found, ok = r.FindCorpse("MobOne corpse")
+	found, ok = r.FindCorpse(nil, "MobOne corpse")
 	assert.True(t, ok, "Expected to find mob corpse by exact name")
 	assert.Equal(t, "MobOne", found.Character.Name, "Expected found corpse to match the correct character")
 
 	// Searching partial name (depends on your util.FindMatchIn logic)
-	found, ok = r.FindCorpse("player")
+	found, ok = r.FindCorpse(nil, "player")
 	assert.True(t, ok, "Expected to find a close match for player corpse")
 	assert.Equal(t, "PlayerOne", found.Character.Name, "Expected found corpse to be the player's")
 
 	// Non-existent
-	found, ok = r.FindCorpse("NonExistent")
+	found, ok = r.FindCorpse(nil, "NonExistent")
 	assert.False(t, ok, "Expected not to find a missing corpse")
 }
 

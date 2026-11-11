@@ -216,3 +216,109 @@ func TestEachPresenceLineReachesOnlyThoseWhoPerceive(t *testing.T) {
 		})
 	}
 }
+
+// ratCorpses puts two rat corpses in room A: the older (round 5) holds 1
+// gold, the newer (round 7) 2.
+func ratCorpses(room *rooms.Room) {
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 5, Gold: 1})
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 7, Gold: 2})
+}
+
+// One numbering per name, the living first (Calabe, 2026-11-11). Room A
+// holds the live rat, a live player Ratty and two rat corpses. Players and
+// NPCs are numbered apart (FindByName) and a command takes the player when
+// both match, so 1 reaches the living (Ratty, then the rat) and the corpses
+// start at 2: 2 is the newest, 3 the older. A player's name takes no "The".
+// The person typing is not in their own name's count: Ann's "ann" is her
+// newest corpse; Bob's "ann" is Ann.
+func TestCorpseNumbersCountPastTheLiving(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, bob, _, _ := w.trio()
+	w.addPlayer("Ratty", readsRoomA)
+	room := rooms.LoadRoom(readsRoomA)
+	ratCorpses(room)
+	room.AddCorpse(rooms.Corpse{UserId: ann.UserId, Character: characters.Character{Name: "Ann"}, RoundCreated: 6, Gold: 3})
+
+	c, refusal := room.FindCorpseByRef(ann.Character, "rat")
+	assert.Nil(t, c)
+	assert.Equal(t, "Ratty is still alive.", refusal, "1 is the living; the player when a player and an NPC both match")
+	for search, gold := range map[string]int{"2.rat": 2, "rat#2": 2, "3.rat": 1, "rat corpse": 2, "ann": 3} {
+		c, refusal := room.FindCorpseByRef(ann.Character, search)
+		require.NotNil(t, c, search)
+		assert.Empty(t, refusal, search)
+		assert.Equal(t, gold, c.Gold, search)
+	}
+	c, refusal = room.FindCorpseByRef(ann.Character, "4.rat")
+	assert.Nil(t, c, "two rat corpses only")
+	assert.Empty(t, refusal)
+
+	c, refusal = room.FindCorpseByRef(bob.Character, "ann")
+	assert.Nil(t, c)
+	assert.Equal(t, "Ann is still alive.", refusal, "to Bob, Ann is alive and first")
+	c, _ = room.FindCorpseByRef(bob.Character, "2.ann")
+	require.NotNil(t, c)
+	assert.Equal(t, 3, c.Gold)
+
+	c, refusal = room.FindCorpseByRef(ann.Character, "bob")
+	assert.Nil(t, c, "no corpse answers to bob: nothing, not a refusal")
+	assert.Empty(t, refusal)
+}
+
+// A hidden body takes no ordinal in a corpse lookup either, and nothing
+// says it is there; a viewer with see-hidden counts it.
+func TestHiddenBodiesTakeNoCorpseOrdinal(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, _, _, rat := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+	ratCorpses(room)
+	w.hide(&rat.Character)
+
+	c, refusal := room.FindCorpseByRef(ann.Character, "rat")
+	require.NotNil(t, c, "the hidden rat takes no ordinal: 1 is the newest corpse")
+	assert.Empty(t, refusal, "and nothing says it is there")
+	assert.Equal(t, 2, c.Gold)
+
+	w.flag(ann.Character, readsSeeHiddenBuf, "see-hidden")
+	c, refusal = room.FindCorpseByRef(ann.Character, "rat")
+	assert.Nil(t, c)
+	assert.Equal(t, "The rat is still alive.", refusal)
+}
+
+// bury numbers as the lookup does: an ordinal on the living is refused, not
+// skipped; "2.rat" buries the newest rat corpse, here the later of two from
+// the same round (which RemoveCorpse, matching owner, name and round, would
+// mistake for the first).
+func TestBuryBuriesTheCorpseItNames(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	w.trio() // the rat is alive in room A
+	room := rooms.LoadRoom(readsRoomA)
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 5, Gold: 1})
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 5, Gold: 2})
+
+	w.run("Ann", "bury rat")
+	require.Len(t, room.Corpses, 2, "the live rat is not a corpse")
+	w.run("Ann", "bury 2.rat")
+
+	require.Len(t, room.Corpses, 1)
+	require.Equal(t, 1, room.Corpses[0].Gold, "the newest rat corpse was buried, the older stays")
+	out := w.out.String()
+	require.Contains(t, out, `Ann: The rat is still alive.`)
+	require.Contains(t, out, `Ann: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.`)
+}
+
+// Bob looking at "bob" sees his newest corpse when one is here (the person
+// typing is not in their own name's count for a corpse); with none, he looks
+// at himself, as before.
+func TestLookAtYourOwnNameFindsYourCorpse(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	_, bob, _, _ := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+
+	w.run("Bob", "look bob")
+	before := w.out.String()
+	require.NotContains(t, before, "Bob: You look at the", "no corpse yet: Bob looks at himself")
+
+	room.AddCorpse(rooms.Corpse{UserId: bob.UserId, Character: characters.Character{Name: "Bob"}, RoundCreated: 5})
+	w.run("Bob", "look bob")
+	require.Contains(t, w.out.String()[len(before):], `Bob: You look at the <ansi fg="user-corpse">Bob corpse</ansi>.`)
+}

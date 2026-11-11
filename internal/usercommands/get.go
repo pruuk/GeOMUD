@@ -89,7 +89,14 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 
 		// Look for a corpse as the source when CorpseItems is enabled
 		if containerName == `` && configs.GetGamePlayConfig().Death.CorpseItems {
-			if c, ok := room.FindCorpseByRef(args[len(args)-1]); ok {
+			c, refusal := room.FindCorpseByRef(actor.Character, args[len(args)-1])
+			if refusal != `` {
+				// The ordinal names someone living, not a corpse (one
+				// numbering, the living first): refuse, do not skip ahead.
+				Tell(actor, refusal)
+				return true, nil
+			}
+			if c != nil {
 				corpseRef = c
 				if len(args) >= 2 && args[len(args)-2] == "from" {
 					rest = strings.Join(args[0:len(args)-2], " ")
@@ -419,7 +426,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 
 	}
 
-	if _, corpseFound := room.FindCorpse(rest); corpseFound {
+	if _, corpseFound := room.FindCorpse(actor.Character, rest); corpseFound {
 		Tell(actor, `You can't pick up corpses. What would people think?`)
 		return true, nil
 	}
