@@ -8,6 +8,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/stretchr/testify/assert"
@@ -321,4 +322,70 @@ func TestLookAtYourOwnNameFindsYourCorpse(t *testing.T) {
 	room.AddCorpse(rooms.Corpse{UserId: bob.UserId, Character: characters.Character{Name: "Bob"}, RoundCreated: 5})
 	w.run("Bob", "look bob")
 	require.Contains(t, w.out.String()[len(before):], `Bob: You look at the <ansi fg="user-corpse">Bob corpse</ansi>.`)
+}
+
+// bury refuses a player's corpse that holds any item or gold, whoever asks,
+// its owner too: no single command destroys a player's belongings (Calabe,
+// 2026-11-11). An empty player corpse, and an NPC corpse with its loot,
+// bury as before.
+func TestBuryRefusesAPlayersCorpseThatHoldsAnything(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	ann, _, _, rat := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+	room.RemoveMob(rat.Character.Id) // no live rat: "rat" is the corpse
+	room.AddCorpse(rooms.Corpse{UserId: ann.UserId, Character: characters.Character{Name: "Ann"}, Gold: 5})
+	room.AddCorpse(rooms.Corpse{UserId: 9398, Character: characters.Character{Name: "Zed"}, Items: []items.Item{items.New(1)}})
+	room.AddCorpse(rooms.Corpse{UserId: 9399, Character: characters.Character{Name: "Yan"}})
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, Gold: 25})
+
+	w.run("Ann", "bury ann") // her own name reaches her corpse (Task 5b)
+	w.run("Ann", "bury zed")
+	w.run("Ann", "bury yan")
+	w.run("Ann", "bury rat")
+
+	out := w.out.String()
+	require.Contains(t, out, `Ann: You can't bury the <ansi fg="user-corpse">Ann corpse</ansi> while it still holds something.`, "her own, holding gold")
+	require.Contains(t, out, `Ann: You can't bury the <ansi fg="user-corpse">Zed corpse</ansi> while it still holds something.`, "another's, holding an item")
+	require.Contains(t, out, `Ann: You bury the <ansi fg="user-corpse">Yan corpse</ansi>.`, "an empty player corpse")
+	require.Contains(t, out, `Ann: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.`, "an NPC corpse, loot and all")
+	left := []string{}
+	for _, c := range room.Corpses {
+		left = append(left, c.Character.Name)
+	}
+	require.Equal(t, []string{"Ann", "Zed"}, left, "the two holding something are still there")
+}
+
+// Two players bury in turn: the second bury resolves its name against what
+// is left, so it takes the next match or reads the not-found line. A corpse
+// that has crumbled (Prunable) is never found. Commands and the round tick
+// run one at a time (MainWorker, util.LockMud), so this order is the only one.
+func TestBuryAfterTheCorpseIsGone(t *testing.T) {
+	w := newReadsWorld(t, 1)
+	_, _, _, rat := w.trio()
+	room := rooms.LoadRoom(readsRoomA)
+	room.RemoveMob(rat.Character.Id) // no live rat: "rat" is a corpse
+	room.AddCorpse(rooms.Corpse{UserId: 9399, Character: characters.Character{Name: "Yan"}})
+	room.AddCorpse(rooms.Corpse{MobId: 7, Character: characters.Character{Name: "rat"}, RoundCreated: 3})
+	room.AddCorpse(rooms.Corpse{MobId: 8, Character: characters.Character{Name: "rat"}, RoundCreated: 5})
+	room.AddCorpse(rooms.Corpse{UserId: 9398, Character: characters.Character{Name: "Xan"}, Prunable: true})
+
+	w.run("Ann", "bury yan")
+	w.run("Bob", "bury yan") // already gone
+	w.run("Ann", "bury rat") // the newest rat (round 5)
+	w.run("Bob", "bury rat") // the other rat (round 3)
+	w.run("Ann", "bury rat") // none left
+	w.run("Bob", "bury xan") // crumbled, never a candidate
+
+	out := w.out.String()
+	require.Contains(t, out, `Ann: You bury the <ansi fg="user-corpse">Yan corpse</ansi>.`)
+	require.Contains(t, out, `Bob: You don't see a yan around for burying.`, "the second bury finds it gone")
+	require.Contains(t, out, `Ann: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.`)
+	require.Contains(t, out, `Bob: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.`, "the next rat, resolved afresh")
+	require.Contains(t, out, `Ann: You don't see a rat around for burying.`, "no rat left")
+	require.Contains(t, out, `Bob: You don't see a xan around for burying.`, "a crumbled corpse is not found")
+	left := []string{}
+	for _, c := range room.Corpses {
+		left = append(left, c.Character.Name)
+	}
+	require.Equal(t, []string{"Xan"}, left, "only the crumbled corpse remains, for UpdateCorpses to remove")
 }

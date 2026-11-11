@@ -152,6 +152,15 @@ func (c *CleanupModule) buryCommand(rest string, actor *actors.Actor, room *room
 		// it is read first.
 		corpse := *found
 
+		// No single command destroys a player's belongings (Calabe,
+		// 2026-11-11): a player's corpse that holds any item or gold is not
+		// buried, whoever asks, its owner too. An NPC corpse's loot goes
+		// with it.
+		if corpse.UserId > 0 && (len(corpse.Items) > 0 || corpse.Gold > 0) {
+			usercommands.Tell(actor, fmt.Sprintf(`You can't bury the <ansi fg="user-corpse">%s corpse</ansi> while it still holds something.`, corpse.Character.Name))
+			return true, nil
+		}
+
 		// The very corpse found (of two alike, the one named; RemoveCorpse
 		// would take the first).
 		if room.RemoveCorpseRef(found) {
