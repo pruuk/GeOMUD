@@ -287,6 +287,10 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 					if mob.Character.Aggro != nil {
 						continue
 					}
+					// The line names the NPC: only one the mover perceives.
+					if !rooms.Perceives(actor.Character, &mob.Character) {
+						continue
+					}
 					isHostile := mob.Hostile // Is it automatically hostile?
 					if !isHostile {
 						for _, groupName := range mob.Groups {

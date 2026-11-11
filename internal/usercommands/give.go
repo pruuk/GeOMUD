@@ -63,7 +63,7 @@ func Give(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 	}
 
-	playerId, mobId := room.FindByName(giveWho)
+	playerId, mobId := room.FindByName(actor.Character, giveWho)
 
 	if playerId > 0 {
 

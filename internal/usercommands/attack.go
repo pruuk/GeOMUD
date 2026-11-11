@@ -22,9 +22,30 @@ import (
 func othersOf(actor *actors.Actor, bodyIds []ids.ID) []ids.ID {
 	out := make([]ids.ID, 0, len(bodyIds))
 	for _, id := range bodyIds {
-		if id != actor.Id {
-			out = append(out, id)
+		if id == actor.Id {
+			continue
 		}
+		// Never a body the attacker does not perceive (rooms.Perceives).
+		if b := actors.Get(id); b != nil && b.Character != nil && !rooms.Perceives(actor.Character, b.Character) {
+			continue
+		}
+		out = append(out, id)
+	}
+	return out
+}
+
+// perceivedPlayers is the room's players less the attacker and less every
+// player it does not perceive (rooms.Perceives).
+func perceivedPlayers(actor *actors.Actor, room *rooms.Room, selfUserId int) []int {
+	out := []int{}
+	for _, userId := range room.GetPlayers() {
+		if userId == selfUserId {
+			continue
+		}
+		if u := accounts.GetByUserId(userId); u == nil || !rooms.Perceives(actor.Character, u.Character) {
+			continue
+		}
+		out = append(out, userId)
 	}
 	return out
 }
@@ -47,7 +68,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		// If no argument supplied, attack whoever is attacking the player currently.
 		for _, mId := range room.GetMobs(rooms.FindFightingPlayer) {
 			m := mobs.GetInstance(mId)
-			if m.Character.Aggro == nil {
+			if m == nil || m.Character.Aggro == nil || !rooms.Perceives(actor.Character, &m.Character) {
 				continue
 			}
 
@@ -67,7 +88,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		if attackMobId.IsZero() {
 			for _, uId := range room.GetPlayers(rooms.FindFightingPlayer) {
 				u := accounts.GetByUserId(uId)
-				if u == nil || u.Character.Aggro == nil {
+				if u == nil || u.Character.Aggro == nil || !rooms.Perceives(actor.Character, u.Character) {
 					continue
 				}
 
@@ -96,12 +117,15 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 						target := partyUser.Character.Aggro.Target
 
-						if mobs.GetInstance(target) != nil {
-							attackMobId = target
-							break
+						if tm := mobs.GetInstance(target); tm != nil {
+							if rooms.Perceives(actor.Character, &tm.Character) {
+								attackMobId = target
+								break
+							}
+							continue
 						}
 
-						if tu := accounts.GetByBodyId(target); tu != nil {
+						if tu := accounts.GetByBodyId(target); tu != nil && rooms.Perceives(actor.Character, tu.Character) {
 							attackPlayerId = tu.UserId
 							break
 						}
@@ -116,13 +140,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		if rest == `*` { // * ANYONE
 
 			allMobs := othersOf(actor, room.GetMobs())
-			allPlayers := []int{}
-			for _, userId := range room.GetPlayers() {
-				if userId == selfUserId {
-					continue
-				}
-				allPlayers = append(allPlayers, userId)
-			}
+			allPlayers := perceivedPlayers(actor, room, selfUserId)
 
 			totalTargets := len(allMobs) + len(allPlayers)
 			if totalTargets == 0 {
@@ -146,13 +164,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 
 		} else { // *user etc. ANY PLAYER
 
-			allPlayers := []int{}
-			for _, userId := range room.GetPlayers() {
-				if userId == selfUserId {
-					continue
-				}
-				allPlayers = append(allPlayers, userId)
-			}
+			allPlayers := perceivedPlayers(actor, room, selfUserId)
 
 			if len(allPlayers) > 0 {
 				attackPlayerId = allPlayers[util.Rand(len(allPlayers))]
@@ -161,7 +173,7 @@ func Attack(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		}
 
 	} else {
-		attackPlayerId, attackMobId = room.FindByName(rest)
+		attackPlayerId, attackMobId = room.FindByName(actor.Character, rest)
 	}
 
 	if attackPlayerId == selfUserId { // Can't attack self!

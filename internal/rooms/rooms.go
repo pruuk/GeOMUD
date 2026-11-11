@@ -1331,16 +1331,79 @@ func (r *Room) AddSign(displayText string, visibleUserId int, daysBeforeDecay in
 	return false
 }
 
-func (r *Room) FindByName(searchName string, findTypes ...FindFlag) (playerId int, mobId ids.ID) {
+// PerceivesWith is the one visibility rule (Calabe, 2026-11-11): whether
+// viewer perceives subject, a body, with buff flags read through flag. A
+// body always perceives itself; an unhidden body is perceived; a hidden one
+// only by an admin (accounts.RoleAdmin, the role HasRolePermission lets
+// through) or a viewer with see-hidden. A nil viewer perceives no hidden
+// body. Light and distance are not part of it: messaging's canSee keeps
+// them. Perceives is this with the bodies' own buff flags; messaging passes
+// its test seam.
+func PerceivesWith(flag func(c *characters.Character, flag string) bool, viewer, subject *characters.Character) bool {
+	if viewer != nil && viewer.Id == subject.Id {
+		return true
+	}
+	if !flag(subject, "hidden") {
+		return true
+	}
+	if viewer == nil {
+		return false
+	}
+	if acc := actors.AccountOf(viewer.Id); acc != nil && acc.Role == accounts.RoleAdmin {
+		return true
+	}
+	return flag(viewer, "see-hidden")
+}
+
+// Perceives is PerceivesWith reading the bodies' own buff flags. Every
+// place that decides whether a viewer perceives a body asks it: the room
+// view, the name lookups, GMCP's room contents and combat; messaging asks
+// PerceivesWith.
+func Perceives(viewer, subject *characters.Character) bool {
+	return PerceivesWith(func(c *characters.Character, flag string) bool { return c.HasBuffFlag(flag) }, viewer, subject)
+}
+
+// NotPerceiving lists the bodies in subject's room that do not perceive
+// subject (Perceives). A line whose only content is subject's presence
+// (arriving, leaving the game, starting to meditate, dropping, reviving)
+// excludes them: no reply reveals a hidden body (Calabe, 2026-11-11).
+func NotPerceiving(subject *characters.Character) []ids.ID {
+	r := LoadRoom(subject.RoomId)
+	if r == nil {
+		return nil
+	}
+	out := []ids.ID{}
+	for _, id := range r.GetBodies() {
+		if id == subject.Id {
+			continue
+		}
+		if a := actors.Get(id); a != nil && a.Character != nil && !Perceives(a.Character, subject) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// FindByName finds the player and the NPC in the room that searchName
+// names for viewer: a body viewer does not perceive (Perceives) is not in
+// the lists, so it takes no ordinal and cannot be named, by name or ID.
+// Players and NPCs are numbered apart; a caller takes the player when both
+// come back.
+func (r *Room) FindByName(viewer *characters.Character, searchName string, findTypes ...FindFlag) (playerId int, mobId ids.ID) {
+	return r.findByName(func(c *characters.Character) bool { return Perceives(viewer, c) }, searchName, findTypes...)
+}
+
+// findByName is FindByName with the bodies it may match given by sees.
+func (r *Room) findByName(sees func(*characters.Character) bool, searchName string, findTypes ...FindFlag) (playerId int, mobId ids.ID) {
 	if len(findTypes) < 1 {
 		findTypes = []FindFlag{FindAll}
 	}
-	mobId, _ = r.findMobByName(searchName, findTypes...)
-	playerId, _ = r.findPlayerByName(searchName, findTypes...)
+	mobId, _ = r.findMobByName(sees, searchName, findTypes...)
+	playerId, _ = r.findPlayerByName(sees, searchName, findTypes...)
 	return playerId, mobId
 }
 
-func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, error) {
+func (r *Room) findPlayerByName(sees func(*characters.Character) bool, searchName string, findTypes ...FindFlag) (int, error) {
 
 	if len(searchName) > 1 {
 		// #N and @N are not name forms; refuse them so they cannot fall through to
@@ -1351,7 +1414,7 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	}
 
 	if idMatch, err := ids.Parse(searchName); err == nil {
-		if acc := actors.AccountOf(idMatch); acc != nil {
+		if acc := actors.AccountOf(idMatch); acc != nil && sees(acc.Character) {
 			for _, uId := range r.GetPlayers(findTypes...) {
 				if uId == acc.UserId {
 					return uId, nil
@@ -1366,7 +1429,7 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	playerLookup := map[string]int{}
 	for _, uId := range r.GetPlayers(findTypes...) {
 		u := accounts.GetByUserId(uId)
-		if u == nil {
+		if u == nil || !sees(u.Character) {
 			continue
 		}
 		playerLookup[u.Character.Name] = u.UserId
@@ -1386,7 +1449,7 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	return playerLookup[fullMatch], nil
 }
 
-func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, error) {
+func (r *Room) findMobByName(sees func(*characters.Character) bool, searchName string, findTypes ...FindFlag) (ids.ID, error) {
 
 	if len(searchName) > 1 {
 		// #N and @N are not name forms; refuse them so they cannot fall through to
@@ -1398,7 +1461,10 @@ func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, 
 
 	if idMatch, err := ids.Parse(searchName); err == nil {
 		for _, mId := range r.GetMobs(findTypes...) {
-			if mId == idMatch {
+			if mId != idMatch {
+				continue
+			}
+			if m := mobs.GetInstance(mId); m == nil || sees(&m.Character) {
 				return mId, nil
 			}
 		}
@@ -1412,6 +1478,9 @@ func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, 
 		m := mobs.GetInstance(mId)
 		if m == nil {
 			continue // body with no instance (disconnect race)
+		}
+		if !sees(&m.Character) {
+			continue // the viewer does not perceive it: no ordinal, no name
 		}
 
 		mobName := fmt.Sprintf(`%s#%d`, m.Character.Name, len(namesInRoom)+1) // skeleton#1, skeleton#2 etc

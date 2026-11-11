@@ -41,7 +41,7 @@ func Show(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		return true, nil
 	}
 
-	playerId, mobId := room.FindByName(targetName)
+	playerId, mobId := room.FindByName(actor.Character, targetName)
 
 	if playerId > 0 {
 

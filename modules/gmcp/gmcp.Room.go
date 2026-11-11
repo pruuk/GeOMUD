@@ -82,6 +82,19 @@ func (g *GMCPRoomModule) itemOwnershipHandler(e events.Event) events.ListenerRet
 	return events.Continue
 }
 
+// perceivesBody reports whether the account's body perceives the body
+// bodyId (rooms.Perceives, the one visibility rule). A body no longer in the
+// registry has nothing to hide, so it is perceived.
+func perceivesBody(viewer *accounts.Account, bodyId actors.ActorId) bool {
+	if viewer == nil {
+		return false
+	}
+	if a := actors.Get(bodyId); a != nil && a.Character != nil {
+		return rooms.Perceives(viewer.Character, a.Character)
+	}
+	return true
+}
+
 func (g *GMCPRoomModule) aggroChangedHandler(e events.Event) events.ListenerReturn {
 
 	evt, typeOk := e.(events.AggroChanged)
@@ -100,6 +113,10 @@ func (g *GMCPRoomModule) aggroChangedHandler(e events.Event) events.ListenerRetu
 	}
 
 	for _, uId := range room.GetPlayers() {
+		// A viewer who does not perceive the body gets no update about it.
+		if !perceivesBody(accounts.GetByUserId(uId), evt.ActorId) {
+			continue
+		}
 		events.AddToQueue(GMCPRoomUpdate{
 			UserId:     uId,
 			Identifier: identifier,
@@ -127,6 +144,8 @@ func (g *GMCPRoomModule) despawnHandler(e events.Event) events.ListenerReturn {
 		return events.Continue
 	}
 
+	leaver := accounts.GetByUserId(evt.UserId)
+
 	//
 	// Send GMCP Updates for players leaving
 	//
@@ -138,6 +157,11 @@ func (g *GMCPRoomModule) despawnHandler(e events.Event) events.ListenerReturn {
 
 		u := accounts.GetByUserId(uid)
 		if u == nil {
+			continue
+		}
+
+		// Only a viewer who perceives the leaver reads its name.
+		if leaver != nil && !rooms.Perceives(u.Character, leaver.Character) {
 			continue
 		}
 
@@ -175,7 +199,7 @@ func (g *GMCPRoomModule) roomChangeHandler(e events.Event) events.ListenerReturn
 	if evt.FromRoomId != 0 {
 		if oldRoom := rooms.LoadRoom(evt.FromRoomId); oldRoom != nil {
 			for _, uId := range oldRoom.GetPlayers() {
-				if uId == moverUserId {
+				if uId == moverUserId || !perceivesBody(accounts.GetByUserId(uId), evt.ActorId) {
 					continue
 				}
 				events.AddToQueue(GMCPRoomUpdate{
@@ -189,7 +213,7 @@ func (g *GMCPRoomModule) roomChangeHandler(e events.Event) events.ListenerReturn
 	if evt.ToRoomId != 0 {
 		if newRoom := rooms.LoadRoom(evt.ToRoomId); newRoom != nil {
 			for _, uId := range newRoom.GetPlayers() {
-				if uId == moverUserId {
+				if uId == moverUserId || !perceivesBody(accounts.GetByUserId(uId), evt.ActorId) {
 					continue
 				}
 				events.AddToQueue(GMCPRoomUpdate{
@@ -343,7 +367,7 @@ func (g *GMCPRoomModule) GetRoomNode(user *accounts.Account, gmcpModule string) 
 				continue
 			}
 
-			if u.Character.HasBuffFlag("hidden") {
+			if !rooms.Perceives(user.Character, u.Character) {
 				continue
 			}
 
@@ -371,7 +395,7 @@ func (g *GMCPRoomModule) GetRoomNode(user *accounts.Account, gmcpModule string) 
 				continue
 			}
 
-			if mob.Character.HasBuffFlag("hidden") {
+			if !rooms.Perceives(user.Character, &mob.Character) {
 				continue
 			}
 

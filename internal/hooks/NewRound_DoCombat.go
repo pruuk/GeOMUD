@@ -192,8 +192,8 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 		return affected
 	}
 
-	// Can't see them, can't fight them.
-	if d.Character.HasBuffFlag("hidden") {
+	// Can't see them, can't fight them (the one visibility rule).
+	if !rooms.Perceives(a.Character, d.Character) {
 		usercommands.Tell(a, "You can't seem to find your target.")
 		return affected
 	}
@@ -456,6 +456,7 @@ func flee(a *actors.Actor, aRoom *rooms.Room) {
 		Range:        perception.Room,
 		ActorText:    fmt.Sprintf(`You flee to the <ansi fg="exit">%s</ansi> exit!`, exitName),
 		ObserverText: fmt.Sprintf(`{actor} flees to the <ansi fg="exit">%s</ansi> exit!`, exitName),
+		Exclude:      rooms.NotPerceiving(a.Character), // a leaving: only its presence
 	})
 
 	endAggro(a)

@@ -249,10 +249,8 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 			player := accounts.GetByUserId(playerId)
 			if player != nil {
 
-				if player.Character.HasBuffFlag("hidden") { // Don't show them if they are sneaking
-					if !user.Character.HasBuffFlag("see-hidden") {
-						continue
-					}
+				if !Perceives(user.Character, player.Character) { // Don't show them if they are sneaking
+					continue
 				}
 
 				pName := player.Character.GetPlayerName(user.Character.Id, renderFlags...)
@@ -265,10 +263,8 @@ func GetDetails(r *Room, user *accounts.Account, tinymap ...[]string) RoomTempla
 	for _, mobId := range r.mobIds() {
 		if mob := mobs.GetInstance(mobId); mob != nil {
 
-			if mob.Character.HasBuffFlag("hidden") { // Don't show them if they are sneaking
-				if !user.Character.HasBuffFlag("see-hidden") {
-					continue
-				}
+			if !Perceives(user.Character, &mob.Character) { // Don't show them if they are sneaking
+				continue
 			}
 
 			tmpNameFlags := nameFlags

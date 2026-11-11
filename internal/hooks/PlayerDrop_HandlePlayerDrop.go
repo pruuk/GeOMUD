@@ -42,6 +42,7 @@ func HandlePlayerDrop(e events.Event) events.ListenerReturn {
 		Range:        perception.Room,
 		ActorText:    `<ansi fg="red">you drop to the ground!</ansi>`,
 		ObserverText: `{actor} <ansi fg="red">drops to the ground!</ansi>`,
+		Exclude:      rooms.NotPerceiving(user.Character), // only its presence
 	})
 
 	return events.Continue

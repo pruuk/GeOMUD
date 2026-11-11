@@ -169,6 +169,7 @@ func recoveryRegen(a *actors.Actor) rules.RegenResult {
 			Range:        perception.Room,
 			Senses:       perception.Sight,
 			ObserverText: `{actor} is recovering from a recent death.`,
+			Exclude:      rooms.NotPerceiving(c),
 		},
 	}}
 }

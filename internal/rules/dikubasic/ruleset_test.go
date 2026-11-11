@@ -9,6 +9,7 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
+	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -357,4 +358,42 @@ func TestRegenInTheRecoveryRoomSaysWhatItHealed(t *testing.T) {
 	a.Character.Health, a.Character.Mana = 100, 100
 	got = New().Regen(a, 4)
 	assert.Equal(t, rules.RegenResult{}, got, "nothing to heal: no lines")
+}
+
+// The recovery room's line is only the body's presence (round 5): a viewer
+// there who does not perceive the hidden body is excluded from it; an admin
+// is not, nor is anyone while the body is not hidden.
+func TestRecoveryLineExcludesThoseWhoDoNotPerceive(t *testing.T) {
+	const recovery = 94009
+	testRoom(t, recovery, "regenzone")
+	recoveryCopy(t, recovery, "regenzone")
+	r := rooms.LoadRoom(recovery)
+	a, dan, eve := player(t, 9651), player(t, 9652), player(t, 9653)
+	for userId, p := range map[int]*actors.Actor{9651: a, 9652: dan, 9653: eve} {
+		p.Character.RoomId = recovery
+		r.AddPlayer(userId)
+	}
+	actors.AccountOf(eve.Id).Role = accounts.RoleAdmin
+	a.Character.HealthMax.Value, a.Character.ManaMax.Value = 100, 100
+	reseed(t)
+
+	a.Character.Health, a.Character.Mana = 1, 0
+	got := New().Regen(a, 1)
+	require.Len(t, got.Messages, 2)
+	assert.Empty(t, got.Messages[1].Exclude, "unhidden: everyone perceives it")
+
+	const hiddenBuff = 96209
+	t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{
+		BuffId: hiddenBuff, Name: "test hidden", TriggerRate: "1 round", TriggerCount: 1000,
+		Flags: []string{"hidden"},
+	}))
+	require.NoError(t, a.Character.AddBuff(hiddenBuff, true))
+	require.True(t, a.Character.HasBuffFlag("hidden"))
+
+	// AddBuff runs Validate, which recomputes the maximums: set them again.
+	a.Character.HealthMax.Value, a.Character.ManaMax.Value = 100, 100
+	a.Character.Health, a.Character.Mana = 1, 0
+	got = New().Regen(a, 2)
+	require.Len(t, got.Messages, 2)
+	assert.Equal(t, []ids.ID{dan.Id}, got.Messages[1].Exclude, "Dan does not perceive the hidden body; Eve, an admin, does")
 }

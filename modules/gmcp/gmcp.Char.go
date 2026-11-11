@@ -457,6 +457,10 @@ func (g *GMCPCharModule) GetCharNode(user *accounts.Account, gmcpModule string) 
 				if mob == nil {
 					continue
 				}
+				// Only an enemy the viewer perceives (the one visibility rule).
+				if !rooms.Perceives(user.Character, &mob.Character) {
+					continue
+				}
 
 				e := GMCPCharModule_Enemy{
 					Id:      mob.Character.Id.String(),

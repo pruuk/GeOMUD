@@ -73,7 +73,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	// look for any mobs, players, npcs
 	//
 
-	playerId, mobId := room.FindByName(lookAt)
+	playerId, mobId := room.FindByName(actor.Character, lookAt)
 
 	if playerId > 0 || !mobId.IsZero() {
 
