@@ -286,7 +286,7 @@ func clearKillersAggro(victim *actors.Actor) {
 // it: each item carried or worn (an item the body does not hold is not
 // dropped), and the gold, up to what the body has. Each item that leaves
 // queues ItemOwnership (lost), as every other item move does (spec, plan
-// review round 1).
+// review round 1), and gold that leaves queues EquipmentChange.
 func takeDrops(c *characters.Character, outcome rules.DeathOutcome) ([]items.Item, int) {
 	drops := make([]items.Item, 0, len(outcome.DropItems))
 	for _, itm := range outcome.DropItems {
@@ -297,6 +297,10 @@ func takeDrops(c *characters.Character, outcome rules.DeathOutcome) ([]items.Ite
 	}
 	gold := min(max(outcome.DropGold, 0), c.Gold)
 	c.Gold -= gold
+	if gold > 0 {
+		// The client's worth refreshes on it, as for drop (drop.go).
+		events.AddToQueue(events.EquipmentChange{ActorId: c.Id, GoldChange: -gold})
+	}
 	return drops, gold
 }
 

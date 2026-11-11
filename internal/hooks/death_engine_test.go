@@ -129,6 +129,31 @@ func TestDeathWithCorpsesOffDropsOnTheFloor(t *testing.T) {
 	require.Contains(t, bobRead, `<ansi fg="yellow-bold">25 gold</ansi> drops to the ground.`)
 }
 
+// The gold that leaves a body queues EquipmentChange, as drop does, so the
+// client's worth refreshes (whole-branch review m3). A body with no gold to
+// drop queues none.
+func TestDeathGoldDropQueuesEquipmentChange(t *testing.T) {
+	w := newCombatWorld(t, 111)
+	w.recoveryRoom()
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
+	bob := w.addPlayer(9302, "Bob", goldenRoomA, 10, 10, 10, 12)
+	require.Equal(t, 25, alice.Character.Gold, "a new character's gold")
+	bob.Character.Gold = 0
+	w.start()
+	var changes []events.EquipmentChange
+	id := events.RegisterListener(events.EquipmentChange{}, func(e events.Event) events.ListenerReturn {
+		changes = append(changes, e.(events.EquipmentChange))
+		return events.Continue
+	})
+	t.Cleanup(func() { events.UnregisterListener(events.EquipmentChange{}, id) })
+
+	death.Die(actors.Get(alice.Character.Id))
+	death.Die(actors.Get(bob.Character.Id))
+	events.ProcessEvents()
+
+	require.Equal(t, []events.EquipmentChange{{ActorId: alice.Character.Id, GoldChange: -25}}, changes)
+}
+
 // revive-on-death gets a body up once: the flag is used up, so the next
 // death is a death; an account's vitals are reported (Q7f).
 func TestReviveOnDeathWorksOnce(t *testing.T) {
