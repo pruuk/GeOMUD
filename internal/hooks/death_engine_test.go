@@ -156,6 +156,30 @@ func TestReviveOnDeathWorksOnce(t *testing.T) {
 	require.Contains(t, notes, "PlayerDeath Alice", "the second death is a death")
 }
 
+// A revive forgets who downed the body (whole-branch review m2), as every
+// other health raise does (ForgetKillerIfUp), so a later death is not
+// credited to a stale killer.
+func TestReviveForgetsTheKiller(t *testing.T) {
+	w := newCombatWorld(t, 111)
+	w.recoveryRoom()
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
+	guard := w.addNPC(93202, "guard", 1, goldenRoomA, 30, 30, 20, 10)
+	w.flag(alice.Character, 93903, "revive-on-death")
+	w.start()
+	c := alice.Character
+	c.KilledBy, c.KillerMobId, c.KillerMobName, c.KillerMobIsElite = guard.Character.Id, 93202, "guard", true
+
+	c.Health = 0
+	death.Die(actors.Get(c.Id))
+	events.ProcessEvents()
+
+	require.Positive(t, c.Health, "revived")
+	require.True(t, c.KilledBy.IsZero(), "the killer is forgotten")
+	require.Zero(t, c.KillerMobId)
+	require.Empty(t, c.KillerMobName)
+	require.False(t, c.KillerMobIsElite)
+}
+
 // The revive line is only the body's presence (Task 5a's rule, plan review
 // round 5): a viewer who does not perceive the hidden body reads nothing,
 // not even "someone"; an admin reads it.

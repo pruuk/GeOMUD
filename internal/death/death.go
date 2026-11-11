@@ -115,6 +115,7 @@ func accountOf(a *actors.Actor) *accounts.Account {
 // revive gets the victim up instead of dying.
 func revive(victim *actors.Actor, health int) {
 	victim.Character.Health = health
+	victim.Character.ForgetKillerIfUp()
 
 	messaging.Send(perception.Message{
 		Kind:         perception.WorldEvent,

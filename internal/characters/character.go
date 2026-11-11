@@ -699,13 +699,15 @@ func (c *Character) ForgetTransient() {
 	c.KillerMobId = 0
 }
 
-// forgetKillerIfUp drops the record of who downed this character once its
+// ForgetKillerIfUp drops the record of who downed this character once its
 // health is 1 or more, so a later death from another cause (poison, a
 // suicide) is not credited to a stale killer. Health is a plain field with
 // no single writer, so every Character method that raises it calls this:
 // Heal (the AutoHeal regeneration), ApplyHealthChange, and the full restore
-// on a level gain. death.Die's respawn clears the record itself.
-func (c *Character) forgetKillerIfUp() {
+// on a level gain; so does death's revive, which sets Health directly. A
+// death that respawns the body has its record cleared by death's
+// recordPlayerDeath, which books it first.
+func (c *Character) ForgetKillerIfUp() {
 	if c.Health < 1 {
 		return
 	}
@@ -909,7 +911,7 @@ func (c *Character) ApplyHealthChange(healthChange int) int {
 	}
 
 	c.Health = newHealth
-	c.forgetKillerIfUp()
+	c.ForgetKillerIfUp()
 
 	return newHealth - oldHealth
 }
@@ -979,7 +981,7 @@ func (c *Character) LevelUp() (bool, stats.Statistics) {
 
 	c.Health = c.HealthMax.Value
 	c.Mana = c.ManaMax.Value
-	c.forgetKillerIfUp()
+	c.ForgetKillerIfUp()
 
 	return true, statsDelta
 }
@@ -996,7 +998,7 @@ func (c *Character) Heal(hp int, mana int) (int, int) {
 	if c.Mana > c.ManaMax.Value {
 		c.Mana = c.ManaMax.Value
 	}
-	c.forgetKillerIfUp()
+	c.ForgetKillerIfUp()
 
 	return c.Health - startHP, c.Mana - startMP
 }
