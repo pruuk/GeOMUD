@@ -77,7 +77,6 @@ type Character struct {
 	KeyRing          map[string]string              `yaml:"keyring,omitempty"`        // key is the lock id, value is the sequence
 	KD               KDStats                        `yaml:"kd,omitempty"`             // Kill/Death stats
 	MiscData         map[string]any                 `yaml:"miscdata,omitempty"`       // Any random other data that needs to be stored
-	ExtraLives       int                            `yaml:"extralives,omitempty"`     // How many lives remain. If enabled, players can perma-die if they die at zero
 	Created          time.Time                      `yaml:"created"`                  // When this character was created
 	Timers           map[string]gametime.RoundTimer `yaml:"timers,omitempty"`         // any special timers added to this character
 	ZonesVisited     map[string]RoomBitset          `yaml:"zonesvisited,omitempty"`   // permanent record of every room visited, keyed by zone name
@@ -705,7 +704,7 @@ func (c *Character) ForgetTransient() {
 // suicide) is not credited to a stale killer. Health is a plain field with
 // no single writer, so every Character method that raises it calls this:
 // Heal (the AutoHeal regeneration), ApplyHealthChange, and the full restore
-// on a level gain. suicide.go's revive clears the record itself.
+// on a level gain. death.Die's respawn clears the record itself.
 func (c *Character) forgetKillerIfUp() {
 	if c.Health < 1 {
 		return

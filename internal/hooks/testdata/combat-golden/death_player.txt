@@ -48,94 +48,15 @@ seed 303
 == round 6
 -- Alice reads
   You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">5 damage</ansi>.
+  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Alice</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
 -- events
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001
   AggroChanged Alice room=93001
-  PlayerDrop Alice room=93001
--- state
-  Alice: room=93001 hp=-2/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=true weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== heal 1
--- Alice reads
-  <ansi fg="red">you are bleeding out!</ansi>
--- events
-  CharacterVitalsChanged Alice
--- state
-  Alice: room=93001 hp=-3/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=true weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== heal 2
--- Alice reads
-  <ansi fg="red">you are bleeding out!</ansi>
--- events
-  CharacterVitalsChanged Alice
--- state
-  Alice: room=93001 hp=-4/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=true weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== heal 3
--- Alice reads
-  <ansi fg="red">you are bleeding out!</ansi>
--- events
-  CharacterVitalsChanged Alice
--- state
-  Alice: room=93001 hp=-5/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=true weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== heal 4
--- Alice reads
-  <ansi fg="red">you are bleeding out!</ansi>
--- events
-  CharacterVitalsChanged Alice
--- state
-  Alice: room=93001 hp=-6/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=true weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== heal 5
--- Alice reads
-  <ansi fg="red">you are bleeding out!</ansi>
--- events
-  CharacterVitalsChanged Alice
--- state
-  Alice: room=93001 hp=-7/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=true weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== heal 6
--- Alice reads
-  <ansi fg="red">you are bleeding out!</ansi>
--- events
-  CharacterVitalsChanged Alice
--- state
-  Alice: room=93001 hp=-8/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=true weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== heal 7
--- Alice reads
-  <ansi fg="red">you are bleeding out!</ansi>
--- events
-  CharacterVitalsChanged Alice
--- state
-  Alice: room=93001 hp=-9/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=true weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== heal 8
--- Alice reads
-  <ansi fg="red">you are bleeding out!</ansi>
--- events
-  CharacterVitalsChanged Alice
--- state
-  Alice: room=93001 hp=-10/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=true weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== heal 9
--- Alice reads
-  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Alice</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
-  You remove your <ansi fg="item">testsword</ansi> and return it to your backpack. ( <ansi fg="157">+1 strength</ansi>, <ansi fg="157">+1 speed</ansi>, <ansi fg="157">+1 smarts</ansi>, <ansi fg="157">+1 vitality</ansi>, <ansi fg="157">+1 mysticism</ansi>, <ansi fg="157">+1 perception</ansi>, <ansi fg="204">-5 health</ansi>, <ansi fg="157">+5 mana</ansi> )
-  You drop the <ansi fg="item">testsword</ansi>.
-  You drop <ansi fg="gold">25 gold</ansi> on the floor.
-  You lost <ansi fg="yellow">100 experience points</ansi>.
--- events
-  Input Alice: "suicide"
-  Ran Alice: "suicide"
   PlayerDeath Alice
-  ItemOwnership Alice item=93101 gained=false
+  ItemOwnership Alice item=93108 gained=false
   CharacterVitalsChanged Alice
 -- state
-  Alice: room=copy-of-93003 hp=1/7 aggro=[none] playerdamage={} items=93108 gold=0 xp=900 worn=[93107] kd=0/1/0/0/0/1 pk=[] pd=[]
+  Alice: room=copy-of-93003 hp=1/12 aggro=[none] playerdamage={} weapon=93101 gold=0 xp=1000 worn=[93101,93107] kd=0/1/0/0/0/1 pk=[] pd=[]
   guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-  room 93001 floor: 93101
-  room 93001 floor gold: 25
-  room 93001 corpse Alice: items=[] gold=0 worn=[93107]
+  room 93001 corpse Alice: items=[93108] gold=25 worn=[]

@@ -2,6 +2,7 @@ package dikubasic
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,9 +13,12 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/rules"
@@ -396,4 +400,219 @@ func TestRecoveryLineExcludesThoseWhoDoNotPerceive(t *testing.T) {
 	got = New().Regen(a, 2)
 	require.Len(t, got.Messages, 2)
 	assert.Equal(t, []ids.ID{dan.Id}, got.Messages[1].Exclude, "Dan does not perceive the hidden body; Eve, an admin, does")
+}
+
+// trinket is an item with its own spec (no item file needed).
+func trinket(itemId int, name string, typ items.ItemType) items.Item {
+	spec := items.ItemSpec{ItemId: itemId, Name: name, NameSimple: name, Type: typ}
+	return items.Item{ItemId: itemId, Id: ids.New(ids.NoCell), Spec: &spec}
+}
+
+func idsOf(list []items.Item) []int {
+	out := []int{}
+	for _, it := range list {
+		out = append(out, it.ItemId)
+	}
+	return out
+}
+
+// onlinePlayer is player, registered so accounts.GetByUserId finds it.
+func onlinePlayer(t *testing.T, userId int) *actors.Actor {
+	t.Helper()
+	a := player(t, userId)
+	accounts.SetTestUser(a.Controller().Account())
+	t.Cleanup(func() { accounts.RemoveTestUser(userId) })
+	return a
+}
+
+// flagged gives c a test buff carrying one flag. A bare test NPC
+// (mobs.NewTestInstance(mobs.Mob{})) has a zero Buffs whose maps are nil,
+// and AddBuff writes into them (buffs.go:187), so it gets buffs.New() first,
+// as givePermaGear does (usercommands/items_test.go:42).
+func flagged(t *testing.T, c *characters.Character, buffId int, flag string) {
+	t.Helper()
+	t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{
+		BuffId: buffId, Name: "test " + flag, TriggerRate: "1 round", TriggerCount: 1000, Flags: []string{flag},
+	}))
+	if c.Buffs.List == nil { // buffs.New() makes List non-nil (buffs.go:43-49)
+		c.Buffs = buffs.New()
+	}
+	require.NoError(t, c.AddBuff(buffId, true))
+	require.True(t, c.HasBuffFlag(flag))
+}
+
+// Decision 11: a player drops what it carries and its gold, keeps what it
+// wears, and comes back at 1 health.
+func TestOnDeathAPlayerDropsWhatItCarriesAndKeepsWhatItWears(t *testing.T) {
+	a := player(t, 9630)
+	a.Character.Items = []items.Item{trinket(96101, "testgem", items.Gemstone)}
+	a.Character.Equipment.Ring = trinket(96102, "testring", items.Ring)
+	a.Character.Gold = 25
+
+	out := New().OnDeath(a)
+	assert.Equal(t, []int{96101}, idsOf(out.DropItems))
+	assert.Equal(t, 25, out.DropGold)
+	assert.True(t, out.Respawn)
+	assert.Equal(t, 1, out.RespawnHealth)
+	assert.False(t, out.Revive)
+	assert.Empty(t, out.Awards)
+}
+
+// Ruling 3: an NPC drops what it carries and its gold always, and each worn
+// item at its ItemDropChance, one d100 per item in slot order (Neck before
+// Ring, items.AllEquipSlots).
+func TestOnDeathAnNPCDropsEachWornItemAtItsDropChance(t *testing.T) {
+	n := npc(t, 0, 0)
+	mobs.GetInstance(n.Id).ItemDropChance = 50
+	n.Character.Items = []items.Item{trinket(96101, "testgem", items.Gemstone)}
+	n.Character.Equipment.Neck = trinket(96103, "testamulet", items.Neck)
+	n.Character.Equipment.Ring = trinket(96102, "testring", items.Ring)
+	n.Character.Gold = 30
+	reseed(t)
+	for seed := int64(1); seed <= 500; seed++ {
+		util.SeedRandForTest(seed)
+		want := []int{96101}
+		if util.Rand(100) < 50 {
+			want = append(want, 96103)
+		}
+		if util.Rand(100) < 50 {
+			want = append(want, 96102)
+		}
+		next := util.Rand(1000)
+
+		util.SeedRandForTest(seed)
+		out := New().OnDeath(n)
+		require.Equal(t, want, idsOf(out.DropItems), "seed %d", seed)
+		require.Equal(t, next, util.Rand(1000), "seed %d: one draw per worn item", seed)
+		require.Equal(t, 30, out.DropGold)
+		require.False(t, out.Respawn, "an NPC's body ends")
+	}
+}
+
+// The draw order of the moved code: the XP variation (one d3) before the
+// worn-item rolls. Both alignments are 0, so UpdateAlignment draws nothing.
+func TestOnDeathDrawsTheXPVariationBeforeTheDrops(t *testing.T) {
+	onlinePlayer(t, 9631)
+	n := npc(t, 0, 0)
+	mobs.GetInstance(n.Id).ItemDropChance = 50
+	n.Character.PlayerDamage = map[int]int{9631: 5}
+	n.Character.Equipment.Ring = trinket(96102, "testring", items.Ring)
+
+	// One killer within 5 levels of the NPC: no scaler, not elite.
+	base := n.Character.XPTL(n.Character.Level-1) / 90
+	variation := base / 100
+	if variation < 1 {
+		variation = 1
+	}
+	reseed(t)
+	for seed := int64(1); seed <= 300; seed++ {
+		util.SeedRandForTest(seed)
+		xp := base + (util.Rand(3)-1)*variation
+		ring := util.Rand(100) < 50
+		next := util.Rand(1000)
+
+		util.SeedRandForTest(seed)
+		out := New().OnDeath(n)
+		require.Len(t, out.Awards, 1)
+		require.Equal(t, 9631, out.Awards[0].UserId)
+		require.Equal(t, xp, out.Awards[0].XP, "seed %d", seed)
+		require.Equal(t, ring, len(out.DropItems) == 1, "seed %d", seed)
+		require.Equal(t, next, util.Rand(1000), "seed %d: two draws", seed)
+	}
+}
+
+// An alignment shift is applied to the killer, returned as its line, and
+// queued as AlignmentChanged (the ruleset may queue an event: spec, plan
+// review round 1).
+func TestOnDeathShiftsTheKillersAlignment(t *testing.T) {
+	killer := onlinePlayer(t, 9632)
+	killer.Character.Alignment = 19 // neutral; killing an evil NPC makes her lawful (reads golden H)
+	n := npc(t, 0, 0)
+	n.Character.Alignment = -100
+	n.Character.PlayerDamage = map[int]int{9632: 5}
+	var changed []events.AlignmentChanged
+	id := events.RegisterListener(events.AlignmentChanged{}, func(e events.Event) events.ListenerReturn {
+		changed = append(changed, e.(events.AlignmentChanged))
+		return events.Continue
+	})
+	t.Cleanup(func() { events.UnregisterListener(events.AlignmentChanged{}, id) })
+	events.ProcessEvents() // drop what setup queued
+
+	out := New().OnDeath(n)
+	events.ProcessEvents()
+	require.Len(t, out.Awards, 1)
+	require.Len(t, out.Awards[0].Messages, 1)
+	assert.Contains(t, out.Awards[0].Messages[0].ActorText, "Your alignment has shifted from")
+	assert.Equal(t, killer.Id, out.Awards[0].Messages[0].Actor)
+	assert.Equal(t, "lawful", killer.Character.AlignmentName())
+	require.Len(t, changed, 1)
+	assert.Equal(t, events.AlignmentChanged{UserId: 9632, AlignmentOld: "neutral", AlignmentNew: "lawful"}, changed[0])
+}
+
+// Party XP, moved as is: a killer in a party puts its share in the party's
+// pot, which is split equally among the members, each awarded (a member who
+// dealt no damage too), with the elite bonus (10% when EliteXPBonus is
+// unset) added to each split for an elite NPC. Both alignments are 0, so
+// UpdateAlignment draws nothing.
+func TestOnDeathSplitsAPartysShare(t *testing.T) {
+	onlinePlayer(t, 9640)
+	onlinePlayer(t, 9641)
+	p := parties.New(9640)
+	require.NotNil(t, p)
+	require.True(t, p.InvitePlayer(9641))
+	require.True(t, p.AcceptInvite(9641))
+	t.Cleanup(p.Disband)
+	n := npc(t, 0, 0)
+	n.Character.Level = 5
+	n.Character.TNLScale = 1 // a bare test NPC has 0, which makes its XP 0 (XPTL, character.go:923-933)
+	n.Character.PlayerDamage = map[int]int{9640: 5}
+
+	base := n.Character.XPTL(n.Character.Level-1) / 90
+	variation := max(base/100, 1)
+	reseed(t)
+	for _, elite := range []bool{false, true} {
+		mobs.GetInstance(n.Id).IsElite = elite
+		util.SeedRandForTest(7)
+		split := (base + (util.Rand(3)-1)*variation) / 2
+		if elite {
+			split += int(math.Ceil(float64(split) * 10 / 100.0))
+		}
+		require.Positive(t, split, "the fixture needs XP to share")
+
+		util.SeedRandForTest(7)
+		out := New().OnDeath(n)
+		require.Len(t, out.Awards, 2, "elite %v: one award per member", elite)
+		assert.Equal(t, []int{9640, 9641}, []int{out.Awards[0].UserId, out.Awards[1].UserId}, "elite %v: member order", elite)
+		assert.Equal(t, split, out.Awards[0].XP, "elite %v", elite)
+		assert.Equal(t, split, out.Awards[1].XP, "elite %v", elite)
+	}
+}
+
+func TestOnDeathPermaGearDropsNothing(t *testing.T) {
+	p, n := player(t, 9633), npc(t, 0, 0)
+	mobs.GetInstance(n.Id).ItemDropChance = 100
+	for _, a := range []*actors.Actor{p, n} {
+		flagged(t, a.Character, 96201, "perma-gear")
+		a.Character.Items = []items.Item{trinket(96101, "testgem", items.Gemstone)}
+		a.Character.Equipment.Ring = trinket(96102, "testring", items.Ring)
+		a.Character.Gold = 25
+		out := New().OnDeath(a)
+		assert.Empty(t, out.DropItems)
+		assert.Zero(t, out.DropGold)
+	}
+}
+
+// revive-on-death revives any actor at full health (an NPC's rule before
+// slice 3, now everyone's).
+func TestOnDeathReviveOnDeathRevivesAnyActorAtFullHealth(t *testing.T) {
+	for name, a := range map[string]*actors.Actor{"account": player(t, 9634), "NPC": npc(t, 0, 0)} {
+		flagged(t, a.Character, 96202, "revive-on-death")
+		a.Character.HealthMax.Value = 33 // after AddBuff's Validate
+		a.Character.Gold = 25
+		out := New().OnDeath(a)
+		assert.True(t, out.Revive, name)
+		assert.Equal(t, 33, out.ReviveHealth, name)
+		assert.Empty(t, out.DropItems, name)
+		assert.Zero(t, out.DropGold, name)
+	}
 }

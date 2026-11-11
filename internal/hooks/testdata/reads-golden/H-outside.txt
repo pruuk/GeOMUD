@@ -5,8 +5,6 @@ Ann: <ansi fg="mobname">rat</ansi> has died.
 Bob: <ansi fg="mobname">rat</ansi> has died.
 Ann: You gained <ansi fg="yellow-bold">5 experience points</ansi>! <ansi fg="7">(combat)</ansi>
 Ann: <ansi fg="231">Your alignment has shifted from <ansi fg="neutral">neutral</ansi> to <ansi fg="lawful">lawful</ansi>!</ansi>
-Ann: <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
-Bob: <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 == cleanup module: bury rat
 > Ann: bury rat
 Ann: You bury the <ansi fg="mob-corpse">rat corpse</ansi>.
@@ -71,8 +69,6 @@ Ann|                                                                          �
 Ann|                                                                          ╚═════╝</ansi>
 Ann: <ansi fg="room-description-dark">Also here: </ansi><ansi fg="username">Bob</ansi>
 Ann|
-Ann: <ansi fg="room-description-dark">On the Ground: </ansi><ansi fg="item"><ansi fg="gold">25 gold</ansi></ansi>
-Ann|
 Ann: <ansi fg="yellow">Exits: </ansi><ansi fg="exit">east</ansi>, <ansi fg="exit">north</ansi>
 Ann|
 == player death: Bob downed and suicide (recovery room: an instance of B)
@@ -81,5 +77,3 @@ Ann: <ansi fg="username">Bob</ansi> has died.
 Ann: <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
 Bob: <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
 Cid: <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
-Bob: You drop <ansi fg="gold">25 gold</ansi> on the floor.
-Ann: <ansi fg="username">Bob</ansi> drops <ansi fg="gold">25 gold</ansi>.

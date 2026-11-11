@@ -14,6 +14,7 @@ import (
 // percentage, Alice queues a flee once the guard hurts her.
 func TestAttackRunsTheDefendersWimpyCheck(t *testing.T) {
 	w := newCombatWorld(t, 303)
+	w.recoveryRoom()
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
 	alice.SetConfigOption(`wimpy`, 101)
 	guard := w.addNPC(93202, "guard", 1, goldenRoomA, 30, 30, 20, 10)

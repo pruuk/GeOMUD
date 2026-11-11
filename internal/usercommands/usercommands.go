@@ -184,8 +184,8 @@ var (
 		`show`:        {Show, true, false},
 		`spawn`:       {Spawn, false, true}, // Admin only
 
-		// Kept until Phase 5: it is player and NPC death. NewRound_AutoHeal, NewRound_DoCombat
-		// (players and mobs), and Buff_ApplyBuffs dispatch it.
+		// Death by one's own hand (death.Die). Allowed when downed, so a downed actor
+		// can end it under a ruleset with a downed state.
 		`suicide`:  {Suicide, true, false},
 		`syslogs`:  {SysLogs, true, true},  // Admin only
 		`teleport`: {Teleport, true, true}, // Admin only

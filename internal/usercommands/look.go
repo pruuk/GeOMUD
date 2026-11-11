@@ -6,7 +6,6 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
-	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -392,9 +391,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 			Tell(actor, buildCorpseDescriptionPanel(&corpse.Character))
 
-			if configs.GetGamePlayConfig().Death.CorpseItems {
-				Tell(actor, buildCorpseInventoryPanel(&corpse))
-			}
+			Tell(actor, buildCorpseInventoryPanel(&corpse))
 
 			return true, nil
 

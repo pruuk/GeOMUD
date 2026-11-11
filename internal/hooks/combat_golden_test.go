@@ -37,6 +37,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/races"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/stretchr/testify/require"
@@ -574,36 +575,21 @@ func (w *combatWorld) recoveryRoom() {
 	require.NoError(w.t, rooms.SaveRoomTemplate(*rooms.LoadRoom(goldenRoomC)))
 }
 
-// deathConfig sets today's death rules for one fixture with settings that
-// make each rule show (the test binary loads no config.yaml, so all are
-// zero otherwise): corpses on, drops on the floor beside them (CorpseItems
-// off, as shipped), half of a player's gear dropped by chance, a 10% XP
-// penalty, and levels up to 1 protected.
+// deathConfig turns corpses on for one fixture (the test binary loads no
+// config.yaml, so they are off otherwise).
 func deathConfig(t *testing.T) {
 	t.Helper()
 	gp := configs.GetGamePlayConfig()
 	setConfig(t,
-		map[string]any{
-			"GamePlay.Death.CorpsesEnabled":      true,
-			"GamePlay.Death.CorpseItems":         false,
-			"GamePlay.Death.EquipmentDropChance": 0.5,
-			"GamePlay.Death.XPPenalty":           "10%",
-			"GamePlay.Death.ProtectionLevels":    1,
-		},
-		map[string]any{
-			"GamePlay.Death.CorpsesEnabled":      bool(gp.Death.CorpsesEnabled),
-			"GamePlay.Death.CorpseItems":         bool(gp.Death.CorpseItems),
-			"GamePlay.Death.EquipmentDropChance": float64(gp.Death.EquipmentDropChance),
-			"GamePlay.Death.XPPenalty":           string(gp.Death.XPPenalty),
-			"GamePlay.Death.ProtectionLevels":    int(gp.Death.ProtectionLevels),
-		})
+		map[string]any{"GamePlay.Death.CorpsesEnabled": true},
+		map[string]any{"GamePlay.Death.CorpsesEnabled": bool(gp.Death.CorpsesEnabled)})
 	require.True(t, bool(configs.GetGamePlayConfig().Death.CorpsesEnabled), "the override took")
-	require.Equal(t, "10%", string(configs.GetGamePlayConfig().Death.XPPenalty), "the override took")
 }
 
 // A player kills an NPC.
 func TestCombatGoldenPvMToDeath(t *testing.T) {
 	w := newCombatWorld(t, 111)
+	w.recoveryRoom()
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 5, 30, 20, 10)
 	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
 	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "golden-rats-pvm")
@@ -618,6 +604,7 @@ func TestCombatGoldenPvMToDeath(t *testing.T) {
 // can break.
 func TestCombatGoldenPvP(t *testing.T) {
 	w := newCombatWorld(t, 202)
+	w.recoveryRoom()
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
 	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
 	bob := w.addPlayer(9302, "Bob", goldenRoomA, 10, 10, 10, 15)
@@ -626,20 +613,21 @@ func TestCombatGoldenPvP(t *testing.T) {
 	w.start()
 	w.rounds(20)
 	w.check("pvp")
-	require.Less(t, bob.Character.Health, 1, "the fixture must reach Bob going down")
+	require.True(t, rooms.IsEphemeralRoomId(bob.Character.RoomId), "the fixture must reach Bob's death")
 }
 
 // An NPC attacks a player (nothing in data does this today; the aggro is set
 // directly).
 func TestCombatGoldenMvP(t *testing.T) {
 	w := newCombatWorld(t, 303)
+	w.recoveryRoom()
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
 	guard := w.addNPC(93202, "guard", 1, goldenRoomA, 30, 30, 20, 10)
 	guard.Character.SetAggro(alice.Character.Id, characters.DefaultAttack)
 	w.start()
 	w.rounds(20)
 	w.check("mvp")
-	require.Less(t, alice.Character.Health, 1, "the fixture must reach Alice going down")
+	require.True(t, rooms.IsEphemeralRoomId(alice.Character.RoomId), "the fixture must reach Alice's death")
 }
 
 // An NPC attacks an NPC (the aggro is set directly); nobody is credited.
@@ -719,6 +707,7 @@ func TestCombatGoldenObserver(t *testing.T) {
 // every line, waits and swings alike.
 func TestCombatGoldenHiddenAttacker(t *testing.T) {
 	w := newCombatWorld(t, 909)
+	w.recoveryRoom()
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
 	alice.Character.Equipment.Weapon = weapon(93105, "testdagger", items.Stabbing, 1, 4, 1)
 	bob := w.addPlayer(9302, "Bob", goldenRoomA, 10, 10, 10, 10)
@@ -728,6 +717,7 @@ func TestCombatGoldenHiddenAttacker(t *testing.T) {
 	w.start()
 	w.rounds(6)
 	w.check("hidden_attacker")
+	require.True(t, rooms.IsEphemeralRoomId(bob.Character.RoomId), "the fixture must reach Bob's death")
 }
 
 // A player kills an elite NPC that carries an item and gold and wears two
@@ -768,17 +758,17 @@ func TestCombatGoldenDeathNPC(t *testing.T) {
 	require.Contains(t, string(ledger), rat.Character.Id.String())
 }
 
-// An elite NPC kills a player above the protection band (Phase 5 slice 3,
-// recorded on the death before it moved). Today she goes down, bleeds out
-// over the regen passes, and her death drops gear by chance, costs XP,
-// books an elite death and leaves a corpse; she wakes in the recovery room.
+// An elite NPC kills a player (Phase 5 slice 3; recorded on the old death
+// first, Task 1). She dies in the round her health reaches 0; the gem she
+// carries and her gold go into her corpse; she keeps what she wears and her
+// XP; the elite death is booked; she wakes in the recovery room at 1 health.
 func TestCombatGoldenDeathPlayer(t *testing.T) {
 	w := newCombatWorld(t, 303)
 	w.recoveryRoom()
 	deathConfig(t)
 	w.runInputs()
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
-	alice.Character.Level, alice.Character.Experience = 2, 1000 // above ProtectionLevels 1
+	alice.Character.Level, alice.Character.Experience = 2, 1000 // the record shows no XP is lost
 	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
 	alice.Character.Equipment.Ring = trinket(93107, "testring", items.Ring, items.Wearable)
 	alice.Character.Items = []items.Item{trinket(93108, "testgem", items.Gemstone, items.Mundane)}
@@ -793,9 +783,10 @@ func TestCombatGoldenDeathPlayer(t *testing.T) {
 	require.True(t, dead(), "the fixture must reach Alice's death")
 }
 
-// A player kills a player (Phase 5 slice 3, recorded on the death before it
-// moved): the kill credit and "killed by" notice, drops by chance, XP
-// penalty, corpse, recovery room.
+// A player kills a player (Phase 5 slice 3; recorded on the old death first,
+// Task 1): the kill credit and the "killed by" notice; the gem Bob carries
+// and his gold go into his corpse; he keeps what he wears and his XP; he
+// wakes in the recovery room at 1 health.
 func TestCombatGoldenDeathPvP(t *testing.T) {
 	w := newCombatWorld(t, 202)
 	w.recoveryRoom()
@@ -804,7 +795,7 @@ func TestCombatGoldenDeathPvP(t *testing.T) {
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
 	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
 	bob := w.addPlayer(9302, "Bob", goldenRoomA, 10, 10, 10, 15)
-	bob.Character.Level, bob.Character.Experience = 2, 1000 // above ProtectionLevels 1
+	bob.Character.Level, bob.Character.Experience = 2, 1000 // the record shows no XP is lost
 	bob.Character.Equipment.Ring = trinket(93107, "testring", items.Ring, items.Wearable)
 	bob.Character.Items = []items.Item{trinket(93108, "testgem", items.Gemstone, items.Mundane)}
 	alice.Character.SetAggro(bob.Character.Id, characters.DefaultAttack)
@@ -831,16 +822,31 @@ func TestShootWaitLineDoesNotReachTargetRoom(t *testing.T) {
 	require.Empty(t, w.reads[carol.UserId], "observers in the target's room read nothing on the wait round")
 }
 
-// The killer is recorded when combat downs the player, so destroying the
-// killer before the death does not lose its MobId; healing clears it.
+// downedAtZero is the active ruleset with a downed state: at 0 health or
+// below an actor is downed, never dead.
+type downedAtZero struct{ rules.Ruleset }
+
+func (downedAtZero) Condition(a *actors.Actor) rules.Condition {
+	if a.Character.Health <= 0 {
+		return rules.Downed
+	}
+	return rules.Up
+}
+
+// The killer is recorded when combat takes a player out of Up, so under a
+// ruleset with a downed state, destroying the killer before the death does
+// not lose its MobId; healing clears it. (Under the reference rules death
+// is immediate and clears the record itself.)
 func TestKilledByOutlivesTheKiller(t *testing.T) {
 	w := newCombatWorld(t, 303)
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
 	guard := w.addNPC(93202, "guard", 1, goldenRoomA, 30, 30, 20, 10)
 	guard.Character.SetAggro(alice.Character.Id, characters.DefaultAttack)
+	t.Cleanup(rules.SetForTest(downedAtZero{rules.Get()}))
 	w.start()
 	w.rounds(20)
 	require.Less(t, alice.Character.Health, 1, "the fixture must reach Alice going down")
+	require.Equal(t, goldenRoomA, alice.Character.RoomId, "downed, not dead")
 
 	mobs.DestroyInstance(guard.Character.Id)
 	require.Nil(t, mobs.GetInstance(guard.Character.Id))

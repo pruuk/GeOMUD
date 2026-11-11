@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
-	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/messaging"
@@ -37,7 +36,10 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		return true, nil
 	}
 
-	if args[0] == "all" {
+	// "get all <corpse>" and "get all from <corpse>" take everything from
+	// that corpse (the corpse branch below). Every other "get all ..." takes
+	// everything on the floor, as it always has.
+	if args[0] == "all" && !namesACorpse(actor, room, args) {
 		if room.Gold > 0 {
 			Get(`gold`, actor, room, flags)
 		}
@@ -87,8 +89,8 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			}
 		}
 
-		// Look for a corpse as the source when CorpseItems is enabled
-		if containerName == `` && configs.GetGamePlayConfig().Death.CorpseItems {
+		// Look for a corpse as the source
+		if containerName == `` {
 			c, refusal := room.FindCorpseByRef(actor.Character, args[len(args)-1])
 			if refusal != `` {
 				// The ordinal names someone living, not a corpse (one
@@ -439,4 +441,23 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	}
 
 	return true, nil
+}
+
+// namesACorpse reports whether args is "all <word>" or "all from <word>"
+// with <word> a corpse's name for actor: it finds a corpse, or its ordinal
+// lands on someone living whom a corpse shares a name with (the corpse
+// branch below then refuses, "The rat is still alive."; Task 5b). A
+// container of the same name wins, as it does for every get (the container
+// lookup comes first, :80-88), so then this is false and "get all" keeps
+// its room-wide meaning.
+func namesACorpse(actor *actors.Actor, room *rooms.Room, args []string) bool {
+	if len(args) != 2 && !(len(args) == 3 && args[1] == "from") {
+		return false
+	}
+	word := args[len(args)-1]
+	if room.FindContainerByName(word) != `` {
+		return false
+	}
+	c, refusal := room.FindCorpseByRef(actor.Character, word)
+	return c != nil || refusal != ``
 }

@@ -363,11 +363,6 @@
                     <input type="number" id="f-statpoints" min="0" placeholder="0" />
                     <div class="field-hint">Unspent stat allocation points</div>
                 </div>
-                <div class="field">
-                    <label>Extra Lives</label>
-                    <input type="number" id="f-extralives" min="0" placeholder="0" />
-                    <div class="field-hint">Permadeath lives remaining (0 if not enabled)</div>
-                </div>
 
                 <div class="field">
                     <label>Alignment</label>
@@ -589,7 +584,6 @@
         setVal('f-roomid',  ch.RoomId      || 0);
         setVal('f-trainingpoints', ch.TrainingPoints || 0);
         setVal('f-statpoints',     ch.StatPoints     || 0);
-        setVal('f-extralives',     ch.ExtraLives     || 0);
 
         const align = ch.Alignment || 0;
         setVal('f-alignment', align);
@@ -1086,7 +1080,6 @@
                 Gold:           parseInt(document.getElementById('f-gold').value, 10) || 0,
                 TrainingPoints: parseInt(document.getElementById('f-trainingpoints').value, 10) || 0,
                 StatPoints:     parseInt(document.getElementById('f-statpoints').value, 10) || 0,
-                ExtraLives:     parseInt(document.getElementById('f-extralives').value, 10) || 0,
                 Stats: {
                     Strength:   { Training: parseInt(document.getElementById('f-stat-strength').value, 10) || 0 },
                     Speed:      { Training: parseInt(document.getElementById('f-stat-speed').value, 10) || 0 },

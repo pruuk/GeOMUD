@@ -22,6 +22,7 @@ func (fake) Consider(a, d *actors.Actor) float64               { return 1 }
 func (fake) CanAttack(a, d *actors.Actor) error                { return nil }
 func (fake) Condition(a *actors.Actor) Condition               { return Up }
 func (fake) Regen(a *actors.Actor, round uint64) RegenResult   { return RegenResult{} }
+func (fake) OnDeath(v *actors.Actor) DeathOutcome              { return DeathOutcome{} }
 
 func TestGetPanicsWithNoRuleset(t *testing.T) {
 	restore := SetForTest(nil)

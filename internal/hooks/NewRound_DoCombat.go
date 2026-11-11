@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/death"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -472,11 +473,12 @@ func flee(a *actors.Actor, aRoom *rooms.Room) {
 }
 
 // handleAffected settles everyone the round touched, actors with an account
-// first, then NPCs, each once: the ruleset says who is down or dead.
+// first, then NPCs, each once: the ruleset says who is dead (death.Die) or,
+// under a ruleset with a downed state, down (an account's PlayerDrop).
 func handleAffected(affected []ids.ID) {
 
 	handled := map[ids.ID]struct{}{}
-	npcs := []*mobs.Mob{}
+	npcs := []*actors.Actor{}
 
 	for _, id := range affected {
 		if _, ok := handled[id]; ok {
@@ -490,30 +492,23 @@ func handleAffected(affected []ids.ID) {
 		}
 
 		if user := accountOf(a); user != nil {
-
-			if user.Character.Health <= -10 {
-
-				user.Command(`suicide`) // suicide drops all money/items and transports to land of the dead.
-
-			} else if rules.Get().Condition(a) != rules.Up {
-
+			switch rules.Get().Condition(a) {
+			case rules.Dead:
+				death.Die(a)
+			case rules.Downed:
 				events.AddToQueue(events.PlayerDrop{UserId: user.UserId, RoomId: user.Character.RoomId})
-
 			}
-
 			continue
 		}
 
-		if mob := mobs.GetInstance(id); mob != nil {
-			npcs = append(npcs, mob)
+		if mobs.GetInstance(id) != nil {
+			npcs = append(npcs, a)
 		}
 	}
 
-	for _, mob := range npcs {
-		if a := actors.Get(mob.Character.Id); a != nil && rules.Get().Condition(a) == rules.Dead {
-
-			mob.Command(`suicide`)
-
+	for _, a := range npcs {
+		if rules.Get().Condition(a) == rules.Dead {
+			death.Die(a)
 		}
 	}
 

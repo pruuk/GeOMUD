@@ -51,6 +51,7 @@ func TestActorUpkeepTicksEveryActorsCooldowns(t *testing.T) {
 	m := mobs.NewTestInstance(mobs.Mob{})
 	t.Cleanup(func() { mobs.Rest(m.Character.Id) })
 	m.Character.Cooldowns = characters.Cooldowns{"bite": 3}
+	m.Character.Health = 10 // a bare test NPC is at 0, which is dead: upkeep would end it
 
 	ActorUpkeep(events.NewRound{RoundNumber: 1})
 

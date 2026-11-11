@@ -29,6 +29,7 @@ func (oneShot) ResolveAttack(a, d *actors.Actor) rules.AttackResult {
 // in round 1 instead of round 4, with no change to the engine.
 func TestStubRulesetChangesTheFight(t *testing.T) {
 	w := newCombatWorld(t, 111)
+	w.recoveryRoom()
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 5, 30, 20, 10)
 	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
 	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "stub-rats")
@@ -40,7 +41,7 @@ func TestStubRulesetChangesTheFight(t *testing.T) {
 	out := w.out.String()
 	require.Contains(t, out, "== round 1")
 	require.NotContains(t, out, "== round 2", "the reference ruleset takes 4 rounds (golden pvm_death)")
-	require.Contains(t, out, `Input rat: "suicide"`)
+	require.Contains(t, out, "MobDeath rat")
 	require.Contains(t, out, "STUB HIT")
 }
 

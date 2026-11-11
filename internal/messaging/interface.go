@@ -7,6 +7,7 @@ package messaging
 
 import (
 	"net"
+	"sort"
 	"sync"
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
@@ -69,6 +70,22 @@ func Notify(n Notice) {
 		TextScreenReader: n.ScreenReaderText,
 		SkipLineRefresh:  n.SkipLineRefresh,
 	})
+}
+
+// NotifyEach is a notice whose text depends on who reads it (the death
+// notice names only the killers each reader perceives). Every active
+// account, in UserId order, gets text(account) as its own message: the same
+// line refresh and prompt redraw as Notify's broadcast, and stripped for a
+// screen reader as every message is. An empty text sends that account
+// nothing.
+func NotifyEach(text func(u *accounts.Account) string) {
+	all := accounts.GetAllActiveUsers()
+	sort.Slice(all, func(i, j int) bool { return all[i].UserId < all[j].UserId })
+	for _, u := range all {
+		if t := text(u); t != `` {
+			events.AddToQueue(events.Message{UserId: u.UserId, Text: t})
+		}
+	}
 }
 
 // Raw writes bytes to a connection as they are: screens before an account

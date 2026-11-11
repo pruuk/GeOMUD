@@ -12,8 +12,8 @@ type Corpse struct {
 	Character    characters.Character
 	RoundCreated uint64
 	Prunable     bool         // Whether it can be removed
-	Items        []items.Item // Held items when CorpseItems config is enabled
-	Gold         int          // Held gold when CorpseItems config is enabled
+	Items        []items.Item // What the body dropped (rules.DeathOutcome)
+	Gold         int          // The gold it dropped
 }
 
 func (c *Corpse) Update(roundNow uint64, decayRate string) {

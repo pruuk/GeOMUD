@@ -6,6 +6,7 @@ package rules
 
 import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
+	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 )
 
@@ -44,6 +45,32 @@ type RegenResult struct {
 // the engine packages, so the regen pass compares no health with a number
 // (TestEngineAsksTheRulesetWhoIsDead).
 func (r RegenResult) Changes() bool { return r.Health != 0 || r.Mana != 0 }
+
+// Award is one account's share of a kill (Q1). After announcing the death
+// the engine credits the kill (an NPC victim's), grants XP through the
+// account (source "combat") and sends Messages, award by award.
+type Award struct {
+	UserId   int
+	XP       int
+	Messages []perception.Message
+}
+
+// DeathOutcome is what a death means. The engine carries it out
+// (internal/death): it announces the death, moves the drops and respawns
+// or ends the body.
+type DeathOutcome struct {
+	Revive        bool // the victim gets up instead of dying
+	ReviveHealth  int  // health on revive
+	Respawn       bool // true: back to life in the recovery room; false: the body ends
+	RespawnHealth int  // health on respawn
+
+	// DropItems leave the body, carried or worn, for its corpse (or the
+	// floor when corpses are off); DropGold likewise.
+	DropItems []items.Item
+	DropGold  int
+
+	Awards []Award // the killers' shares, in order; their Messages are the outcome's lines
+}
 
 // Ruleset is everything the engine asks a game's rules. A method that needs
 // a random draw makes it itself. Phase 5 slice 2 holds the fight and slice 3 the
@@ -87,6 +114,10 @@ type Ruleset interface {
 	// Regen is what a regenerates this round. It changes no health or mana:
 	// the engine applies the result.
 	Regen(a *actors.Actor, round uint64) RegenResult
+
+	// OnDeath is what victim's death means. Its awards may change the
+	// killers' characters (alignment); the victim's body is the engine's.
+	OnDeath(victim *actors.Actor) DeathOutcome
 }
 
 // active is set once at boot, before the game loop starts, and swapped only

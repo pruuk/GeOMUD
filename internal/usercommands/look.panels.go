@@ -107,13 +107,13 @@ func buildInventoryLookPanel(equipment *characters.Worn, itemNames []string) str
 	return layout.Render() + term.CRLFStr + ` Carrying: ` + sb.String() + term.CRLFStr
 }
 
-// buildCorpseInventoryPanel renders the lootable contents of a corpse when CorpseItems is enabled.
+// buildCorpseInventoryPanel renders the lootable contents of a corpse.
 func buildCorpseInventoryPanel(c *rooms.Corpse) string {
 	layout, err := templates.LoadPanelLayout("character/equipment-look")
 	if err != nil {
 		layout = templates.NewPanelLayout("open", "single", 1, 1)
-		layout.AddPanelsToSlot(layout.AddSlot(), "inv")
-		layout.Panel("inv").SetTitle(` <ansi fg="black-bold">.:</ansi><ansi fg="20">Inventory</ansi> `).SetWidth(78)
+		layout.AddPanelsToSlot(layout.AddSlot(), "equip")
+		layout.Panel("equip").SetTitle(` <ansi fg="black-bold">.:</ansi><ansi fg="20">Inventory</ansi> `).SetWidth(78)
 	}
 	layout.Panel("equip").SetTitle(` <ansi fg="black-bold">.:</ansi><ansi fg="20">Inventory</ansi> `)
 	layout.Panel("equip").SetLabelWidth(9)

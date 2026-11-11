@@ -36,23 +36,18 @@ seed 111
   <ansi fg="mobname">rat</ansi> has died.
   You gained <ansi fg="yellow-bold">21 experience points</ansi>! <ansi fg="7">(combat)</ansi>
   <ansi fg="231">Your alignment has shifted from <ansi fg="neutral">neutral</ansi> to <ansi fg="lawful">lawful</ansi>!</ansi>
-  <ansi fg="item">testgem</ansi> drops to the ground.
-  <ansi fg="item">testclub</ansi> drops to the ground.
-  <ansi fg="item">testring</ansi> drops to the ground.
-  <ansi fg="yellow-bold">30 gold</ansi> drops to the ground.
 -- events
   AggroChanged Alice room=93001
   AggroChanged rat room=93001
-  Input rat: "suicide"
-  Ran rat: "suicide"
   MobDeath rat
+  ItemOwnership rat item=93108 gained=false
+  ItemOwnership rat item=93106 gained=false
+  ItemOwnership rat item=93107 gained=false
   MobItemDrop mob=93201 room=93001 zone=goldenzone item=93108
   MobItemDrop mob=93201 room=93001 zone=goldenzone item=93106
   MobItemDrop mob=93201 room=93001 zone=goldenzone item=93107
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101 gold=25 xp=22 worn=[93101] kd=1/0/0/0/1/0 pk=[] pd=[]
-  rat: room=93001 hp=0/12 aggro=[none] playerdamage={Alice:12} weapon=93106 items=93108 gold=30 xp=1 worn=[93106,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93001 hp=0/12 aggro=[none] playerdamage={Alice:12} gold=0 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
   group golden-rats-death hates Alice
-  room 93001 floor: 93108,93106,93107
-  room 93001 floor gold: 30
-  room 93001 corpse rat: items=[] gold=0 worn=[93106,93107]
+  room 93001 corpse rat: items=[93108,93106,93107] gold=30 worn=[]

@@ -193,48 +193,18 @@ GamePlay:
   AllowItemBuffRemoval: false
   # Death settings
   Death:
-    # - EquipmentDropChance -
-    #   The chance that a player will drop a piece of worn/backpack equipment when
-    #   they die. This is a percentage, so 0.5 is 50% chance.
-    EquipmentDropChance: 0.25
-    # - AlwaysDropBackpack -
-    #   If true, players will always drop their backpack contents when they die.
-    #   If false, it will failover to EquipmentDropChance.
-    AlwaysDropBackpack: false
-    # - XPPenalty -
-    #   What penalty is applies to a players XP when they die.
-    #   none - no penalty
-    #   level - lose all XP gained over their current level.
-    #   10%, 25%, 50%, 75%, 90%, 100% - lose that percentage of total XP
-    XPPenalty: none
-    # - ProtectionLevels -
-    #   Players do not incur death penalties up to and including this level.
-    ProtectionLevels: 5
-    # - PermaDeath -
-    #   If true, players lose their character if they die with zero lives left.
-    PermaDeath: false
     # - CorpsesEnabled -
     #   If set to true, corpses are left behind by players or mobs that are killed.
+    #   A corpse holds what its owner dropped: a player's carried items and gold,
+    #   an NPC's carried items, gold and the worn items its ItemDropChance drops.
+    #   Players take them with "get <item> <corpse>", or everything with
+    #   "get all <corpse>" or "get all from <corpse>".
     CorpsesEnabled: true
     # - CorpseDecayTime -
-    #   How long until corpses crumble to dust (Go away).
+    #   How long until corpses crumble to dust (Go away). Everything still in a
+    #   corpse when it crumbles is destroyed.
     #   See ShopRestockRate comments for time format.
     CorpseDecayTime: 1 hour
-    # - CorpseItems -
-    #   If true, items and gold that would drop from mobs or players on death
-    #   are instead placed on the corpse. Players can loot corpses with
-    #   "get <item> <corpse>" or "get all <corpse>".
-    #   Corpse decay destroys all held items. Requires CorpsesEnabled: true.
-    CorpseItems: false
-  # - LivesStart -
-  #   (Req: PermaDeath) How many lives players start with before being reset.
-  LivesStart: 3
-  # - LivesMax -
-  #   (Req: PermaDeath) The maximum lives a player can have.
-  LivesMax: 3
-  # - LivesOnLevelUp -
-  #   (Req: PermaDeath) If non zero, players gain this many lives per level.
-  LivesOnLevelUp: 1
   # - ShopRestockRate -
   #   The default time for a shops to restock 1 item. This can still be
   #   overriden in character shop definitions if desired.

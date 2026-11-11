@@ -48,11 +48,15 @@ seed 303
 == round 6
 -- Alice reads
   You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">5 damage</ansi>.
+  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Alice</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- events
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001
   AggroChanged Alice room=93001
-  PlayerDrop Alice room=93001
+  PlayerDeath Alice
+  CharacterVitalsChanged Alice
 -- state
-  Alice: room=93001 hp=-2/12 aggro=[none] playerdamage={} killedby=guard mob=93202 elite=false
+  Alice: room=copy-of-93003 hp=1/12 aggro=[none] playerdamage={}
   guard: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  room 93001 floor gold: 25
