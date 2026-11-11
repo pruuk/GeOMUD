@@ -27,6 +27,8 @@ func Quit(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		Range:        perception.Room,
 		ActorText:    "You sit down and begin your meditation.",
 		ObserverText: "{actor} sits down and begins to meditate.",
+		// Only the quitter's presence: none for a viewer who does not perceive it.
+		Exclude: rooms.NotPerceiving(actor.Character),
 	})
 	Tell(actor, "Your meditation must complete without interruption to quit gracefully.")
 	user.AddBuff(0, `quitting`)

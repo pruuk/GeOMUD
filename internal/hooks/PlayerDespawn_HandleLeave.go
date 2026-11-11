@@ -49,7 +49,8 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 
 	if _, ok := room.RemovePlayer(evt.UserId); ok {
 		// The leaving body is already out of the room's list; the template
-		// names it with {actor}, so an observer who cannot see reads "someone".
+		// names it with {actor}. The line is only its presence, so a viewer
+		// who does not perceive it reads nothing (rooms.NotPerceiving).
 		tplTxt, _ := templates.Process("player-despawn", nil)
 		messaging.Send(perception.Message{
 			Kind:         perception.WorldEvent,
@@ -57,6 +58,7 @@ func HandleLeave(e events.Event) events.ListenerReturn {
 			Senses:       perception.Sight | perception.Sound,
 			Range:        perception.Room,
 			ObserverText: tplTxt,
+			Exclude:      rooms.NotPerceiving(user.Character),
 		})
 	}
 

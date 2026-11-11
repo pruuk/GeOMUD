@@ -25,11 +25,14 @@ seed 404
 == round 3
 -- Alice reads
   <ansi fg="yellow-bold">***</ansi> <ansi fg="mobname">dog</ansi> <ansi fg="cyan-bold">CRITICALLY HITS</ansi> <ansi fg="mobname">rat</ansi> with their <ansi fg="item">fists</ansi>! <ansi fg="yellow-bold">***</ansi>
+  <ansi fg="mobname">rat</ansi> has died.
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- events
   AggroChanged dog room=93001
   AggroChanged rat room=93001
-  Input rat: "suicide"
+  MobDeath rat
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
   dog: room=93001 hp=10/10 aggro=[none] playerdamage={}
   rat: room=93001 hp=-5/12 aggro=[none] playerdamage={}
+  room 93001 floor gold: 25

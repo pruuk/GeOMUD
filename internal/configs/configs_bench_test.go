@@ -25,7 +25,6 @@ func seedConfig() Config {
 	c.GamePlay.XPScale = 100
 	c.GamePlay.ShopRestockRate = "6 hours"
 	c.GamePlay.ContainerSizeMax = 10
-	c.GamePlay.Death.XPPenalty = "none"
 	c.GamePlay.Death.CorpseDecayTime = "1 hour"
 	c.Validation.NameSizeMin = 3
 	c.Validation.NameSizeMax = 20
@@ -171,11 +170,8 @@ func Benchmark_Flatten_Deep(b *testing.B) {
 		},
 		"GamePlay": map[string]any{
 			"Death": map[string]any{
-				"XPPenalty":           "none",
-				"EquipmentDropChance": 0.5,
-				"ProtectionLevels":    3,
-				"CorpsesEnabled":      true,
-				"CorpseDecayTime":     "1 hour",
+				"CorpsesEnabled":  true,
+				"CorpseDecayTime": "1 hour",
 			},
 			"Party": map[string]any{
 				"MaxPlayerCount": 5,

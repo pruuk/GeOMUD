@@ -20,7 +20,7 @@ func Consider(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 
 	lookAt := args[0]
 
-	playerId, mobId := room.FindByName(lookAt)
+	playerId, mobId := room.FindByName(actor.Character, lookAt)
 	if playerId == UserIdOf(actor) {
 		playerId = 0
 	}

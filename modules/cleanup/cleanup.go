@@ -138,9 +138,32 @@ func (c *CleanupModule) buryCommand(rest string, actor *actors.Actor, room *room
 		return true, nil
 	}
 
-	if corpse, corpseFound := room.FindCorpse(rest); corpseFound {
+	found, refusal := room.FindCorpseByRef(actor.Character, rest)
+	if refusal != `` {
+		// The ordinal names someone living, not a corpse (one numbering,
+		// the living first): refuse, do not skip ahead.
+		usercommands.Tell(actor, refusal)
+		return true, nil
+	}
 
-		if room.RemoveCorpse(corpse) {
+	if found != nil {
+
+		// Removing the corpse shifts the room's list, so what is said about
+		// it is read first.
+		corpse := *found
+
+		// No single command destroys a player's belongings (Calabe,
+		// 2026-11-11): a player's corpse that holds any item or gold is not
+		// buried, whoever asks, its owner too. An NPC corpse's loot goes
+		// with it.
+		if corpse.UserId > 0 && (len(corpse.Items) > 0 || corpse.Gold > 0) {
+			usercommands.Tell(actor, fmt.Sprintf(`You can't bury the <ansi fg="user-corpse">%s corpse</ansi> while it still holds something.`, corpse.Character.Name))
+			return true, nil
+		}
+
+		// The very corpse found (of two alike, the one named; RemoveCorpse
+		// would take the first).
+		if room.RemoveCorpseRef(found) {
 
 			corpseColor := `mob-corpse`
 			if corpse.UserId > 0 {

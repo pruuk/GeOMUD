@@ -179,8 +179,6 @@ func Start(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		Tell(actor, fmt.Sprintf(`You will be known as <ansi fg="yellow-bold">%s</ansi>!%s`, user.Character.Name, term.CRLFStr))
 	}
 
-	user.Character.ExtraLives = int(configs.GetGamePlayConfig().LivesStart)
-
 	user.EventLog.Add(`char`, fmt.Sprintf(`Created a new character: <ansi fg="username">%s</ansi>`, user.Character.Name))
 
 	// Trigger a player changed event

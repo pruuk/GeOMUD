@@ -218,15 +218,19 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, 
 	s.do("relogin: character", "online", b.char)
 	s.field("relogin: still holds the item", "inventory", "Carrying:", smokeItem)
 
-	// Death, with the Phase 4 stand-in (docs/completed/2026-10-26-phase-4-scripting-surface.md):
-	// suicide revives the player at 1 health in a private copy of the recovery
-	// room (75, "Waiting room"), which has a fixed portal back to the start room.
-	// Walking out proves the player is not downed (go is refused while downed).
-	// Bots are level 1, under Death.ProtectionLevels, so nothing is dropped.
+	// Death (Phase 5 slice 3, decision 11): suicide drops what the bot carries
+	// (the ring and its gold) into its corpse in the start room and brings it
+	// back at 1 health in a private copy of the recovery room (75, "Waiting
+	// room"), whose portal leads back to the start room. Walking out proves
+	// the bot is not downed (go is refused while downed); taking the ring
+	// from its own corpse proves the drop went into the corpse (its own name
+	// reaches its corpse: the one typing is not in its own name's count).
 	s.do("death: suicide", "suicide", b.char+" has DIED!")
 	s.do("death: in the recovery room", "look", recoveryRoomTitle)
 	s.do("death: walk out", "portal", startRoomTitle)
-	s.field("death: still holds the item", "inventory", "Carrying:", smokeItem)
+	s.do("death: take the item from the corpse", "get "+smokeItem+" "+b.char,
+		"You take the "+smokeItem+" from the "+b.char+" corpse")
+	s.field("death: holds the item again", "inventory", "Carrying:", smokeItem)
 	if s.err != nil {
 		return s.gmcp, s.err
 	}

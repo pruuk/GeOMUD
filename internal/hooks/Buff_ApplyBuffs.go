@@ -4,9 +4,11 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/buffs"
 	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/death"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 )
 
 //
@@ -61,13 +63,8 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 	//
 	if buffInfo.TriggerNow {
 
-		if isMob && targetChar.Health <= 0 {
-			// Mob died
-			events.AddToQueue(events.Input{
-				ActorId:   evt.ActorId,
-				InputText: `suicide`,
-			})
-
+		if a := actors.Get(evt.ActorId); a != nil && rules.Get().Condition(a) == rules.Dead {
+			death.Die(a)
 		}
 	}
 

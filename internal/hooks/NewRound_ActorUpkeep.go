@@ -6,15 +6,17 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/death"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 )
 
 // ActorUpkeep is every actor's round upkeep, before combat (slice 6): the
 // same cooldowns, buff triggers and stat refresh for players
 // and NPCs. An account also decays its alignment and reports changed vitals;
-// an NPC at 0 health dies. Actors go in ID order.
+// an actor the ruleset calls dead dies (death.Die). Actors go in ID order.
 func ActorUpkeep(e events.Event) events.ListenerReturn {
 
 	evt := e.(events.NewRound)
@@ -31,7 +33,6 @@ func ActorUpkeep(e events.Event) events.ListenerReturn {
 
 		char := a.Character
 		user := a.Controller().Account()
-		mob := mobs.GetInstance(a.Id) // nil for a player
 
 		// Roundtick any cooldowns
 		char.Cooldowns.RoundTick()
@@ -56,12 +57,10 @@ func ActorUpkeep(e events.Event) events.ListenerReturn {
 			if char.Health != hBefore || char.Mana != mBefore {
 				events.AddToQueue(events.CharacterVitalsChanged{UserId: user.UserId})
 			}
-			continue
 		}
 
-		if mob != nil && char.Health <= 0 {
-			// Mob died
-			mob.Command(`suicide`)
+		if rules.Get().Condition(a) == rules.Dead {
+			death.Die(a)
 		}
 	}
 

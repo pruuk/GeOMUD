@@ -150,8 +150,8 @@ and a PR. Calabe sees only player-visible rulings.
    upkeep pass for every actor per round (replaces `PruneBuffs`' player and NPC split); engine flags
    become Go constants; buff YAML names a Go effect by `effect:` key; mutators get one buff list for
    every actor plus the native list; the source is stored so GMCP stops reading "unknown"; nil check
-   in `HasFlag`; `reload buffs`. The Death Recovery affect (heal in the recovery room) is rebuilt in
-   Go here. Rename `buffs` to `affects` as a separate mechanical commit at the end.
+   in `HasFlag`; `reload buffs`.
+   Rename `buffs` to `affects` as a separate mechanical commit at the end.
 7. **Close Phase 5.** Smoke runs a fight through the ruleset; a stub ruleset swapped in at boot
    changes the outcome with no core edit; docs sweep (`help` pages, known issues, the spec notes
    this phase settles).
@@ -199,9 +199,9 @@ Each slice plan reads these first; a note leaves once a slice settles it.
     `characters` cannot import `rules` (cycle via `actors`). It moves behind the ruleset with swing
     speed (Calabe 2026-11-10: weapon speed plus stats and skill set swings per round, possibly 0
     with carried progress; out of scope until then).
-  - Three files still import `dikubasic`, allowlisted in `TestOnlyBootNamesTheRuleset` with their
-    slice: `usercommands/suicide_npc.go` (`AlignmentChange`, slice 3), `web/api_v1_items.go` and
-    `web/api_v1_mobs.go` (rankings, slice 4). Remove each from the allowlist when it goes.
+  - Two files still import `dikubasic`, allowlisted in `TestOnlyBootNamesTheRuleset`:
+    `web/api_v1_items.go` and `web/api_v1_mobs.go` (rankings, slice 4). Remove each from the
+    allowlist when it goes.
   - Slice 4 deletes offhand breakage (Calabe 2026-11-10): `offhandBreakCheck` in `DoCombat`, the
     broken item 20, and `BreakChance`/`BreakTest` if nothing else reads them; the `pvp` golden
     (shield break chance 90) changes then.
@@ -213,6 +213,13 @@ Each slice plan reads these first; a note leaves once a slice settles it.
     `dikubasic/ruleset_test.go` repeat one pattern, and each leaves restored keys pinned as explicit
     overrides (a later `AddOverlayOverrides` on them in the same test binary is skipped). Nothing
     trips it today; one `configs` test helper that removes the keys it added would replace all three.
+- **From slice 3 (2026-11-10).** Slice 4 takes what slice 3 left in the engine:
+  - NPC regen (one-actor rule).
+  - The -5/-10 floors in `ApplyHealthChange`.
+  - XP, levels and alignment, alignment decay included (still in upkeep).
+  - The four `characters` health checks and `rooms.FindDowned`.
+  - Offhand breakage and `BackStab` (see slice 2 above).
+  - `actors.BodyReplaced`, which has no production caller since permadeath went.
 
 ## Out of scope
 

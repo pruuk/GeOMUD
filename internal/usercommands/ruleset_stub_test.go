@@ -66,3 +66,28 @@ func TestConsiderAPlayerUsesThePlayerColour(t *testing.T) {
 	require.Len(t, told, 2)
 	assert.Contains(t, told[0], `<ansi fg="username">Target</ansi>`)
 }
+
+// downedAlways is the active ruleset with every actor downed.
+type downedAlways struct{ rules.Ruleset }
+
+func (downedAlways) Condition(a *actors.Actor) rules.Condition { return rules.Downed }
+
+// A downed actor cannot act: commands not allowed when downed are refused,
+// though the reference ruleset calls the player (10 health) up.
+func TestStubRulesetDownedActorCannotAct(t *testing.T) {
+	_, player, _ := goSetup(t)
+	t.Cleanup(rules.SetForTest(downedAlways{rules.Get()}))
+
+	told := playerTexts(t, player, func() {
+		_, err := TryCommand("get", "stick", player.Id, 0)
+		require.NoError(t, err)
+	})
+	assert.Equal(t, []string{"You are unable to do that while downed.\n"}, told)
+
+	told = playerTexts(t, player, func() {
+		_, err := TryCommand("north", "", player.Id, 0)
+		require.NoError(t, err)
+	})
+	assert.Equal(t, []string{"You are unable to do that while downed.\n"}, told)
+	assert.Equal(t, testRoomId, player.Character.RoomId)
+}

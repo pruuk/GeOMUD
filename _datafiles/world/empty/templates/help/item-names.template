@@ -14,3 +14,6 @@ Referring to "axe" or "heavy" is ambiguous. However you can refer to a specific
 item that matches by adding a <ansi fg="yellow">#[item_number]</ansi> to the end of the name. For 
 example: <ansi fg="command">get heavy#2</ansi> would get the second match: the <ansi fg="item">heavy sword</ansi>.
 
+You can also put the number first, with a dot: <ansi fg="command">get 2.heavy</ansi> is the same.
+Both forms work for any name: items, characters and corpses.
+

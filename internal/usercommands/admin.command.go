@@ -40,7 +40,7 @@ func AdminCommand(rest string, actor *actors.Actor, room *rooms.Room, flags even
 	cmd := strings.TrimPrefix(rest, searchName+` `)
 	//cmd := strings.Join(args, ` `)
 
-	playerId, mobId := room.FindByName(searchName)
+	playerId, mobId := room.FindByName(actor.Character, searchName)
 
 	// Use the index for how many turns to defer the extra commands
 	readyTurn := util.GetTurnCount()

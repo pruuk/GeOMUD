@@ -1,15 +1,17 @@
 <ansi fg="black-bold">.:</ansi> <ansi fg="magenta">Help for </ansi><ansi fg="command">death</ansi>
 
-When your hitpoints fall to zero or less, you'll drop to the ground and begin
-to bleed out. While bleeding out, each round you'll fall more and more into 
-the negative range.
+When your health falls to 0, you die.
 
-Once you reach -10 hitpoints, you will die!
+You drop everything you carry and all your gold into your corpse, which stays
+where you fell. What you wear stays on you.
 
-Dying can have many consequences - you can drop some of your gear or lose some 
-of your experience points.
+You come back in the shadow realm with 1 health, and you heal fast while you
+are there. Leave through the <ansi fg="exit">portal</ansi> when you are ready.
 
-You will also be transported to the shadow realm, where you must wait for your
-hitpoints to recover and for the next portal out to appear.
+Your corpse holds your things until it crumbles to dust after a while. When it
+crumbles, everything still in it is destroyed, so go back for it. Type
+<ansi fg="command">get all</ansi> and your name to take it all back (see
+<ansi fg="command">help get</ansi>).
 
-If you lost gear on death, you'll need to go find it and recover it.
+A creature's corpse holds its loot the same way, and its contents are
+destroyed the same way when it crumbles.

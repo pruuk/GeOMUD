@@ -99,7 +99,7 @@ func Party(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		var invitePlayerId int
 		if bool(partyCfg.SameRoomOnly) {
-			invitePlayerId, _ = room.FindByName(rest)
+			invitePlayerId, _ = room.FindByName(actor.Character, rest)
 		} else {
 			if u := accounts.GetByCharacterName(rest); u != nil {
 				invitePlayerId = u.UserId

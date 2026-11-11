@@ -1107,27 +1107,6 @@ var FIELD_META = {
         inputType: 'slider',
         min: 0, max: 500, step: 5,
     },
-    'GamePlay.LivesStart': {
-        label: 'Starting Lives (Permadeath)',
-        description: 'How many permadeath lives new characters start with. Only relevant when permadeath is enabled.',
-        implications: 'More starting lives make the game more forgiving for new players. Fewer lives create immediate tension and high stakes from the start.',
-        inputType: 'number',
-        min: 0, max: 100, step: 1,
-    },
-    'GamePlay.LivesMax': {
-        label: 'Maximum Lives (Permadeath)',
-        description: 'The maximum number of permadeath lives a character can accumulate. Caps the benefit of buying or earning extra lives.',
-        implications: 'A low cap prevents players from stockpiling lives. A high or zero cap allows unlimited accumulation.',
-        inputType: 'number',
-        min: 0, max: 1000, step: 1,
-    },
-    'GamePlay.LivesOnLevelUp': {
-        label: 'Lives Gained on Level Up',
-        description: 'Number of permadeath lives awarded each time a character levels up.',
-        implications: 'Granting lives on level-up rewards progression and makes higher-level characters more resilient. Set to 0 to not grant lives on level-up.',
-        inputType: 'number',
-        min: 0, max: 10, step: 1,
-    },
     'GamePlay.ShopRestockRate': {
         label: 'Shop Restock Rate',
         description: 'Default time interval for shops to restock one unit of each item. Uses period format (e.g., "6 hours", "30 minutes").',
@@ -1158,46 +1137,6 @@ var FIELD_META = {
     },
 
     // --- GamePlay.Death ---
-    'GamePlay.Death.EquipmentDropChance': {
-        label: 'Equipment Drop Chance on Death',
-        description: 'The probability (0.0 to 1.0) that each piece of equipped gear will drop when a player dies. 0.0 = never drop, 1.0 = always drop everything.',
-        implications: 'Higher values create a brutal death penalty that strongly discourages dying. Lower values are more forgiving. 0.1 (10% per item) is a common "moderate" setting.',
-        inputType: 'slider',
-        min: 0, max: 1, step: 0.05,
-        isFloat: true,
-    },
-    'GamePlay.Death.AlwaysDropBackpack': {
-        label: 'Always Drop Backpack on Death',
-        description: 'When enabled, players always drop all their carried (non-equipped) items on death, regardless of the equipment drop chance.',
-        implications: 'This creates a strong incentive to bank items before dangerous content. Combined with equipment drop chance, it can make death very costly.',
-        inputType: 'bool',
-    },
-    'GamePlay.Death.XPPenalty': {
-        label: 'XP Penalty on Death',
-        description: 'The experience point penalty applied when a player dies. Options: "none" (no penalty), "level" (lose enough XP to de-level), or a percentage like "10%", "25%", "50%".',
-        implications: 'No penalty makes death trivial. A level penalty is very harsh. Percentage penalties provide a middle ground. Balance this with equipment drop chance to set the overall death severity.',
-        inputType: 'enum',
-        options: [
-            { value: 'none', label: 'None', desc: 'No XP is lost on death.' },
-            { value: 'level', label: 'De-level', desc: 'Lose enough XP to drop back to the previous level.' },
-            { value: '10%', label: '10% XP', desc: 'Lose 10% of total XP on death.' },
-            { value: '25%', label: '25% XP', desc: 'Lose 25% of total XP on death.' },
-            { value: '50%', label: '50% XP', desc: 'Lose half of all earned XP on death.' },
-        ],
-    },
-    'GamePlay.Death.ProtectionLevels': {
-        label: 'Death Protection Levels',
-        description: 'How many levels of protection from death penalties new characters receive. Characters below this level threshold are immune to XP loss and equipment drops.',
-        implications: 'Higher values give new players a longer grace period to learn the game without harsh consequences. Set to 0 to apply death penalties from level 1.',
-        inputType: 'number',
-        min: 0, max: 100, step: 1,
-    },
-    'GamePlay.Death.PermaDeath': {
-        label: 'Permadeath Enabled',
-        description: 'When enabled, characters have a limited number of lives. Running out of lives results in permanent character deletion.',
-        implications: 'Permadeath creates intense, high-stakes gameplay but significantly increases the barrier to entry. Only enable if your server is designed around this mechanic.',
-        inputType: 'bool',
-    },
     'GamePlay.Death.CorpsesEnabled': {
         label: 'Corpses Enabled',
         description: 'When enabled, mob and player deaths leave behind a physical corpse object in the room.',
@@ -1210,12 +1149,6 @@ var FIELD_META = {
         implications: 'Shorter decay times keep the world cleaner but may frustrate players who want to loot a corpse later. Longer decay times can clutter busy areas.',
         inputType: 'text',
         placeholder: '1 hour',
-    },
-    'GamePlay.Death.CorpseItems': {
-        label: 'Items Go to Corpse',
-        description: 'When enabled, dropped items and gold go onto the corpse instead of the floor when a player or mob dies.',
-        implications: 'Placing items on corpses creates a clear, findable container for loot. Items on the floor can be harder to locate in cluttered rooms.',
-        inputType: 'bool',
     },
 
     // --- GamePlay.PVP ---
@@ -1541,22 +1474,13 @@ var SECTIONS = [
         fields: ['GamePlay.AllowItemBuffRemoval','GamePlay.XPScale','GamePlay.AlignmentDecayRounds','GamePlay.EliteLevelBonus','GamePlay.EliteXPBonus','GamePlay.ShopRestockRate','GamePlay.MercHirePricePerLevel','GamePlay.ContainerSizeMax','GamePlay.FloorItemCountMax'],
     },
     {
-        key: 'GamePlay.Lives',
-        name: 'Gameplay: Lives',
-        desc: 'Permadeath life counts, level-up life grants, and the price to buy extra lives.',
-        color: '#b03060',
-        iconBg: '#fce8ef',
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
-        fields: ['GamePlay.LivesStart','GamePlay.LivesMax','GamePlay.LivesOnLevelUp'],
-    },
-    {
         key: 'GamePlay.Death',
         name: 'Gameplay: Death',
-        desc: 'Equipment drop chance, XP penalty, corpse behavior, permadeath, and new-player protection.',
+        desc: 'Corpses, and how long they last before crumbling.',
         color: '#7a1a1a',
         iconBg: '#f5e8e8',
         icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a9 9 0 0 1 9 9c0 3.5-2 6.5-5 8v3H8v-3C5 17.5 3 14.5 3 11a9 9 0 0 1 9-9z"/><line x1="9" y1="22" x2="15" y2="22"/><line x1="9" y1="18" x2="15" y2="18"/></svg>',
-        fields: ['GamePlay.Death.EquipmentDropChance','GamePlay.Death.AlwaysDropBackpack','GamePlay.Death.XPPenalty','GamePlay.Death.ProtectionLevels','GamePlay.Death.PermaDeath','GamePlay.Death.CorpsesEnabled','GamePlay.Death.CorpseDecayTime','GamePlay.Death.CorpseItems'],
+        fields: ['GamePlay.Death.CorpsesEnabled','GamePlay.Death.CorpseDecayTime'],
     },
     {
         key: 'GamePlay.PVP',

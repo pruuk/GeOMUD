@@ -13,6 +13,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -183,8 +184,9 @@ var (
 		`show`:        {Show, true, false},
 		`spawn`:       {Spawn, false, true}, // Admin only
 
-		// Kept until Phase 5: it is player and NPC death. NewRound_AutoHeal, NewRound_DoCombat
-		// (players and mobs), and Buff_ApplyBuffs dispatch it.
+		// Death by one's own hand (death.Die). Allowed when downed, so under a
+		// ruleset with a downed state a downed actor can end it, though only once
+		// nobody is fighting it: Suicide refuses in a fight first.
 		`suicide`:  {Suicide, true, false},
 		`syslogs`:  {SysLogs, true, true},  // Admin only
 		`teleport`: {Teleport, true, true}, // Admin only
@@ -278,7 +280,7 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 			}
 		}
 
-		userDisabled = actor.Character.IsDisabled()
+		userDisabled = rules.Get().Condition(actor) != rules.Up
 
 	}
 

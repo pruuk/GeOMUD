@@ -2,6 +2,7 @@ package dikubasic
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/configs"
@@ -89,8 +90,8 @@ func (Ruleset) CanAttack(attacker, defender *actors.Actor) error {
 		return nil
 	}
 	// CanPvp checks only the attacker's room against the recovery room; a
-	// safe room protects whoever stands in it.
-	if defender.Character.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom) {
+	// safe room protects whoever stands in it, its private copies included.
+	if rooms.IsDeathRecoveryRoom(defender.Character.RoomId) {
 		return errors.New(`Fighting is not allowed here.`)
 	}
 	r := rooms.LoadRoom(attacker.Character.RoomId)
@@ -110,4 +111,65 @@ func (Ruleset) CanAttack(attacker, defender *actors.Actor) error {
 		}
 	}
 	return nil
+}
+
+// Condition: dead at 0 health or below, else up. The reference rules have
+// no downed state (decision 7).
+func (Ruleset) Condition(a *actors.Actor) rules.Condition {
+	if a.Character.Health <= 0 {
+		return rules.Dead
+	}
+	return rules.Up
+}
+
+// Regen in the death recovery room (or a private copy of it) is fast:
+// recoveryRegen. Elsewhere it is GoMud's AutoHeal, moved behind the seam
+// unchanged: an account, every 3rd round, out of a fight and not downed,
+// regains HealthPerRound and ManaPerRound. NPCs do not regenerate there
+// (slice 4 gives every actor the one rule).
+func (Ruleset) Regen(a *actors.Actor, round uint64) rules.RegenResult {
+	if rooms.IsDeathRecoveryRoom(a.Character.RoomId) {
+		return recoveryRegen(a)
+	}
+	if accountOf(a) == nil || round%3 != 0 || a.Character.Aggro != nil {
+		return rules.RegenResult{}
+	}
+	if a.Character.Health <= 0 {
+		return rules.RegenResult{}
+	}
+	return rules.RegenResult{Health: a.Character.HealthPerRound(), Mana: a.Character.ManaPerRound()}
+}
+
+// recoveryRegen is the recovery room's fast regen (spec ruling 2): upstream's
+// deleted Death Recovery buff (24-death_recovery.js), 1d10 health and 1d10
+// mana every round, health drawn first, with its lines. The amounts are what
+// Heal will apply (capped at the maximums), so the lines say what happened.
+func recoveryRegen(a *actors.Actor) rules.RegenResult {
+	c := a.Character
+	health := min(util.RollDice(1, 10), max(c.HealthMax.Value-c.Health, 0))
+	mana := min(util.RollDice(1, 10), max(c.ManaMax.Value-c.Mana, 0))
+
+	text := ``
+	switch {
+	case health > 0 && mana > 0:
+		text = fmt.Sprintf(`The shadow realm heals you for <ansi fg="healing">%d damage</ansi> and restores <ansi fg="mana-100">%d mana</ansi>!`, health, mana)
+	case health > 0:
+		text = fmt.Sprintf(`The shadow realm heals you for <ansi fg="healing">%d damage</ansi>!`, health)
+	case mana > 0:
+		text = fmt.Sprintf(`The shadow realm restores <ansi fg="mana-100">%d mana</ansi>!`, mana)
+	}
+	if text == `` {
+		return rules.RegenResult{}
+	}
+	return rules.RegenResult{Health: health, Mana: mana, Messages: []perception.Message{
+		{Kind: perception.Interface, Actor: a.Id, Audience: perception.ActorOnly, ActorText: text},
+		{
+			Kind:         perception.WorldEvent,
+			Actor:        a.Id,
+			Range:        perception.Room,
+			Senses:       perception.Sight,
+			ObserverText: `{actor} is recovering from a recent death.`,
+			Exclude:      rooms.NotPerceiving(c),
+		},
+	}}
 }

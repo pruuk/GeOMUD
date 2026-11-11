@@ -39,8 +39,10 @@ func canSeeIn(receiver *actors.Actor, room *rooms.Room) bool {
 }
 
 // canSee reports whether receiver sees the body subject: a body always sees
-// itself; a hidden body is unseen; a far receiver, or one whose sight is
-// blocked in its own room, sees no one.
+// itself; a body the receiver does not perceive (rooms.PerceivesWith, the one
+// visibility rule: hidden unless the receiver is an admin or has see-hidden)
+// is unseen; a far receiver, or one whose sight is blocked in its own room,
+// sees no one.
 func canSee(receiver *actors.Actor, room *rooms.Room, subject *actors.Actor, far bool) bool {
 	if subject == nil {
 		return true
@@ -48,7 +50,7 @@ func canSee(receiver *actors.Actor, room *rooms.Room, subject *actors.Actor, far
 	if subject.Id == receiver.Id {
 		return true
 	}
-	if far || hasFlag(subject.Character, "hidden") {
+	if far || !rooms.PerceivesWith(hasFlag, receiver.Character, subject.Character) {
 		return false
 	}
 	return canSeeIn(receiver, room)

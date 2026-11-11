@@ -7,6 +7,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 )
 
@@ -48,7 +49,7 @@ func Remove(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 			return true, nil
 		}
 
-		if matchItem.IsCursed() && actor.Character.Health > 0 {
+		if matchItem.IsCursed() && rules.Get().Condition(actor) == rules.Up {
 			if actor.Character.GetSkillLevel(`enchant`) < skills.MaxSkillLevel(`enchant`) {
 				Tell(actor,
 					fmt.Sprintf(`You can't seem to remove your <ansi fg="item">%s</ansi>... It's <ansi fg="red-bold">CURSED!</ansi>`, matchItem.DisplayName()),

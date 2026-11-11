@@ -1,8 +1,10 @@
 package rooms
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -890,106 +892,104 @@ func (r *Room) GetAllFloorItems(stash bool) []items.Item {
 	return found
 }
 
-func (r *Room) FindCorpse(searchName string) (Corpse, bool) {
-
-	// First search for player corpses that match
-
-	playerCorpseLookup := map[string]int{}
-	playerCorpses := []string{}
-
-	mobCorpseLookup := map[string]int{}
-	mobCorpses := []string{}
-
-	for idx, c := range r.Corpses {
-
-		if c.Prunable {
-			continue
-		}
-
-		if c.UserId > 0 {
-			name := c.Character.Name + ` corpse`
-			if _, ok := playerCorpseLookup[name]; !ok {
-				playerCorpseLookup[name] = idx
-				playerCorpses = append(playerCorpses, name)
-			}
-		}
-
-		if c.MobId > 0 {
-			name := c.Character.Name + ` corpse`
-			if _, ok := mobCorpseLookup[name]; !ok {
-				mobCorpseLookup[name] = idx
-				mobCorpses = append(mobCorpses, name)
-			}
-		}
+// FindCorpse is FindCorpseByRef's corpse, as a copy. An ordinal that lands
+// on someone living finds none.
+func (r *Room) FindCorpse(viewer *characters.Character, searchName string) (Corpse, bool) {
+	if c, _ := r.FindCorpseByRef(viewer, searchName); c != nil {
+		return *c, true
 	}
-
-	userMatch, closeUserMatch := util.FindMatchIn(searchName, playerCorpses...)
-	if userMatch != `` {
-		return r.Corpses[playerCorpseLookup[userMatch]], true
-	}
-
-	mobMatch, closeMobMatch := util.FindMatchIn(searchName, mobCorpses...)
-	if mobMatch != `` {
-		return r.Corpses[mobCorpseLookup[mobMatch]], true
-	}
-
-	if closeUserMatch != `` {
-		return r.Corpses[playerCorpseLookup[closeUserMatch]], true
-	} else if closeMobMatch != `` {
-		return r.Corpses[mobCorpseLookup[closeMobMatch]], true
-	}
-
 	return Corpse{}, false
 }
 
-func (r *Room) FindCorpseByRef(searchName string) (*Corpse, bool) {
+// FindCorpseByRef finds the corpse searchName names for viewer, the body
+// typing it. A name has one numbering (Calabe, 2026-11-11): first the
+// living viewer perceives (Perceives), numbered as FindByName numbers them
+// but without viewer itself, then the corpses that have not crumbled,
+// newest first (RoundCreated; of two from one round, the later added).
+// Players and NPCs follow the same rule. "rat" reaches a "rat corpse", and
+// util.FindMatchIndexIn matches "<name> corpse" exactly before by a prefix.
+// When the ordinal lands on someone living, corpse is nil and refusal is
+// the line to tell viewer ("Bob is still alive." for a player, "The rat is
+// still alive." for an NPC); the caller does not skip ahead. When no corpse
+// answers to the name at all, both are empty, and the caller goes on as for
+// any word that names no corpse.
+func (r *Room) FindCorpseByRef(viewer *characters.Character, searchName string) (corpse *Corpse, refusal string) {
 
-	playerCorpseLookup := map[string]int{}
-	playerCorpses := []string{}
+	name, number := util.GetMatchNumber(searchName)
+	if name == `` {
+		return nil, ``
+	}
 
-	mobCorpseLookup := map[string]int{}
-	mobCorpses := []string{}
-
-	for idx, c := range r.Corpses {
-
-		if c.Prunable {
-			continue
-		}
-
-		if c.UserId > 0 {
-			name := c.Character.Name + ` corpse`
-			if _, ok := playerCorpseLookup[name]; !ok {
-				playerCorpseLookup[name] = idx
-				playerCorpses = append(playerCorpses, name)
-			}
-		}
-
-		if c.MobId > 0 {
-			name := c.Character.Name + ` corpse`
-			if _, ok := mobCorpseLookup[name]; !ok {
-				mobCorpseLookup[name] = idx
-				mobCorpses = append(mobCorpses, name)
-			}
+	order := []int{}
+	for idx := len(r.Corpses) - 1; idx >= 0; idx-- {
+		if !r.Corpses[idx].Prunable {
+			order = append(order, idx)
 		}
 	}
-
-	userMatch, closeUserMatch := util.FindMatchIn(searchName, playerCorpses...)
-	if userMatch != `` {
-		return &r.Corpses[playerCorpseLookup[userMatch]], true
+	slices.SortStableFunc(order, func(a, b int) int {
+		return cmp.Compare(r.Corpses[b].RoundCreated, r.Corpses[a].RoundCreated)
+	})
+	names := make([]string, len(order))
+	for i, idx := range order {
+		names[i] = r.Corpses[idx].Character.Name + ` corpse`
 	}
 
-	mobMatch, closeMobMatch := util.FindMatchIn(searchName, mobCorpses...)
-	if mobMatch != `` {
-		return &r.Corpses[mobCorpseLookup[mobMatch]], true
+	if match, closeMatch := util.FindMatchIndexIn(name, names...); match < 0 && closeMatch < 0 {
+		return nil, ``
 	}
 
-	if closeUserMatch != `` {
-		return &r.Corpses[playerCorpseLookup[closeUserMatch]], true
-	} else if closeMobMatch != `` {
-		return &r.Corpses[mobCorpseLookup[closeMobMatch]], true
+	// The living viewer perceives, less viewer itself (Calabe, 2026-11-11:
+	// the person typing is not in their own name's living count).
+	sees := func(c *characters.Character) bool {
+		return (viewer == nil || c.Id != viewer.Id) && Perceives(viewer, c)
+	}
+	living := r.livingReach(sees, name)
+	if number <= living {
+		playerId, mobId := r.findByName(sees, fmt.Sprintf(`%s#%d`, name, number))
+		if u := accounts.GetByUserId(playerId); playerId > 0 && u != nil {
+			return nil, fmt.Sprintf(`%s is still alive.`, u.Character.Name)
+		}
+		if m := mobs.GetInstance(mobId); m != nil {
+			return nil, fmt.Sprintf(`The %s is still alive.`, m.Character.Name)
+		}
+		return nil, fmt.Sprintf(`The %s is still alive.`, name)
 	}
 
-	return nil, false
+	match, closeMatch := util.FindMatchIndexIn(fmt.Sprintf(`%s#%d`, name, number-living), names...)
+	if match >= 0 {
+		return &r.Corpses[order[match]], ``
+	}
+	if closeMatch >= 0 {
+		return &r.Corpses[order[closeMatch]], ``
+	}
+	return nil, ``
+}
+
+// livingReach is how many ordinals of name reach a living body sees allows,
+// as FindByName numbers them: players and NPCs apart, each in the order
+// they came into the room, a caller taking the player when both match. So
+// ordinals 1 up to the larger of the two counts reach someone living.
+// Asked through the same lookup, so it cannot drift from it.
+func (r *Room) livingReach(sees func(*characters.Character) bool, name string) int {
+	for n := 1; ; n++ {
+		playerId, mobId := r.findByName(sees, fmt.Sprintf(`%s#%d`, name, n))
+		if playerId == 0 && mobId.IsZero() {
+			return n - 1
+		}
+	}
+}
+
+// RemoveCorpseRef removes the corpse c points at (one FindCorpseByRef
+// returned). RemoveCorpse compares owner, name and round, so of two corpses
+// alike in those (two rats killed in one round) it would take the first.
+func (r *Room) RemoveCorpseRef(c *Corpse) bool {
+	for idx := range r.Corpses {
+		if &r.Corpses[idx] == c {
+			r.Corpses = append(r.Corpses[:idx], r.Corpses[idx+1:]...)
+			return true
+		}
+	}
+	return false
 }
 
 // floorHasItemId reports whether an item made from itemId lies on the floor
@@ -1331,16 +1331,79 @@ func (r *Room) AddSign(displayText string, visibleUserId int, daysBeforeDecay in
 	return false
 }
 
-func (r *Room) FindByName(searchName string, findTypes ...FindFlag) (playerId int, mobId ids.ID) {
+// PerceivesWith is the one visibility rule (Calabe, 2026-11-11): whether
+// viewer perceives subject, a body, with buff flags read through flag. A
+// body always perceives itself; an unhidden body is perceived; a hidden one
+// only by an admin (accounts.RoleAdmin, the role HasRolePermission lets
+// through) or a viewer with see-hidden. A nil viewer perceives no hidden
+// body. Light and distance are not part of it: messaging's canSee keeps
+// them. Perceives is this with the bodies' own buff flags; messaging passes
+// its test seam.
+func PerceivesWith(flag func(c *characters.Character, flag string) bool, viewer, subject *characters.Character) bool {
+	if viewer != nil && viewer.Id == subject.Id {
+		return true
+	}
+	if !flag(subject, "hidden") {
+		return true
+	}
+	if viewer == nil {
+		return false
+	}
+	if acc := actors.AccountOf(viewer.Id); acc != nil && acc.Role == accounts.RoleAdmin {
+		return true
+	}
+	return flag(viewer, "see-hidden")
+}
+
+// Perceives is PerceivesWith reading the bodies' own buff flags. Every
+// place that decides whether a viewer perceives a body asks it: the room
+// view, the name lookups, GMCP's room contents and combat; messaging asks
+// PerceivesWith.
+func Perceives(viewer, subject *characters.Character) bool {
+	return PerceivesWith(func(c *characters.Character, flag string) bool { return c.HasBuffFlag(flag) }, viewer, subject)
+}
+
+// NotPerceiving lists the bodies in subject's room that do not perceive
+// subject (Perceives). A line whose only content is subject's presence
+// (arriving, leaving the game, starting to meditate, dropping, reviving)
+// excludes them: no reply reveals a hidden body (Calabe, 2026-11-11).
+func NotPerceiving(subject *characters.Character) []ids.ID {
+	r := LoadRoom(subject.RoomId)
+	if r == nil {
+		return nil
+	}
+	out := []ids.ID{}
+	for _, id := range r.GetBodies() {
+		if id == subject.Id {
+			continue
+		}
+		if a := actors.Get(id); a != nil && a.Character != nil && !Perceives(a.Character, subject) {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// FindByName finds the player and the NPC in the room that searchName
+// names for viewer: a body viewer does not perceive (Perceives) is not in
+// the lists, so it takes no ordinal and cannot be named, by name or ID.
+// Players and NPCs are numbered apart; a caller takes the player when both
+// come back.
+func (r *Room) FindByName(viewer *characters.Character, searchName string, findTypes ...FindFlag) (playerId int, mobId ids.ID) {
+	return r.findByName(func(c *characters.Character) bool { return Perceives(viewer, c) }, searchName, findTypes...)
+}
+
+// findByName is FindByName with the bodies it may match given by sees.
+func (r *Room) findByName(sees func(*characters.Character) bool, searchName string, findTypes ...FindFlag) (playerId int, mobId ids.ID) {
 	if len(findTypes) < 1 {
 		findTypes = []FindFlag{FindAll}
 	}
-	mobId, _ = r.findMobByName(searchName, findTypes...)
-	playerId, _ = r.findPlayerByName(searchName, findTypes...)
+	mobId, _ = r.findMobByName(sees, searchName, findTypes...)
+	playerId, _ = r.findPlayerByName(sees, searchName, findTypes...)
 	return playerId, mobId
 }
 
-func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, error) {
+func (r *Room) findPlayerByName(sees func(*characters.Character) bool, searchName string, findTypes ...FindFlag) (int, error) {
 
 	if len(searchName) > 1 {
 		// #N and @N are not name forms; refuse them so they cannot fall through to
@@ -1351,7 +1414,7 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	}
 
 	if idMatch, err := ids.Parse(searchName); err == nil {
-		if acc := actors.AccountOf(idMatch); acc != nil {
+		if acc := actors.AccountOf(idMatch); acc != nil && sees(acc.Character) {
 			for _, uId := range r.GetPlayers(findTypes...) {
 				if uId == acc.UserId {
 					return uId, nil
@@ -1366,7 +1429,7 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	playerLookup := map[string]int{}
 	for _, uId := range r.GetPlayers(findTypes...) {
 		u := accounts.GetByUserId(uId)
-		if u == nil {
+		if u == nil || !sees(u.Character) {
 			continue
 		}
 		playerLookup[u.Character.Name] = u.UserId
@@ -1386,7 +1449,7 @@ func (r *Room) findPlayerByName(searchName string, findTypes ...FindFlag) (int, 
 	return playerLookup[fullMatch], nil
 }
 
-func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, error) {
+func (r *Room) findMobByName(sees func(*characters.Character) bool, searchName string, findTypes ...FindFlag) (ids.ID, error) {
 
 	if len(searchName) > 1 {
 		// #N and @N are not name forms; refuse them so they cannot fall through to
@@ -1398,7 +1461,10 @@ func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, 
 
 	if idMatch, err := ids.Parse(searchName); err == nil {
 		for _, mId := range r.GetMobs(findTypes...) {
-			if mId == idMatch {
+			if mId != idMatch {
+				continue
+			}
+			if m := mobs.GetInstance(mId); m == nil || sees(&m.Character) {
 				return mId, nil
 			}
 		}
@@ -1412,6 +1478,9 @@ func (r *Room) findMobByName(searchName string, findTypes ...FindFlag) (ids.ID, 
 		m := mobs.GetInstance(mId)
 		if m == nil {
 			continue // body with no instance (disconnect race)
+		}
+		if !sees(&m.Character) {
+			continue // the viewer does not perceive it: no ordinal, no name
 		}
 
 		mobName := fmt.Sprintf(`%s#%d`, m.Character.Name, len(namesInRoom)+1) // skeleton#1, skeleton#2 etc
@@ -2057,10 +2126,20 @@ func (r *Room) IsPvp() bool {
 	return roomPvp
 }
 
+// IsDeathRecoveryRoom reports whether roomId is the death recovery room or
+// a private copy of it: a death moves the body into its own copy
+// (MoveToRoom), so a raw ID compare misses where the dead stand. With no
+// recovery room set (0 or less) no room is it: 0 would match room 0 and
+// every empty ephemeral room, whose original is recorded as 0.
+func IsDeathRecoveryRoom(roomId int) bool {
+	recovery := int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)
+	return recovery > 0 && GetOriginalRoom(roomId) == recovery
+}
+
 // Returns an error with a reason why they cannot PVP, or nil
 func (r *Room) CanPvp(attChar *characters.Character, defChar *characters.Character) error {
 
-	if attChar.RoomId == -1 || attChar.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom) {
+	if attChar.RoomId == -1 || IsDeathRecoveryRoom(attChar.RoomId) {
 		return errors.New(`Fighting is not allowed here.`)
 	}
 

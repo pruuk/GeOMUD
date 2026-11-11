@@ -121,14 +121,14 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 		go co.run(ctx, addr, adm, timeout, srv)
 	}
 
-	fc := newFightCheck(n, fmt.Sprintf("Smk%sc0", tag))
+	fc := newFightCheck(n, fmt.Sprintf("Smk%sc000", tag))
 	results := make([]result, n)
 	var wg sync.WaitGroup
 	for i := range n {
 		b := bot{
 			user: fmt.Sprintf("smk%su%d", tag, i),
 			pass: "smoke" + tag,
-			char: fmt.Sprintf("Smk%sc%d", tag, i),
+			char: fmt.Sprintf("Smk%sc%03d", tag, i), // fixed width: no name is a prefix of another (corpse lookup)
 			idx:  i,
 		}
 		wg.Add(1)

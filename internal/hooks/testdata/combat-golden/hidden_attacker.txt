@@ -70,16 +70,26 @@ seed 909
 == round 6
 -- Alice reads
   You strike <ansi fg="username">Bob</ansi> with your <ansi fg="item">testdagger</ansi>, dealing <ansi fg="damage">4 damage</ansi>!
+  <ansi fg="username">Bob</ansi> has died.
+  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by <ansi fg="username">Alice</ansi>) <ansi fg="magenta-bold">***</ansi>
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- Bob reads
   Someone stabs you with their <ansi fg="item">testdagger</ansi> and does <ansi fg="damage">4 damage</ansi>!
+  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- Carol reads
   Someone stabs <ansi fg="username">Bob</ansi> with their <ansi fg="item">testdagger</ansi>!
+  <ansi fg="username">Bob</ansi> has died.
+  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- events
   CharacterVitalsChanged Bob
   AggroChanged Alice room=93001
   AggroChanged Bob room=93001
-  PlayerDrop Bob room=93001
+  PlayerDeath Bob
+  CharacterVitalsChanged Bob
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93105
-  Bob: room=93001 hp=0/10 aggro=[none] playerdamage={Alice:10} killedby=Alice mob=0 elite=false
+  Bob: room=copy-of-93003 hp=1/10 aggro=[none] playerdamage={}
   Carol: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  room 93001 floor gold: 25

@@ -104,6 +104,14 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 
 	}
 
+	// A say names its speaker only to a receiver who perceives it (the one
+	// visibility rule); to anyone else it is "Someone", as the text reads
+	// (messaging's canSee), with no player or mob source.
+	var speaker *actors.Actor
+	if evt.CommType == `say` {
+		speaker = actors.Get(evt.SourceActorId)
+	}
+
 	for _, userId := range sendToUserIds {
 
 		// Exclude user from receiving their own messages?
@@ -111,10 +119,18 @@ func (g *GMCPCommModule) onComm(e events.Event) events.ListenerReturn {
 		//continue
 		//}
 
+		out := payload
+		if speaker != nil && speaker.Character != nil {
+			if receiver := accounts.GetByUserId(userId); receiver == nil || !rooms.Perceives(receiver.Character, speaker.Character) {
+				out.Sender = `Someone`
+				out.Source = ``
+			}
+		}
+
 		events.AddToQueue(GMCPOut{
 			UserId:  userId,
 			Module:  `Comm.Channel`,
-			Payload: payload,
+			Payload: out,
 		})
 
 	}

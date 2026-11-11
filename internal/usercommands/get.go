@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
-	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/messaging"
@@ -37,7 +36,10 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 		return true, nil
 	}
 
-	if args[0] == "all" {
+	// "get all <corpse>" and "get all from <corpse>" take everything from
+	// that corpse (the corpse branch below). Every other "get all ..." takes
+	// everything on the floor, as it always has.
+	if args[0] == "all" && !namesACorpse(actor, room, args) {
 		if room.Gold > 0 {
 			Get(`gold`, actor, room, flags)
 		}
@@ -87,9 +89,19 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			}
 		}
 
-		// Look for a corpse as the source when CorpseItems is enabled
-		if containerName == `` && configs.GetGamePlayConfig().Death.CorpseItems {
-			if c, ok := room.FindCorpseByRef(args[len(args)-1]); ok {
+		// Look for a corpse as the source, unless the whole phrase names an
+		// item on the floor: "get iron key" beside a Keymaster corpse picks
+		// up the key (whole-branch review M1).
+		_, onFloor := room.FindOnFloor(rest, getFromStash)
+		if containerName == `` && !onFloor {
+			c, refusal := room.FindCorpseByRef(actor.Character, args[len(args)-1])
+			if refusal != `` {
+				// The ordinal names someone living, not a corpse (one
+				// numbering, the living first): refuse, do not skip ahead.
+				Tell(actor, refusal)
+				return true, nil
+			}
+			if c != nil {
 				corpseRef = c
 				if len(args) >= 2 && args[len(args)-2] == "from" {
 					rest = strings.Join(args[0:len(args)-2], " ")
@@ -150,26 +162,6 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 				}
 			}
 
-			// Worn items on corpse character
-			allWorn := corpseRef.Character.GetAllWornItems()
-			for _, item := range allWorn {
-				if actor.Character.StoreItem(item) {
-					corpseRef.Character.RemoveFromBody(item)
-					events.AddToQueue(events.ItemOwnership{
-						ActorId: actor.Character.Id,
-						Item:    item,
-						Gained:  true,
-					})
-					itemRoomEvent(actor,
-						fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName),
-						fmt.Sprintf(`{actor} takes the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName),
-					)
-					tookSomething = true
-				} else {
-					Tell(actor, fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, item.DisplayName()))
-				}
-			}
-
 			if !tookSomething {
 				Tell(actor, fmt.Sprintf(`There is nothing to take from the %s.`, corpseName))
 			}
@@ -202,21 +194,9 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			return true, nil
 		}
 
-		// "get <item> <corpse>" - search backpack items first, then worn items
+		// "get <item> <corpse>": a corpse's body wears nothing (death's
+		// corpseBody), so what it holds is its Items.
 		matchItem, found := corpseRef.FindItem(rest)
-		if !found {
-			// Also search worn equipment on the corpse character
-			wornItems := corpseRef.Character.GetAllWornItems()
-			closeMatch, exactMatch := items.FindMatchIn(rest, wornItems...)
-			if exactMatch.ItemId != 0 {
-				matchItem = exactMatch
-				found = true
-			} else if closeMatch.ItemId != 0 {
-				matchItem = closeMatch
-				found = true
-			}
-		}
-
 		if !found {
 			Tell(actor, fmt.Sprintf(`You don't see a %s on the %s.`, rest, corpseName))
 			return true, nil
@@ -235,9 +215,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			Gained:  true,
 		})
 
-		// Remove from whichever location it came from
 		corpseRef.RemoveItem(matchItem)
-		corpseRef.Character.RemoveFromBody(matchItem)
 
 		itemRoomEvent(actor,
 			fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, matchItem.DisplayName(), corpseName),
@@ -419,7 +397,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 
 	}
 
-	if _, corpseFound := room.FindCorpse(rest); corpseFound {
+	if _, corpseFound := room.FindCorpse(actor.Character, rest); corpseFound {
 		Tell(actor, `You can't pick up corpses. What would people think?`)
 		return true, nil
 	}
@@ -432,4 +410,23 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 	}
 
 	return true, nil
+}
+
+// namesACorpse reports whether args is "all <word>" or "all from <word>"
+// with <word> a corpse's name for actor: it finds a corpse, or its ordinal
+// lands on someone living whom a corpse shares a name with (the corpse
+// branch below then refuses, "The rat is still alive."; Task 5b). A
+// container of the same name wins, as it does for every get (the container
+// lookup comes first, :80-88), so then this is false and "get all" keeps
+// its room-wide meaning.
+func namesACorpse(actor *actors.Actor, room *rooms.Room, args []string) bool {
+	if len(args) != 2 && !(len(args) == 3 && args[1] == "from") {
+		return false
+	}
+	word := args[len(args)-1]
+	if room.FindContainerByName(word) != `` {
+		return false
+	}
+	c, refusal := room.FindCorpseByRef(actor.Character, word)
+	return c != nil || refusal != ``
 }

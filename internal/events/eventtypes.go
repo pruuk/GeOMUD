@@ -205,7 +205,6 @@ type LevelUp struct {
 	StatsDelta     stats.Statistics
 	TrainingPoints int
 	StatPoints     int
-	LivesGained    int
 }
 
 func (l LevelUp) Type() string { return `LevelUp` }
@@ -222,7 +221,6 @@ type PlayerDeath struct {
 	RoomId        int
 	Username      string
 	CharacterName string
-	Permanent     bool
 	KilledByUsers []int
 	KillerMobId   int // mob spec ID of the killing mob; 0 if killed by a player or unknown
 }

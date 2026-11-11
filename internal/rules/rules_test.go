@@ -20,6 +20,9 @@ func (fake) FindsWeapon(npc *actors.Actor) bool                { return false }
 func (fake) FleeEscapes(fleer, blocker *actors.Actor) bool     { return true }
 func (fake) Consider(a, d *actors.Actor) float64               { return 1 }
 func (fake) CanAttack(a, d *actors.Actor) error                { return nil }
+func (fake) Condition(a *actors.Actor) Condition               { return Up }
+func (fake) Regen(a *actors.Actor, round uint64) RegenResult   { return RegenResult{} }
+func (fake) OnDeath(v *actors.Actor) DeathOutcome              { return DeathOutcome{} }
 
 func TestGetPanicsWithNoRuleset(t *testing.T) {
 	restore := SetForTest(nil)
@@ -35,4 +38,12 @@ func TestSetForTestRestoresThePreviousRuleset(t *testing.T) {
 	require.Equal(t, fake{name: "inner"}, Get())
 	restore()
 	require.Equal(t, fake{name: "outer"}, Get())
+}
+
+func TestRegenResultChangesWhenHealthOrManaDoes(t *testing.T) {
+	assert.False(t, RegenResult{}.Changes())
+	assert.False(t, RegenResult{Messages: []perception.Message{{ActorText: "a line"}}}.Changes(), "a line alone changes nothing")
+	assert.True(t, RegenResult{Health: 1}.Changes())
+	assert.True(t, RegenResult{Health: -1}.Changes(), "a bleed")
+	assert.True(t, RegenResult{Mana: 2}.Changes())
 }

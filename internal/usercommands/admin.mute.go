@@ -27,7 +27,7 @@ func Mute(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 		return true, nil
 	}
 
-	targetUserId, _ := room.FindByName(rest)
+	targetUserId, _ := room.FindByName(actor.Character, rest)
 
 	if targetUserId > 0 {
 
@@ -58,7 +58,7 @@ func UnMute(rest string, actor *actors.Actor, room *rooms.Room, flags events.Eve
 		return true, nil
 	}
 
-	targetUserId, _ := room.FindByName(rest)
+	targetUserId, _ := room.FindByName(actor.Character, rest)
 
 	if targetUserId > 0 {
 

@@ -8,6 +8,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/behaviour"
+	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -200,14 +201,20 @@ func (f *FollowModule) onNewRound(e events.Event) events.ListenerReturn {
 
 			// user doing the following? Tell both users
 			if followSourceUser != nil {
-				messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="username">%s</ansi> stopped following you.`, followSourceUser.Character.Name))
-				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followTargetUser.Character.Name))
+				// A line only about the follower's presence: none for a target
+				// who does not perceive it (Calabe, 2026-11-11).
+				if rooms.Perceives(followTargetUser.Character, followSourceUser.Character) {
+					messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="username">%s</ansi> stopped following you.`, followSourceUser.Character.Name))
+				}
+				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following %s.`, seenName(followSourceUser.Character, followTargetUser.Character, `username`)))
 				continue
 			}
 
 			// mob doing the following? tell the target user
 			if followSourceMob != nil {
-				messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> stopped following you.`, followSourceMob.Character.Name))
+				if rooms.Perceives(followTargetUser.Character, &followSourceMob.Character) {
+					messaging.Tell(followTargetUser.Character.Id, fmt.Sprintf(`<ansi fg="mobname">%s</ansi> stopped following you.`, followSourceMob.Character.Name))
+				}
 				continue
 			}
 
@@ -219,7 +226,7 @@ func (f *FollowModule) onNewRound(e events.Event) events.ListenerReturn {
 
 			// user doing the following? Tell the following user
 			if followSourceUser != nil {
-				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followTargetMob.Character.Name))
+				messaging.Tell(followSourceUser.Character.Id, fmt.Sprintf(`You are no longer following %s.`, seenName(followSourceUser.Character, &followTargetMob.Character, `mobname`)))
 			}
 
 			continue
@@ -373,6 +380,18 @@ func (f *FollowModule) onPlayerDeath(e events.Event) events.ListenerReturn {
 // Commands
 //
 
+// seenName is subject's name, in colour, as viewer reads it in a follow
+// line that tells viewer about its own follow: the name when viewer
+// perceives subject (rooms.Perceives, the one visibility rule), else
+// "someone", as messaging shows an unseen body. The line carries news the
+// viewer gets anyway (its follow ended), so it is kept.
+func seenName(viewer, subject *characters.Character, colour string) string {
+	if rooms.Perceives(viewer, subject) {
+		return fmt.Sprintf(`<ansi fg="%s">%s</ansi>`, colour, subject.Name)
+	}
+	return `someone`
+}
+
 // followCommand is the one follow command for players and NPCs. A follow key
 // is the account's UserId for a player and the body's ID for an NPC.
 func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
@@ -416,7 +435,7 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 
 	userId, targetMobId := 0, ids.ID{}
 	if len(followTargetName) > 0 {
-		userId, targetMobId = room.FindByName(followTargetName)
+		userId, targetMobId = room.FindByName(actor.Character, followTargetName)
 	}
 
 	followCommandTarget := followId{userId: userId, mobId: targetMobId}
@@ -443,7 +462,10 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 				}
 
 				if followerUser := accounts.GetByUserId(fId.userId); followerUser != nil {
-					messaging.Tell(followerUser.Character.Id, fmt.Sprintf(`You are no longer following <ansi fg="%s">%s</ansi>.`, usercommands.NameColour(actor), actor.Character.Name))
+					// The follower's own line (its follow ended): "someone" for
+					// a leader it does not perceive. Also run by a leader's
+					// teleport (roomChangeHandler's "follow lose").
+					messaging.Tell(followerUser.Character.Id, fmt.Sprintf(`You are no longer following %s.`, seenName(followerUser.Character, actor.Character, usercommands.NameColour(actor))))
 				}
 			}
 
@@ -462,8 +484,10 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 		if wasFollowing.userId > 0 {
 
 			if followUser := accounts.GetByUserId(wasFollowing.userId); followUser != nil {
-				messaging.Tell(followUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> stopped following you.`, usercommands.NameColour(actor), actor.Character.Name))
-				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="username">%s</ansi>.`, followUser.Character.Name))
+				if rooms.Perceives(followUser.Character, actor.Character) {
+					messaging.Tell(followUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> stopped following you.`, usercommands.NameColour(actor), actor.Character.Name))
+				}
+				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following %s.`, seenName(actor.Character, followUser.Character, `username`)))
 				return true, nil
 			}
 
@@ -472,7 +496,7 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 		if !wasFollowing.mobId.IsZero() {
 
 			if followMob := mobs.GetInstance(wasFollowing.mobId); followMob != nil {
-				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following <ansi fg="mobname">%s</ansi>.`, followMob.Character.Name))
+				usercommands.Tell(actor, fmt.Sprintf(`You are no longer following %s.`, seenName(actor.Character, &followMob.Character, `mobname`)))
 				return true, nil
 			}
 
@@ -498,7 +522,11 @@ func (f *FollowModule) followCommand(rest string, actor *actors.Actor, room *roo
 
 		usercommands.Tell(actor, fmt.Sprintf(`You start following <ansi fg="username">%s</ansi>.`, targetUser.Character.Name))
 
-		messaging.Tell(targetUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> is following you.`, usercommands.NameColour(actor), actor.Character.Name))
+		// Shadowing: a follower the target does not perceive is not announced
+		// (following does not cancel hiding; Calabe, 2026-11-11).
+		if rooms.Perceives(targetUser.Character, actor.Character) {
+			messaging.Tell(targetUser.Character.Id, fmt.Sprintf(`<ansi fg="%s">%s</ansi> is following you.`, usercommands.NameColour(actor), actor.Character.Name))
+		}
 
 		return true, nil
 	}

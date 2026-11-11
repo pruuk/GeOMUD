@@ -293,30 +293,64 @@ func SplitButRespectQuotes(s string) []string {
 	return finalMatches
 }
 
-// accepts an input and splits it along a # if any.
-// By default returns the full string and 1 as the number.
+// GetMatchNumber splits an ordinal off a name: "rat#2" and "2.rat" are both
+// the second rat (Calabe, 2026-11-11: both forms, for every name, in this one
+// parser). A "#N" suffix is read first. Otherwise a prefix of digits and a dot
+// counts when a name follows that does not start with a digit, so "1.5" stays
+// a number and ".rat" and "2." stay as typed. An ordinal below 1 is 1; with
+// none, the number is 1. The name comes back trimmed and lower case.
 func GetMatchNumber(input string) (string, int) {
 	// Clean up the input
 	input = strings.TrimSpace(strings.ToLower(input))
-	// See if the item has a # and if so grab the left as the name, and the right as the number
-	if !strings.Contains(input, "#") {
-		return input, 1
+
+	// "rat#2": the left is the name, the right the number
+	if strings.Contains(input, "#") {
+		parts := strings.Split(input, "#")
+		input = parts[0]
+		inputNumber, _ := strconv.Atoi(strings.Join(parts[1:], "#"))
+		if inputNumber < 1 {
+			inputNumber = 1
+		}
+		return input, inputNumber
 	}
 
-	parts := strings.Split(input, "#")
-	input = parts[0]
-	inputNumber, _ := strconv.Atoi(strings.Join(parts[1:], "#"))
-	if inputNumber < 1 {
-		inputNumber = 1
+	// "2.rat": digits, a dot, then a name that does not start with a digit
+	if dot := strings.IndexByte(input, '.'); dot > 0 {
+		digits, name := input[:dot], strings.TrimSpace(input[dot+1:])
+		if strings.Trim(digits, "0123456789") == `` && name != `` && (name[0] < '0' || name[0] > '9') {
+			inputNumber, _ := strconv.Atoi(digits)
+			if inputNumber < 1 {
+				inputNumber = 1
+			}
+			return name, inputNumber
+		}
 	}
 
-	return input, inputNumber
+	return input, 1
 }
 
 func FindMatchIn(searchName string, items ...string) (match string, closeMatch string) {
 
+	matchIdx, closeMatchIdx := FindMatchIndexIn(searchName, items...)
+	if matchIdx >= 0 {
+		match = items[matchIdx]
+	}
+	if closeMatchIdx >= 0 {
+		closeMatch = items[closeMatchIdx]
+	}
+	return match, closeMatch
+}
+
+// FindMatchIndexIn is FindMatchIn by position: it returns the index in items
+// of the match and of the close match, -1 for none. Items may repeat (two
+// corpses of one name, rooms.FindCorpseByRef); the index tells them apart
+// where the text cannot. FindMatchIn is this, returning the items.
+func FindMatchIndexIn(searchName string, items ...string) (match int, closeMatch int) {
+
+	match, closeMatch = -1, -1
+
 	if searchName == `` {
-		return ``, `` // No match
+		return match, closeMatch // No match
 	}
 
 	searchName, searchNumber := GetMatchNumber(searchName)
@@ -324,21 +358,21 @@ func FindMatchIn(searchName string, items ...string) (match string, closeMatch s
 	var matchCt int = 0
 	var closeMatchCt int = 0
 
-	for _, i := range items {
+	for idx, i := range items {
 
 		part, full := stringMatch(searchName, i, false)
 
 		if part {
 			closeMatchCt++
 			if closeMatchCt == searchNumber {
-				closeMatch = i
+				closeMatch = idx
 			}
 		}
 
 		if full {
 			matchCt++
 			if matchCt == searchNumber {
-				match = i
+				match = idx
 				break
 			}
 		}
@@ -347,15 +381,15 @@ func FindMatchIn(searchName string, items ...string) (match string, closeMatch s
 
 	// If no "starts with" or "exact" matches are found, try and find the first item that contain the supplied name
 	// Note: Can't have an exact match if there was never a close match
-	if len(closeMatch) == 0 {
+	if closeMatch < 0 {
 		closeMatchCt = 0
-		for _, i := range items {
+		for idx, i := range items {
 			part, _ := stringMatch(searchName, i, true)
 
 			if part {
 				closeMatchCt++
 				if closeMatchCt == searchNumber {
-					closeMatch = i
+					closeMatch = idx
 					break
 				}
 			}

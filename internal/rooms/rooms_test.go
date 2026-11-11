@@ -78,16 +78,16 @@ func TestRoomHoldsOneBodyList(t *testing.T) {
 	assert.Equal(t, 1, r.PlayerCt())
 	assert.Equal(t, 1, r.MobCt())
 
-	uId, mId := r.FindByName(playerId.String())
+	uId, mId := r.FindByName(nil, playerId.String())
 	assert.Equal(t, acc.UserId, uId)
 	assert.True(t, mId.IsZero())
 
-	uId, mId = r.FindByName(mobId.String())
+	uId, mId = r.FindByName(nil, mobId.String())
 	assert.Equal(t, 0, uId)
 	assert.Equal(t, mobId, mId)
 
 	for _, old := range []string{"#1", "@1", "@4242"} {
-		uId, mId = r.FindByName(old)
+		uId, mId = r.FindByName(nil, old)
 		assert.Equal(t, 0, uId, old)
 		assert.True(t, mId.IsZero(), old)
 	}
@@ -109,7 +109,7 @@ func TestFindByNameSkipsBodyWithNoActor(t *testing.T) {
 	r.bodies = append(r.bodies, ids.New(ids.NoCell))
 
 	assert.NotPanics(t, func() {
-		uId, mId := r.FindByName("rat")
+		uId, mId := r.FindByName(nil, "rat")
 		assert.Equal(t, 0, uId)
 		assert.True(t, mId.IsZero())
 	})
@@ -194,22 +194,22 @@ func TestRoom_FindCorpse(t *testing.T) {
 	r.AddCorpse(mobCorpse)
 
 	// Exact search
-	found, ok := r.FindCorpse("PlayerOne corpse")
+	found, ok := r.FindCorpse(nil, "PlayerOne corpse")
 	assert.True(t, ok, "Expected to find player corpse by exact name")
 	assert.Equal(t, "PlayerOne", found.Character.Name, "Expected found corpse to match the correct character")
 
 	// Searching for mob
-	found, ok = r.FindCorpse("MobOne corpse")
+	found, ok = r.FindCorpse(nil, "MobOne corpse")
 	assert.True(t, ok, "Expected to find mob corpse by exact name")
 	assert.Equal(t, "MobOne", found.Character.Name, "Expected found corpse to match the correct character")
 
 	// Searching partial name (depends on your util.FindMatchIn logic)
-	found, ok = r.FindCorpse("player")
+	found, ok = r.FindCorpse(nil, "player")
 	assert.True(t, ok, "Expected to find a close match for player corpse")
 	assert.Equal(t, "PlayerOne", found.Character.Name, "Expected found corpse to be the player's")
 
 	// Non-existent
-	found, ok = r.FindCorpse("NonExistent")
+	found, ok = r.FindCorpse(nil, "NonExistent")
 	assert.False(t, ok, "Expected not to find a missing corpse")
 }
 
@@ -396,4 +396,15 @@ func TestInstanceItemIdsReplaceTheTemplates(t *testing.T) {
 	require.Len(t, tpl.Items, 2)
 	assert.Equal(t, live.Items[0].Id, tpl.Items[0].Id)
 	assert.Equal(t, live.Items[1].Id, tpl.Items[1].Id)
+}
+
+// Perceives: a body perceives an unhidden body, and itself; so does a nil
+// viewer. The two bodies have distinct IDs, so self and other differ.
+func TestPerceivesAnUnhiddenBodyAndItself(t *testing.T) {
+	viewer, other := characters.New(), characters.New()
+	viewer.Id, other.Id = ids.New(ids.NoCell), ids.New(ids.NoCell)
+	require.NotEqual(t, viewer.Id, other.Id)
+	assert.True(t, Perceives(viewer, other))
+	assert.True(t, Perceives(nil, other))
+	assert.True(t, Perceives(viewer, viewer))
 }

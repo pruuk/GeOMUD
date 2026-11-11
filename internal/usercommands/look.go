@@ -6,7 +6,6 @@ import (
 
 	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
-	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/gametime"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -73,7 +72,17 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	// look for any mobs, players, npcs
 	//
 
-	playerId, mobId := room.FindByName(lookAt)
+	playerId, mobId := room.FindByName(actor.Character, lookAt)
+
+	// Your own name reaches your corpse when one answers to it: the person
+	// typing is not in their own name's living count when they look at a
+	// corpse (Calabe, 2026-11-11). With none, you look at yourself, as
+	// before.
+	if playerId > 0 && playerId == UserIdOf(actor) {
+		if _, ok := room.FindCorpse(actor.Character, lookAt); ok {
+			playerId, mobId = 0, ids.ID{}
+		}
+	}
 
 	if playerId > 0 || !mobId.IsZero() {
 
@@ -364,34 +373,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 	if len(room.Corpses) > 0 {
 
-		mobCorpseLookup := map[string]int{}
-		mobCorpses := []string{}
-
-		playerCorpseLookup := map[string]int{}
-		playerCorpses := []string{}
-		for idx, c := range room.Corpses {
-			if c.Prunable {
-				continue
-			}
-
-			if c.MobId > 0 {
-				name := c.Character.Name + ` corpse`
-				if _, ok := mobCorpseLookup[name]; !ok {
-					mobCorpseLookup[name] = idx
-					mobCorpses = append(mobCorpses, name)
-				}
-			}
-
-			if c.UserId > 0 {
-				name := c.Character.Name + ` corpse`
-				if _, ok := playerCorpseLookup[name]; !ok {
-					playerCorpseLookup[name] = idx
-					playerCorpses = append(playerCorpses, name)
-				}
-			}
-		}
-
-		if corpse, corpseFound := room.FindCorpse(rest); corpseFound {
+		if corpse, corpseFound := room.FindCorpse(actor.Character, rest); corpseFound {
 
 			corpseColor := `mob-corpse`
 			if corpse.UserId > 0 {
@@ -409,9 +391,7 @@ func Look(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 
 			Tell(actor, buildCorpseDescriptionPanel(&corpse.Character))
 
-			if configs.GetGamePlayConfig().Death.CorpseItems {
-				Tell(actor, buildCorpseInventoryPanel(&corpse))
-			}
+			Tell(actor, buildCorpseInventoryPanel(&corpse))
 
 			return true, nil
 

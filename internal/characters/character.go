@@ -77,7 +77,6 @@ type Character struct {
 	KeyRing          map[string]string              `yaml:"keyring,omitempty"`        // key is the lock id, value is the sequence
 	KD               KDStats                        `yaml:"kd,omitempty"`             // Kill/Death stats
 	MiscData         map[string]any                 `yaml:"miscdata,omitempty"`       // Any random other data that needs to be stored
-	ExtraLives       int                            `yaml:"extralives,omitempty"`     // How many lives remain. If enabled, players can perma-die if they die at zero
 	Created          time.Time                      `yaml:"created"`                  // When this character was created
 	Timers           map[string]gametime.RoundTimer `yaml:"timers,omitempty"`         // any special timers added to this character
 	ZonesVisited     map[string]RoomBitset          `yaml:"zonesvisited,omitempty"`   // permanent record of every room visited, keyed by zone name
@@ -700,13 +699,15 @@ func (c *Character) ForgetTransient() {
 	c.KillerMobId = 0
 }
 
-// forgetKillerIfUp drops the record of who downed this character once its
+// ForgetKillerIfUp drops the record of who downed this character once its
 // health is 1 or more, so a later death from another cause (poison, a
 // suicide) is not credited to a stale killer. Health is a plain field with
 // no single writer, so every Character method that raises it calls this:
 // Heal (the AutoHeal regeneration), ApplyHealthChange, and the full restore
-// on a level gain. suicide.go's revive clears the record itself.
-func (c *Character) forgetKillerIfUp() {
+// on a level gain; so does death's revive, which sets Health directly. A
+// death that respawns the body has its record cleared by death's
+// recordPlayerDeath, which books it first.
+func (c *Character) ForgetKillerIfUp() {
 	if c.Health < 1 {
 		return
 	}
@@ -910,7 +911,7 @@ func (c *Character) ApplyHealthChange(healthChange int) int {
 	}
 
 	c.Health = newHealth
-	c.forgetKillerIfUp()
+	c.ForgetKillerIfUp()
 
 	return newHealth - oldHealth
 }
@@ -980,7 +981,7 @@ func (c *Character) LevelUp() (bool, stats.Statistics) {
 
 	c.Health = c.HealthMax.Value
 	c.Mana = c.ManaMax.Value
-	c.forgetKillerIfUp()
+	c.ForgetKillerIfUp()
 
 	return true, statsDelta
 }
@@ -993,11 +994,11 @@ func (c *Character) Heal(hp int, mana int) (int, int) {
 	if c.Health > c.HealthMax.Value {
 		c.Health = c.HealthMax.Value
 	}
-	c.Mana += hp
+	c.Mana += mana
 	if c.Mana > c.ManaMax.Value {
 		c.Mana = c.ManaMax.Value
 	}
-	c.forgetKillerIfUp()
+	c.ForgetKillerIfUp()
 
 	return c.Health - startHP, c.Mana - startMP
 }

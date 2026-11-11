@@ -50,8 +50,6 @@ type Account struct {
 
 func NewAccount(userId int, connectionId uint64) *Account {
 
-	c := configs.GetGamePlayConfig()
-
 	u := &Account{
 		session:       &Session{connectionId: connectionId, connectionTime: time.Now()},
 		UserId:        userId,
@@ -64,10 +62,6 @@ func NewAccount(userId int, connectionId uint64) *Account {
 		Joined:        time.Now(),
 		tempDataStore: make(map[string]any),
 		EventLog:      UserLog{},
-	}
-
-	if c.Death.PermaDeath {
-		u.Character.ExtraLives = int(c.LivesStart)
 	}
 
 	return u
@@ -199,10 +193,6 @@ func (u *Account) GrantXP(amt int, source string) {
 
 	if newLevel, statsDelta := u.Character.LevelUp(); newLevel {
 
-		c := configs.GetGamePlayConfig()
-
-		livesBefore := u.Character.ExtraLives
-
 		levelUpEvent := events.LevelUp{
 			UserId:         u.UserId,
 			RoomId:         u.Character.RoomId,
@@ -213,14 +203,9 @@ func (u *Account) GrantXP(amt int, source string) {
 			StatsDelta:     stats.Statistics{},
 			TrainingPoints: 0,
 			StatPoints:     0,
-			LivesGained:    0,
 		}
 
 		for newLevel {
-
-			if c.Death.PermaDeath && c.LivesOnLevelUp > 0 {
-				u.Character.ExtraLives += int(c.LivesOnLevelUp)
-			}
 
 			u.EventLog.Add(`xp`, fmt.Sprintf(`<ansi fg="username">%s</ansi> is now <ansi fg="magenta-bold">level %d</ansi>!`, u.Character.Name, u.Character.Level))
 
@@ -242,11 +227,6 @@ func (u *Account) GrantXP(amt int, source string) {
 			levelUpEvent.StatPoints += u.Character.StatPoints - spBefore
 		}
 
-		if u.Character.ExtraLives > int(c.LivesMax) {
-			u.Character.ExtraLives = int(c.LivesMax)
-		}
-
-		levelUpEvent.LivesGained = u.Character.ExtraLives - livesBefore
 		levelUpEvent.NewLevel = u.Character.Level
 
 		events.AddToQueue(levelUpEvent)

@@ -46,7 +46,7 @@ func Grant(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 
 		if len(args) > 2 {
 
-			targetUserId, targetMobId = room.FindByName(args[0])
+			targetUserId, targetMobId = room.FindByName(actor.Character, args[0])
 			expAmt, _ = strconv.Atoi(args[1])
 
 		} else {

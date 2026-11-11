@@ -69,7 +69,7 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 		}
 
 		if adjacentRoom := rooms.LoadRoom(attackRoomId); adjacentRoom != nil {
-			attackPlayerId, attackMobId = adjacentRoom.FindByName(strings.Join(args, ` `))
+			attackPlayerId, attackMobId = adjacentRoom.FindByName(actor.Character, strings.Join(args, ` `))
 		}
 	} else {
 		Tell(actor, `Could not find where you wanted to shoot`)

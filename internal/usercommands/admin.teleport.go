@@ -112,6 +112,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 				Senses:       perception.Sight | perception.Sound,
 				Range:        perception.Room,
 				ObserverText: `{actor} appears in a flash of light!`,
+				Exclude:      rooms.NotPerceiving(targetUser.Character), // only its presence
 			})
 
 			if party := parties.Get(targetUser.UserId); party != nil {
@@ -139,6 +140,7 @@ func Teleport(rest string, actor *actors.Actor, room *rooms.Room, flags events.E
 								Senses:       perception.Sight | perception.Sound,
 								Range:        perception.Room,
 								ObserverText: `{actor} appears in a flash of light!`,
+								Exclude:      rooms.NotPerceiving(partyUser.Character), // only its presence
 							})
 
 							if partyActor := actors.ByUserId(partyUser.UserId); partyActor != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
 	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
+	"github.com/GoMudEngine/GoMud/internal/death"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/items"
@@ -166,7 +167,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 
 	d.Character.CancelBuffsWithFlag("cancel-on-combat")
 
-	if d.Character.Health < 1 {
+	if rules.Get().Condition(d) != rules.Up {
 		usercommands.Tell(a, `Your rage subsides.`)
 		endAggro(a)
 		return affected
@@ -192,13 +193,11 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 		return affected
 	}
 
-	// Can't see them, can't fight them.
-	if d.Character.HasBuffFlag("hidden") {
+	// Can't see them, can't fight them (the one visibility rule).
+	if !rooms.Perceives(a.Character, d.Character) {
 		usercommands.Tell(a, "You can't seem to find your target.")
 		return affected
 	}
-
-	healthBefore := d.Character.Health
 
 	roundResult := attack(a, d)
 
@@ -212,9 +211,10 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 
 	defAcct := accountOf(d)
 
-	// Combat damage downed a player: remember who did it (plan Decision 7),
-	// for the death that follows.
-	if defAcct != nil && healthBefore >= 1 && d.Character.Health < 1 {
+	// Combat took a player out of Up: remember who did it (plan Decision 7),
+	// for the death that follows. The defender was up before this attack:
+	// the rage check above returns for one who is not.
+	if defAcct != nil && rules.Get().Condition(d) != rules.Up {
 		d.Character.KilledBy = a.Id
 		d.Character.KillerMobIsElite = false
 		d.Character.KillerMobName = ``
@@ -266,7 +266,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 		}
 	}
 
-	if a.Character.Health <= 0 || d.Character.Health <= 0 {
+	if rules.Get().Condition(a) != rules.Up || rules.Get().Condition(d) != rules.Up {
 		endAggro(a)
 		endAggro(d)
 	} else {
@@ -457,6 +457,7 @@ func flee(a *actors.Actor, aRoom *rooms.Room) {
 		Range:        perception.Room,
 		ActorText:    fmt.Sprintf(`You flee to the <ansi fg="exit">%s</ansi> exit!`, exitName),
 		ObserverText: fmt.Sprintf(`{actor} flees to the <ansi fg="exit">%s</ansi> exit!`, exitName),
+		Exclude:      rooms.NotPerceiving(a.Character), // a leaving: only its presence
 	})
 
 	endAggro(a)
@@ -471,12 +472,13 @@ func flee(a *actors.Actor, aRoom *rooms.Room) {
 	}
 }
 
-// handleAffected queues the death or the drop of everyone the round left
-// below 1 health: actors with an account first, then NPCs, each once.
+// handleAffected settles everyone the round touched, actors with an account
+// first, then NPCs, each once: the ruleset says who is dead (death.Die) or,
+// under a ruleset with a downed state, down (an account's PlayerDrop).
 func handleAffected(affected []ids.ID) {
 
 	handled := map[ids.ID]struct{}{}
-	npcs := []*mobs.Mob{}
+	npcs := []*actors.Actor{}
 
 	for _, id := range affected {
 		if _, ok := handled[id]; ok {
@@ -490,30 +492,23 @@ func handleAffected(affected []ids.ID) {
 		}
 
 		if user := accountOf(a); user != nil {
-
-			if user.Character.Health <= -10 {
-
-				user.Command(`suicide`) // suicide drops all money/items and transports to land of the dead.
-
-			} else if user.Character.Health < 1 {
-
+			switch rules.Get().Condition(a) {
+			case rules.Dead:
+				death.Die(a)
+			case rules.Downed:
 				events.AddToQueue(events.PlayerDrop{UserId: user.UserId, RoomId: user.Character.RoomId})
-
 			}
-
 			continue
 		}
 
-		if mob := mobs.GetInstance(id); mob != nil {
-			npcs = append(npcs, mob)
+		if mobs.GetInstance(id) != nil {
+			npcs = append(npcs, a)
 		}
 	}
 
-	for _, mob := range npcs {
-		if mob.Character.Health < 1 {
-
-			mob.Command(`suicide`)
-
+	for _, a := range npcs {
+		if rules.Get().Condition(a) == rules.Dead {
+			death.Die(a)
 		}
 	}
 
