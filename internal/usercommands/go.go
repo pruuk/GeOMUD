@@ -14,6 +14,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/parties"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 )
 
 func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFlag) (bool, error) {
@@ -43,7 +44,7 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 	if exitName != `` {
 
-		if actor.Character.IsDisabled() {
+		if rules.Get().Condition(actor) != rules.Up {
 			Tell(actor, "You are unable to do that while downed.")
 			return true, nil
 		}

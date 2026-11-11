@@ -17,6 +17,8 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
+	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 	"github.com/GoMudEngine/GoMud/internal/usercommands"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/stretchr/testify/assert"
@@ -66,6 +68,7 @@ var ran []string
 func TestMain(m *testing.M) {
 	mudlog.SetupLogger(testLogs, "", "", false)
 	actors.Init()
+	rules.Set(dikubasic.New()) // TryCommand asks the ruleset whether the actor is up
 	dataDir, err := filepath.Abs("_datafiles/world/empty")
 	if err != nil {
 		panic(err)

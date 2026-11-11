@@ -166,7 +166,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 
 	d.Character.CancelBuffsWithFlag("cancel-on-combat")
 
-	if d.Character.Health < 1 {
+	if rules.Get().Condition(d) != rules.Up {
 		usercommands.Tell(a, `Your rage subsides.`)
 		endAggro(a)
 		return affected
@@ -198,8 +198,6 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 		return affected
 	}
 
-	healthBefore := d.Character.Health
-
 	roundResult := attack(a, d)
 
 	for _, buffId := range roundResult.BuffTarget {
@@ -212,9 +210,10 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 
 	defAcct := accountOf(d)
 
-	// Combat damage downed a player: remember who did it (plan Decision 7),
-	// for the death that follows.
-	if defAcct != nil && healthBefore >= 1 && d.Character.Health < 1 {
+	// Combat took a player out of Up: remember who did it (plan Decision 7),
+	// for the death that follows. The defender was up before this attack:
+	// the rage check above returns for one who is not.
+	if defAcct != nil && rules.Get().Condition(d) != rules.Up {
 		d.Character.KilledBy = a.Id
 		d.Character.KillerMobIsElite = false
 		d.Character.KillerMobName = ``
@@ -266,7 +265,7 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 		}
 	}
 
-	if a.Character.Health <= 0 || d.Character.Health <= 0 {
+	if rules.Get().Condition(a) != rules.Up || rules.Get().Condition(d) != rules.Up {
 		endAggro(a)
 		endAggro(d)
 	} else {
@@ -471,8 +470,8 @@ func flee(a *actors.Actor, aRoom *rooms.Room) {
 	}
 }
 
-// handleAffected queues the death or the drop of everyone the round left
-// below 1 health: actors with an account first, then NPCs, each once.
+// handleAffected settles everyone the round touched, actors with an account
+// first, then NPCs, each once: the ruleset says who is down or dead.
 func handleAffected(affected []ids.ID) {
 
 	handled := map[ids.ID]struct{}{}
@@ -495,7 +494,7 @@ func handleAffected(affected []ids.ID) {
 
 				user.Command(`suicide`) // suicide drops all money/items and transports to land of the dead.
 
-			} else if user.Character.Health < 1 {
+			} else if rules.Get().Condition(a) != rules.Up {
 
 				events.AddToQueue(events.PlayerDrop{UserId: user.UserId, RoomId: user.Character.RoomId})
 
@@ -510,7 +509,7 @@ func handleAffected(affected []ids.ID) {
 	}
 
 	for _, mob := range npcs {
-		if mob.Character.Health < 1 {
+		if a := actors.Get(mob.Character.Id); a != nil && rules.Get().Condition(a) == rules.Dead {
 
 			mob.Command(`suicide`)
 

@@ -24,9 +24,30 @@ type AttackResult struct {
 	Messages []perception.Message
 }
 
+// Condition is what the ruleset says an actor's body is.
+type Condition int
+
+const (
+	Up     Condition = iota // can act
+	Downed                  // cannot act, not dead
+	Dead                    // the engine runs its death (death.Die)
+)
+
+// RegenResult is what one round regenerates for an actor. The engine applies
+// Health and Mana (either may be negative: a bleed) and sends Messages.
+type RegenResult struct {
+	Health, Mana int
+	Messages     []perception.Message
+}
+
+// Changes reports whether r changes health or mana. It lives here, outside
+// the engine packages, so the regen pass compares no health with a number
+// (TestEngineAsksTheRulesetWhoIsDead).
+func (r RegenResult) Changes() bool { return r.Health != 0 || r.Mana != 0 }
+
 // Ruleset is everything the engine asks a game's rules. A method that needs
-// a random draw makes it itself. Phase 5 slice 2 holds the fight; later
-// slices add the round, death and display.
+// a random draw makes it itself. Phase 5 slice 2 holds the fight and slice 3 the
+// round and death; later slices add display.
 type Ruleset interface {
 	// TurnOrder orders the actors that may take a combat turn this round.
 	// It receives every actor with a body and returns them in turn order.
@@ -58,6 +79,14 @@ type Ruleset interface {
 	// CanAttack is nil when attacker may start a fight with defender, or
 	// the refusal to show the attacker.
 	CanAttack(attacker, defender *actors.Actor) error
+
+	// Condition is whether a is up, downed or dead. The engine compares no
+	// health against a number: it asks this.
+	Condition(a *actors.Actor) Condition
+
+	// Regen is what a regenerates this round. It changes no health or mana:
+	// the engine applies the result.
+	Regen(a *actors.Actor, round uint64) RegenResult
 }
 
 // active is set once at boot, before the game loop starts, and swapped only

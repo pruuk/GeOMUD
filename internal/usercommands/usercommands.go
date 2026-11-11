@@ -13,6 +13,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/util"
 )
 
@@ -278,7 +279,7 @@ func TryCommand(cmd string, rest string, actorId ids.ID, flags events.EventFlag)
 			}
 		}
 
-		userDisabled = actor.Character.IsDisabled()
+		userDisabled = rules.Get().Condition(actor) != rules.Up
 
 	}
 

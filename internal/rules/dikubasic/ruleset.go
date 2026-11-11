@@ -111,3 +111,29 @@ func (Ruleset) CanAttack(attacker, defender *actors.Actor) error {
 	}
 	return nil
 }
+
+// Condition: dead at 0 health or below, else up. The reference rules have
+// no downed state (decision 7).
+func (Ruleset) Condition(a *actors.Actor) rules.Condition {
+	if a.Character.Health <= 0 {
+		return rules.Dead
+	}
+	return rules.Up
+}
+
+// Regen is GoMud's AutoHeal, moved behind the seam unchanged: an account,
+// every 3rd round, out of a fight, outside the death recovery room and not
+// downed, regains HealthPerRound and ManaPerRound. NPCs do not regenerate
+// (slice 4 gives every actor the one rule).
+func (Ruleset) Regen(a *actors.Actor, round uint64) rules.RegenResult {
+	if accountOf(a) == nil || round%3 != 0 || a.Character.Aggro != nil {
+		return rules.RegenResult{}
+	}
+	if a.Character.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom) {
+		return rules.RegenResult{}
+	}
+	if a.Character.Health <= 0 {
+		return rules.RegenResult{}
+	}
+	return rules.RegenResult{Health: a.Character.HealthPerRound(), Mana: a.Character.ManaPerRound()}
+}

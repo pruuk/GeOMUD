@@ -9,6 +9,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/messaging"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 )
 
 // ActorUpkeep is every actor's round upkeep, before combat (slice 6): the
@@ -59,7 +60,7 @@ func ActorUpkeep(e events.Event) events.ListenerReturn {
 			continue
 		}
 
-		if mob != nil && char.Health <= 0 {
+		if mob != nil && rules.Get().Condition(a) == rules.Dead {
 			// Mob died
 			mob.Command(`suicide`)
 		}

@@ -14,6 +14,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -219,4 +220,45 @@ func TestCanAttackRefusesATargetInACopyOfTheRecoveryRoom(t *testing.T) {
 	attacker, target := player(t, 9609), player(t, 9610)
 	attacker.Character.RoomId, target.Character.RoomId = here, copyId
 	assert.EqualError(t, New().CanAttack(attacker, target), "Fighting is not allowed here.")
+}
+
+func TestConditionIsDeadAtZeroOrBelow(t *testing.T) {
+	a := player(t, 9620)
+	for health, want := range map[int]rules.Condition{1: rules.Up, 0: rules.Dead, -1: rules.Dead} {
+		a.Character.Health = health
+		assert.Equal(t, want, New().Condition(a), "health %d", health)
+	}
+}
+
+// Parity with the old AutoHeal (NewRound_AutoHeal.go before slice 3).
+func TestRegenIsTheOldAutoHeal(t *testing.T) {
+	const here, recovery = 94005, 94006
+	setConfig(t,
+		map[string]any{"SpecialRooms.DeathRecoveryRoom": recovery},
+		map[string]any{"SpecialRooms.DeathRecoveryRoom": int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)})
+	none := rules.RegenResult{}
+
+	a := player(t, 9621)
+	a.Character.RoomId, a.Character.Health = here, 5
+	full := rules.RegenResult{Health: a.Character.HealthPerRound(), Mana: a.Character.ManaPerRound()}
+	require.NotZero(t, full.Health)
+	assert.Equal(t, full, New().Regen(a, 3), "every 3rd round")
+	assert.Equal(t, full, New().Regen(a, 6))
+	assert.Equal(t, none, New().Regen(a, 4), "only every 3rd round")
+	assert.Equal(t, none, New().Regen(a, 5))
+
+	a.Character.Aggro = &characters.Aggro{Type: characters.DefaultAttack}
+	assert.Equal(t, none, New().Regen(a, 3), "never in a fight")
+	a.Character.Aggro = nil
+
+	a.Character.RoomId = recovery
+	assert.Equal(t, none, New().Regen(a, 3), "not in the recovery room")
+	a.Character.RoomId = here
+
+	a.Character.Health = 0
+	assert.Equal(t, none, New().Regen(a, 3), "never while down")
+
+	n := npc(t, 0, 0)
+	n.Character.RoomId, n.Character.Health = here, 5
+	assert.Equal(t, none, New().Regen(n, 3), "accounts only")
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
+	"github.com/GoMudEngine/GoMud/internal/rules"
 )
 
 //
@@ -61,7 +62,7 @@ func ApplyBuffs(e events.Event) events.ListenerReturn {
 	//
 	if buffInfo.TriggerNow {
 
-		if isMob && targetChar.Health <= 0 {
+		if a := actors.Get(evt.ActorId); isMob && a != nil && rules.Get().Condition(a) == rules.Dead {
 			// Mob died
 			events.AddToQueue(events.Input{
 				ActorId:   evt.ActorId,
