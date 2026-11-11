@@ -368,7 +368,7 @@ func end(mob *mobs.Mob, room *rooms.Room) {
 
 // respawn brings the body back in the death recovery room (its own private
 // copy, MoveToRoom) with no buffs, the given health and no mana (Q7c), its
-// damage record cleared. recordPlayerDeath has already cleared the killer
+// damage record cleared and its fight ended. recordPlayerDeath has already cleared the killer
 // record (only an account has one: NewRound_DoCombat records it for a
 // defender with an account).
 func respawn(victim *actors.Actor, user *accounts.Account, health int) {
@@ -383,6 +383,14 @@ func respawn(victim *actors.Actor, user *accounts.Account, health int) {
 	}
 
 	clear(c.PlayerDamage)
+
+	// The body's own fight ends with it: a death in upkeep or from a buff
+	// runs no endAggro, and a kept target would leave it "too busy" to quit.
+	// The room it died in is told, as endAggro tells it.
+	if c.Aggro != nil {
+		c.EndAggro()
+		events.AddToQueue(events.AggroChanged{ActorId: c.Id, RoomId: c.RoomId})
+	}
 
 	if err := rooms.MoveToRoom(victim.Id, int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)); err != nil {
 		mudlog.Error("death", "error", err)

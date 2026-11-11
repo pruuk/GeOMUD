@@ -282,6 +282,27 @@ func TestRespawnStartsClean(t *testing.T) {
 	require.Contains(t, last.What, "DIED", "the event log records the death")
 }
 
+// A respawn ends the body's own fight (whole-branch review m1): a death in
+// upkeep or from a buff runs no endAggro, and a body that kept its target
+// would be "too busy" to quit after waking. The room it died in hears of it.
+func TestRespawnEndsTheFight(t *testing.T) {
+	w := newCombatWorld(t, 111)
+	w.recoveryRoom()
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 12)
+	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "respawn-rats")
+	alice.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+	w.start()
+	alice.Character.Health = 0
+
+	ActorUpkeep(events.NewRound{RoundNumber: 1})
+	events.ProcessEvents()
+
+	notes, _ := w.taken()
+	require.Contains(t, notes, "PlayerDeath Alice")
+	require.Nil(t, alice.Character.Aggro, "her fight ended with her death")
+	require.Contains(t, notes, "AggroChanged Alice room=93001")
+}
+
 // An NPC's ending frees its spawn slot in its home room (CleanupMobSpawns),
 // so the slot can spawn again.
 func TestDeathFreesTheNPCsSpawnSlot(t *testing.T) {
