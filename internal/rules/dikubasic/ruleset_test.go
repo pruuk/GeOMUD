@@ -2,6 +2,7 @@ package dikubasic
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -138,5 +139,84 @@ func TestCanAttackRefusesATargetInTheRecoveryRoom(t *testing.T) {
 	}
 	attacker, target := player(t, 9607), player(t, 9608)
 	attacker.Character.RoomId, target.Character.RoomId = here, recovery
+	assert.EqualError(t, New().CanAttack(attacker, target), "Fighting is not allowed here.")
+}
+
+// setConfig sets config keys for one test and puts back the old values
+// named in old (RestoreOverrides resets nothing it is not given; as
+// setConfig in internal/hooks).
+func setConfig(t *testing.T, set, old map[string]any) {
+	t.Helper()
+	before := configs.Flatten(configs.GetOverrides())
+	next := map[string]any{}
+	for k, v := range before {
+		next[k] = v
+	}
+	for k, v := range set {
+		next[k] = v
+	}
+	require.NoError(t, configs.RestoreOverrides(next))
+	t.Cleanup(func() {
+		back := map[string]any{}
+		for k, v := range before {
+			back[k] = v
+		}
+		for k, v := range old {
+			back[k] = v
+		}
+		require.NoError(t, configs.RestoreOverrides(back))
+	})
+}
+
+// testRoom puts an empty room in memory for one test.
+func testRoom(t *testing.T, id int, zone string) {
+	t.Helper()
+	r := rooms.NewEmptyRoom()
+	r.RoomId, r.Zone = id, zone
+	rooms.AddTestRoom(r)
+	t.Cleanup(func() { rooms.RemoveTestRoom(id) })
+}
+
+// recoveryCopy makes roomId (a room testRoom put in memory, in zone) the
+// death recovery room, saves its template into a temporary data folder and
+// makes a private copy of it, as a death does. It returns the copy's ID.
+func recoveryCopy(t *testing.T, roomId int, zone string) int {
+	t.Helper()
+	tmp := t.TempDir()
+	setConfig(t,
+		map[string]any{"FilePaths.DataFiles": tmp, "SpecialRooms.DeathRecoveryRoom": roomId},
+		map[string]any{
+			"FilePaths.DataFiles":            configs.GetFilePathsConfig().DataFiles.String(),
+			"SpecialRooms.DeathRecoveryRoom": int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom),
+		})
+	require.Equal(t, roomId, int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom), "the override took")
+	require.NoError(t, os.MkdirAll(filepath.Join(tmp, "rooms", zone), 0o755))
+	require.NoError(t, rooms.SaveRoomTemplate(*rooms.LoadRoom(roomId)))
+	copies, err := rooms.CreateEphemeralRoomIds(roomId)
+	require.NoError(t, err)
+	id := copies[roomId]
+	require.True(t, rooms.IsEphemeralRoomId(id))
+	// Free the copy's ephemeral chunk (one of 100; ephemeral.go:14): removing
+	// only the room would hold the chunk for the rest of the run.
+	t.Cleanup(func() { rooms.TryEphemeralCleanup(id) })
+	return id
+}
+
+// A target in a private copy of the recovery room is protected as one in
+// the room itself. PvP is disabled, so a missed copy reads "PVP is
+// disabled." instead.
+func TestCanAttackRefusesATargetInACopyOfTheRecoveryRoom(t *testing.T) {
+	const here, recovery = 94003, 94004
+	testRoom(t, here, "rulesetzone")
+	testRoom(t, recovery, "rulesetzone")
+	copyId := recoveryCopy(t, recovery, "rulesetzone")
+	setConfig(t,
+		map[string]any{"GamePlay.PVP.Enabled": "disabled", "GamePlay.PVP.MinimumLevel": 0},
+		map[string]any{
+			"GamePlay.PVP.Enabled":      string(configs.GetPVPConfig().Enabled),
+			"GamePlay.PVP.MinimumLevel": int(configs.GetPVPConfig().MinimumLevel),
+		})
+	attacker, target := player(t, 9609), player(t, 9610)
+	attacker.Character.RoomId, target.Character.RoomId = here, copyId
 	assert.EqualError(t, New().CanAttack(attacker, target), "Fighting is not allowed here.")
 }

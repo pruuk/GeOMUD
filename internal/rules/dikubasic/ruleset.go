@@ -89,8 +89,8 @@ func (Ruleset) CanAttack(attacker, defender *actors.Actor) error {
 		return nil
 	}
 	// CanPvp checks only the attacker's room against the recovery room; a
-	// safe room protects whoever stands in it.
-	if defender.Character.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom) {
+	// safe room protects whoever stands in it, its private copies included.
+	if rooms.IsDeathRecoveryRoom(defender.Character.RoomId) {
 		return errors.New(`Fighting is not allowed here.`)
 	}
 	r := rooms.LoadRoom(attacker.Character.RoomId)

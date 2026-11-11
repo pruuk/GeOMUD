@@ -2057,10 +2057,20 @@ func (r *Room) IsPvp() bool {
 	return roomPvp
 }
 
+// IsDeathRecoveryRoom reports whether roomId is the death recovery room or
+// a private copy of it: a death moves the body into its own copy
+// (MoveToRoom), so a raw ID compare misses where the dead stand. With no
+// recovery room set (0 or less) no room is it: 0 would match room 0 and
+// every empty ephemeral room, whose original is recorded as 0.
+func IsDeathRecoveryRoom(roomId int) bool {
+	recovery := int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)
+	return recovery > 0 && GetOriginalRoom(roomId) == recovery
+}
+
 // Returns an error with a reason why they cannot PVP, or nil
 func (r *Room) CanPvp(attChar *characters.Character, defChar *characters.Character) error {
 
-	if attChar.RoomId == -1 || attChar.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom) {
+	if attChar.RoomId == -1 || IsDeathRecoveryRoom(attChar.RoomId) {
 		return errors.New(`Fighting is not allowed here.`)
 	}
 
