@@ -365,9 +365,12 @@ changes the design above except Q1's outcome shape. Details, with line numbers, 
 
 - **`get all <corpse>` works** (player-visible). Today `get.go:39` returns early whenever the first
   word is `all`, so `get all <corpse>` and `get all from <corpse>` silently do nothing. With every
-  death's drops in a corpse, that is the main way back to your things. The early `all` branch applies
-  only when `all` is the whole command; `get all <corpse>` takes every item and the gold from the
-  corpse. Tested; the help pages describe it.
+  death's drops in a corpse, that is the main way back to your things. When the word after `all`
+  (or after `all from`) names a corpse in the room, `get` takes every item and the gold from that
+  corpse; otherwise `get all ...` keeps today's room-wide behaviour exactly (so `get all ground`,
+  `get all stash` and `get all <container>` are unchanged). Tested; the help pages describe it.
+- **Death drops queue `ItemOwnership{Gained: false}`** for each item that leaves the body, as the old
+  `drop` did and as every other item move does (no listener today).
 - **`IsDeathRecoveryRoom` is false when no recovery room is set** (0 or less): with 0 it would match
   room 0 and every empty ephemeral room (`ephemeral.go:92` records 0 as their original).
 - **The `Shadow Realm` check was live, not broken:** the shipped recovery zone is named "Shadow Realm"
