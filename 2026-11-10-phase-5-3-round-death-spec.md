@@ -783,11 +783,20 @@ test written for the reads world, three probes fail as stated, and `go test ./..
 the 3 known Windows failures, every golden unchanged. Task 6's form of the notice test is unrun (it
 needs the `death` package).
 
+**Plan review round 6 (2026-11-11): nothing material.** The whole plan ran, Tasks 1 to 10, on one
+scratch copy: everything builds, every named test passes, exactly the nine predicted goldens change,
+and the tests earlier rounds could not run (recovery line in its `Regen` form, revive, death notice,
+`suicide`) pass with their probes failing. Shuffled and repeated runs are clean apart from the known
+`TestCombatGoldenFleeSuccess` flake. Four text slips fixed by the controller: the Extra Lives range is
+`users.html:366-370` (its `</div>` is on 370); two probes in Task 6 Step 11b(b) and Task 7 Step 4
+needed `_ =` lines to compile; Task 5's cap probes fail first at the d10 test's full-health assert.
+One unrecorded choice added to the decisions table (`perceivesBody`). Review stops here: six rounds.
+
 **Facts corrected while planning:** help pages are under `_datafiles/world/empty/templates/help/`;
 more health checks exist than the table lists (`NewRound_AutoHeal.go:68`, `remove.go:51`, and in
 `characters` `:464`, `:1204` and the remove-lock checks); `save_and_load.go:437` is another raw
 recovery compare (room loading only; left alone); the admin pages' ranges are wider and
-`users.html:366-369,592,1089` (Extra Lives) is missing; `configs_bench_test.go:28,174-176` name deleted
+`users.html:366-370,592,1089` (Extra Lives) is missing; `configs_bench_test.go:28,174-176` name deleted
 knobs; `decayAlignment` is `:71-91`.
 
 ## Decisions taken without asking
@@ -847,3 +856,4 @@ knobs; `decayAlignment` is `:71-91`.
 | A hidden killer in another room is named only to an admin; a `see-hidden` reader elsewhere does not read it (round 5 M1) | `see-hidden` reveals what is in the reader's room; admins perceive hidden bodies everywhere (Calabe's admin ruling) | Let `see-hidden` reveal a hidden killer anywhere |
 | The per-reader notice is one `UserId` message per active account (`messaging.NotifyEach`), not a broadcast with a receiver list | Same bytes, line refresh and prompt redraw; no change to `events.Broadcast` or its writer; the goldens record it the same way. A screen-reader account now gets the notice stripped, as every message is | Add a receiver list to `events.Broadcast` |
 | `DeathOutcome.Messages` is dropped | Q1: awards carry the death's lines; nothing set or tested it | Restore it with a test |
+| GMCP treats a body no longer in the registry as perceived (`perceivesBody`) (round 6) | A body that has left has nothing left to hide; the refresh reveals nothing new | Treat it as not perceived and skip the refresh |

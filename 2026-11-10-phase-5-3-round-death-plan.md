@@ -310,7 +310,7 @@ exist for them; no reply reveals it"), not a Calabe ruling; he may overrule.
 - **Admin pages:** `config-wizard.html` entries are `:1110-1130` (lives), `:1161-1200`
   (`EquipmentDropChance` through `PermaDeath`), `:1214-1219` (`CorpseItems`), the Lives group
   `:1543-1551` and the Death group's `desc`/`fields` `:1555`, `:1559`. `config.html` is `:228-238`, not
-  `:232-238`. Missing: `users.html:366-369`, `:592`, `:1089` (the Extra Lives field in the user editor).
+  `:232-238`. Missing: `users.html:366-370`, `:592`, `:1089` (the Extra Lives field in the user editor).
 - **Other readers of deleted knobs:** `configs/configs_bench_test.go:28` sets `Death.XPPenalty` (stops
   compiling when the field goes); `:174-176` name three deleted keys in a map. `config.yaml:196-237`
   holds the deleted entries.
@@ -1822,9 +1822,9 @@ func recoveryRegen(a *actors.Actor) rules.RegenResult {
     `a.Character.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)` (the copy half of
     the d10 test fails);
   - drop the health cap only: `health := util.RollDice(1, 10)` (the mana line still uses `c`, so it
-    compiles; the health-cap assert fails on the first seed whose d10 is above 1);
+    compiles; the d10 test fails, first at its full-health assert, `ruleset_test.go:298`);
   - drop the mana cap only: `mana := util.RollDice(1, 10)` (the health line still uses `c`; the
-    mana-cap assert fails the same way);
+    d10 test fails the same way, first at its full-health assert);
   - add `if c.Health >= c.HealthMax.Value && c.Mana >= c.ManaMax.Value { return rules.RegenResult{} }`
     as the first statement after `c := a.Character` (the full-health "still two draws" assert fails);
   - change `{actor} is recovering` to `{actor} recovers` (the line test fails);
@@ -5273,7 +5273,7 @@ func namesACorpse(actor *actors.Actor, room *rooms.Room, args []string) bool {
     `EquipmentDropChance`, `AlwaysDropBackpack`, `XPPenalty`, `ProtectionLevels`, `PermaDeath`,
     `CorpseItems`, `LivesStart`, `LivesMax`, `LivesOnLevelUp` entries), keeping `CorpsesEnabled` and
     `CorpseDecayTime`.
-  - `_datafiles/html/admin/users.html`: delete the Extra Lives field (`:366-369`, the
+  - `_datafiles/html/admin/users.html`: delete the Extra Lives field (`:366-370`, the
     `<div class="field">` holding `<label>Extra Lives</label>` through its `</div>`), `:592`
     (`setVal('f-extralives', ...)`) and `:1089` (`ExtraLives: ...`).
   - The absence proof for these names runs in Step 13, after Step 11 (`deathConfig` and the death
@@ -6218,7 +6218,8 @@ func TestGetAllCountsCorpsesPastTheLiving(t *testing.T) {
   - in `get.go` replace Task 5b's ``if refusal != `` { ... }`` block with `_ = refusal` (deleting it
     alone leaves `refusal` unused, and `get.go` does not compile): `TestGetAllCountsCorpsesPastTheLiving`
     fails on its refusal assert (no "still alive" line);
-  - in `namesACorpse` return `c != nil` only: the same test's refusal assert fails (`get all rat`
+  - in `namesACorpse` return `c != nil` only (write `_ = refusal; return c != nil` so it compiles):
+    the same test's refusal assert fails (`get all rat`
     takes the room-wide branch instead).
 
   (`TestGetAllCountsCorpsesPastTheLiving` was not run while writing this revision: it needs Task 6's
@@ -6539,8 +6540,9 @@ func Suicide(rest string, actor *actors.Actor, room *rooms.Room, flags events.Ev
 - [ ] **Step 4: Run; they pass.** Probes: delete the `inFight` check (the fight test fails); replace
   `rooms.IsDeathRecoveryRoom(actor.Character.RoomId)` with
   `actor.Character.RoomId == int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)` (add the `configs`
-  import for the probe; the copy test fails, the room test passes); delete the recovery check (both
-  recovery tests fail); delete `death.Die(actor)` (`TestSuicideDiesOtherwise` fails). Paste the four
+  import for the probe; the copy test fails, the room test passes); delete the recovery check, adding
+  `_ = errors.New` so the import stays used (both recovery tests fail); delete `death.Die(actor)`,
+  adding `_ = death.Die` (`TestSuicideDiesOtherwise` fails). Paste the four
   lines.
 - [ ] **Step 5:** Per-task check (goldens unchanged: no golden runs `suicide` in a fight or the recovery
   room). `go test ./internal/usercommands -run Suicide -count=16` prints `ok` (each test's copies are
