@@ -1343,3 +1343,16 @@ func TestCharacter_GetSkillLevel(t *testing.T) {
 		})
 	}
 }
+
+// Heal's second argument is mana: it restores mana by that amount, not by
+// the health amount (slice 3 fix).
+func TestHealRestoresManaByTheManaAmount(t *testing.T) {
+	c := New()
+	c.HealthMax.Value, c.ManaMax.Value = 20, 20
+	c.Health, c.Mana = 10, 10
+	dh, dm := c.Heal(1, 5)
+	assert.Equal(t, 11, c.Health)
+	assert.Equal(t, 15, c.Mana)
+	assert.Equal(t, 1, dh)
+	assert.Equal(t, 5, dm)
+}
