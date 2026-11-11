@@ -41,7 +41,7 @@ func Die(victim *actors.Actor) {
 		return
 	}
 
-	user := accountOf(victim)
+	user := actors.AccountOf(victim.Id)
 	mob := mobs.GetInstance(victim.Id)
 	room := rooms.LoadRoom(c.RoomId)
 
@@ -104,14 +104,6 @@ func Die(victim *actors.Actor) {
 	respawn(victim, user, outcome.RespawnHealth)
 }
 
-// accountOf is the account driving a, or nil for an NPC.
-func accountOf(a *actors.Actor) *accounts.Account {
-	if ctrl := a.Controller(); ctrl != nil {
-		return ctrl.Account()
-	}
-	return nil
-}
-
 // revive gets the victim up instead of dying.
 func revive(victim *actors.Actor, health int) {
 	victim.Character.Health = health
@@ -130,7 +122,7 @@ func revive(victim *actors.Actor, health int) {
 
 	victim.Character.CancelBuffsWithFlag("revive-on-death")
 
-	if user := accountOf(victim); user != nil {
+	if user := actors.AccountOf(victim.Id); user != nil {
 		events.AddToQueue(events.CharacterVitalsChanged{UserId: user.UserId})
 	}
 }

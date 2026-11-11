@@ -120,24 +120,9 @@ func buildCorpseInventoryPanel(c *rooms.Corpse) string {
 
 	panel := layout.Panel("equip")
 
+	// A corpse's body wears nothing (death's corpseBody): what it holds is
+	// its Items and Gold.
 	hasContent := false
-
-	for _, slot := range characters.AllSlots() {
-		itm := c.Character.Equipment.Get(slot)
-		if itm == nil || itm.ItemId == 0 {
-			continue
-		}
-		if itm.IsDisabled() {
-			continue
-		}
-		label := characters.SlotLabel(slot)
-		panel.Add(
-			fmt.Sprintf(`<ansi fg="yellow">%s</ansi>`, label),
-			fmt.Sprintf(`<ansi fg="yellow">%s</ansi>`, label),
-			fmt.Sprintf(`<ansi fg="itemname">%s</ansi>`, itm.DisplayName()),
-		)
-		hasContent = true
-	}
 
 	for _, itm := range c.Items {
 		panel.Add(``, ``, fmt.Sprintf(`<ansi fg="itemname">%s</ansi>`, itm.DisplayName()))

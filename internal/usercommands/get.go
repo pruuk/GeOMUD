@@ -162,26 +162,6 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 				}
 			}
 
-			// Worn items on corpse character
-			allWorn := corpseRef.Character.GetAllWornItems()
-			for _, item := range allWorn {
-				if actor.Character.StoreItem(item) {
-					corpseRef.Character.RemoveFromBody(item)
-					events.AddToQueue(events.ItemOwnership{
-						ActorId: actor.Character.Id,
-						Item:    item,
-						Gained:  true,
-					})
-					itemRoomEvent(actor,
-						fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName),
-						fmt.Sprintf(`{actor} takes the <ansi fg="itemname">%s</ansi> from the %s.`, item.DisplayName(), corpseName),
-					)
-					tookSomething = true
-				} else {
-					Tell(actor, fmt.Sprintf(`You can't carry the <ansi fg="itemname">%s</ansi>.`, item.DisplayName()))
-				}
-			}
-
 			if !tookSomething {
 				Tell(actor, fmt.Sprintf(`There is nothing to take from the %s.`, corpseName))
 			}
@@ -214,21 +194,9 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			return true, nil
 		}
 
-		// "get <item> <corpse>" - search backpack items first, then worn items
+		// "get <item> <corpse>": a corpse's body wears nothing (death's
+		// corpseBody), so what it holds is its Items.
 		matchItem, found := corpseRef.FindItem(rest)
-		if !found {
-			// Also search worn equipment on the corpse character
-			wornItems := corpseRef.Character.GetAllWornItems()
-			closeMatch, exactMatch := items.FindMatchIn(rest, wornItems...)
-			if exactMatch.ItemId != 0 {
-				matchItem = exactMatch
-				found = true
-			} else if closeMatch.ItemId != 0 {
-				matchItem = closeMatch
-				found = true
-			}
-		}
-
 		if !found {
 			Tell(actor, fmt.Sprintf(`You don't see a %s on the %s.`, rest, corpseName))
 			return true, nil
@@ -247,9 +215,7 @@ func Get(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventF
 			Gained:  true,
 		})
 
-		// Remove from whichever location it came from
 		corpseRef.RemoveItem(matchItem)
-		corpseRef.Character.RemoveFromBody(matchItem)
 
 		itemRoomEvent(actor,
 			fmt.Sprintf(`You take the <ansi fg="itemname">%s</ansi> from the %s.`, matchItem.DisplayName(), corpseName),
