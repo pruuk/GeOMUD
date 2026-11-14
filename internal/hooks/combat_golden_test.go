@@ -292,7 +292,7 @@ func (w *combatWorld) aggro(c *characters.Character) string {
 		return "none"
 	}
 	kind := map[characters.AggroType]string{
-		characters.DefaultAttack: "DefaultAttack", characters.Shooting: "Shooting", characters.BackStab: "BackStab",
+		characters.DefaultAttack: "DefaultAttack", characters.Shooting: "Shooting",
 		characters.Flee: "Flee",
 	}[c.Aggro.Type]
 	s := fmt.Sprintf("%s %s wait=%d", w.name(c.Aggro.Target), kind, c.Aggro.RoundsWaiting)

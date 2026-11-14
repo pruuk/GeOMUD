@@ -41,8 +41,7 @@ func TestCheckObserverText(t *testing.T) {
 		{"attacker prepare", "Smkabc0 hits rat.\nYou prepare to fight rat!\n", true},
 		{"xp line", "Smkabc0 hits rat.\nYou gained 44 experience points! (combat)\n", true},
 		{"crit line", "Smkabc0 prepares to fight rat.\n*** Smkabc0 hits rat with their fists. ***\nrat has died.\n", false},
-		{"backstab crit line", "*[BACKSTAB]* *** Smkabc0 hits rat with their fists. ***\n", false},
-		{"backstab line after prompt", "[☀️ 4:01AM HP:6/6 MP:5/5]:*[BACKSTAB]* Smkabc0 hits rat.\n", false},
+		{"crit line after prompt", "[☀️ 4:01AM HP:6/6 MP:5/5]:*** Smkabc0 hits rat with their fists. ***\n", false},
 		{"crit attacker line", "Smkabc0 prepares to fight rat.\n*** You hit rat with your fists. ***\n", true},
 		{"unrelated you line", "Smkabc0 hits rat.\nYou say, \"hi\"\n", false},
 	}

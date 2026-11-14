@@ -360,13 +360,6 @@ func (i *ItemSpec) Id() int {
 	return i.ItemId
 }
 
-func CanBackstab(iSubType ItemSubType) bool {
-	if iSubType == Cleaving || iSubType == Stabbing || iSubType == Slashing || iSubType == Claws {
-		return true
-	}
-	return false
-}
-
 // GetBuffSummary returns the count and aggregate GetValue() of all WornBuffIds
 // on the item spec. It is used by the admin API to surface passive buff info
 // in the item list without requiring callers to load each buff separately.

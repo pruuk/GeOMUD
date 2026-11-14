@@ -172,15 +172,6 @@ func calculateCombat(sourceChar characters.Character, targetChar characters.Char
 			}
 		}
 
-		attackMessagePrefix := ``
-		// If they are backstabbing it's a free crit
-		if sourceChar.Aggro.Type == characters.BackStab {
-			attackResult.Crit = true
-			attackMessagePrefix = `<ansi fg="magenta-bold">*[BACKSTAB]*</ansi> `
-			// Failover to the default attack
-			sourceChar.SetAggro(sourceChar.Aggro.Target, characters.DefaultAttack)
-		}
-
 		for wIdx, weapon := range attackWeapons {
 
 			// Only the offhand weapon (index > 0) incurs a hit penalty for dual-wielding.
@@ -240,10 +231,10 @@ func calculateCombat(sourceChar characters.Character, targetChar characters.Char
 					attackResult.Hit = true
 					attackTargetDamage = util.RollDice(dCount, dSides) + dBonus
 
-					// Backstab sets attackResult.Crit for the first hit only; subsequent
-					// hits use a fresh per-attack roll so crits don't cascade.
+					// Once a hit this round is a crit, every later hit this round
+					// is one too, with no new crit roll (kept as it was; slice
+					// 4.3's hit roll replaces this).
 					isCrit = attackResult.Crit || Crits(sourceChar, targetChar)
-					attackResult.Crit = false // consume the backstab flag after one use
 					if isCrit {
 						attackResult.Crit = true // record that at least one crit occurred this round
 						attackResult.BuffTarget = critBuffs
@@ -270,15 +261,6 @@ func calculateCombat(sourceChar characters.Character, targetChar characters.Char
 					toAttackerRoomMsg = `<ansi fg="yellow-bold">***</ansi> ` + toAttackerRoomMsg + ` <ansi fg="yellow-bold">***</ansi>`
 					if len(toDefenderRoomMsg) > 0 {
 						toDefenderRoomMsg = `<ansi fg="yellow-bold">***</ansi> ` + toDefenderRoomMsg + ` <ansi fg="yellow-bold">***</ansi>`
-					}
-				}
-
-				if len(attackMessagePrefix) > 0 {
-					toAttackerMsg = attackMessagePrefix + toAttackerMsg
-					toDefenderMsg = attackMessagePrefix + toDefenderMsg
-					toAttackerRoomMsg = attackMessagePrefix + toAttackerRoomMsg
-					if len(toDefenderRoomMsg) > 0 {
-						toDefenderRoomMsg = attackMessagePrefix + toDefenderRoomMsg
 					}
 				}
 

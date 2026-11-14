@@ -119,17 +119,10 @@ var ratWord = regexp.MustCompile(`\brat\b`)
 // promptPrefix matches the status prompt, e.g. "[☀️ 4:01AM HP:6/6 MP:5/5]:".
 var promptPrefix = regexp.MustCompile(`^\[[^\]]*\]:`)
 
-// stripCombatMarks removes the leading marks combat puts on a line (from
-// internal/rules/dikubasic/combat.go, ansi stripped): "*[BACKSTAB]* " on a backstab
-// and "*** " on a crit, in that order when both apply.
+// stripCombatMarks removes the leading mark combat puts on a crit line (from
+// internal/rules/dikubasic/combat.go, ansi stripped): "*** ".
 func stripCombatMarks(line string) string {
-	for {
-		trimmed := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(line, "*[BACKSTAB]*"), "***"))
-		if trimmed == line {
-			return line
-		}
-		line = trimmed
-	}
+	return strings.TrimSpace(strings.TrimPrefix(line, "***"))
 }
 
 // checkObserverText checks what a bystander read during bot fighter's fight:
