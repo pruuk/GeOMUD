@@ -7,7 +7,9 @@ ruleset whether a body is up through one func variable (`characters.IsUp`); no h
 engine; every actor regenerates by one rule; `Character.IsDisabled`, `rooms.FindDowned`,
 `actors.BodyReplaced`, offhand breakage and `BackStab` are deleted; the death guard covers
 `characters` and `rooms`; and (rulings 6-9, Task 6a) a body that is attacked fights back, and a body
-whose target is gone turns to its longest attacker.
+whose target is gone turns to its longest attacker; and (ruling 13, Task 6a) shooting is one shot per
+action: `shoot` arms one shot, a body shot by a typed `shoot` earns one shot back, and a shot back
+earns nothing.
 
 **Architecture:** See the spec ("Design"). Every design decision this plan implements is in the spec:
 its rulings, its "Retaliation and target switching" section, and its "Decisions taken without asking"
@@ -31,7 +33,10 @@ another on the branch: they share files. No parallel worktrees.
 
 Every task below was applied, in order, to a scratch copy of `1c8e607f` (`git archive`) while this
 plan was written: the builds, every golden diff stated below, every new test and every mutation
-probe were run there (2026-11-12). The repo was not touched.
+probe were run there (2026-11-12). The repo was not touched. Ruling 13's changes to Task 6a were
+applied the same way on 2026-11-14 to a fresh scratch copy of `ce912466` (code identical to
+`1c8e607f`: only the spec and plan changed between them), after Tasks 1-6, and every Task 6a check
+was run again there.
 
 ---
 
@@ -72,6 +77,8 @@ probe were run there (2026-11-12). The repo was not touched.
 | Task 6a: messages | an `Interface` message is written without token resolution (`messaging/interface.go:37-39`, `messaging.go:81-82`); an `ActorOnly` `WorldEvent` resolves `{target}` | read, scratch run |
 | `docs/known-issues.md` | names none of this slice's items | grep `-i` for break, backstab, downed, floor, regenerat |
 | Task 6a (plan review round 5): how `shoot` finds an exit | `room.FindExitByName(direction)` for the stored name and the room it leads to, then `room.GetExitInfo(exitName).Lock.IsLocked()` (`usercommands/shoot.go:62-66`). `FindExitByName` (`rooms.go:1688`) searches `Exits`, `ExitsTemp` and active mutators' `Exits`, and returns a temporary exit's `Title`; `GetExitInfo` (`rooms.go:805-820`) checks active mutators' exits before `Exits` and never `ExitsTemp` (a temporary exit has no lock). `Room.ActiveMutators` (`rooms.go:2073`) yields nothing when the zone has no config | read |
+| Task 6a, ruling 13: how `shoot` arms today | `SetAggroRemote(exitName, target, characters.Shooting)` at `usercommands/shoot.go:104` (NPC target) and `:136` (player target), each followed by an `AggroChanged`; `SetAggroRemote` is `SetAggro` plus `ExitName` (`character.go:784-787`); `SetAggro` builds a new `Aggro` (`:807-811`), so any re-arm clears every other field | read 2026-11-14 at `ce912466` |
+| Task 6a, ruling 13: tests and fixtures that stand in for `shoot` | `shoot_test.go:91-93` (`TestShootAtAPlayerQueuesAggroChanged` checks target and exit), `:108-110` (the NPC case checks the event only); the combat goldens call `SetAggroRemote` directly: `TestCombatGoldenShootThroughExit` (`combat_golden_test.go:685`) and `TestShootWaitLineDoesNotReachTargetRoom` (`:818`); the harness's `w.aggro` prints target, type, wait and exit (`:290-303`) | read 2026-11-14 |
 | Task 6a (plan review round 5): mutator specs in tests | `allMutators` (`mutators/mutators.go`), `MutatorSpec.Exits` (`:70`), `Mutator.GetSpec` (`:201-203`), `MutatorList.Add` refuses an unknown id (`:113-132`); no test helper existed (`ls internal/mutators`: `admin.go`, `mutators.go`, `plugin.go` plus GoMud's notes); `admin.go`'s `SaveMutatorSpec` writes a file | read |
 
 ## Settled from the code (the spec's five open items)
@@ -170,7 +177,14 @@ Each was found while planning, by reading or running the code.
   makes it wait first: the switch re-arms through `SetAggro` like `attack <name>` (plan review round
   3; Step 5, `TestSwitchKeepsTheWeaponDelay`).
 - **Q12:** lookup order: gone, switch; not up, switch; other room and can shoot, shoot (kept even if
-  someone in the room attacks); other room and attacked here, switch; else wait (Step 5).
+  someone in the room attacks); other room and attacked here, switch; else wait (Step 5). Narrowed
+  by ruling 13 (2026-11-14): step 3 shoots only while the aggro holds a shot, and once the shot is
+  spent step 4 switches to a perceived attacker in the room.
+- **Ruling 13 (spec, 2026-11-14):** one shot per action. The aggro gets a shot mark
+  (`Aggro.Shot`: `NoShot`, `TypedShot`, `EarnedShot`), armed by `shoot`, earned by being shot by a
+  typed shot from the body's own target or (retaliation) a new attacker, spent by firing, dropped
+  when it cannot fire, saved in NPC sidecars. After the shot the aggro waits (step 5) with the told
+  mark set. Steps 1, 5, 6, 8, 9 and 10 (the shot paragraphs) carry it.
 - **Q13:** the waiting line is "Your target is out of reach." (once) (Step 5).
 - **Q14:** the switch rule lives in `internal/death/switch.go` (Step 3).
 - **Q15:** a failed flee keeps the `Since` the fleer's aggro had (Step 5c).
@@ -335,11 +349,11 @@ Report: build result, the failing-test lines, the `git status` output.
 ### Task 0: Baseline (controller)
 
 - [ ] On `strip/phase-5-4-1-leftovers`, run the per-task check except its last line; save the output
-  in the scratchpad as the baseline (expected: 41 packages ok and the 3 known failures). Before this
-  commit `git status --short` shows exactly ` M 2026-11-12-phase-5-4-1-leftovers-spec.md` (the
-  controller's settled-while-planning edits since `1c8e607f`) and
-  `?? 2026-11-12-phase-5-4-1-leftovers-plan.md`.
-- [ ] Once Calabe approves the plan, commit the spec and the plan together:
+  in the scratchpad as the baseline (expected: 41 packages ok and the 3 known failures). The spec
+  and plan are already tracked (WIP commits since `1c8e607f`); before this commit
+  `git status --short` shows at most ` M` on those two files (review edits since the last WIP
+  commit) and nothing else.
+- [ ] Once Calabe approves the plan, commit the spec and the plan together (if either is modified):
 
 ```bash
 git add 2026-11-12-phase-5-4-1-leftovers-spec.md 2026-11-12-phase-5-4-1-leftovers-plan.md
@@ -1657,7 +1671,7 @@ change per fixture is in Step 9, written before the run, with what the run showe
 `internal/hooks/combat_golden_test.go`, `internal/mobs/saved_test.go`,
 `internal/rules/dikubasic/ruleset.go`, `internal/rules/dikubasic/ruleset_test.go`,
 `internal/usercommands/go.go`, `internal/usercommands/go_test.go`, `internal/usercommands/flee.go`,
-`internal/usercommands/shoot_test.go`, `internal/usercommands/quit_test.go`,
+`internal/usercommands/shoot.go`, `internal/usercommands/shoot_test.go`, `internal/usercommands/quit_test.go`,
 `internal/hooks/death_engine_test.go` (a comment), `cmd/smoke/server.go`, `cmd/smoke/fight.go`,
 `cmd/smoke/fight_test.go`, `cmd/smoke/main.go`, `cmd/smoke/script.go` (a comment),
 `internal/configs/config.gameplay.go`, `internal/behaviour/tick.go`, `internal/behaviour/tick_test.go`,
@@ -1691,16 +1705,40 @@ every `internal/hooks/testdata/combat-golden/*.txt` and
 	// it, not being attacked by the target (which resets OutOfReach). Saved
 	// in NPC sidecars with OutOfReach.
 	OutOfReachTold bool
+	// Shot is the one shot this aggro holds through an exit (ruling 13):
+	// armed by the shoot command (TypedShot), or earned by being shot by a
+	// typed shoot (EarnedShot). The turn fires it once (lookup step 3) and
+	// the re-arm after the swing spends it; one that cannot be fired is
+	// dropped. Only a fired TypedShot earns its target a shot back. Saved in
+	// NPC sidecars; a sidecar saved before 4.1 loads NoShot.
+	Shot ShotMark
 ```
 
-  (NPC sidecars save the aggro by plain YAML, `mobs/saved.go:20`, so `since:`, `outofreach:` and
-  `outofreachtold:` are saved; a player's aggro is `yaml:"-"`, `character.go:73`. Saving the count
+  and after the `AggroType` constants:
+
+```go
+
+// ShotMark is the shot an aggro holds (Phase 5 slice 4.1, ruling 13: one
+// shot per action). A body never holds more than one.
+type ShotMark int
+
+const (
+	NoShot     ShotMark = iota
+	TypedShot           // armed by the shoot command, a player's or an NPC's
+	EarnedShot          // earned by being shot by a typed shoot; earns nothing back
+)
+```
+
+  (NPC sidecars save the aggro by plain YAML, `mobs/saved.go:20`, so `since:`, `outofreach:`,
+  `outofreachtold:` and `shot:` are saved; a player's aggro is `yaml:"-"`, `character.go:73`. Saving the count
   and the mark is the plain-YAML default for every aggro field and keeps a mid-wait NPC's wait as it
   was across a rest or restart, rather than giving it a fresh 5 rounds and a second line. The mark is
   separate from the count because being attacked by the target resets the count (Step 5, plan
   review round 6) and must not repeat the line: with the line tied to count 1, steady fire from the
   next room told the body every round (12 lines in 12 rounds, scratch run). Re-arming with
-  `SetAggro` makes a new record, so the count and the mark start at 0 and false after every swing.) In `SetAggro` (`character.go:789-813`)
+  `SetAggro` makes a new record, so the count and the mark start at 0 and false after every swing, and
+  the shot at `NoShot`: a swing at a target in the room spends a held shot too, the re-arm staying as
+  today (spec "What stays as today").) In `SetAggro` (`character.go:789-813`)
   the final assignment becomes:
 
 ```go
@@ -1719,6 +1757,34 @@ every `internal/hooks/testdata/combat-golden/*.txt` and
 
   (`util` is already imported by `character.go`.) A failed flee re-arms the fled target through a
   `Flee` aggro whose target is zero; Step 5c carries the `Since` through it (Q15).
+
+  **`shoot` arms one shot (ruling 13).** In `internal/usercommands/shoot.go`, after each of the two
+  `SetAggroRemote` calls (`:104`, NPC target, and `:136`, player target), add the line
+
+```go
+			actor.Character.Aggro.Shot = characters.TypedShot // one shot (Phase 5 slice 4.1, ruling 13)
+```
+
+  An NPC running `shoot` as a combat command goes through the same function, so it types its shot
+  like a player (spec Decisions, "How a shot is held"). In `shoot_test.go`,
+  `TestShootAtAPlayerQueuesAggroChanged` gains after its `ExitName` assertion (`:93`)
+
+```go
+	assert.Equal(t, characters.TypedShot, shooter.Character.Aggro.Shot, "shoot arms one typed shot")
+```
+
+  and `TestShootAtAnNPCQueuesAggroChanged` gains after its last assertion (`:110`)
+
+```go
+	require.NotNil(t, shooter.Character.Aggro)
+	assert.Equal(t, characters.TypedShot, shooter.Character.Aggro.Shot, "shoot arms one typed shot")
+```
+
+  (add `"github.com/GoMudEngine/GoMud/internal/characters"` to `shoot_test.go`'s imports). Before
+  the `aggro.go` change both fail to build (`undefined: characters.TypedShot`); after it, both pass.
+  Mutations (run, each killed): the player branch's new line deleted fails the player test ("shoot
+  arms one typed shot", `expected: 1 actual: 0`); the NPC branch's deleted fails the NPC test the
+  same way.
 
 - [ ] **Step 2: Unit tests for `Since`, failing first.** Append to `character_test.go` (and add
   `"github.com/GoMudEngine/GoMud/internal/util"` to its imports):
@@ -1750,8 +1816,9 @@ func TestSetAggroSinceIsSetOnChangeAndKeptOnReArm(t *testing.T) {
 
 ```go
 
-// Phase 5 slice 4.1: a sidecar keeps the aggro's Since, and its wait
-// (OutOfReach and OutOfReachTold). (One saved before 4.1 has no since key
+// Phase 5 slice 4.1: a sidecar keeps the aggro's Since, its wait
+// (OutOfReach and OutOfReachTold) and its shot (ruling 13). (One saved
+// before 4.1 has no since key
 // and loads 0, YAML's zero value for a missing key; nothing in this slice
 // can change that, so no test claims it.)
 func TestSavedAggroKeepsSince(t *testing.T) {
@@ -1759,17 +1826,19 @@ func TestSavedAggroKeepsSince(t *testing.T) {
 	m := Mob{MobId: 7, HomeRoomId: 2}
 	m.Character = *characters.New()
 	m.Character.Id = ids.New(ids.NoCell)
-	m.Character.Aggro = &characters.Aggro{Target: ids.New(ids.NoCell), Since: 77, OutOfReach: 3, OutOfReachTold: true}
+	m.Character.Aggro = &characters.Aggro{Target: ids.New(ids.NoCell), Since: 77, OutOfReach: 3, OutOfReachTold: true, Shot: characters.EarnedShot}
 
 	b, err := yaml.Marshal(Snapshot(&m))
 	require.NoError(t, err)
 	require.Contains(t, string(b), "since: 77")
 	require.Contains(t, string(b), "outofreachtold: true")
+	require.Contains(t, string(b), "shot: 2")
 	var back SavedNPC
 	require.NoError(t, yaml.Unmarshal(b, &back))
 	assert.Equal(t, uint64(77), back.Mob().Character.Aggro.Since)
 	assert.Equal(t, 3, back.Mob().Character.Aggro.OutOfReach, "a restored NPC resumes its wait count")
 	assert.True(t, back.Mob().Character.Aggro.OutOfReachTold, "and does not repeat the out-of-reach line")
+	assert.Equal(t, characters.EarnedShot, back.Mob().Character.Aggro.Shot, "and still owes its shot")
 }
 ```
 
@@ -2129,12 +2198,21 @@ func TestOutOfReachRoundsDefaultsToFive(t *testing.T) {
   becomes
 
 ```go
+	// A target in another room was shot through an exit (lookup step 3).
+	// Only a typed shot earns the target one shot back (ruling 13).
+	shot := d.Character.RoomId != a.Character.RoomId
+	typedShot := shot && a.Character.Aggro.Shot == characters.TypedShot
+
 	// A defender whose aggro targets its attacker is still in that fight:
-	// the attack, hit or miss, resets its wait count (plan review round 6).
+	// the attack, hit or miss, resets its wait count (plan review round 6),
+	// and a typed shot earns it one shot back, never more than one.
 	if d.Character.Aggro != nil && d.Character.Aggro.Target == a.Id {
 		d.Character.Aggro.OutOfReach = 0
+		if typedShot && d.Character.Aggro.Shot == characters.NoShot {
+			d.Character.Aggro.Shot = characters.EarnedShot
+		}
 	}
-	retaliate(d, a)
+	retaliate(d, a, typedShot)
 
 	// A defender taken out of Up leaves its own fight. The attacker keeps
 	// its aggro: the death that follows (death.Die) turns it to its next
@@ -2142,10 +2220,13 @@ func TestOutOfReachRoundsDefaultsToFive(t *testing.T) {
 	// turn does (settleTarget).
 	if rules.Get().Condition(d) != rules.Up {
 		endAggro(d)
-	} else if exitName := a.Character.Aggro.ExitName; exitName != `` && d.Character.RoomId != a.Character.RoomId {
-		// A shot through an exit re-arms through the same exit, so the next
-		// turn's lookup finds the aggro unchanged.
-		a.Character.SetAggroRemote(exitName, d.Id, characters.Shooting)
+	} else if shot {
+		// The shot is spent (ruling 13). The re-arm keeps the exit it shot
+		// through, so the aggro waits on the target (lookup step 5), with
+		// the told mark set: the body just shot the target there, so it is
+		// not told "Your target is out of reach.".
+		a.Character.SetAggroRemote(a.Character.Aggro.ExitName, d.Id, characters.Shooting)
+		a.Character.Aggro.OutOfReachTold = true
 		events.AddToQueue(events.AggroChanged{ActorId: a.Id, RoomId: a.Character.RoomId})
 	} else {
 		a.Character.SetAggro(d.Id, characters.DefaultAttack)
@@ -2154,8 +2235,14 @@ func TestOutOfReachRoundsDefaultsToFive(t *testing.T) {
 ```
 
   (An attacker's own attack never takes it out of Up, so the old `Condition(a)` half had no case.
-  Re-arming a shot with plain `SetAggro` would drop the exit, and the next turn's step 3 would put it
-  back with a second `AggroChanged` each round: plan review round 4.) The reset before `retaliate`
+  Re-arming a shot with plain `SetAggro` would drop the exit (plan review round 4) and, with it, the
+  wait on a target in another room would read as a target it never shot. A target in another room at
+  the swing can only have come from step 3, which needs a held shot, so `shot` is "a shot was fired
+  through an exit"; the mark is read before the re-arm clears it. The told mark set at the re-arm is
+  the spec's "not after a shot" (Decisions row "'Your target is out of reach.' is not told on the
+  turns after a shot"); the turn that fired went through `inReach`, which reset the count, so the
+  fired turn counts as reachable. A defender already holding a shot keeps the one it has, typed or
+  earned: "a body never holds more than one shot".) The reset before `retaliate`
   is the spec's lookup step 5 "and so does being attacked by the target" (Decisions row "Being
   attacked by its target resets a body's wait count"): this point is reached after every attack,
   hit or miss, the same place retaliation is decided.
@@ -2167,11 +2254,14 @@ func TestOutOfReachRoundsDefaultsToFive(t *testing.T) {
 //  1. the target no longer exists: switch to the next opponent, or end
 //     ("Your target can't be found.");
 //  2. the target is not up: switch, or end ("Your rage subsides.");
-//  3. the target is in another room, a wields a shooting weapon and an
-//     unlocked exit leads there: shoot through that exit (a target a can
-//     shoot is reachable, so it is kept even if someone here attacks a);
-//  4. the target is in another room, or here but a cannot perceive it, and
-//     someone here whom a perceives attacks a: switch;
+//  3. the target is in another room, the aggro holds a shot (ruling 13), a
+//     wields a shooting weapon and an unlocked exit leads there: shoot
+//     through that exit, once (a target a is about to shoot is reachable,
+//     so it is kept even if someone here attacks a). A shot that cannot be
+//     fired is dropped, and the lookup goes on to step 4;
+//  4. the target is in another room (its shot spent or never held), or
+//     here but a cannot perceive it, and someone here whom a perceives
+//     attacks a: switch;
 //  5. otherwise the aggro waits, telling a once "Your target is out of
 //     reach."; a swings again once they share a room. After
 //     GamePlay.OutOfReachRounds such turns in a row (5 by default) a loses
@@ -2206,16 +2296,21 @@ func settleTarget(a *actors.Actor, aRoom *rooms.Room) *actors.Actor {
 		}
 		return inReach(a, d)
 	}
-	if exitName := shootingExit(a, aRoom, d.Character.RoomId); exitName != `` {
-		if err := rules.Get().CanAttack(a, d); err != nil {
-			return switchOrEnd(a, err.Error())
+	if a.Character.Aggro.Shot != characters.NoShot {
+		if exitName := shootingExit(a, aRoom, d.Character.RoomId); exitName != `` {
+			if err := rules.Get().CanAttack(a, d); err != nil {
+				return switchOrEnd(a, err.Error())
+			}
+			if a.Character.Aggro.Type != characters.Shooting || a.Character.Aggro.ExitName != exitName {
+				a.Character.Aggro.Type = characters.Shooting
+				a.Character.Aggro.ExitName = exitName
+				events.AddToQueue(events.AggroChanged{ActorId: a.Id, RoomId: a.Character.RoomId})
+			}
+			return inReach(a, d)
 		}
-		if a.Character.Aggro.Type != characters.Shooting || a.Character.Aggro.ExitName != exitName {
-			a.Character.Aggro.Type = characters.Shooting
-			a.Character.Aggro.ExitName = exitName
-			events.AddToQueue(events.AggroChanged{ActorId: a.Id, RoomId: a.Character.RoomId})
-		}
-		return inReach(a, d)
+		// A shot that cannot be fired (no shooting weapon, no unlocked
+		// exit) is dropped (ruling 13).
+		a.Character.Aggro.Shot = characters.NoShot
 	}
 	if death.NextOpponent(a) != nil {
 		death.Switch(a)
@@ -2337,11 +2432,12 @@ func shootingExit(a *actors.Actor, aRoom *rooms.Room, roomId int) string {
 // retaliate gives a defender that is not fighting an aggro on its attacker
 // (Phase 5 slice 4.1, rulings 6, 8 and 9), after every attack, hit or miss,
 // when it is up and the ruleset lets it attack back: a plain attack when they
-// share a room; through an exit when the attacker is in another room and the
-// defender can shoot there; otherwise an aggro that waits. An attacker the
-// defender cannot perceive is taken all the same (its turn then says "You
-// can't seem to find your target.").
-func retaliate(d, a *actors.Actor) {
+// share a room; when the attacker is in another room and its shot was typed
+// (typedShot) and the defender can shoot there, an aggro through the exit
+// holding one shot back (ruling 13); otherwise an aggro that waits. An
+// attacker the defender cannot perceive is taken all the same (its turn then
+// says "You can't seem to find your target.").
+func retaliate(d, a *actors.Actor, typedShot bool) {
 	if d.Character.Aggro != nil || rules.Get().Condition(d) != rules.Up {
 		return
 	}
@@ -2350,8 +2446,9 @@ func retaliate(d, a *actors.Actor) {
 	}
 	if a.Character.RoomId == d.Character.RoomId {
 		d.Character.SetAggro(a.Id, characters.DefaultAttack)
-	} else if dRoom := rooms.LoadRoom(d.Character.RoomId); dRoom != nil && shootingExit(d, dRoom, a.Character.RoomId) != `` {
+	} else if dRoom := rooms.LoadRoom(d.Character.RoomId); typedShot && dRoom != nil && shootingExit(d, dRoom, a.Character.RoomId) != `` {
 		d.Character.SetAggroRemote(shootingExit(d, dRoom, a.Character.RoomId), a.Id, characters.Shooting)
+		d.Character.Aggro.Shot = characters.EarnedShot
 	} else {
 		d.Character.SetAggro(a.Id, characters.DefaultAttack)
 	}
@@ -2360,8 +2457,11 @@ func retaliate(d, a *actors.Actor) {
 ```
 
   This carries Q11 (a switch inside a turn goes on to the new opponent: it swings, unless the
-  weapon's delay, which `SetAggro` re-arms, makes it wait first), Q12 (shoot before switch)
-  and Q13 (the waiting line). `go build ./...` and `gofmt -l internal` print nothing.
+  weapon's delay, which `SetAggro` re-arms, makes it wait first), Q12 (shoot before switch, while
+  a shot is held), Q13 (the waiting line) and ruling 13 (one shot per action). A held shot waits
+  through the weapon's delay and through a turn that cannot perceive the target: neither reaches the
+  swing, so neither spends it. A switch (`death.Switch`), `attack <name>`, a flee and any plain
+  `SetAggro` make a new record, so they drop a held shot. `go build ./...` and `gofmt -l internal` print nothing.
 
 - [ ] **Step 5a: NPCs attacking players are not PvP (Q7; ruling 10).** In
   `internal/rules/dikubasic/ruleset.go`, `CanAttack`'s comment and its first checks (`:85-96`)
@@ -2624,21 +2724,21 @@ func resumeAfterFlee(a *actors.Actor, fleeFrom ids.ID, since uint64) {
 ```yaml
   # - OutOfReachRounds -
   #   How many rounds in a row a fight waits on a target out of reach (in
-  #   another room, not shootable) before the fighter loses track of it.
+  #   another room, with no shot to fire) before the fighter loses track of it.
   #   0 or less means 5.
   OutOfReachRounds: 5
 ```
 
     `_datafiles/html/admin/config.html`, after the `'GamePlay.EliteXPBonus': ...` description
     (`:275`):
-    `        'GamePlay.OutOfReachRounds': 'Rounds in a row a fight waits on a target out of reach (another room, not shootable) before the fighter loses track of it. 0 or less = 5.',`.
+    `        'GamePlay.OutOfReachRounds': 'Rounds in a row a fight waits on a target out of reach (another room, no shot to fire) before the fighter loses track of it. 0 or less = 5.',`.
     `_datafiles/html/admin/config-wizard.html`: after the `'GamePlay.EliteXPBonus': { ... },` entry
     (`:1103-1109`) a new entry
 
 ```js
     'GamePlay.OutOfReachRounds': {
         label: 'Out-of-Reach Rounds',
-        description: 'How many rounds in a row a fight waits on a target that is out of reach (in another room and not shootable) before the fighter loses track of it.',
+        description: 'How many rounds in a row a fight waits on a target that is out of reach (in another room, with no shot to fire) before the fighter loses track of it.',
         implications: 'Higher values keep fighters waiting longer for a fleeing target to come back; lower values end such fights sooner. 0 or less means 5.',
         inputType: 'number',
         min: 0, max: 100, step: 1,
@@ -2708,10 +2808,10 @@ func TestTickLeavesAFightToTheCombatRound(t *testing.T) {
     attacker's turn, the command runs before the NPC's next turn, and the next turn finds the target
     in its room (count back to 0); in `shot_from_another_room` the rat's count never passed 1. An NPC
     with a bow shot from another room does both: the walk block (it tests `d.Character.Aggro == nil`)
-    runs first and queues `go <exit>` and an angry command, as today, then `retaliate` gives it a
-    shooting aggro through the exit, so it may shoot back once before the walk lands it in the
-    shooter's room. Intended: the walk is today's behaviour (spec "What stays as today"), the shot is
-    ruling 9.
+    runs first and queues `go <exit>` and an angry command, as today, then, when the shot was typed,
+    `retaliate` gives it an aggro through the exit holding one shot back, so it may shoot back once
+    before the walk lands it in the shooter's room. Intended: the walk is today's behaviour (spec
+    "What stays as today"), the shot is rulings 9 and 13.
 
 - [ ] **Step 6: The golden harness advances the round count.** In `combat_golden_test.go`
   `newCombatWorld`, before `util.SeedRandForTest(seed)` (`:175`):
@@ -2734,8 +2834,36 @@ func TestTickLeavesAFightToTheCombatRound(t *testing.T) {
   damage.`; `TestCombatGoldenFleeSuccess` (`:662-663`) `// A player's flee succeeds: they leave through
   the only exit and the NPC` / `// that fought them waits on its target in the room they left.`;
   `TestCombatGoldenShootThroughExit` (`:677-678`) `// A player shoots an NPC in the next room through
-  an exit; a player in that` / `// room watches. The shooter keeps shooting; the NPC, with no bow,
-  waits.`; `TestCombatGoldenPvMToDeath` (`:589`) `// A player kills an NPC that fights back.`
+  an exit; a player in that` / `// room watches. The shooter shoots once, then waits; the NPC, with
+  no bow,` / `// waits.`; `TestCombatGoldenPvMToDeath` (`:589`) `// A player kills an NPC that fights back.`
+
+  **Fixtures type their shots (ruling 13).** A fixture that stands in for `shoot` must arm the shot
+  as `shoot` does. Add after `weapon` (`:262-268`):
+
+```go
+
+// typeShoot arms c's aggro as the shoot command does: through exitName at
+// target, holding one typed shot (Phase 5 slice 4.1, ruling 13).
+func typeShoot(c *characters.Character, exitName string, target ids.ID) {
+	c.SetAggroRemote(exitName, target, characters.Shooting)
+	c.Aggro.Shot = characters.TypedShot
+}
+```
+
+  and use it for the two fixtures that call `SetAggroRemote` today: `TestCombatGoldenShootThroughExit`
+  (`:685`) and `TestShootWaitLineDoesNotReachTargetRoom` (`:818`), each
+  `alice.Character.SetAggroRemote("north", rat.Character.Id, characters.Shooting)` becoming
+  `typeShoot(alice.Character, "north", rat.Character.Id)`. Without it the second test passes
+  vacuously: with no shot Alice waits and reads "Your target is out of reach." where the test means the
+  bow's wait line (run). In `w.aggro` (`:290-303`), after the `ExitName` suffix, add
+
+```go
+	if c.Aggro.Shot != characters.NoShot {
+		s += " shot=" + map[characters.ShotMark]string{characters.TypedShot: "typed", characters.EarnedShot: "earned"}[c.Aggro.Shot]
+	}
+```
+
+  so a state line shows a shot still held at the end of a round.
 
 - [ ] **Step 7: `TestCombatGoldenDeathNPC` keeps its NPC death (Q10).** With retaliation the
   elite rat (club) kills Alice in round 5 and survives at 1/12, so `require.Nil(t, mobs.GetInstance(rat...))`
@@ -2870,16 +2998,38 @@ func TestSettleTargetSteps(t *testing.T) {
 		assert.Equal(t, []string{`Your rage subsides.`}, w.told(9301))
 	})
 
-	t.Run("3 in another room, a bow, an attacker here: keeps shooting", func(t *testing.T) {
+	t.Run("3 in another room, a shot, a bow, an attacker here: kept for the shot", func(t *testing.T) {
 		w, a, room := setup(t)
 		rat := w.addNPC(93201, "rat", 10, goldenRoomB, 5, 5, 5, 30)
 		cat := w.addNPC(93204, "cat", 10, goldenRoomA, 5, 5, 5, 30)
 		aggroOn(&cat.Character, a.Id, 1)
 		a.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
-		a.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+		typeShoot(a.Character, "north", rat.Character.Id)
 		d := settleTarget(a, room)
 		require.NotNil(t, d)
-		assert.Equal(t, rat.Character.Id, d.Id, "a target it can shoot is reachable: kept")
+		assert.Equal(t, rat.Character.Id, d.Id, "a target it is about to shoot is reachable: kept")
+		assert.Equal(t, characters.TypedShot, a.Character.Aggro.Shot, "the lookup does not spend the shot")
+	})
+
+	t.Run("4 in another room, a bow but no shot, an attacker here: switches", func(t *testing.T) {
+		w, a, room := setup(t)
+		rat := w.addNPC(93201, "rat", 10, goldenRoomB, 5, 5, 5, 30)
+		cat := w.addNPC(93204, "cat", 10, goldenRoomA, 5, 5, 5, 30)
+		aggroOn(&cat.Character, a.Id, 1)
+		a.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
+		a.Character.SetAggroRemote("north", rat.Character.Id, characters.Shooting) // its shot spent
+		d := settleTarget(a, room)
+		require.NotNil(t, d)
+		assert.Equal(t, cat.Character.Id, d.Id, "a target it will not shoot again gives way to the attacker here")
+	})
+
+	t.Run("3 a shot and no shooting weapon: dropped, waits", func(t *testing.T) {
+		w, a, room := setup(t)
+		rat := w.addNPC(93201, "rat", 10, goldenRoomB, 5, 5, 5, 30)
+		typeShoot(a.Character, "north", rat.Character.Id) // owed, but she holds no bow
+		assert.Nil(t, settleTarget(a, room))
+		require.NotNil(t, a.Character.Aggro, "the aggro waits")
+		assert.Equal(t, characters.NoShot, a.Character.Aggro.Shot, "a shot that cannot be fired is dropped")
 	})
 
 	t.Run("4 in another room, an attacker here: switches", func(t *testing.T) {
@@ -2893,11 +3043,12 @@ func TestSettleTargetSteps(t *testing.T) {
 		assert.Equal(t, cat.Character.Id, d.Id)
 	})
 
-	t.Run("3 in another room, a bow and an unlocked exit: shoots", func(t *testing.T) {
+	t.Run("3 in another room, a shot, a bow and an unlocked exit: shoots", func(t *testing.T) {
 		w, a, room := setup(t)
 		rat := w.addNPC(93201, "rat", 10, goldenRoomB, 5, 5, 5, 30)
 		a.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
 		a.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+		a.Character.Aggro.Shot = characters.EarnedShot // owed, with no exit on the aggro yet
 		events.ProcessEvents()
 		w.rec.take()
 		aggroChanged := func() int {
@@ -2920,14 +3071,16 @@ func TestSettleTargetSteps(t *testing.T) {
 		assert.Equal(t, 0, aggroChanged(), "already shooting through that exit: none")
 	})
 
-	t.Run("3 the exit is locked: waits", func(t *testing.T) {
+	t.Run("3 the exit is locked: the shot is dropped, waits", func(t *testing.T) {
 		w, a, room := setup(t)
 		rat := w.addNPC(93201, "rat", 10, goldenRoomB, 5, 5, 5, 30)
 		a.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
 		room.Exits["north"] = exit.RoomExit{RoomId: goldenRoomB, Lock: gamelock.Lock{Difficulty: 5}}
 		a.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+		a.Character.Aggro.Shot = characters.TypedShot
 		assert.Nil(t, settleTarget(a, room))
 		require.NotNil(t, a.Character.Aggro)
+		assert.Equal(t, characters.NoShot, a.Character.Aggro.Shot)
 	})
 
 	t.Run("5 waits, says so once, swings when they share a room", func(t *testing.T) {
@@ -2954,37 +3107,96 @@ func TestRetaliate(t *testing.T) {
 	a := actors.Get(alice.Character.Id)
 
 	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 5, 5, 5, 30)
-	retaliate(actors.Get(rat.Character.Id), a)
+	retaliate(actors.Get(rat.Character.Id), a, false)
 	require.NotNil(t, rat.Character.Aggro, "same room: a plain attack")
 	assert.Equal(t, alice.Character.Id, rat.Character.Aggro.Target)
 	assert.Empty(t, rat.Character.Aggro.ExitName)
 
 	cat := w.addNPC(93204, "cat", 10, goldenRoomA, 5, 5, 5, 30)
 	aggroOn(&cat.Character, rat.Character.Id, 1)
-	retaliate(actors.Get(cat.Character.Id), a)
+	retaliate(actors.Get(cat.Character.Id), a, false)
 	assert.Equal(t, rat.Character.Id, cat.Character.Aggro.Target, "a body already fighting keeps its target")
 
 	archer := w.addNPC(93206, "archer", 1, goldenRoomB, 5, 5, 5, 30)
 	archer.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
-	retaliate(actors.Get(archer.Character.Id), a)
+	retaliate(actors.Get(archer.Character.Id), a, true)
 	require.NotNil(t, archer.Character.Aggro)
-	assert.Equal(t, characters.Shooting, archer.Character.Aggro.Type, "another room, a bow: shoots back")
+	assert.Equal(t, characters.Shooting, archer.Character.Aggro.Type, "another room, a typed shot, a bow: shoots back")
 	assert.Equal(t, "south", archer.Character.Aggro.ExitName)
+	assert.Equal(t, characters.EarnedShot, archer.Character.Aggro.Shot, "one shot back")
+
+	bowman := w.addNPC(93209, "bowman", 1, goldenRoomB, 5, 5, 5, 30)
+	bowman.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
+	retaliate(actors.Get(bowman.Character.Id), a, false)
+	require.NotNil(t, bowman.Character.Aggro, "a shot back earns nothing: an aggro that waits")
+	assert.Equal(t, characters.NoShot, bowman.Character.Aggro.Shot, "a shot back earns nothing")
+	assert.Empty(t, bowman.Character.Aggro.ExitName)
 
 	dog := w.addNPC(93203, "dog", 1, goldenRoomB, 5, 5, 5, 30)
-	retaliate(actors.Get(dog.Character.Id), a)
+	retaliate(actors.Get(dog.Character.Id), a, true)
 	require.NotNil(t, dog.Character.Aggro, "another room, no bow: an aggro that waits")
 	assert.Empty(t, dog.Character.Aggro.ExitName)
+	assert.Equal(t, characters.NoShot, dog.Character.Aggro.Shot)
 
 	down := w.addNPC(93207, "mouse", 10, goldenRoomA, 5, 5, 5, 30)
 	down.Character.Health = 0
-	retaliate(actors.Get(down.Character.Id), a)
+	retaliate(actors.Get(down.Character.Id), a, false)
 	assert.Nil(t, down.Character.Aggro, "a body that is not up does not retaliate")
 
 	t.Cleanup(rules.SetForTest(refusesAll{rules.Get()}))
 	owl := w.addNPC(93208, "owl", 10, goldenRoomA, 5, 5, 5, 30)
-	retaliate(actors.Get(owl.Character.Id), a)
+	retaliate(actors.Get(owl.Character.Id), a, false)
 	assert.Nil(t, owl.Character.Aggro, "the ruleset's CanAttack refuses")
+}
+
+// Phase 5 slice 4.1, ruling 13: one shot per action. A typed shot fires
+// once and earns its target one shot back; a shot back earns nothing; a
+// second typed shoot earns a second shot back; a body never holds more than
+// one shot; a shot from someone the body is not fighting earns nothing.
+func TestTypedShotEarnsOneShotBack(t *testing.T) {
+	w := newCombatWorld(t, 1)
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 500)
+	alice.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 2, 0)
+	bob := w.addPlayer(9302, "Bob", goldenRoomB, 30, 30, 20, 500)
+	bob.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 2, 0)
+	a, b := actors.Get(alice.Character.Id), actors.Get(bob.Character.Id)
+	typeShoot(alice.Character, "north", bob.Character.Id)
+
+	combatTurn(a) // Alice fires her typed shot
+	require.NotNil(t, alice.Character.Aggro)
+	assert.Equal(t, characters.NoShot, alice.Character.Aggro.Shot, "fired: spent")
+	assert.Equal(t, "north", alice.Character.Aggro.ExitName, "the re-arm keeps the exit")
+	assert.True(t, alice.Character.Aggro.OutOfReachTold, "the shot sets the told mark")
+	require.NotNil(t, bob.Character.Aggro, "Bob retaliates")
+	assert.Equal(t, characters.EarnedShot, bob.Character.Aggro.Shot, "a typed shot earns one back")
+
+	combatTurn(b) // Bob fires back
+	assert.Equal(t, characters.NoShot, bob.Character.Aggro.Shot, "fired: spent")
+	assert.Equal(t, characters.NoShot, alice.Character.Aggro.Shot, "a shot back earns nothing")
+
+	w.told(9301)
+	w.told(9302)
+	combatTurn(a)
+	combatTurn(b)
+	assert.Empty(t, w.told(9301), "Alice neither fires nor is told her target is out of reach")
+	assert.Equal(t, characters.NoShot, bob.Character.Aggro.Shot)
+
+	typeShoot(alice.Character, "north", bob.Character.Id) // Alice types shoot again
+	combatTurn(a)
+	assert.Equal(t, characters.EarnedShot, bob.Character.Aggro.Shot, "a second typed shoot earns a second shot back")
+
+	bob.Character.Aggro.Shot = characters.TypedShot // as if Bob had typed shoot too
+	typeShoot(alice.Character, "north", bob.Character.Id)
+	combatTurn(a)
+	assert.Equal(t, characters.TypedShot, bob.Character.Aggro.Shot, "never more than one: his own typed shot stays")
+
+	carol := w.addPlayer(9303, "Carol", goldenRoomA, 30, 30, 20, 500)
+	carol.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 2, 0)
+	bob.Character.Aggro.Shot = characters.NoShot
+	typeShoot(carol.Character, "north", bob.Character.Id)
+	combatTurn(actors.Get(carol.Character.Id))
+	assert.Equal(t, alice.Character.Id, bob.Character.Aggro.Target, "Bob keeps his target")
+	assert.Equal(t, characters.NoShot, bob.Character.Aggro.Shot, "a shot from someone he is not fighting earns nothing")
 }
 
 // refusesAll is the active ruleset with every attack refused.
@@ -3047,6 +3259,7 @@ func TestSettleTargetAsksCanAttackBeforeAttacking(t *testing.T) {
 		bob := w.addPlayer(9302, "Bob", goldenRoomB, 10, 10, 10, 30)
 		a.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
 		a.Character.SetAggro(bob.Character.Id, characters.DefaultAttack)
+		a.Character.Aggro.Shot = characters.TypedShot // a shot to fire through the exit
 		w.told(9301)
 		assert.Nil(t, settleTarget(a, room))
 		assert.Nil(t, a.Character.Aggro)
@@ -3236,8 +3449,9 @@ func TestWaitCountResetsWhenTheTargetIsReachable(t *testing.T) {
 	require.NotNil(t, a.Character.Aggro, "the count started again: 4 of 5")
 
 	a.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
+	a.Character.Aggro.Shot = characters.TypedShot
 	require.NotNil(t, settleTarget(a, room), "through the exit: reachable by shooting")
-	a.Character.Equipment.Weapon = items.Item{}
+	a.Character.Equipment.Weapon = items.Item{} // the held shot is dropped on the next turn
 	wait(4)
 	assert.NotNil(t, a.Character.Aggro, "shooting reset the count too: 4 of 5")
 }
@@ -3266,30 +3480,47 @@ func TestNPCWaitsEndForOfflinePlayersAndNPCs(t *testing.T) {
 	assert.Nil(t, d.Character.Aggro, "an NPC target out of reach ends at the limit too")
 }
 
-// Phase 5 slice 4.1 (plan review round 4): a shot through an exit re-arms
-// through the same exit, so each shooting round queues one AggroChanged for
-// the shooter, not a second one when the next lookup restores the exit.
-func TestShootingRoundQueuesOneAggroChanged(t *testing.T) {
+// Phase 5 slice 4.1 (plan review round 4; ruling 13): a typed shot fires
+// once. Its round re-arms through the same exit with one AggroChanged for
+// the shooter; the rounds after it the aggro waits, firing nothing, queuing
+// nothing and telling nothing (the shot set the told mark). Typing shoot
+// again fires again.
+func TestOneShotPerTypedShoot(t *testing.T) {
 	w := newCombatWorld(t, 1)
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 60)
 	alice.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 2, 0)
 	rat := w.addNPC(93201, "rat", 10, goldenRoomB, 5, 5, 5, 200)
-	alice.Character.SetAggroRemote("north", rat.Character.Id, characters.Shooting)
+	typeShoot(alice.Character, "north", rat.Character.Id)
 	events.ProcessEvents()
 	w.rec.take()
-	for round := 1; round <= 3; round++ {
+	round := func(n int, wantShot bool) {
 		DoCombat(events.NewRound{})
 		events.ProcessEvents()
-		n := 0
+		changed, read := 0, 0
 		for _, e := range w.rec.take() {
 			if e.userId == 0 && strings.HasPrefix(e.text, "AggroChanged Alice ") {
-				n++
+				changed++
+			}
+			if e.userId == 9301 {
+				read++
 			}
 		}
-		assert.Equal(t, 1, n, "round %d: one AggroChanged for the shooter", round)
-		require.NotNil(t, alice.Character.Aggro)
-		assert.Equal(t, "north", alice.Character.Aggro.ExitName, "round %d: the exit is kept", round)
+		require.NotNil(t, alice.Character.Aggro, "round %d", n)
+		assert.Equal(t, "north", alice.Character.Aggro.ExitName, "round %d: the exit is kept", n)
+		if wantShot {
+			assert.Equal(t, 1, changed, "round %d: one AggroChanged for the shot", n)
+			assert.NotZero(t, read, "round %d: Alice reads her shot", n)
+		} else {
+			assert.Equal(t, 0, changed, "round %d: no second shot", n)
+			assert.Zero(t, read, "round %d: no second shot, and no out-of-reach line after a shot", n)
+		}
 	}
+	round(1, true)
+	round(2, false)
+	round(3, false)
+	typeShoot(alice.Character, "north", rat.Character.Id)
+	round(4, true)
+	round(5, false)
 }
 
 // Phase 5 slice 4.1 (plan review round 4): a target in reach that the body
@@ -3332,15 +3563,16 @@ func TestUnseenTargetCountsTowardTheWait(t *testing.T) {
 
 // Phase 5 slice 4.1 (plan review round 6): being attacked by its target, hit
 // or miss, resets a body's wait count. A body under steady fire from the next
-// room keeps its aggro; once the fire stops it loses track at the limit.
+// room (its shooter typing shoot every round, ruling 13) keeps its aggro;
+// once the fire stops it loses track at the limit.
 func TestBeingAttackedByItsTargetResetsTheWait(t *testing.T) {
 	w := newCombatWorld(t, 1)
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 1, 20, 60)
 	alice.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 2, 0)
 	dan := w.addPlayer(9304, "Dan", goldenRoomB, 10, 10, 10, 500)
-	alice.Character.SetAggroRemote("north", dan.Character.Id, characters.Shooting)
 	w.told(9304)
 	for round := 1; round <= 12; round++ {
+		typeShoot(alice.Character, "north", dan.Character.Id) // she types shoot every round
 		DoCombat(events.NewRound{})
 		events.ProcessEvents()
 		require.NotNil(t, dan.Character.Aggro, "round %d: Dan, shot every round, keeps his aggro", round)
@@ -3362,8 +3594,8 @@ func TestBeingAttackedByItsTargetResetsTheWait(t *testing.T) {
 	alice.Character.Aggro = nil
 	bob := w.addPlayer(9302, "Bob", goldenRoomA, 30, 1, 20, 60)
 	bob.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 2, 0)
-	bob.Character.SetAggroRemote("north", dan.Character.Id, characters.Shooting)
 	for round := 1; round <= 3; round++ {
+		typeShoot(bob.Character, "north", dan.Character.Id)
 		DoCombat(events.NewRound{})
 		events.ProcessEvents()
 		require.NotNil(t, dan.Character.Aggro, "round %d after the fire stopped: still waiting", round)
@@ -3409,6 +3641,7 @@ func TestShootingExitUsesEveryExitTheRoomHas(t *testing.T) {
 		a := actors.Get(alice.Character.Id)
 		a.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
 		a.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+		a.Character.Aggro.Shot = characters.TypedShot // a shot to fire through some exit
 		return a, rooms.LoadRoom(goldenRoomA)
 	}
 	mutator := func(t *testing.T, room *rooms.Room, exits map[string]exit.RoomExit) {
@@ -3546,11 +3779,21 @@ func SetTestSpec(spec *MutatorSpec) (remove func()) {
 | `NextOpponent`: range `candidates` instead of `TurnOrder(candidates)` | same | "accounts come first in turn order" |
 | `NextOpponent`: drop `!rooms.Perceives(...)` | same | "a body she cannot perceive is skipped" |
 | `NextOpponent`: drop the `Condition(b) != Up` test | same | "a body that is not up is skipped" |
-| step 1: `switchOrEnd(...)` to `endAggro(a); return nil` | `TestSettleTargetSteps` | "1 gone, an attacker here" |
+| step 1: `switchOrEnd(...)` to `endAggro(a); return nil` | `TestSettleTargetSteps` | "1 gone, an attacker here" (and "1 gone, nobody else") |
 | step 4: `if death.NextOpponent(a) != nil {` to `if false {` | same | step 4 `Expected value not to be nil` |
 | step 3: the `Shooting` branch returns nil | same | step 3 `Expected value not to be nil` |
-| steps 3 and 4 swapped back (switch before shoot) | same | "a target it can shoot is reachable: kept" |
-| `shootingExit`: the lock check `if exitInfo, ok := aRoom.GetExitInfo(exitName); ok && exitInfo.Lock.IsLocked() {` to `if false {` | same, and `TestShootingExitUsesEveryExitTheRoomHas` | "the exit is locked: waits" (`Expected nil, but got: &actors.Actor{...}`) |
+| steps 3 and 4 swapped back (switch before shoot) | same | "a target it is about to shoot is reachable: kept" |
+| `shootingExit`: the lock check `if exitInfo, ok := aRoom.GetExitInfo(exitName); ok && exitInfo.Lock.IsLocked() {` to `if false {` | same, and `TestShootingExitUsesEveryExitTheRoomHas` | "3 the exit is locked: the shot is dropped, waits" (`Expected nil, but got: &actors.Actor{...}`), and "the locked exit stops the shot: waits" |
+| step 3 (ruling 13): `if a.Character.Aggro.Shot != characters.NoShot {` to `if true {` (a shot every turn) | `TestOneShotPerTypedShoot`, `TestTypedShotEarnsOneShotBack`, `TestSettleTargetSteps`, `shoot_exit`, `shot_from_another_room` | "round 2: no second shot" (expected 0, actual 1); "Alice neither fires nor is told her target is out of reach"; "a target it will not shoot again gives way to the attacker here"; `shoot_exit.txt differs from the golden at line 24`; `shot_from_another_room.txt ... at line 29` |
+| step 3 (ruling 13): the drop `a.Character.Aggro.Shot = characters.NoShot` replaced by `_ = 0` | `TestSettleTargetSteps` | "a shot that cannot be fired is dropped" (expected 0, actual 1), and the locked-exit subtest |
+| the swing end (ruling 13): the re-arm's `a.Character.Aggro.OutOfReachTold = true` dropped | `TestOneShotPerTypedShoot`, `TestTypedShotEarnsOneShotBack`, `shoot_exit`, `shot_from_another_room` | "round 2: no second shot, and no out-of-reach line after a shot" (`Should be zero, but was 1`); "the shot sets the told mark"; `shoot_exit.txt ... at line 24` |
+| the swing end (ruling 13): the re-arm also sets `a.Character.Aggro.Shot = characters.TypedShot` (a shot never spent) | `TestTypedShotEarnsOneShotBack`, `shoot_exit`, `shot_from_another_room` | "fired: spent" (expected 0, actual 1); `shoot_exit.txt ... at line 18` |
+| the swing end (ruling 13): `typedShot := shot` (a shot back earns too) | `TestTypedShotEarnsOneShotBack`, `shot_from_another_room` | "a shot back earns nothing" (expected 0, actual 2); `... at line 23` |
+| the swing end (ruling 13): the earn for a defender already fighting disabled (`if false && typedShot ...`) | same | "a second typed shoot earns a second shot back" (expected 2, actual 0); `... at line 50` |
+| the swing end (ruling 13): `&& d.Character.Aggro.Shot == characters.NoShot` dropped (an earned shot overwrites a held one) | `TestTypedShotEarnsOneShotBack` | "never more than one: his own typed shot stays" (expected 1, actual 2) |
+| `retaliate` (ruling 13): `typedShot &&` dropped from the shooting branch | `TestRetaliate` | "a shot back earns nothing" (expected 0, actual 2) |
+| `retaliate` (ruling 13): `d.Character.Aggro.Shot = characters.EarnedShot` dropped | `TestRetaliate`, `TestTypedShotEarnsOneShotBack`, `shot_from_another_room` | "one shot back"; "a typed shot earns one back"; `... at line 11` |
+| `aggro.go`: `Shot ShotMark` to ``Shot ShotMark `yaml:"-"` `` | `TestSavedAggroKeepsSince` | `"mob:..." does not contain "shot: 2"` |
 | `shootingExit`: the lock read from `aRoom.Exits[exitName]` instead of `GetExitInfo` | `TestShootingExitUsesEveryExitTheRoomHas` | "the locked exit stops the shot: waits" |
 | `shootingExit`: `FindExitByName(name)` replaced by `name, aRoom.Exits[name].RoomId` | same | "shoots through the portal" |
 | `shootingExit`: the `ExitsTemp` loop ranges an empty map | same | "shoots through the portal" |
@@ -3564,7 +3807,7 @@ func SetTestSpec(spec *MutatorSpec) (remove func()) {
 | step 5: `OutOfReach >= outOfReachRounds()` to `>` | `TestWaitRunsOutAtTheLimit` | "the 5th turn out of reach ends the wait" |
 | `inReach`: the reset `OutOfReach = 0` dropped (one line serves a target in the room and one shot through an exit) | `TestWaitCountResetsWhenTheTargetIsReachable` | "the wait has not run out" |
 | the swing end: the attacked defender's reset `d.Character.Aggro.OutOfReach = 0` dropped | `TestBeingAttackedByItsTargetResetsTheWait` (and `TestUnseenTargetCountsTowardTheWait`, "the hidden attacker keeps hitting") | "round 5: Dan, shot every round, keeps his aggro" (and "round 5: each attack resets Bob's count") |
-| the swing end: the reset's `d.Character.Aggro.Target == a.Id` test dropped (any attacker resets the wait) | `TestBeingAttackedByItsTargetResetsTheWait` | "his 5th turn out of reach ends the wait" (`Expected nil, but got: &characters.Aggro{... OutOfReach:1}`) |
+| the swing end: the reset's `d.Character.Aggro.Target == a.Id` test dropped (any attacker resets the wait) | `TestBeingAttackedByItsTargetResetsTheWait` | "his 5th turn out of reach ends the wait" (`Expected nil, but got: &characters.Aggro{... OutOfReach:2}`) |
 | step 5: `loseTrack(a, d)` not called | `TestNPCWaitsEndForOfflinePlayersAndNPCs` | "an NPC target out of reach ends at the limit too" |
 | `settleTarget`: the same-room `CanAttack` check removed | `TestSettleTargetAsksCanAttackBeforeAttacking` | `Expected nil, but got: &actors.Actor{...}` (in the room) |
 | `settleTarget`: the through-an-exit `CanAttack` check removed | same | `Expected nil, but got: &actors.Actor{...}` (through the exit; the next assertion then reports `&characters.Aggro{Type:1, ... ExitName:"north"...}`) |
@@ -3573,17 +3816,17 @@ func SetTestSpec(spec *MutatorSpec) (remove func()) {
 | `combatTurn`: the `no-combat` return moved back above `settleTarget` | `TestTakenTurnsStillCountTheWait` | "a no-combat body loses track at the limit" |
 | `combatTurn`: the NPC combat-command block moved back above `settleTarget` | same | "an NPC whose combat commands take its turns still loses track" |
 | `Switch`: `a.Character.Aggro.RoundsWaiting = 0` after `SetAggro` (a switch that skips the weapon delay) | `TestSwitchKeepsTheWeaponDelay` | "the mace's one round of delay was spent this turn" |
-| step 3: the `AggroChanged` it queues removed | `TestSettleTargetSteps` (step 3, "a bow and an unlocked exit") | "turning to shoot queues one AggroChanged" |
-| step 3: the "only if changed" guard to `if true {` (an `AggroChanged` every shooting turn) | same | "already shooting through that exit: none" |
+| step 3: the `AggroChanged` it queues removed | `TestSettleTargetSteps` (step 3, "a shot, a bow and an unlocked exit") | "turning to shoot queues one AggroChanged" |
+| step 3: the "only if changed" guard to `if true {` (an `AggroChanged` every shooting turn) | same, and `TestOneShotPerTypedShoot` | "already shooting through that exit: none"; "round 1: one AggroChanged for the shot" |
 | `resumeAfterFlee`: `a.Character.Aggro.Since = since` dropped | `TestFailedFleeKeepsSince` | "in its place" |
 | `flee.go`: `since = actor.Character.Aggro.Since` dropped | same | "in its place" |
 | `retaliate`: drop `Condition(d) != Up` | `TestRetaliate` (the only test that kills it: under `dikubasic` a defender that is not up is dead and its death ends everything in the same round, so no golden can see the difference) | "a body that is not up does not retaliate" |
-| the swing end: the `SetAggroRemote` re-arm branch disabled (`if false {`), so a shot re-arms with plain `SetAggro` | `TestShootingRoundQueuesOneAggroChanged` | "round 1: the exit is kept" (and two `AggroChanged` from round 2) |
+| the swing end: the `SetAggroRemote` re-arm branch disabled (`if false {`), so a shot re-arms with plain `SetAggro` | `TestOneShotPerTypedShoot`, `TestTypedShotEarnsOneShotBack` | "round 1: the exit is kept" (and "round 2: no second shot, and no out-of-reach line after a shot", got 1) |
 | `inReach`: the unseen branch returns `d` without counting | `TestUnseenTargetCountsTowardTheWait` | "Bob loses track of hidden Alice at the limit" (the "keeps hitting" subtest passes under it: since round 6, it checks that Bob never loses track) |
 | `retaliate`: drop `d.Character.Aggro != nil` | same | "a body already fighting keeps its target" |
-| `retaliate`: the shooting branch `if false` | same | `Not equal` (`Shooting`) |
+| `retaliate`: the shooting branch `if false` | same | "one shot back", and `Not equal` on the exit (expected `"south"`); the type stays `Shooting`, since `SetAggro` turns a bow's `DefaultAttack` into `Shooting` |
 | `retaliate`: `CanAttack` check `if false` | same | "the ruleset's CanAttack refuses" |
-| the call `retaliate(d, a)` removed | `TestCombatGoldenPvMToDeath` | `pvm_death.txt differs at line 9` |
+| the call `retaliate(d, a, typedShot)` removed | `TestCombatGoldenPvMToDeath` | `pvm_death.txt differs at line 9` |
 | step 2: `switchOrEnd(a, "Your rage subsides.")` to `endAggro(a); return nil` | `TestCombatGoldenDeathReleasesAttackers` | `differs at line 15` |
 | the swing end ends `a` too (`endAggro(a)` before `endAggro(d)`) | `TestCombatGoldenSwitchToLongestAttacker` | `switch_longest.txt differs at line 50` |
 | `Die`: `releaseAttackers(victim)` removed | `TestCombatGoldenDeathReleasesAttackers` | `differs at line 19` |
@@ -3600,7 +3843,7 @@ func SetTestSpec(spec *MutatorSpec) (remove func()) {
 | `mvm` | the rat swings back; the rat still dies about round 3 | as expected: the rat dies in round 4 (was 3) |
 | `flee_blocked` | her blocked flee ends her aggro; the guard's hit gives her one; she swings from round 2 | as expected: she swings in rounds 2-3 (misses); the guard ends at 10/10 |
 | `flee_success` | the guard waits on Alice (no "can't be found", no end); a round 2 is recorded with nothing read | as expected: 2 rounds (was 1); the guard ends `aggro=[Alice DefaultAttack wait=0]` |
-| `shoot_exit` | the rat takes a waiting aggro and still queues `go south` (recorded, not run); in round 2 Alice shoots again (was "Your target can't be found.") | as expected; with the round 4 re-arm through the exit, Alice's state lines read `aggro=[rat Shooting wait=0 exit=north]` after rounds 1 and 2, and round 2 has one `AggroChanged Alice` (the re-arm's) |
+| `shoot_exit` | (ruling 13) the start state shows Alice's `shot=typed`; round 1 she fires once; the rat takes a waiting aggro and still queues `go south` and its emote (recorded, not run); Alice re-arms through `north` with no shot; round 2 she does not fire, reads nothing (no "out of reach": the shot set the told mark), and nothing is queued (was "Your target can't be found." and the aggro's end) | as expected (2026-11-14): round 1 her shot misses, events `Input rat: "go south"`, `Input rat: "emote squeeks angrily."`, `AggroChanged rat`, `AggroChanged Alice`; round 2 empty reads and no events; Alice ends `aggro=[rat Shooting wait=0 exit=north]`, the rat `[Alice DefaultAttack wait=0]` |
 | `observer` | the rat swings at Alice from the round Alice first hits; Carol reads its lines | as expected: the rat ends at 1/12, Alice at 8/10, both still fighting after 6 rounds |
 | `hidden_attacker` | Bob takes an aggro on Alice and reads "You can't seem to find your target." each turn; Bob still dies | as expected: four such lines; Bob dies in round 6 |
 | `death_npc` | the rat (club) swings back; the rat probably still dies | **surprise: Alice dies in round 5; the rat survives at 1/12 and the test's `require` fails (Q10)** |
@@ -3705,8 +3948,10 @@ func TestCombatGoldenTargetFleesWait(t *testing.T) {
 }
 
 // Shot from another room: with a bow the body shoots back through the
-// exit; without, it waits ("Your target is out of reach."); an NPC walks
-// over (its queued "go" is run) and swings on arrival.
+// exit once and then waits; a second typed shoot earns a second shot back;
+// neither side fires in the rounds between (ruling 13). Without a bow the
+// body waits ("Your target is out of reach."); an NPC walks over (its
+// queued "go" is run) and swings on arrival.
 func TestCombatGoldenShotFromAnotherRoom(t *testing.T) {
 	w := newCombatWorld(t, 1105)
 	w.runInputs()
@@ -3717,12 +3962,14 @@ func TestCombatGoldenShotFromAnotherRoom(t *testing.T) {
 	carol := w.addPlayer(9303, "Carol", goldenRoomB, 30, 30, 20, 60)
 	rat := w.addNPC(93201, "rat", 10, goldenRoomB, 10, 5, 5, 60)
 	rat.Character.ActionPoints = 100 // a walk costs action points; the harness runs no turn that refills them
-	alice.Character.SetAggroRemote("north", bob.Character.Id, characters.Shooting)
+	typeShoot(alice.Character, "north", bob.Character.Id)
 	w.start()
+	w.rounds(3) // Alice's shot and Bob's shot back, then a round with neither
+	typeShoot(alice.Character, "north", bob.Character.Id)
+	w.rounds(2) // a second typed shoot: a second shot back, then neither
+	typeShoot(alice.Character, "north", carol.Character.Id)
 	w.rounds(2)
-	alice.Character.SetAggroRemote("north", carol.Character.Id, characters.Shooting)
-	w.rounds(2)
-	alice.Character.SetAggroRemote("north", rat.Character.Id, characters.Shooting)
+	typeShoot(alice.Character, "north", rat.Character.Id)
 	w.rounds(3)
 	w.check("shot_from_another_room")
 }
@@ -3794,15 +4041,21 @@ func TestCombatGoldenWaitRunsOut(t *testing.T) {
     no weapon delay).
   - `target_flees_wait`: round 2 Alice reads `Your target is out of reach.`; round 3 nothing; after
     the rat is moved back, her next turn swings (the second `rounds` call numbers from 1 again).
-  - `shot_from_another_room`: Bob shoots back through `south` in round 1; Carol takes a waiting aggro
-    and reads `Your target is out of reach.` on her first turn; in the third part the rat queues
-    `go south` and an angry emote, the harness runs them, and the rat arrives in room A (Alice reads
-    `rat enters from the north`, Bob and Carol `rat leaves towards the south exit`); from the next
-    round it swings at Alice in her room and she hits it there. Since plan review round 6, Alice's
-    second shot at Carol resets Carol's wait count (not her told mark, so no second "out of reach"
-    line), and her count is 4 when the fixture ends (part 3's round 3), so she still waits on Alice
-    (`aggro=[Alice DefaultAttack wait=0]`). Before round 6 her 5th turn fell in
-    part 3's round 3 and she lost track (the fourth run below).
+  - `shot_from_another_room` (since ruling 13, the ninth run below; four parts, 3, 2, 2 and 3
+    rounds): part 1 round 1 Alice's typed shot at Bob misses, Bob retaliates with one shot back
+    through `south` and misses (events `AggroChanged Bob`, `AggroChanged Alice`, `AggroChanged Bob`:
+    his retaliation, her re-arm, his); rounds 2 and 3 nobody reads anything and nothing is queued,
+    both aggros waiting through their exits with no shot (`[Bob Shooting wait=0 exit=north]`,
+    `[Alice Shooting wait=0 exit=south]`). Part 2 (Alice types `shoot` again): round 1 she misses and
+    Bob's second shot back hits her for 1; round 2 nothing. Part 3 (Alice shoots Carol, who has no
+    bow): round 1 Alice hits Carol for 1, Carol takes a waiting aggro and reads `Your target is out
+    of reach.`; round 2 nothing. Part 4 (Alice shoots the rat): round 1 she hits it for 3, the rat
+    queues `go south` and its emote, the harness runs them, and it arrives in room A (Alice reads
+    `rat enters from the north`, Bob and Carol `rat leaves towards the south exit`); round 2 Alice
+    hits it in her room (her re-arm drops the exit) and Bob, on his 5th turn out of reach since
+    his shot, reads `You lose track of Alice.` (Carol reads his mumble line); round 3 Carol loses
+    track of Alice the same way (Bob reads hers). End: Alice `[rat Shooting wait=0]`, the rat
+    `[Alice DefaultAttack wait=0]`, Bob and Carol `[none]`.
   - `wait_runs_out`: round 1 Alice misses and the rat flees north; round 2 Alice reads `Your target is
     out of reach.`; rounds 3 to 5 nothing; round 6 (her 5th turn out of reach) she reads `You lose track
     of rat.`, Carol reads `Alice mumbles about losing their quarry.`, `AggroChanged Alice`, and the
@@ -3851,6 +4104,14 @@ func TestCombatGoldenWaitRunsOut(t *testing.T) {
   reach again, and state lines do not print the mark). Result: exactly that, one line removed
   (line 78), every other golden byte-identical.
 
+  Ninth run (ruling 13, 2026-11-14, a fresh scratch copy of `ce912466` with Tasks 1-6 applied;
+  expected before the run: only the shooting fixtures change. `shoot_exit` as its Step 9 row
+  says; `shot_from_another_room` rebuilt as above, Alice's typed shots each answered by one shot
+  back from Bob and silence between; `hidden_attacker_retaliation`, `wait_runs_out` and the other
+  new fixtures, which shoot nothing, as recorded before). Result: as expected. Bob and Carol losing
+  track in part 4 follows from ruling 12 (nobody shoots them after Alice turns to the rat). The
+  fixture's `inFight` mutation now fails at line 106 (was 91).
+
   Each new fixture's mutation (run on the scratch copy; each fails its test):
 
 | Fixture | Mutation | Failure |
@@ -3860,7 +4121,7 @@ func TestCombatGoldenWaitRunsOut(t *testing.T) {
 | `TestCombatGoldenTargetFleesSwitch` | `settleTarget`: step 4 (switch when attacked here) removed | `target_flees_switch.txt differs from the golden at line 23` |
 | `TestCombatGoldenTargetFleesWait` | `settleTarget`: `if !a.Character.Aggro.OutOfReachTold {` to `if true {` (the line every turn) | `target_flees_wait.txt differs from the golden at line 25` |
 | `TestCombatGoldenWaitRunsOut` | `loseTrack`: the observer text emptied | `wait_runs_out.txt differs from the golden at line 58` |
-| `TestCombatGoldenShotFromAnotherRoom` | `inFight`: the room test to `true {` (a waiting aggro blocks `go`) | `shot_from_another_room.txt differs from the golden at line 91` |
+| `TestCombatGoldenShotFromAnotherRoom` | `inFight`: the room test to `true {` (a waiting aggro blocks `go`) | `shot_from_another_room.txt differs from the golden at line 106` (91 before ruling 13) |
 | `TestCombatGoldenHiddenAttackerRetaliation` | `retaliate`: also return when `!rooms.Perceives(d.Character, a.Character)` | `hidden_attacker_retaliation.txt differs from the golden at line 11` |
 | `TestCombatGoldenDeathReleasesAttackers` | `Die`: `releaseAttackers(victim)` removed | `death_releases_attackers.txt differs at line 19` |
 
@@ -3891,8 +4152,9 @@ func TestCombatGoldenWaitRunsOut(t *testing.T) {
   only `TestCombatGoldenFleeSuccess` (once), and `-shuffle=1` to `-shuffle=6` fail only it. After:
   the same (scratch, after the answers to Q7-Q15: `-count=2` fails only `FleeSuccess`, once;
   `-shuffle=1` to `6` fail only `FleeSuccess`; the full suite shows only the 3 known Windows failures;
-  three plain reruns of `internal/hooks` print `ok`). Run both and report the failing names; any new
-  name is a regression.
+  three plain reruns of `internal/hooks` print `ok`; again with ruling 13, 2026-11-14: `-count=2`
+  fails only `FleeSuccess`, seeds 1-4 and 6 fail only it and seed 5 fails nothing). Run both and
+  report the failing names; any new name is a regression.
 
 - [ ] **Step 12: Smoke fights a real rat and checks both endings (ruling 11).** With ruling 10 the
   rat now swings back at bot 0 in the fight step. The numbers behind ruling 11, from the smoke world
@@ -4464,7 +4726,7 @@ git add internal/characters/aggro.go internal/characters/character.go internal/c
   internal/mutators/testhelpers.go \
   internal/mobs/saved_test.go internal/rules/dikubasic/ruleset.go internal/rules/dikubasic/ruleset_test.go \
   internal/usercommands/go.go internal/usercommands/go_test.go internal/usercommands/flee.go \
-  internal/usercommands/quit_test.go internal/usercommands/shoot_test.go \
+  internal/usercommands/quit_test.go internal/usercommands/shoot.go internal/usercommands/shoot_test.go \
   cmd/smoke/server.go cmd/smoke/fightrats_test.go cmd/smoke/fight.go cmd/smoke/fight_test.go \
   cmd/smoke/main.go cmd/smoke/script.go internal/hooks/death_engine_test.go \
   internal/configs/config.gameplay.go internal/configs/config.gameplay_test.go \
@@ -4472,30 +4734,39 @@ git add internal/characters/aggro.go internal/characters/character.go internal/c
   _datafiles/config.yaml _datafiles/html/admin/config.html _datafiles/html/admin/config-wizard.html \
   internal/hooks/testdata/combat-golden/ internal/hooks/testdata/reads-golden/E-move-look.txt
 git commit -F - <<'EOF'
-Phase 5.4.1: retaliation and target switching (rulings 6-9, 12)
+Phase 5.4.1: retaliation and target switching (rulings 6-9, 12, 13)
 
 A body attacked while not fighting takes an aggro on its attacker
 (after every attack, hit or miss, when it is up and CanAttack allows
-it): in the same room a plain attack; from another room a shot back
-through the exit with a shooting weapon, otherwise an aggro that waits.
-Each turn settles the target: gone or not up, switch to the longest
-attacker in the room (or end with today's line), swinging at once; in
-another room, shoot if possible (kept even if attacked here), else
-switch if attacked here, else wait ("Your target is out of reach."
-once). Before it attacks, in the room or through an exit, the ruleset
+it): in the same room a plain attack; from another room, after a typed
+shot, one shot back through the exit with a shooting weapon, otherwise
+an aggro that waits. Each turn settles the target: gone or not up,
+switch to the longest attacker in the room (or end with today's line),
+swinging at once; in another room, shoot while the aggro holds a shot
+(kept even if attacked here), else switch if attacked here, else wait
+("Your target is out of reach." once). Before it attacks, in the room or through an exit, the ruleset
 must still allow it (CanAttack); refused, it switches or ends with the
 refusal; the switch picks only opponents CanAttack allows, so two
 players with aggros on each other in a room without PvP stop. A switch
-re-arms like attack <name>: a slow weapon waits its delay first. A
-shot re-arms through the same exit (SetAggroRemote), one AggroChanged
-a round. A shot goes through any exit shoot <direction> could use:
+re-arms like attack <name>: a slow weapon waits its delay first.
+
+Ruling 13, one shot per action: the aggro holds at most one shot
+(Aggro.Shot: NoShot, TypedShot, EarnedShot; saved in NPC sidecars).
+shoot arms a typed shot (players and NPCs alike); a body shot by a
+typed shot from its own target, or retaliating against a new one,
+earns one shot back; a shot back earns nothing. The shot is spent by
+firing and dropped when it cannot fire. After it the shooter re-arms
+through the same exit (SetAggroRemote) and waits, its told mark set,
+so it is not told its target is out of reach; once the shot is spent
+an attacker in its room takes over (step 4). A shot goes through any
+exit shoot <direction> could use:
 the room's, a temporary one or an active mutator's, resolved with
 FindExitByName and locked by GetExitInfo (mutators.SetTestSpec added
 for tests). A target in reach that the body cannot perceive gives way
 to an attacker here it perceives (step 4), else counts toward the
 wait limit. Being attacked by its target, hit or miss, resets a
 body's wait count, so a hidden attacker or a shooter in the next room
-that keeps attacking is never lost track of. Every
+that keeps typing shoot is never lost track of. Every
 body with an aggro settles its target every round, even when no-combat
 or an NPC combat command takes its swing. Ties on Since go to turn
 order (death.SortBodies, which the round's fighters() uses too). A revived victim's attackers keep fighting
@@ -4560,11 +4831,13 @@ go run ./cmd/smoke -bots 5
 go run ./cmd/smoke -bots 12
 ```
 
-  Report each summary line (unverified at plan time).
+  Report each summary line. On the 2026-11-14 scratch copy after Task 6a (ruling 13 included):
+  `smoke: PASS 1/1 bots passed in 1m4.445s`, `smoke: PASS 5/5 bots passed in 1m0.424s`,
+  `smoke: PASS 12/12 bots passed in 1m0.513s`.
 
 - [ ] **Step 2: `PATCH_NOTES.md`.** Under a heading for the execution date, one line:
 
-  `- Phase 5 slice 4.1: round and death leftovers. The engine compares no body's health with a number, in characters and rooms too (guarded): characters asks the ruleset whether a body is up (characters.IsUp, wired by rules.Set). Player-visible: creatures fight back when attacked, as players now do too (a body with no fight of its own takes one on whoever attacks it, hit or miss); when your target dies, flees or leaves, you turn to whoever in the room has been attacking you longest ("You turn to fight <name>!"), and a target you chose yourself stays chosen while it is around; shot from another room, you shoot back through the exit (a portal or other temporary exit too, unless locked) if you hold a bow or other shooting weapon (and keep shooting even if someone in your room attacks you), otherwise you wait ("Your target is out of reach.") and swing once you share a room; a wait lasts 5 rounds out of reach in a row (admin setting GamePlay.OutOfReachRounds; each attack your target makes on you starts the count again), then you lose track of your target ("You lose track of <name>."), and creatures follow the same rule (they used to give up on a player in another room at once, and never on a creature); while you wait you can walk (into the shooter's room, or away), and a creature shot from another room walks over to fight; a creature attacking a player is not PvP, so creatures fight back against players of any level in any room, and can attack or shoot players under any PvP setting, except in the recovery room; NPCs still never start a fight on their own. A creature wounded and left alone, or once its fight ends, heals over time as players do (at least 1 health and 1 mana every 3rd round out of a fight); a shield no longer breaks. Internal: the engine keeps no health floor (damage below 0 is applied as dealt; nothing shows it before the death settles). Removed: offhand breakage (and the admin item editor's Break Chance field; old item files with breakchance still load), the unused backstab aggro, and dead code (Character.IsDisabled, rooms.FindDowned, actors.BodyReplaced)`
+  `- Phase 5 slice 4.1: round and death leftovers. The engine compares no body's health with a number, in characters and rooms too (guarded): characters asks the ruleset whether a body is up (characters.IsUp, wired by rules.Set). Player-visible: creatures fight back when attacked, as players now do too (a body with no fight of its own takes one on whoever attacks it, hit or miss); when your target dies, flees or leaves, you turn to whoever in the room has been attacking you longest ("You turn to fight <name>!"), and a target you chose yourself stays chosen while it is around; shooting is one shot per action: each `shoot` fires one shot, and then your fight waits on the target (you swing if it comes into your room, and you turn to anyone in your room who attacks you); shot by someone typing `shoot`, you shoot back once through the exit (a portal or other temporary exit too, unless locked) if you hold a bow or other shooting weapon (that shot goes even if someone in your room attacks you), and each further `shoot` at you earns you one more shot back, while a shot back earns nothing, so two archers never trade shots without someone typing; without a shooting weapon you wait ("Your target is out of reach.") and swing once you share a room; a wait lasts 5 rounds out of reach in a row (admin setting GamePlay.OutOfReachRounds; each attack your target makes on you starts the count again), then you lose track of your target ("You lose track of <name>."), and creatures follow the same rule (they used to give up on a player in another room at once, and never on a creature); while you wait you can walk (into the shooter's room, or away), and a creature shot from another room walks over to fight; a creature attacking a player is not PvP, so creatures fight back against players of any level in any room, and can attack or shoot players under any PvP setting, except in the recovery room; NPCs still never start a fight on their own. A creature wounded and left alone, or once its fight ends, heals over time as players do (at least 1 health and 1 mana every 3rd round out of a fight); a shield no longer breaks. Internal: the engine keeps no health floor (damage below 0 is applied as dealt; nothing shows it before the death settles). Removed: offhand breakage (and the admin item editor's Break Chance field; old item files with breakchance still load), the unused backstab aggro, and dead code (Character.IsDisabled, rooms.FindDowned, actors.BodyReplaced)`
 
 - [ ] **Step 3: `status.md`.** "Now": nothing in progress, slice 4.1 merged (PR number). "Next" item 1
   becomes slice 4.2 (progression: levels, XP, alignment, training and stat points, the PvP minimum
