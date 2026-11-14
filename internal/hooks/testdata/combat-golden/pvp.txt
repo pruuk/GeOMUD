@@ -16,9 +16,9 @@ seed 202
   Bob: room=93001 hp=10/15 aggro=[none] playerdamage={Alice:5} offhand=93102
 == round 2
 -- Alice reads
-  You wave your <ansi fg="item">testsword</ansi> at <ansi fg="username">Bob</ansi>, to no avail!
+  You slash at <ansi fg="username">Bob</ansi> but fail to connect!
 -- Bob reads
-  <ansi fg="username">Alice</ansi> attempts to slash you but misses!
+  <ansi fg="username">Alice</ansi> waves their <ansi fg="item">testsword</ansi> at you, but does nothing.
 -- events
   AggroChanged Alice room=93001
 -- state
@@ -26,32 +26,26 @@ seed 202
   Bob: room=93001 hp=10/15 aggro=[none] playerdamage={Alice:5} offhand=93102
 == round 3
 -- Alice reads
-  You deliver a powerful blow to <ansi fg="username">Bob</ansi>, causing an impressive <ansi fg="damage">6 damage</ansi>!
+  You slash <ansi fg="username">Bob</ansi> with your <ansi fg="item">testsword</ansi>, causing <ansi fg="damage">4 damage</ansi>!
 -- Bob reads
-  In a sweeping motion, <ansi fg="username">Alice</ansi> slashes you with their <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">6 damage</ansi>!
+  <ansi fg="username">Alice</ansi> slashes you with their <ansi fg="item">testsword</ansi>, causing <ansi fg="damage">4 damage</ansi>! <ansi fg="red">[you blocked 1]</ansi>
 -- events
   CharacterVitalsChanged Bob
   AggroChanged Alice room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101
-  Bob: room=93001 hp=4/15 aggro=[none] playerdamage={Alice:11} offhand=93102
+  Bob: room=93001 hp=6/15 aggro=[none] playerdamage={Alice:9} offhand=93102
 == round 4
 -- Alice reads
-  Your <ansi fg="item">testsword</ansi> cuts deeply into <ansi fg="username">Bob</ansi>, dealing significant damage of <ansi fg="damage">7</ansi>!
-  <ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">testshield</ansi> <ansi fg="username">Bob</ansi> was carrying breaks! <ansi fg="202">***</ansi></ansi>
+  In a sweeping motion, you slash <ansi fg="username">Bob</ansi> with your <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">7 damage</ansi>!
   <ansi fg="username">Bob</ansi> has died.
   <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by <ansi fg="username">Alice</ansi>) <ansi fg="magenta-bold">***</ansi>
   <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- Bob reads
-  In a sweeping motion, <ansi fg="username">Alice</ansi> slashes you with their <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">7 damage</ansi>! <ansi fg="red">[you blocked 1]</ansi>
-  <ansi fg="202">***</ansi>
-  <ansi fg="214"><ansi fg="202">***</ansi> Your <ansi fg="item">testshield</ansi> breaks! <ansi fg="202">***</ansi></ansi>
-  <ansi fg="202">***</ansi>
+  You are hit hard as <ansi fg="username">Alice</ansi> cuts deeply into you for <ansi fg="damage">7 damage</ansi>!
   <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by <ansi fg="username">Alice</ansi>) <ansi fg="magenta-bold">***</ansi>
   <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- events
-  ItemOwnership Bob item=93102 gained=false
-  ItemOwnership Bob item=0 gained=true
   CharacterVitalsChanged Bob
   AggroChanged Alice room=93001
   AggroChanged Bob room=93001
@@ -59,6 +53,5 @@ seed 202
   CharacterVitalsChanged Bob
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
-  Bob: room=copy-of-93003 hp=1/15 aggro=[none] playerdamage={}
-  room 93001 floor: 0
+  Bob: room=copy-of-93003 hp=1/15 aggro=[none] playerdamage={} offhand=93102
   room 93001 floor gold: 25

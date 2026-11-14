@@ -240,11 +240,6 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 		}
 	}
 
-	// If the attack connected, check for damage to equipment.
-	if roundResult.Hit {
-		offhandBreakCheck(d, defRoom, roundResult.Crit)
-	}
-
 	if defAcct != nil && roundResult.DamageToTarget != 0 {
 		events.AddToQueue(events.CharacterVitalsChanged{UserId: defAcct.UserId})
 	}
@@ -335,57 +330,6 @@ func lookForWeapon(a *actors.Actor, mob *mobs.Mob) {
 		if len(possibleWeapons) > 0 {
 			mob.Command(fmt.Sprintf("equip %s", possibleWeapons[util.Rand(len(possibleWeapons))]))
 		}
-	}
-}
-
-// offhandBreakCheck may break the defender's offhand item after a hit. A
-// broken item it cannot carry lands in its own room.
-func offhandBreakCheck(d *actors.Actor, defRoom *rooms.Room, crit bool) {
-
-	// For now, only focus on offhand items.
-	if d.Character.Equipment.Offhand.ItemId <= 0 {
-		return
-	}
-
-	modifier := 0
-	if crit { // Crits double the chance of breakage for offhand items.
-		modifier = int(d.Character.Equipment.Offhand.GetSpec().BreakChance)
-	}
-
-	if !d.Character.Equipment.Offhand.BreakTest(modifier) {
-		return
-	}
-
-	itemName := d.Character.Equipment.Offhand.NameSimple()
-
-	usercommands.Tell(d, `<ansi fg="202">***</ansi>`)
-	messaging.Send(perception.Message{
-		Kind:         perception.WorldEvent,
-		Actor:        d.Id,
-		Senses:       perception.Sight | perception.Sound,
-		Range:        perception.Room,
-		ActorText:    fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> Your <ansi fg="item">%s</ansi> breaks! <ansi fg="202">***</ansi></ansi>`, itemName),
-		ObserverText: fmt.Sprintf(`<ansi fg="214"><ansi fg="202">***</ansi> The <ansi fg="item">%s</ansi> {actor} was carrying breaks! <ansi fg="202">***</ansi></ansi>`, itemName),
-	})
-	usercommands.Tell(d, `<ansi fg="202">***</ansi>`)
-
-	events.AddToQueue(events.ItemOwnership{
-		ActorId: d.Id,
-		Item:    d.Character.Equipment.Offhand,
-		Gained:  false,
-	})
-
-	d.Character.RemoveFromBody(d.Character.Equipment.Offhand)
-
-	itm := items.New(20) // Broken item
-	if !d.Character.StoreItem(itm) {
-		defRoom.AddItem(itm, false)
-
-		events.AddToQueue(events.ItemOwnership{
-			ActorId: d.Id,
-			Item:    itm,
-			Gained:  true,
-		})
 	}
 }
 

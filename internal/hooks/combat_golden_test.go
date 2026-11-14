@@ -79,7 +79,7 @@ type combatWorld struct {
 func newCombatWorld(t *testing.T, seed int64) *combatWorld {
 	t.Helper()
 	loadCombatData.Do(func() {
-		// Attack message text, the broken-item spec and race dice come from the
+		// Attack message text and race dice come from the
 		// empty world's data, so a change to that data shows in the goldens.
 		races.LoadDataFiles()
 		items.LoadDataFiles()
@@ -267,10 +267,10 @@ func weapon(itemId int, name string, subtype items.ItemSubType, dice, sides, wai
 	return items.Item{ItemId: itemId, Id: ids.New(ids.NoCell), Spec: &spec}
 }
 
-func shield(itemId int, name string, breakChance uint8) items.Item {
+func shield(itemId int, name string) items.Item {
 	spec := items.ItemSpec{
 		ItemId: itemId, Name: name, NameSimple: name, Type: items.Offhand, Subtype: items.Wearable,
-		DamageReduction: 10, BreakChance: breakChance,
+		DamageReduction: 10,
 	}
 	return items.Item{ItemId: itemId, Id: ids.New(ids.NoCell), Spec: &spec}
 }
@@ -601,14 +601,14 @@ func TestCombatGoldenPvMToDeath(t *testing.T) {
 }
 
 // A player attacks a player who does not fight back; the defender's shield
-// can break.
+// blocks some of the damage.
 func TestCombatGoldenPvP(t *testing.T) {
 	w := newCombatWorld(t, 202)
 	w.recoveryRoom()
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
 	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
 	bob := w.addPlayer(9302, "Bob", goldenRoomA, 10, 10, 10, 15)
-	bob.Character.Equipment.Offhand = shield(93102, "testshield", 90)
+	bob.Character.Equipment.Offhand = shield(93102, "testshield")
 	alice.Character.SetAggro(bob.Character.Id, characters.DefaultAttack)
 	w.start()
 	w.rounds(20)
