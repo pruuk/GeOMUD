@@ -857,3 +857,24 @@ func TestKilledByOutlivesTheKiller(t *testing.T) {
 	require.True(t, alice.Character.KilledBy.IsZero(), "back on her feet: no stale killer")
 	require.Zero(t, alice.Character.KillerMobId)
 }
+
+// A player wounds an NPC, then the fight ends (both aggros are cleared, as
+// a "break" would leave them) and the regen pass runs four times (Phase 5
+// slice 4.1, recorded on today's code first: an NPC does not regenerate).
+// The rat has no groups, so the fixture leaves no hatred behind.
+func TestCombatGoldenNPCRegen(t *testing.T) {
+	w := newCombatWorld(t, 1010)
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
+	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
+	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 40)
+	alice.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+	w.start()
+	w.rounds(2)
+	alice.Character.EndAggro()
+	rat.Character.EndAggro()
+	wounded := rat.Character.Health
+	w.heal(4, func() bool { return false })
+	w.check("npc_regen")
+	require.Less(t, wounded, rat.Character.HealthMax.Value, "the fixture must wound the rat")
+	require.Greater(t, wounded, 0, "the rat must survive the fight")
+}
