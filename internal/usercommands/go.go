@@ -354,10 +354,16 @@ func Go(rest string, actor *actors.Actor, room *rooms.Room, flags events.EventFl
 
 // inFight reports whether the actor is in a fight: it has an aggro target, or
 // another body in its room has the actor as its aggro target (Decision 4).
-// Being attacked from another room does not count.
+// Being attacked from another room does not count. Its own aggro counts only
+// while its target is in its room (slice 4.1).
 func inFight(actor *actors.Actor, room *rooms.Room) bool {
-	if actor.Character.Aggro != nil {
-		return true
+	// Its own aggro is a fight only while its target is here: a body whose
+	// aggro waits on a target elsewhere, or that shoots into another room,
+	// may walk (Phase 5 slice 4.1, ruling 8).
+	if aggro := actor.Character.Aggro; aggro != nil {
+		if target := actors.Get(aggro.Target); target != nil && target.Character != nil && target.Character.RoomId == actor.Character.RoomId {
+			return true
+		}
 	}
 	for _, bodyId := range room.GetBodies() {
 		if bodyId == actor.Id {

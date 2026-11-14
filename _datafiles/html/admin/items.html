@@ -291,10 +291,6 @@
                     <div class="field-hint">% of incoming damage blocked when equipped</div>
                 </div>
                 <div class="field">
-                    <label>Break Chance %</label>
-                    <input type="number" id="f-breakchance" min="0" max="100" placeholder="0" />
-                </div>
-                <div class="field">
                     <label>Cursed</label>
                     <div class="toggle-wrap">
                         <input type="checkbox" id="f-cursed" />
@@ -505,7 +501,6 @@
         setVal('f-element', item.Element || '');
         setVal('f-uses', item.Uses || 0);
         setVal('f-damagereduction', item.DamageReduction || 0);
-        setVal('f-breakchance', item.BreakChance || 0);
         setVal('f-cursed', item.Cursed);
 
         // Weapon
@@ -645,7 +640,6 @@
             Element:         document.getElementById('f-element').value,
             Uses:            parseInt(document.getElementById('f-uses').value, 10) || 0,
             DamageReduction: parseInt(document.getElementById('f-damagereduction').value, 10) || 0,
-            BreakChance:     parseInt(document.getElementById('f-breakchance').value, 10) || 0,
             Cursed:          document.getElementById('f-cursed').checked,
             Hands:           parseInt(document.getElementById('f-hands').value, 10) || 1,
             WaitRounds:      parseInt(document.getElementById('f-waitrounds').value, 10) || 0,

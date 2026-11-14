@@ -121,7 +121,11 @@ func runBots(ctx context.Context, addr string, n int, timeout, hold time.Duratio
 		go co.run(ctx, addr, adm, timeout, srv)
 	}
 
-	fc := newFightCheck(n, fmt.Sprintf("Smk%sc000", tag))
+	rats := addrRats // a server someone else started keeps its own rats
+	if srv != nil {
+		rats = launchRats // the world copy's two pinned rats (fightRats)
+	}
+	fc := newFightCheck(n, fmt.Sprintf("Smk%sc000", tag), rats)
 	results := make([]result, n)
 	var wg sync.WaitGroup
 	for i := range n {

@@ -10,7 +10,9 @@ import (
 	"maps"
 
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/skills"
+	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -53,6 +55,7 @@ func TestRecoveringHealthClearsTheKiller(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	mudlog.SetupLogger(nil, "", "", false) // ApplyHealthChange below 0 asks buffs, which log
 	// Seed the skills cache so skill-gated helpers (GetSkillLevel)
 	// behave deterministically without loading datafiles from disk.
 	seedSkills := []*skills.Skill{}
@@ -65,6 +68,10 @@ func TestMain(m *testing.M) {
 		seedSkills = append(seedSkills, &skills.Skill{SkillId: id, Name: id, Description: id, MaxLevel: 4})
 	}
 	skills.SetTestData(seedSkills)
+
+	// The reference rules' Condition (rules.Set wires IsUp in the game;
+	// this package cannot import rules): up above 0 health.
+	IsUp = func(c *Character) bool { return c.Health > 0 }
 
 	os.Exit(m.Run())
 }
@@ -1192,48 +1199,6 @@ func TestCharacter_GetSetting(t *testing.T) {
 		})
 	}
 }
-func TestCharacter_IsDisabled(t *testing.T) {
-	tests := []struct {
-		name   string
-		health int
-		want   bool
-	}{
-		{
-			name:   "Health is positive",
-			health: 10,
-			want:   false,
-		},
-		{
-			name:   "Health is zero",
-			health: 0,
-			want:   true,
-		},
-		{
-			name:   "Health is negative",
-			health: -1,
-			want:   true,
-		},
-		{
-			name:   "Health is large positive",
-			health: 100,
-			want:   false,
-		},
-		{
-			name:   "Health is large negative",
-			health: -100,
-			want:   true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := New()
-			c.Health = tt.health
-			got := c.IsDisabled()
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
 func TestCharacter_EndAggro(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -1355,4 +1320,55 @@ func TestHealRestoresManaByTheManaAmount(t *testing.T) {
 	assert.Equal(t, 15, c.Mana)
 	assert.Equal(t, 1, dh)
 	assert.Equal(t, 5, dm)
+}
+
+// An unset IsUp fails loudly (Phase 5 slice 4.1), as rules.Get does.
+func TestUnsetIsUpFailsLoudly(t *testing.T) {
+	saved := IsUp
+	t.Cleanup(func() { IsUp = saved })
+	IsUp = nil
+	assert.PanicsWithValue(t, "characters: IsUp is not set; rules.Set wires it at boot", func() { isUp(New()) })
+}
+
+// Phase 5 slice 4.1: the engine applies damage as given. No floor below 0;
+// the cap at the maximum stays.
+func TestApplyHealthChangeHasNoFloor(t *testing.T) {
+	c := New()
+	c.HealthMax.Value, c.Health = 10, 10
+	assert.Equal(t, -30, c.ApplyHealthChange(-30))
+	assert.Equal(t, -20, c.Health, "a 30 hit on 10 health")
+	assert.Equal(t, -10, c.ApplyHealthChange(-10))
+	assert.Equal(t, -30, c.Health, "a hit on a body already below 0")
+
+	c.Health = 8
+	assert.Equal(t, 2, c.ApplyHealthChange(50))
+	assert.Equal(t, 10, c.Health, "a heal above the maximum stops there")
+}
+
+// Phase 5 slice 4.1: a saved body's health below 0 loads as saved.
+func TestValidateKeepsHealthBelowZero(t *testing.T) {
+	c := New()
+	c.Health = -50
+	require.NoError(t, c.Validate())
+	assert.Equal(t, -50, c.Health)
+}
+
+// Phase 5 slice 4.1, ruling 7: an aggro records the round it began on its
+// target; re-arming the same target keeps it, a new target sets it.
+func TestSetAggroSinceIsSetOnChangeAndKeptOnReArm(t *testing.T) {
+	prev := util.GetRoundCount()
+	t.Cleanup(func() { util.SetRoundCount(prev) })
+	c := New()
+	first, second := ids.New(ids.NoCell), ids.New(ids.NoCell)
+
+	util.SetRoundCount(500)
+	c.SetAggro(first, DefaultAttack)
+	assert.Equal(t, uint64(500), c.Aggro.Since)
+
+	util.SetRoundCount(510)
+	c.SetAggro(first, DefaultAttack)
+	assert.Equal(t, uint64(500), c.Aggro.Since, "the same target, re-armed")
+
+	c.SetAggro(second, DefaultAttack)
+	assert.Equal(t, uint64(510), c.Aggro.Since, "a new target")
 }

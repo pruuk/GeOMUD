@@ -6,6 +6,7 @@ package rules
 
 import (
 	"github.com/GoMudEngine/GoMud/internal/actors"
+	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/items"
 	"github.com/GoMudEngine/GoMud/internal/perception"
 )
@@ -124,8 +125,12 @@ type Ruleset interface {
 // by tests, which do not run in parallel with the loop.
 var active Ruleset
 
-// Set makes r the active ruleset. main.go calls it once at boot.
-func Set(r Ruleset) { active = r }
+// Set makes r the active ruleset and wires characters.IsUp to it. main.go
+// calls it once at boot.
+func Set(r Ruleset) {
+	active = r
+	characters.IsUp = isUp
+}
 
 // Get is the active ruleset. It panics when none is set: a boot that forgot
 // to choose one must fail loudly, not fight by default rules.
@@ -141,5 +146,21 @@ func Get() Ruleset {
 func SetForTest(r Ruleset) (restore func()) {
 	prev := active
 	active = r
+	characters.IsUp = isUp
 	return func() { active = prev }
+}
+
+// isUp is characters.IsUp: whether the active ruleset calls c's actor Up.
+func isUp(c *characters.Character) bool {
+	return Get().Condition(actorOf(c)) == Up
+}
+
+// actorOf is the live actor whose body is c. A body no live actor holds (a
+// corpse's copy of a body, a test's bare character, an account not yet
+// bound) gets a detached actor: that body, its ID, no controller.
+func actorOf(c *characters.Character) *actors.Actor {
+	if a := actors.Get(c.Id); a != nil && a.Character == c {
+		return a
+	}
+	return &actors.Actor{Id: c.Id, Character: c}
 }

@@ -1,0 +1,54 @@
+seed 1107
+== start
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  Bob: room=93001 hp=60/60 aggro=[dog DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  dog: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  cat: room=93001 hp=60/60 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+  rat: room=93001 hp=1/1 aggro=[none] playerdamage={}
+== round 1
+-- Alice reads
+  <ansi fg="cyan"><ansi fg="mobname">rat</ansi> dodges your attack!</ansi>
+  <ansi fg="username">Bob</ansi> wallops <ansi fg="mobname">dog</ansi> with their <ansi fg="item">fists</ansi>!
+  <ansi fg="yellow-bold">***</ansi> <ansi fg="username">Carol</ansi> lands a <ansi fg="cyan-bold">CRITICAL HIT</ansi> on <ansi fg="mobname">rat</ansi>! <ansi fg="yellow-bold">***</ansi>
+  <ansi fg="mobname">dog</ansi> swings at <ansi fg="username">Bob</ansi>, but misses.
+  <ansi fg="mobname">cat</ansi>'s attack goes wide.
+  <ansi fg="mobname">rat</ansi> has died.
+  You gained <ansi fg="yellow-bold">10 experience points</ansi>! <ansi fg="7">(combat)</ansi>
+  You turn to fight <ansi fg="mobname">cat</ansi>!
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
+-- Bob reads
+  You deliver a powerful blow to <ansi fg="mobname">dog</ansi>, causing <ansi fg="damage">3 damage</ansi>!
+  <ansi fg="yellow-bold">***</ansi> <ansi fg="username">Carol</ansi> lands a <ansi fg="cyan-bold">CRITICAL HIT</ansi> on <ansi fg="mobname">rat</ansi>! <ansi fg="yellow-bold">***</ansi>
+  <ansi fg="mobname">dog</ansi> missed you with their <ansi fg="item">fists</ansi>.
+  <ansi fg="mobname">cat</ansi> attacks <ansi fg="username">Alice</ansi> but fails to connect.
+  <ansi fg="mobname">rat</ansi> has died.
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
+-- Carol reads
+  <ansi fg="username">Bob</ansi> wallops <ansi fg="mobname">dog</ansi> with their <ansi fg="item">fists</ansi>!
+  <ansi fg="yellow-bold">***</ansi> You <ansi fg="cyan-bold">CRITICALLY HIT</ansi> <ansi fg="mobname">rat</ansi> with <ansi fg="item">fists</ansi> for <ansi fg="damage">5 damage</ansi>! <ansi fg="yellow-bold">***</ansi>
+  <ansi fg="mobname">dog</ansi> swings at <ansi fg="username">Bob</ansi>, but misses.
+  <ansi fg="mobname">cat</ansi> attacks <ansi fg="username">Alice</ansi> but fails to connect.
+  <ansi fg="mobname">rat</ansi> has died.
+  You gained <ansi fg="yellow-bold">10 experience points</ansi>! <ansi fg="7">(combat)</ansi>
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
+-- events
+  AggroChanged rat room=93001
+  AggroChanged Alice room=93001
+  AggroChanged Bob room=93001
+  AggroChanged rat room=93001
+  AggroChanged dog room=93001
+  AggroChanged dog room=93001
+  AggroChanged cat room=93001
+  MobDeath rat
+  AggroChanged Alice room=93001
+  AggroChanged Carol room=93001
+-- state
+  Alice: room=93001 hp=60/60 aggro=[cat DefaultAttack wait=0] playerdamage={} weapon=93101
+  Bob: room=93001 hp=60/60 aggro=[dog DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  dog: room=93001 hp=57/60 aggro=[Bob DefaultAttack wait=0] playerdamage={Bob:3}
+  cat: room=93001 hp=60/60 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+  rat: room=93001 hp=-4/1 aggro=[none] playerdamage={Alice:0 Carol:5}
+  room 93001 floor gold: 25

@@ -208,10 +208,9 @@ type ItemSpec struct {
 	Subtype         ItemSubType
 	Damage          Damage
 	Element         Element           `yaml:"element,omitempty"`
-	StatMods        statmods.StatMods `yaml:"statmods,omitempty"`    // What stats it modifies when equipped
-	BreakChance     uint8             `yaml:"breakchance,omitempty"` // Chance in 100 that the item will break when used, or when the character is hit with it equipped, or if it is in the characters inventory during an explosion, etc.
-	Cursed          bool              `yaml:"cursed,omitempty"`      // Can't be removed once equipped
-	KeyLockId       string            `yaml:"keylockid,omitempty"`   // Example: `778-north` - If it's a key, what lock does it open? roomid-exitname etc.
+	StatMods        statmods.StatMods `yaml:"statmods,omitempty"`  // What stats it modifies when equipped
+	Cursed          bool              `yaml:"cursed,omitempty"`    // Can't be removed once equipped
+	KeyLockId       string            `yaml:"keylockid,omitempty"` // Example: `778-north` - If it's a key, what lock does it open? roomid-exitname etc.
 }
 
 // AllEquipSlots returns every equipment slot ItemType in canonical display order.
@@ -361,13 +360,6 @@ func (i *ItemSpec) Id() int {
 	return i.ItemId
 }
 
-func CanBackstab(iSubType ItemSubType) bool {
-	if iSubType == Cleaving || iSubType == Stabbing || iSubType == Slashing || iSubType == Claws {
-		return true
-	}
-	return false
-}
-
 // GetBuffSummary returns the count and aggregate GetValue() of all WornBuffIds
 // on the item spec. It is used by the admin API to surface passive buff info
 // in the item list without requiring callers to load each buff separately.
@@ -483,10 +475,6 @@ func (i *ItemSpec) Validate() error {
 		i.DamageReduction = 0
 	} else if i.DamageReduction > 100 {
 		i.DamageReduction = 100
-	}
-
-	if i.BreakChance > 100 {
-		i.BreakChance = 100
 	}
 
 	if i.NameSimple == `` {

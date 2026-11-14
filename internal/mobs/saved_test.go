@@ -227,3 +227,28 @@ charmed:
 	assert.Equal(t, 2, got.HomeRoomId)
 	assert.True(t, got.IsElite)
 }
+
+// Phase 5 slice 4.1: a sidecar keeps the aggro's Since, its wait
+// (OutOfReach and OutOfReachTold) and its shot (ruling 13). (One saved
+// before 4.1 has no since key
+// and loads 0, YAML's zero value for a missing key; nothing in this slice
+// can change that, so no test claims it.)
+func TestSavedAggroKeepsSince(t *testing.T) {
+	withTemplate(t, 7, nil)
+	m := Mob{MobId: 7, HomeRoomId: 2}
+	m.Character = *characters.New()
+	m.Character.Id = ids.New(ids.NoCell)
+	m.Character.Aggro = &characters.Aggro{Target: ids.New(ids.NoCell), Since: 77, OutOfReach: 3, OutOfReachTold: true, Shot: characters.EarnedShot}
+
+	b, err := yaml.Marshal(Snapshot(&m))
+	require.NoError(t, err)
+	require.Contains(t, string(b), "since: 77")
+	require.Contains(t, string(b), "outofreachtold: true")
+	require.Contains(t, string(b), "shot: 2")
+	var back SavedNPC
+	require.NoError(t, yaml.Unmarshal(b, &back))
+	assert.Equal(t, uint64(77), back.Mob().Character.Aggro.Since)
+	assert.Equal(t, 3, back.Mob().Character.Aggro.OutOfReach, "a restored NPC resumes its wait count")
+	assert.True(t, back.Mob().Character.Aggro.OutOfReachTold, "and does not repeat the out-of-reach line")
+	assert.Equal(t, characters.EarnedShot, back.Mob().Character.Aggro.Shot, "and still owes its shot")
+}

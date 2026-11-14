@@ -1,0 +1,50 @@
+seed 1010
+== start
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=40/40 aggro=[none] playerdamage={}
+== round 1
+-- Alice reads
+  Your <ansi fg="item">testsword</ansi> cuts into <ansi fg="mobname">rat</ansi>, dealing <ansi fg="damage">3 damage</ansi>!
+  <ansi fg="mobname">rat</ansi> swings at you but misses!
+-- events
+  AggroChanged rat room=93001
+  AggroChanged Alice room=93001
+  AggroChanged rat room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=37/40 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:3}
+== round 2
+-- Alice reads
+  You slash <ansi fg="mobname">rat</ansi> with your <ansi fg="item">testsword</ansi>, causing <ansi fg="damage">5 damage</ansi>!
+  <ansi fg="mobname">rat</ansi> missed you with their <ansi fg="item">teeth and nails</ansi>.
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged rat room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=32/40 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:8}
+== heal 1
+-- Alice reads
+-- events
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
+  rat: room=93001 hp=33/40 aggro=[none] playerdamage={Alice:8}
+== heal 2
+-- Alice reads
+-- events
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
+  rat: room=93001 hp=34/40 aggro=[none] playerdamage={Alice:8}
+== heal 3
+-- Alice reads
+-- events
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
+  rat: room=93001 hp=35/40 aggro=[none] playerdamage={Alice:8}
+== heal 4
+-- Alice reads
+-- events
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
+  rat: room=93001 hp=36/40 aggro=[none] playerdamage={Alice:8}

@@ -142,7 +142,8 @@ and a PR. Calabe sees only player-visible rulings.
    fields beyond the name; die at 0 (no downed state,
    no bleed); simple hit roll and weapon damage; regen for every actor (one-actor ruling). World
    data, help templates, config knobs, admin pages, prompt tokens and GMCP fields that served them go
-   with them. Goldens are re-recorded and each diff is read and summarised in the PR.
+   with them. Goldens are re-recorded and each diff is read and summarised in the PR. Cut into 4.1
+   (round and death leftovers, done), 4.2 (progression) and 4.3 (the body); Calabe 2026-11-12.
 5. **The engine knows health only** (decision 6). The per-body value store; gold moves into it with
    a save migration; prompt, `who`, party and GMCP get rules values from the ruleset; the guard test
    lands.
@@ -183,7 +184,7 @@ Slice 4 implements both.
 
 Each slice plan reads these first; a note leaves once a slice settles it.
 
-- **From slice 1 (2026-11-06).** Slice 4 deletes `statmods.Casting`/`CastingPrefix` (dead since
+- **From slice 1 (2026-11-06).** Slice 4.3 deletes `statmods.Casting`/`CastingPrefix` (dead since
   spells went), the race field `KnowsFirstAid` (shown only in `races.template`), and the stat help
   templates that still mention spells (`help/mysticism`, `smarts`, `stats`); `skills/cast.yaml` goes
   with skills. Upstream `AGENTS.md`/`README.md` notes in `characters`, `gamelock`, `rooms`, `mobs`,
@@ -200,26 +201,51 @@ Each slice plan reads these first; a note leaves once a slice settles it.
     speed (Calabe 2026-11-10: weapon speed plus stats and skill set swings per round, possibly 0
     with carried progress; out of scope until then).
   - Two files still import `dikubasic`, allowlisted in `TestOnlyBootNamesTheRuleset`:
-    `web/api_v1_items.go` and `web/api_v1_mobs.go` (rankings, slice 4). Remove each from the
+    `web/api_v1_items.go` and `web/api_v1_mobs.go` (rankings, slice 4.3). Why 4.3: the three
+    ranking functions are built on the body rules 4.3 replaces. `RankWeapons` scores against a
+    `baselineCharacter` with six stats at 50 (`dikubasic/weapon_rank.go:57-74`); `RankArmor` scores
+    `statmods` by stat (`armor_rank.go:11`, `:112-141`); `RankMobs` builds a stat baseline from the
+    level (six stats at `level * 2`, kept within 1 to 100) and runs `newSimMob` (`mob_rank.go:52-62`,
+    `:132`). Level is an input to `RankMobs` (4.2), but the rankings stand or fall with the stat block
+    and the hit roll, so they go or change in 4.3. Remove each from the
     allowlist when it goes.
-  - Slice 4 deletes offhand breakage (Calabe 2026-11-10): `offhandBreakCheck` in `DoCombat`, the
-    broken item 20, and `BreakChance`/`BreakTest` if nothing else reads them; the `pvp` golden
-    (shield break chance 90) changes then.
-  - Slice 4 deletes the `BackStab` branch in `calculateCombat` (nothing sets `BackStab`; its reset
-    acts on a copy of the character).
-  - Better targeting and aggro tracking than the single aggro flag is wanted later (Calabe
-    2026-11-10), outside the slim base.
+  - Slice 4.1 gave the single aggro record its start round (`Since`), retaliation, switching to the
+    longest attacker and a wait limit (rulings 6-9, 12). Still wanted later, outside the slim base:
+    more than one target per body, threat or aggro tracking beyond the longest attacker (Calabe
+    2026-11-10).
   - Test config helpers: `setConfig` (hooks), `setPvP` (usercommands) and an inline copy in
     `dikubasic/ruleset_test.go` repeat one pattern, and each leaves restored keys pinned as explicit
     overrides (a later `AddOverlayOverrides` on them in the same test binary is skipped). Nothing
     trips it today; one `configs` test helper that removes the keys it added would replace all three.
-- **From slice 3 (2026-11-10).** Slice 4 takes what slice 3 left in the engine:
-  - NPC regen (one-actor rule).
-  - The -5/-10 floors in `ApplyHealthChange`.
-  - XP, levels and alignment, alignment decay included (still in upkeep).
-  - The four `characters` health checks and `rooms.FindDowned`.
-  - Offhand breakage and `BackStab` (see slice 2 above).
-  - `actors.BodyReplaced`, which has no production caller since permadeath went.
+- **From slice 3 (2026-11-10).** Slice 4.1 took NPC regen, the -5/-10 floors, the `characters`
+  health checks, `rooms.FindDowned`, offhand breakage, `BackStab` and `actors.BodyReplaced`. Left:
+  - XP, levels and alignment, alignment decay included (still in upkeep): slice 4.2.
+- **From slice 4.1 (2026-11-14; spec `2026-11-12-phase-5-4-1-leftovers-spec.md`, ruling 1).**
+  - NPC aggression (NPCs starting fights) is still out of scope after slice 4.1: NPCs now fight back
+    when attacked (rulings 6-9) but never attack first; it comes with a ruleset or a later phase (spec
+    "What this locks in").
+  - Slice 4.2 (progression: levels, XP, alignment, training and stat points, the PvP minimum level and
+    their displays). Kill stats: since slice 4.1 a player's retaliation that misses still credits a 0
+    in the attacker's `PlayerDamage` (`attack` tracks every swing, `NewRound_DoCombat.go:81-84`), so
+    when that attacker later dies to an NPC, `recordPlayerDeath` books it as a PvP death because its
+    `PlayerDamage` is not empty (`death/death.go:136-137`; plan review round 2). Slice 4.1 keeps this
+    on purpose (spec, Decisions row "Retaliation records the retaliator's damage like any attack");
+    settle it with the kill and death books.
+  - Slice 4.3 (the body: the stat block, `statmods`, mana, race fields, action points and carry
+    capacity, skills, the simple hit roll with weapon damage).
+    - Crit cascade: in `calculateCombat` (`dikubasic/combat.go`), once a hit crits every later hit
+      that round crits with no roll (`isCrit = attackResult.Crit || Crits(...)`); kept through 4.1 with
+      its comment corrected; 4.3's hit roll decides crits.
+    - `rules.actorOf` (slice 4.1) gives any body that is not a live actor's own pointer a detached
+      actor with no controller: a corpse's copy of a body, and a by-value copy such as the template
+      copies `SimulateCombat` fights (`dikubasic/simulate.go:103-114`, which call `ApplyHealthChange`,
+      so `ForgetKillerIfUp`, so `IsUp`). Under `dikubasic` this gives the same answer (its `Condition`
+      reads only health). A ruleset whose `Condition` reads the controller would misjudge those
+      copies. `calculateCombat` also works on by-value copies (`combat.go:146`) and passes
+      `&sourceChar`/`&targetChar` to `buildCombatMessages`, but no call there reaches `IsUp` today
+      (its names come from message tokens); a later change that formats a name from those copies
+      would.
+  - `keywords-api.html`'s sample `backstab` help entry stays on slice 7's docs sweep.
 
 ## Out of scope
 

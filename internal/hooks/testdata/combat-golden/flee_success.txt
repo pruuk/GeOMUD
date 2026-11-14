@@ -14,8 +14,14 @@ seed 606
   (multi-line text, 8 lines)
 -- events
   AggroChanged Alice room=93001
-  AggroChanged guard room=93001
 -- state
   Alice: room=93002 hp=10/10 aggro=[none] playerdamage={}
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+  dog: room=93001 hp=10/10 aggro=[none] playerdamage={}
+== round 2
+-- Alice reads
+-- events
+-- state
+  Alice: room=93002 hp=10/10 aggro=[none] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
   dog: room=93001 hp=10/10 aggro=[none] playerdamage={}

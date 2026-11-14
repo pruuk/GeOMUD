@@ -128,6 +128,8 @@ Bob: <ansi fg="username">Ann</ansi> prepares to fight <ansi fg="mobname">rat</an
 > DoCombat
 Bob: <ansi fg="username">Ann</ansi> attacks <ansi fg="mobname">rat</ansi> but fails to connect.
 Ann: You swing your <ansi fg="item">fists</ansi>, but miss completely!
+Bob: <ansi fg="mobname">rat</ansi>'s <ansi fg="item">teeth and nails</ansi> connects with <ansi fg="username">Ann</ansi>.
+Ann: <ansi fg="mobname">rat</ansi> strikes you with their <ansi fg="item">teeth and nails</ansi>, causing <ansi fg="damage">1 damage</ansi>.
 == flee (A's east exit taken away: the exit pick is in map order)
 > Ann: flee
 Ann: You attempt to flee...

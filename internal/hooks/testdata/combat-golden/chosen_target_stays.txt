@@ -1,0 +1,89 @@
+seed 1102
+== start
+-- state
+  Alice: room=93001 hp=60/60 aggro=[dog DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  dog: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  rat: room=93001 hp=4/4 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 1
+-- Alice reads
+  <ansi fg="cyan"><ansi fg="mobname">dog</ansi> dodges your attack!</ansi>
+  <ansi fg="username">Carol</ansi> swings at <ansi fg="mobname">rat</ansi> but misses completely.
+  <ansi fg="mobname">rat</ansi>'s attack goes wide.
+  <ansi fg="yellow-bold">***</ansi> <ansi fg="mobname">dog</ansi>'s attack <ansi fg="cyan-bold">CRITICALLY STRIKES</ansi> you for <ansi fg="damage">4 damage</ansi>! <ansi fg="yellow-bold">***</ansi>
+-- Carol reads
+  You slash at <ansi fg="mobname">rat</ansi> but fail to connect!
+  <ansi fg="mobname">rat</ansi> attacks <ansi fg="username">Alice</ansi> but fails to connect.
+  <ansi fg="yellow-bold">***</ansi> <ansi fg="mobname">dog</ansi> <ansi fg="cyan-bold">CRITICALLY HITS</ansi> <ansi fg="username">Alice</ansi> with their <ansi fg="item">fists</ansi>! <ansi fg="yellow-bold">***</ansi>
+-- events
+  AggroChanged dog room=93001
+  AggroChanged Alice room=93001
+  AggroChanged Carol room=93001
+  AggroChanged rat room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged dog room=93001
+-- state
+  Alice: room=93001 hp=56/60 aggro=[dog DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  dog: room=93001 hp=60/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:0}
+  rat: room=93001 hp=4/4 aggro=[Alice DefaultAttack wait=0] playerdamage={Carol:0}
+== round 2
+-- Alice reads
+  Your <ansi fg="item">fists</ansi> connects with <ansi fg="mobname">dog</ansi> for <ansi fg="damage">5 damage</ansi>.
+  In a sweeping motion, <ansi fg="username">Carol</ansi> slashes <ansi fg="mobname">rat</ansi> with their <ansi fg="item">testsword</ansi>!
+  <ansi fg="mobname">dog</ansi>'s attack goes wide.
+  <ansi fg="mobname">rat</ansi> has died.
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
+-- Carol reads
+  <ansi fg="username">Alice</ansi> hits <ansi fg="mobname">dog</ansi> with their <ansi fg="item">fists</ansi>.
+  Your <ansi fg="item">testsword</ansi> cuts deeply into <ansi fg="mobname">rat</ansi>, dealing significant damage of <ansi fg="damage">7</ansi>!
+  <ansi fg="mobname">dog</ansi> attacks <ansi fg="username">Alice</ansi> but fails to connect.
+  <ansi fg="mobname">rat</ansi> has died.
+  You gained <ansi fg="yellow-bold">18 experience points</ansi>! <ansi fg="7">(combat)</ansi>
+  <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged rat room=93001
+  AggroChanged dog room=93001
+  MobDeath rat
+  AggroChanged Carol room=93001
+-- state
+  Alice: room=93001 hp=56/60 aggro=[dog DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={} weapon=93101
+  dog: room=93001 hp=55/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:5}
+  rat: room=93001 hp=-3/4 aggro=[none] playerdamage={Carol:7}
+  room 93001 floor gold: 25
+== round 3
+-- Alice reads
+  Your <ansi fg="item">fists</ansi> hits <ansi fg="mobname">dog</ansi> hard for <ansi fg="damage">7 damage</ansi>!
+  <ansi fg="mobname">dog</ansi> strikes you with their <ansi fg="item">fists</ansi>, causing <ansi fg="damage">2 damage</ansi>.
+-- Carol reads
+  <ansi fg="username">Alice</ansi> delivers a heavy hit to <ansi fg="mobname">dog</ansi>!
+  <ansi fg="mobname">dog</ansi>'s <ansi fg="item">fists</ansi> connects with <ansi fg="username">Alice</ansi>.
+-- events
+  AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged dog room=93001
+-- state
+  Alice: room=93001 hp=54/60 aggro=[dog DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={} weapon=93101
+  dog: room=93001 hp=48/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:12}
+  rat: room=93001 hp=-3/4 aggro=[none] playerdamage={Carol:7}
+  room 93001 floor gold: 25
+== round 4
+-- Alice reads
+  You miss with your <ansi fg="item">fists</ansi>.
+  <ansi fg="mobname">dog</ansi> wallops you with their <ansi fg="item">fists</ansi> for <ansi fg="damage">3 damage</ansi>!
+-- Carol reads
+  <ansi fg="username">Alice</ansi> missed <ansi fg="mobname">dog</ansi> with their <ansi fg="item">fists</ansi>.
+  <ansi fg="mobname">dog</ansi> smashes <ansi fg="username">Alice</ansi> with a powerful blow!
+-- events
+  AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged dog room=93001
+-- state
+  Alice: room=93001 hp=51/60 aggro=[dog DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={} weapon=93101
+  dog: room=93001 hp=48/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:12}
+  rat: room=93001 hp=-3/4 aggro=[none] playerdamage={Carol:7}
+  room 93001 floor gold: 25

@@ -143,3 +143,16 @@ func TestNPCWithAPMovesAndPaysTheCost(t *testing.T) {
 	require.NotEmpty(t, left)
 	assert.Contains(t, left[0], `<ansi fg="mobname">Rat</ansi> leaves towards`)
 }
+
+// Phase 5 slice 4.1 (plan Q8): a body's own aggro is a fight only while its
+// target is in its room; one whose target is elsewhere may walk.
+func TestBodyWhoseTargetIsInAnotherRoomMayGo(t *testing.T) {
+	npc, player, room := goSetup(t)
+	player.Character.SetAggro(npc.Id, characters.DefaultAttack)
+	require.NoError(t, rooms.MoveToRoom(npc.Id, testNextRoomId))
+
+	handled, err := Go("north", player, room, 0)
+	require.NoError(t, err)
+	assert.True(t, handled)
+	assert.Equal(t, testNextRoomId, player.Character.RoomId, "her target is not here: she may walk")
+}

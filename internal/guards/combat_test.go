@@ -119,8 +119,8 @@ func TestOnlyBootNamesTheRuleset(t *testing.T) {
 	const ruleset = "github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 	allowed := map[string]string{
 		"main.go":                      "boot: rules.Set(dikubasic.New())",
-		"internal/web/api_v1_items.go": "weapon and armour rankings; slice 4 shrink",
-		"internal/web/api_v1_mobs.go":  "mob rankings; slice 4 shrink",
+		"internal/web/api_v1_items.go": "weapon and armour rankings; slice 4.3 shrink",
+		"internal/web/api_v1_mobs.go":  "mob rankings; slice 4.3 shrink",
 	}
 	seen := map[string]bool{}
 	for path, f := range goFiles(t) {

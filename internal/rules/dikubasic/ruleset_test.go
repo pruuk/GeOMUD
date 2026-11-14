@@ -237,33 +237,32 @@ func TestConditionIsDeadAtZeroOrBelow(t *testing.T) {
 	}
 }
 
-// Parity with the old AutoHeal (NewRound_AutoHeal.go before slice 3).
-func TestRegenOutsideTheRecoveryRoomIsTheOldAutoHeal(t *testing.T) {
+// Outside the recovery room every actor regenerates by one rule (Phase 5
+// slice 4.1): every 3rd round, out of a fight and above 0 health, it regains
+// HealthPerRound and ManaPerRound, an NPC as a player does.
+func TestRegenOutsideTheRecoveryRoomIsOneRuleForEveryActor(t *testing.T) {
 	const here, recovery = 94005, 94006
 	setConfig(t,
 		map[string]any{"SpecialRooms.DeathRecoveryRoom": recovery},
 		map[string]any{"SpecialRooms.DeathRecoveryRoom": int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)})
 	none := rules.RegenResult{}
 
-	a := player(t, 9621)
-	a.Character.RoomId, a.Character.Health = here, 5
-	full := rules.RegenResult{Health: a.Character.HealthPerRound(), Mana: a.Character.ManaPerRound()}
-	require.NotZero(t, full.Health)
-	assert.Equal(t, full, New().Regen(a, 3), "every 3rd round")
-	assert.Equal(t, full, New().Regen(a, 6))
-	assert.Equal(t, none, New().Regen(a, 4), "only every 3rd round")
-	assert.Equal(t, none, New().Regen(a, 5))
+	for name, a := range map[string]*actors.Actor{"player": player(t, 9621), "npc": npc(t, 0, 0)} {
+		a.Character.RoomId, a.Character.Health = here, 5
+		full := rules.RegenResult{Health: a.Character.HealthPerRound(), Mana: a.Character.ManaPerRound()}
+		require.NotZero(t, full.Health, name)
+		assert.Equal(t, full, New().Regen(a, 3), "%s: every 3rd round", name)
+		assert.Equal(t, full, New().Regen(a, 6), name)
+		assert.Equal(t, none, New().Regen(a, 4), "%s: only every 3rd round", name)
+		assert.Equal(t, none, New().Regen(a, 5), name)
 
-	a.Character.Aggro = &characters.Aggro{Type: characters.DefaultAttack}
-	assert.Equal(t, none, New().Regen(a, 3), "never in a fight")
-	a.Character.Aggro = nil
+		a.Character.Aggro = &characters.Aggro{Type: characters.DefaultAttack}
+		assert.Equal(t, none, New().Regen(a, 3), "%s: never in a fight", name)
+		a.Character.Aggro = nil
 
-	a.Character.Health = 0
-	assert.Equal(t, none, New().Regen(a, 3), "never while down")
-
-	n := npc(t, 0, 0)
-	n.Character.RoomId, n.Character.Health = here, 5
-	assert.Equal(t, none, New().Regen(n, 3), "accounts only")
+		a.Character.Health = 0
+		assert.Equal(t, none, New().Regen(a, 3), "%s: never at 0 health", name)
+	}
 }
 
 // reseed puts the shared random source back on a clock seed after a test.
@@ -615,4 +614,75 @@ func TestOnDeathReviveOnDeathRevivesAnyActorAtFullHealth(t *testing.T) {
 		assert.Empty(t, out.DropItems, name)
 		assert.Zero(t, out.DropGold, name)
 	}
+}
+
+// Phase 5 slice 4.1 (plan Q7): an NPC attacking a player is not PvP. Under
+// the shipped settings (limited, minimum level 15), in a room that is not a
+// PvP room, an NPC may attack a level 1 player; a player may not; and the
+// recovery room, and a private copy of it, is safe from both.
+func TestCanAttackAppliesPvPOnlyBetweenPlayers(t *testing.T) {
+	const here, recovery = 94011, 94012
+	testRoom(t, here, "rulesetzone")
+	testRoom(t, recovery, "rulesetzone")
+	copyId := recoveryCopy(t, recovery, "rulesetzone")
+	setConfig(t,
+		map[string]any{"GamePlay.PVP.Enabled": "limited", "GamePlay.PVP.MinimumLevel": 15},
+		map[string]any{
+			"GamePlay.PVP.Enabled":      string(configs.GetPVPConfig().Enabled),
+			"GamePlay.PVP.MinimumLevel": int(configs.GetPVPConfig().MinimumLevel),
+		})
+	target := player(t, 9631)
+	target.Character.RoomId = here
+	require.Equal(t, 1, target.Character.Level)
+
+	n := npc(t, 0, 0)
+	n.Character.RoomId = here
+	assert.NoError(t, New().CanAttack(n, target), "an NPC may attack a level 1 player outside a PvP room")
+
+	p := player(t, 9632)
+	p.Character.RoomId = here
+	assert.EqualError(t, New().CanAttack(p, target), "Players must be at least level 15 to PVP.", "player against player: the PvP rules, unchanged")
+
+	for _, roomId := range []int{recovery, copyId} {
+		target.Character.RoomId = roomId // the NPC stays outside, in room here
+		assert.EqualError(t, New().CanAttack(n, target), "Fighting is not allowed here.", "room %d: safe from an NPC too", roomId)
+	}
+}
+
+// Phase 5 slice 4.1 (plan review round 4): the recovery room is safe in
+// both directions; a body standing in it, or in a private copy of it,
+// attacks nobody (for example an NPC through the room's portal).
+func TestCanAttackRefusesAnAttackerInTheRecoveryRoom(t *testing.T) {
+	const here, recovery = 94013, 94014
+	testRoom(t, here, "rulesetzone")
+	testRoom(t, recovery, "rulesetzone")
+	copyId := recoveryCopy(t, recovery, "rulesetzone")
+	n := npc(t, 0, 0)
+	n.Character.RoomId = here
+	p := player(t, 9633)
+	for _, roomId := range []int{recovery, copyId} {
+		p.Character.RoomId = roomId
+		assert.EqualError(t, New().CanAttack(p, n), "Fighting is not allowed here.", "room %d", roomId)
+	}
+	p.Character.RoomId = here
+	assert.NoError(t, New().CanAttack(p, n), "control: out of it, the NPC may be attacked")
+}
+
+// Phase 5.4.1 final review (spec ruling 10: the recovery room is safe from
+// everyone): an NPC standing in the recovery room, or in a private copy of
+// it, cannot be attacked by a player outside it.
+func TestCanAttackRefusesAnNPCTargetInTheRecoveryRoom(t *testing.T) {
+	const here, recovery = 94015, 94016
+	testRoom(t, here, "rulesetzone")
+	testRoom(t, recovery, "rulesetzone")
+	copyId := recoveryCopy(t, recovery, "rulesetzone")
+	p := player(t, 9634)
+	p.Character.RoomId = here
+	n := npc(t, 0, 0)
+	for _, roomId := range []int{recovery, copyId} {
+		n.Character.RoomId = roomId
+		assert.EqualError(t, New().CanAttack(p, n), "Fighting is not allowed here.", "room %d", roomId)
+	}
+	n.Character.RoomId = here
+	assert.NoError(t, New().CanAttack(p, n), "control: out of it, the NPC may be attacked")
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,4 +61,24 @@ func TestQuitInAFightSaysNothingOfMeditation(t *testing.T) {
 	assert.Contains(t, quitter, "You're too busy to quit right now!")
 	assert.NotContains(t, quitter, "meditat")
 	assert.NotContains(t, strings.Join(reads[observerId], ""), "meditate")
+}
+
+// Phase 5 slice 4.1 (plan Q17): a player whose only fight is with a target
+// in another room is not in a fight: she may quit.
+func TestPlayerWhoseTargetIsInAnotherRoomMayQuit(t *testing.T) {
+	npc, player, room := goSetup(t)
+	player.Character.SetAggro(npc.Id, characters.DefaultAttack)
+	require.NoError(t, rooms.MoveToRoom(npc.Id, testNextRoomId))
+	reading(t, player.Controller().Account())
+	quitterId := player.Controller().Account().UserId
+
+	reads := captureReads(t, func() {
+		handled, err := Quit("", player, room, 0)
+		require.NoError(t, err)
+		assert.True(t, handled)
+	})
+
+	quitter := strings.Join(reads[quitterId], "")
+	assert.Contains(t, quitter, "You sit down and begin your meditation.", "her target is not here: she may quit")
+	assert.NotContains(t, quitter, "You're too busy to quit right now!")
 }

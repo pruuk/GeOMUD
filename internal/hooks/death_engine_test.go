@@ -68,8 +68,8 @@ func TestUpkeepRunsTheDeathOfWhoeverTheRulesetCallsDead(t *testing.T) {
 }
 
 // An immediate buff trigger runs the death of a body the ruleset calls dead
-// (Q7a). The death ends the fight of every credited account still targeting
-// the body (clearKillersAggro), credits the kill and grants the XP (award).
+// (Q7a). The death ends the fight of every body still targeting
+// the body (releaseAttackers), credits the kill and grants the XP (award).
 func TestBuffTriggerDeathEndsTheKillersFightAndPaysTheKill(t *testing.T) {
 	const triggerBuff = 93902
 	w := newCombatWorld(t, 111)

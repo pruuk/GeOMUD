@@ -1,0 +1,159 @@
+seed 1105
+== start
+-- state
+  Alice: room=93001 hp=60/60 aggro=[Bob Shooting wait=0 exit=north shot=typed] playerdamage={} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[none] playerdamage={} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 1
+-- Alice reads
+  You pull the trigger, but your shot through the <ansi fg="exit">north</ansi> fails to hit <ansi fg="username">Bob</ansi>.
+  A shot from a <ansi fg="item">testbow</ansi> flies in from the <ansi fg="exit">north</ansi> direction, but misses you!
+-- Bob reads
+  You hear a shot from the <ansi fg="exit">south</ansi> direction, but it misses.
+  You pull the trigger, but your shot through the <ansi fg="exit">south</ansi> fails to hit <ansi fg="username">Alice</ansi>.
+-- Carol reads
+  A shot from the <ansi fg="exit">south</ansi> direction sails past <ansi fg="username">Bob</ansi>.
+  <ansi fg="username">Bob</ansi> shoots through the <ansi fg="exit">south</ansi> but seems to miss.
+-- events
+  AggroChanged Bob room=93002
+  AggroChanged Alice room=93001
+  AggroChanged Bob room=93002
+-- state
+  Alice: room=93001 hp=60/60 aggro=[Bob Shooting wait=0 exit=north] playerdamage={Bob:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[Alice Shooting wait=0 exit=south] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 2
+-- Alice reads
+-- Bob reads
+-- Carol reads
+-- events
+-- state
+  Alice: room=93001 hp=60/60 aggro=[Bob Shooting wait=0 exit=north] playerdamage={Bob:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[Alice Shooting wait=0 exit=south] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 3
+-- Alice reads
+-- Bob reads
+-- Carol reads
+-- events
+-- state
+  Alice: room=93001 hp=60/60 aggro=[Bob Shooting wait=0 exit=north] playerdamage={Bob:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[Alice Shooting wait=0 exit=south] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 1
+-- Alice reads
+  You pull the trigger, but your shot through the <ansi fg="exit">north</ansi> fails to hit <ansi fg="username">Bob</ansi>.
+  A shot from a <ansi fg="item">testbow</ansi> flies in from the <ansi fg="exit">north</ansi> direction, wounding you for <ansi fg="damage">1 damage</ansi>!
+-- Bob reads
+  A shot from a <ansi fg="item">testbow</ansi> flies in from the <ansi fg="exit">south</ansi> direction, but misses you!
+  You successfully wound <ansi fg="username">Alice</ansi> through the <ansi fg="exit">south</ansi>, causing <ansi fg="damage">1 damage</ansi>!
+-- Carol reads
+  A shot from the <ansi fg="exit">south</ansi> direction sails past <ansi fg="username">Bob</ansi>.
+  <ansi fg="username">Bob</ansi> fires their <ansi fg="item">testbow</ansi> towards the <ansi fg="exit">south</ansi> direction.
+-- events
+  AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged Bob room=93002
+-- state
+  Alice: room=93001 hp=59/60 aggro=[Bob Shooting wait=0 exit=north] playerdamage={Bob:1} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[Alice Shooting wait=0 exit=south] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 2
+-- Alice reads
+-- Bob reads
+-- Carol reads
+-- events
+-- state
+  Alice: room=93001 hp=59/60 aggro=[Bob Shooting wait=0 exit=north] playerdamage={Bob:1} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[Alice Shooting wait=0 exit=south] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 1
+-- Alice reads
+  Your shot through the <ansi fg="exit">north</ansi> hits <ansi fg="username">Carol</ansi>, dealing <ansi fg="damage">1 damage</ansi>!
+-- Bob reads
+  A projectile from the <ansi fg="exit">south</ansi> hits <ansi fg="username">Carol</ansi>, causing damage.
+-- Carol reads
+  A projectile from the <ansi fg="exit">south</ansi> wounds you for <ansi fg="damage">1 damage</ansi>!
+  Your target is out of reach.
+-- events
+  CharacterVitalsChanged Carol
+  AggroChanged Carol room=93002
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=59/60 aggro=[Carol Shooting wait=0 exit=north] playerdamage={Bob:1} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[Alice Shooting wait=0 exit=south] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=59/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:1} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 2
+-- Alice reads
+-- Bob reads
+-- Carol reads
+-- events
+-- state
+  Alice: room=93001 hp=59/60 aggro=[Carol Shooting wait=0 exit=north] playerdamage={Bob:1} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[Alice Shooting wait=0 exit=south] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=59/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:1} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93002 hp=60/60 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 1
+-- Alice reads
+  In a moment of clarity, you fire through the <ansi fg="exit">north</ansi> direction, doing an impressive <ansi fg="damage">3 damage</ansi> to <ansi fg="mobname">rat</ansi>!
+  <ansi fg="mobname">rat</ansi> enters from <ansi fg="exit">the <ansi fg="exit">north</ansi></ansi>.
+  <ansi fg="mobname">rat</ansi> <ansi fg="20">squeeks angrily.</ansi>
+-- Bob reads
+  A projectile from the <ansi fg="exit">south</ansi> strikes <ansi fg="mobname">rat</ansi> powerfully.
+  <ansi fg="mobname">rat</ansi> leaves towards the <ansi fg="exit">south</ansi> exit.
+-- Carol reads
+  A projectile from the <ansi fg="exit">south</ansi> strikes <ansi fg="mobname">rat</ansi> powerfully.
+  <ansi fg="mobname">rat</ansi> leaves towards the <ansi fg="exit">south</ansi> exit.
+-- events
+  Input rat: "go south"
+  Input rat: "emote squeeks angrily."
+  AggroChanged rat room=93002
+  AggroChanged Alice room=93001
+  Ran rat: "go south"
+  Ran rat: "emote squeeks angrily."
+-- state
+  Alice: room=93001 hp=59/60 aggro=[rat Shooting wait=0 exit=north] playerdamage={Bob:1} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[Alice Shooting wait=0 exit=south] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=59/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:1} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93001 hp=57/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:3} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 2
+-- Alice reads
+  In a moment of clarity, you fire at <ansi fg="mobname">rat</ansi> with your <ansi fg="item">testbow</ansi>, doing an impressive <ansi fg="damage">4 damage</ansi>!
+  <ansi fg="mobname">rat</ansi> missed you with their <ansi fg="item">teeth and nails</ansi>.
+-- Bob reads
+  You lose track of <ansi fg="username">Alice</ansi>.
+-- Carol reads
+  <ansi fg="username">Bob</ansi> mumbles about losing their quarry.
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged Bob room=93002
+  AggroChanged rat room=93001
+-- state
+  Alice: room=93001 hp=59/60 aggro=[rat Shooting wait=0] playerdamage={Bob:1} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[none] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=59/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:1} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93001 hp=53/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:7} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 3
+-- Alice reads
+  You pull the trigger, but your shot goes wide of <ansi fg="mobname">rat</ansi>!
+  <ansi fg="mobname">rat</ansi>'s attack goes wide.
+-- Bob reads
+  <ansi fg="username">Carol</ansi> mumbles about losing their quarry.
+-- Carol reads
+  You lose track of <ansi fg="username">Alice</ansi>.
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged Carol room=93002
+  AggroChanged rat room=93001
+-- state
+  Alice: room=93001 hp=59/60 aggro=[rat Shooting wait=0] playerdamage={Bob:1} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93002 hp=60/60 aggro=[none] playerdamage={Alice:0} weapon=93103 gold=25 xp=1 worn=[93103] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Carol: room=93002 hp=59/60 aggro=[none] playerdamage={Alice:1} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  rat: room=93001 hp=53/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:7} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]

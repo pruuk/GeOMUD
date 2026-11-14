@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/GoMudEngine/GoMud/internal/characters"
+	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/stretchr/testify/assert"
@@ -119,4 +120,16 @@ func TestTickWalksItsPath(t *testing.T) {
 
 	require.NotEmpty(t, got)
 	assert.Equal(t, "east", got[0])
+}
+
+// Phase 5 slice 4.1 (ruling 12): an NPC's fight is the combat round's to
+// end, by one wait limit for every body; its behaviour tick leaves the aggro
+// alone even when the target is nowhere to be found.
+func TestTickLeavesAFightToTheCombatRound(t *testing.T) {
+	testRoom(t, 9206, testZone, nil)
+	mob := busyMob(t, 9206, 9206, 3)
+	mob.Character.Aggro = &characters.Aggro{Target: ids.New(ids.NoCell)} // nobody online has this body
+
+	assert.Empty(t, tickRounds(t, mob, 5), "no idle, no emote")
+	require.NotNil(t, mob.Character.Aggro, "the tick does not end the fight")
 }

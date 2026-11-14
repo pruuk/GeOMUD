@@ -419,7 +419,7 @@ func (c *Character) GetAdjectives() []string {
 	retAdjectives := []string{}
 
 	// Start dynamic adjectives
-	if c.Health < 1 {
+	if !isUp(c) {
 		retAdjectives = append(retAdjectives, `downed`)
 	}
 
@@ -459,15 +459,15 @@ func (c *Character) getFormattedName(viewer ids.ID, uType string, renderFlags ..
 		}
 	}
 
-	// If including health, only do so if not downed, because downed shows as its own adjective.
-	if includeHealth && c.Health > 0 {
+	// Health shows only while up: a body that is not up shows downed instead.
+	if includeHealth && isUp(c) {
 		pctHealth := int(math.Ceil(float64(c.Health) / float64(c.HealthMax.Value) * 100))
 		f.Adjectives = append(f.Adjectives, strconv.Itoa(pctHealth)+`%`)
 	}
 
 	f.Adjectives = append(f.Adjectives, c.GetAdjectives()...)
 
-	if c.Health < 1 {
+	if !isUp(c) {
 		f.Suffix = `downed`
 	} else if c.Aggro != nil && !viewer.IsZero() && c.Aggro.Target == viewer {
 		f.Suffix = `aggro`
@@ -699,8 +699,8 @@ func (c *Character) ForgetTransient() {
 	c.KillerMobId = 0
 }
 
-// ForgetKillerIfUp drops the record of who downed this character once its
-// health is 1 or more, so a later death from another cause (poison, a
+// ForgetKillerIfUp drops the record of who downed this character once the
+// ruleset calls it up again (IsUp), so a later death from another cause (poison, a
 // suicide) is not credited to a stale killer. Health is a plain field with
 // no single writer, so every Character method that raises it calls this:
 // Heal (the AutoHeal regeneration), ApplyHealthChange, and the full restore
@@ -708,7 +708,7 @@ func (c *Character) ForgetTransient() {
 // death that respawns the body has its record cleared by death's
 // recordPlayerDeath, which books it first.
 func (c *Character) ForgetKillerIfUp() {
-	if c.Health < 1 {
+	if !isUp(c) {
 		return
 	}
 	c.KilledBy = ids.ID{}
@@ -804,20 +804,22 @@ func (c *Character) SetAggro(target ids.ID, aggroType AggroType, roundsWaitTime 
 		}
 	}
 
+	since := util.GetRoundCount()
+	if c.Aggro != nil && c.Aggro.Target == target {
+		since = c.Aggro.Since // the same fight, re-armed
+	}
+
 	c.Aggro = &Aggro{
 		Target:        target,
 		Type:          aggroType,
 		RoundsWaiting: combatAddlWaitRounds,
+		Since:         since,
 	}
 
 }
 
 func (c *Character) EndAggro() {
 	c.Aggro = nil
-}
-
-func (c *Character) IsDisabled() bool {
-	return c.Health <= 0
 }
 
 func (c *Character) HasBuffFlag(buffFlag string) bool {
@@ -898,14 +900,6 @@ func (c *Character) ApplyHealthChange(healthChange int) int {
 	newHealth := c.Health + healthChange
 	if newHealth < 0 {
 		c.CancelBuffsWithFlag("cancel-on-combat")
-
-		// If they haven't dropped yet, require a drop before going straight to death.
-		// Don't allow players to drop under -5 in a single hit.
-		if newHealth < -5 && oldHealth > 0 {
-			newHealth = -5
-		} else if newHealth <= -10 {
-			newHealth = -10
-		}
 	} else if newHealth > c.HealthMax.Value {
 		newHealth = c.HealthMax.Value
 	}
@@ -1200,10 +1194,6 @@ func (c *Character) Validate(recalcPermaBuffs ...bool) error {
 	}
 	if c.Health > c.HealthMax.Value {
 		c.Health = c.HealthMax.Value
-	}
-
-	if c.Health < -10 {
-		c.Health = -10
 	}
 
 	if c.Mana < 0 {
@@ -1520,7 +1510,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if !c.Equipment.Offhand.IsDisabled() { // Don't allow equipping on a disabled slot
 			// If it's a 2 handed weapon, remove whatever is in the offhand
 			if iHandsRequired == 2 || !canDualWield && c.Equipment.Offhand.GetSpec().Type == items.Weapon {
-				if c.Equipment.Offhand.IsRemoveLocked() && c.Health > 0 {
+				if c.Equipment.Offhand.IsRemoveLocked() && isUp(c) {
 					return returnItems, false, `Your ` + c.Equipment.Offhand.DisplayName() + ` is bound to you and cannot be removed.`
 				}
 				returnItems = append(returnItems, c.Equipment.Offhand)
@@ -1531,7 +1521,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if c.Equipment.Weapon.IsCursed() {
 			return returnItems, false, `Your ` + c.Equipment.Weapon.DisplayName() + ` is cursed and prevents you from removing it.`
 		}
-		if c.Equipment.Weapon.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Weapon.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Weapon.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 
@@ -1549,14 +1539,14 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 				if c.Equipment.Weapon.IsCursed() {
 					return returnItems, false, `Your ` + c.Equipment.Weapon.DisplayName() + ` is cursed and prevents you from removing it.`
 				}
-				if c.Equipment.Weapon.IsRemoveLocked() && c.Health > 0 {
+				if c.Equipment.Weapon.IsRemoveLocked() && isUp(c) {
 					return returnItems, false, `Your ` + c.Equipment.Weapon.DisplayName() + ` is bound to you and cannot be removed.`
 				}
 				returnItems = append(returnItems, c.Equipment.Weapon)
 				c.Equipment.Weapon = items.Item{}
 			}
 		}
-		if c.Equipment.Offhand.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Offhand.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Offhand.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 		returnItems = append(returnItems, c.Equipment.Offhand)
@@ -1565,7 +1555,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if c.Equipment.Head.IsDisabled() { // Don't allow equipping on a disabled slot
 			return returnItems, false, `You can't wear things on your head.`
 		}
-		if c.Equipment.Head.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Head.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Head.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 		returnItems = append(returnItems, c.Equipment.Head)
@@ -1574,7 +1564,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if c.Equipment.Neck.IsDisabled() { // Don't allow equipping on a disabled slot
 			return returnItems, false, `You can't wear things on your neck.`
 		}
-		if c.Equipment.Neck.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Neck.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Neck.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 		returnItems = append(returnItems, c.Equipment.Neck)
@@ -1583,7 +1573,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if c.Equipment.Body.IsDisabled() { // Don't allow equipping on a disabled slot
 			return returnItems, false, `You can't wear things on your body.`
 		}
-		if c.Equipment.Body.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Body.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Body.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 		returnItems = append(returnItems, c.Equipment.Body)
@@ -1592,7 +1582,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if c.Equipment.Belt.IsDisabled() { // Don't allow equipping on a disabled slot
 			return returnItems, false, `You can't wear things on your head.`
 		}
-		if c.Equipment.Belt.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Belt.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Belt.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 		returnItems = append(returnItems, c.Equipment.Belt)
@@ -1601,7 +1591,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if c.Equipment.Gloves.IsDisabled() { // Don't allow equipping on a disabled slot
 			return returnItems, false, `You can't wear things as gloves.`
 		}
-		if c.Equipment.Gloves.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Gloves.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Gloves.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 		returnItems = append(returnItems, c.Equipment.Gloves)
@@ -1610,7 +1600,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if c.Equipment.Ring.IsDisabled() { // Don't allow equipping on a disabled slot
 			return returnItems, false, `You can't wear rings.`
 		}
-		if c.Equipment.Ring.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Ring.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Ring.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 		returnItems = append(returnItems, c.Equipment.Ring)
@@ -1619,7 +1609,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if c.Equipment.Legs.IsDisabled() { // Don't allow equipping on a disabled slot
 			return returnItems, false, `You can't wear things on your legs.`
 		}
-		if c.Equipment.Legs.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Legs.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Legs.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 		returnItems = append(returnItems, c.Equipment.Legs)
@@ -1628,7 +1618,7 @@ func (c *Character) Wear(i items.Item) (returnItems []items.Item, newItemWorn bo
 		if c.Equipment.Feet.IsDisabled() { // Don't allow equipping on a disabled slot
 			return returnItems, false, `You can't wear things on your feet.`
 		}
-		if c.Equipment.Feet.IsRemoveLocked() && c.Health > 0 {
+		if c.Equipment.Feet.IsRemoveLocked() && isUp(c) {
 			return returnItems, false, `Your ` + c.Equipment.Feet.DisplayName() + ` is bound to you and cannot be removed.`
 		}
 		returnItems = append(returnItems, c.Equipment.Feet)
@@ -1646,7 +1636,7 @@ func (c *Character) RemoveFromBody(i items.Item) bool {
 
 	for _, slot := range AllSlots() {
 		if i.Equals(*c.Equipment.Get(slot)) {
-			if i.IsRemoveLocked() && c.Health > 0 {
+			if i.IsRemoveLocked() && isUp(c) {
 				return false
 			}
 			c.Equipment.Set(slot, items.Item{})

@@ -79,7 +79,7 @@ type combatWorld struct {
 func newCombatWorld(t *testing.T, seed int64) *combatWorld {
 	t.Helper()
 	loadCombatData.Do(func() {
-		// Attack message text, the broken-item spec and race dice come from the
+		// Attack message text and race dice come from the
 		// empty world's data, so a change to that data shows in the goldens.
 		races.LoadDataFiles()
 		items.LoadDataFiles()
@@ -172,6 +172,12 @@ func newCombatWorld(t *testing.T, seed int64) *combatWorld {
 		}
 	})
 
+	// The round count starts at 1000 for every fixture and each recorded
+	// round advances it, as the game loop does (an aggro records the round
+	// it began, Aggro.Since).
+	prevRound := util.GetRoundCount()
+	util.SetRoundCount(1000)
+	t.Cleanup(func() { util.SetRoundCount(prevRound) })
 	util.SeedRandForTest(seed)
 	t.Cleanup(func() { util.SeedRandForTest(time.Now().UnixNano()) }) // back on a clock seed, as production runs
 	fmt.Fprintf(&w.out, "seed %d\n", seed)
@@ -267,10 +273,17 @@ func weapon(itemId int, name string, subtype items.ItemSubType, dice, sides, wai
 	return items.Item{ItemId: itemId, Id: ids.New(ids.NoCell), Spec: &spec}
 }
 
-func shield(itemId int, name string, breakChance uint8) items.Item {
+// typeShoot arms c's aggro as the shoot command does: through exitName at
+// target, holding one typed shot (Phase 5 slice 4.1, ruling 13).
+func typeShoot(c *characters.Character, exitName string, target ids.ID) {
+	c.SetAggroRemote(exitName, target, characters.Shooting)
+	c.Aggro.Shot = characters.TypedShot
+}
+
+func shield(itemId int, name string) items.Item {
 	spec := items.ItemSpec{
 		ItemId: itemId, Name: name, NameSimple: name, Type: items.Offhand, Subtype: items.Wearable,
-		DamageReduction: 10, BreakChance: breakChance,
+		DamageReduction: 10,
 	}
 	return items.Item{ItemId: itemId, Id: ids.New(ids.NoCell), Spec: &spec}
 }
@@ -292,12 +305,15 @@ func (w *combatWorld) aggro(c *characters.Character) string {
 		return "none"
 	}
 	kind := map[characters.AggroType]string{
-		characters.DefaultAttack: "DefaultAttack", characters.Shooting: "Shooting", characters.BackStab: "BackStab",
+		characters.DefaultAttack: "DefaultAttack", characters.Shooting: "Shooting",
 		characters.Flee: "Flee",
 	}[c.Aggro.Type]
 	s := fmt.Sprintf("%s %s wait=%d", w.name(c.Aggro.Target), kind, c.Aggro.RoundsWaiting)
 	if c.Aggro.ExitName != "" {
 		s += " exit=" + c.Aggro.ExitName
+	}
+	if c.Aggro.Shot != characters.NoShot {
+		s += " shot=" + map[characters.ShotMark]string{characters.TypedShot: "typed", characters.EarnedShot: "earned"}[c.Aggro.Shot]
 	}
 	return s
 }
@@ -405,7 +421,7 @@ func (w *combatWorld) rounds(max int) {
 	for i := 1; i <= max && w.fighting(); i++ {
 		w.reads = map[int][]string{}
 		w.events = nil
-		DoCombat(events.NewRound{})
+		DoCombat(events.NewRound{RoundNumber: util.IncrementRoundCount()})
 		events.ProcessEvents()
 		w.drainInputs()
 		w.collect()
@@ -586,7 +602,7 @@ func deathConfig(t *testing.T) {
 	require.True(t, bool(configs.GetGamePlayConfig().Death.CorpsesEnabled), "the override took")
 }
 
-// A player kills an NPC.
+// A player kills an NPC that fights back.
 func TestCombatGoldenPvMToDeath(t *testing.T) {
 	w := newCombatWorld(t, 111)
 	w.recoveryRoom()
@@ -600,15 +616,15 @@ func TestCombatGoldenPvMToDeath(t *testing.T) {
 	require.Less(t, rat.Character.Health, 1, "the fixture must reach the rat's death")
 }
 
-// A player attacks a player who does not fight back; the defender's shield
-// can break.
+// A player attacks a player, who fights back; the
+// defender's shield blocks some of the damage.
 func TestCombatGoldenPvP(t *testing.T) {
 	w := newCombatWorld(t, 202)
 	w.recoveryRoom()
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
 	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
 	bob := w.addPlayer(9302, "Bob", goldenRoomA, 10, 10, 10, 15)
-	bob.Character.Equipment.Offhand = shield(93102, "testshield", 90)
+	bob.Character.Equipment.Offhand = shield(93102, "testshield")
 	alice.Character.SetAggro(bob.Character.Id, characters.DefaultAttack)
 	w.start()
 	w.rounds(20)
@@ -660,7 +676,7 @@ func TestCombatGoldenFleeBlocked(t *testing.T) {
 }
 
 // A player's flee succeeds: they leave through the only exit and the NPC
-// that fought them loses its target.
+// that fought them waits on its target in the room they left.
 func TestCombatGoldenFleeSuccess(t *testing.T) {
 	w := newCombatWorld(t, 606)
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 100, 10, 10, 10)
@@ -675,14 +691,15 @@ func TestCombatGoldenFleeSuccess(t *testing.T) {
 }
 
 // A player shoots an NPC in the next room through an exit; a player in that
-// room watches. The remote aggro lasts one attack round.
+// room watches. The shooter shoots once, then waits; the NPC, with no bow,
+// waits.
 func TestCombatGoldenShootThroughExit(t *testing.T) {
 	w := newCombatWorld(t, 707)
 	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
 	alice.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
 	w.addPlayer(9303, "Carol", goldenRoomB, 10, 10, 10, 10)
 	rat := w.addNPC(93201, "rat", 10, goldenRoomB, 10, 5, 5, 12, "golden-rats-shoot")
-	alice.Character.SetAggroRemote("north", rat.Character.Id, characters.Shooting)
+	typeShoot(alice.Character, "north", rat.Character.Id)
 	w.start()
 	w.rounds(2)
 	w.check("shoot_exit")
@@ -735,7 +752,7 @@ func TestCombatGoldenDeathNPC(t *testing.T) {
 		require.NoError(t, os.RemoveAll(filepath.Join(dataFolder, "rooms.instances")))
 		require.NoError(t, rooms.LoadEndings()) // no ledger file: the ledger in memory is empty again
 	})
-	alice := w.addPlayer(9301, "Alice", goldenRoomA, 5, 30, 20, 10)
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 5, 30, 20, 30)
 	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
 	alice.Character.Alignment = 19 // neutral; killing the evil rat shifts her to lawful
 	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 12, "golden-rats-death")
@@ -815,7 +832,7 @@ func TestShootWaitLineDoesNotReachTargetRoom(t *testing.T) {
 	alice.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 1)
 	carol := w.addPlayer(9303, "Carol", goldenRoomB, 10, 10, 10, 10)
 	rat := w.addNPC(93201, "rat", 10, goldenRoomB, 10, 5, 5, 12)
-	alice.Character.SetAggroRemote("north", rat.Character.Id, characters.Shooting)
+	typeShoot(alice.Character, "north", rat.Character.Id)
 	w.start()
 	w.rounds(1)
 	require.NotEmpty(t, w.reads[alice.UserId], "the shooter reads the wait line")
@@ -856,4 +873,25 @@ func TestKilledByOutlivesTheKiller(t *testing.T) {
 	alice.Character.Heal(alice.Character.HealthMax.Value, 0)
 	require.True(t, alice.Character.KilledBy.IsZero(), "back on her feet: no stale killer")
 	require.Zero(t, alice.Character.KillerMobId)
+}
+
+// A player wounds an NPC, then the fight ends (both aggros are cleared, as
+// a "break" would leave them) and the regen pass runs four times (Phase 5
+// slice 4.1: recorded before NPC regen; since then the rat heals each pass).
+// The rat has no groups, so the fixture leaves no hatred behind.
+func TestCombatGoldenNPCRegen(t *testing.T) {
+	w := newCombatWorld(t, 1010)
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 30, 30, 20, 10)
+	alice.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 1, 6, 0)
+	rat := w.addNPC(93201, "rat", 10, goldenRoomA, 10, 5, 5, 40)
+	alice.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+	w.start()
+	w.rounds(2)
+	alice.Character.EndAggro()
+	rat.Character.EndAggro()
+	wounded := rat.Character.Health
+	w.heal(4, func() bool { return false })
+	w.check("npc_regen")
+	require.Less(t, wounded, rat.Character.HealthMax.Value, "the fixture must wound the rat")
+	require.Greater(t, wounded, 0, "the rat must survive the fight")
 }

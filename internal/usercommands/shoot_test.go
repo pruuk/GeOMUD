@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/GoMudEngine/GoMud/internal/actors"
+	"github.com/GoMudEngine/GoMud/internal/characters"
 	"github.com/GoMudEngine/GoMud/internal/configs"
 	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/ids"
@@ -91,6 +92,7 @@ func TestShootAtAPlayerQueuesAggroChanged(t *testing.T) {
 	require.NotNil(t, shooter.Character.Aggro)
 	assert.Equal(t, target.Id, shooter.Character.Aggro.Target)
 	assert.Equal(t, "north", shooter.Character.Aggro.ExitName)
+	assert.Equal(t, characters.TypedShot, shooter.Character.Aggro.Shot, "shoot arms one typed shot")
 }
 
 // Shooting an NPC queues AggroChanged, and PvP settings do not refuse it
@@ -108,22 +110,26 @@ func TestShootAtAnNPCQueuesAggroChanged(t *testing.T) {
 	require.Len(t, got, 1)
 	assert.Equal(t, shooter.Id, got[0].ActorId)
 	assert.Equal(t, here.RoomId, got[0].RoomId)
+	require.NotNil(t, shooter.Character.Aggro)
+	assert.Equal(t, characters.TypedShot, shooter.Character.Aggro.Shot, "shoot arms one typed shot")
 }
 
-// An NPC shooting a player obeys the PvP settings too.
-func TestNPCShootingAPlayerRefusedWhenPvPDisabled(t *testing.T) {
+// An NPC shooting a player is not PvP (Phase 5 slice 4.1, plan Q7): it
+// shoots even with PvP disabled.
+func TestNPCShootingAPlayerAllowedWhenPvPDisabled(t *testing.T) {
 	npc, _, here := goSetup(t) // "Rat" is in this room
 	giveBow(npc)
-	addFoundPlayer(t, 9203, "Target", rooms.LoadRoom(testNextRoomId))
+	target := addFoundPlayer(t, 9203, "Target", rooms.LoadRoom(testNextRoomId))
 	setPvP(t, configs.PVPDisabled)
 
 	_, err := Shoot("Target north", npc, here, 0)
 	require.NoError(t, err)
-	assert.Nil(t, npc.Character.Aggro, "a refused NPC shot starts no fight")
+	require.NotNil(t, npc.Character.Aggro, "an NPC shot is not PvP")
+	assert.Equal(t, target.Id, npc.Character.Aggro.Target)
 }
 
-// Control for the test above: with PvP enabled the same NPC shot sets the
-// aggro, so a refusal there is the PvP rule, not a failed lookup.
+// The test above with PvP enabled: the NPC's shot sets the aggro either way
+// (an NPC shooting a player is not PvP, ruling 10).
 func TestNPCShootingAPlayerAllowedWhenPvPEnabled(t *testing.T) {
 	npc, _, here := goSetup(t) // "Rat" is in this room
 	giveBow(npc)

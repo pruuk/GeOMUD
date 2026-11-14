@@ -8,13 +8,15 @@ import (
 	"time"
 )
 
-// fightStepTimeout is how long bot 0 waits for the rat to die. Rounds are 4 s
-// and `attack rat` may pick a tougher rat (measured: up to about 110 s, 27
-// rounds), so 4 minutes leaves room on a loaded CI runner.
+// fightStepTimeout bounds each of bot 0's fights. Rounds are 4 s. Simulated
+// (Phase 5 slice 4.1 plan, Task 6a Step 12), a fight against the level 1 or
+// the level 5 rat of launch mode's world copy ends either way within 17
+// rounds (68 s); 4 minutes leaves room on a loaded CI runner and for the
+// walk back after a death.
 const fightStepTimeout = 4 * time.Minute
 
 // fightRetryGap is how long bot 0 waits before attacking again after the rat
-// was not there (it wandered off) or the target was lost.
+// was not there or the target was lost.
 const fightRetryGap = 2 * time.Second
 
 // observerWaitTimeout bounds how long bot 0 waits for the observer to reach
@@ -22,12 +24,28 @@ const fightRetryGap = 2 * time.Second
 // concurrently, so this covers the signup lock and a full floor.
 const observerWaitTimeout = 5 * time.Minute
 
-// fightCheck syncs the smoke fight. Bot 0 fights the rat in Town Square; bot 1
-// (when there is one) stands in the room and reads what an observer sees.
-// ready closes when bot 1 is in the room (or has ended, on any path), and
-// done closes when bot 0's fight step has ended (on any path). ok is set
-// before done closes and tells bot 1 that the rat died, so there is
-// something to check.
+// ratTarget is one fight of the smoke: the word bot 0 attacks and the rat's
+// full name, as its death line reads it ("<name> has died.").
+type ratTarget struct{ word, name string }
+
+// launchRats are launch mode's two fights (Phase 5 slice 4.1, ruling 11):
+// the world copy (fightRats) spawns exactly these two in Town Square, the
+// small one at level 1 and the large one at level 5, and neither wanders.
+// Bot 0 fights the small rat first. Each fight may end either way.
+var launchRats = []ratTarget{{"small", "small rat"}, {"large", "large rat"}}
+
+// addrRats is -addr mode's one fight: a server someone else started keeps
+// its own rats (any level, wandering), so bot 0 attacks whichever rat
+// `attack rat` finds; that fight may end either way too.
+var addrRats = []ratTarget{{"rat", "rat"}}
+
+// fightCheck syncs the smoke fight. Bot 0 fights the rats in Town Square;
+// bot 1 (when there is one) stands in the room and reads what an observer
+// sees. ready closes when bot 1 is in the room (or has ended, on any path),
+// and done closes when bot 0's fight step has ended (on any path). ok is set
+// before done closes and tells bot 1 that every fight ended, so there is
+// something to check; endings are the line each fight ended with, as bot 1
+// reads it.
 type fightCheck struct {
 	observer  bool // a bot 1 exists
 	ready     chan struct{}
@@ -35,25 +53,25 @@ type fightCheck struct {
 	readyOnce sync.Once
 	doneOnce  sync.Once
 	ok        bool
-	fighter   string // bot 0's character name, for the observer's checks
+	fighter   string      // bot 0's character name, for the observer's checks
+	rats      []ratTarget // the fights, in order
+	endings   []string    // per fight: "<rat name> has died." or "<fighter> has DIED!"
 }
 
-func newFightCheck(bots int, fighterChar string) *fightCheck {
+func newFightCheck(bots int, fighterChar string, rats []ratTarget) *fightCheck {
 	return &fightCheck{
 		observer: bots >= 2,
 		ready:    make(chan struct{}),
 		done:     make(chan struct{}),
 		fighter:  fighterChar,
+		rats:     rats,
 	}
 }
 
 func (fc *fightCheck) markReady() { fc.readyOnce.Do(func() { close(fc.ready) }) }
 func (fc *fightCheck) markDone()  { fc.doneOnce.Do(func() { close(fc.done) }) }
 
-// fight is bot 0's step: wait for the observer, attack the rat and wait for
-// its death line and the XP line. The fight is over, and the bot's aggro
-// cleared, by the time the death line arrives (npcDeath clears it before it
-// grants XP), so the later steps start with no fight running.
+// fight is bot 0's step: wait for the observer, then fight each rat in turn.
 func (s *script) fight(fc *fightCheck) {
 	if fc == nil {
 		return
@@ -73,42 +91,70 @@ func (s *script) fight(fc *fightCheck) {
 			return
 		}
 	}
+	for _, rat := range fc.rats {
+		ending := s.fightOne(fc.fighter, rat)
+		if s.err != nil {
+			return
+		}
+		fc.endings = append(fc.endings, ending)
+	}
+	fc.ok = true
+}
 
-	const step = "fight: attack rat until it dies"
+// fightOne attacks rat until one of them dies and checks that ending
+// (ruling 11): the rat's death ("<name> has died." and the XP line), or bot
+// 0's ("<fighter> has DIED!", then the recovery room, the walk back to Town
+// Square through its portal, and the ring taken back from its corpse, so the
+// steps after the fight run as before). It returns the ending's line as an
+// observer reads it.
+func (s *script) fightOne(fighter string, rat ratTarget) string {
+	step := "fight: attack " + rat.name
+	ratDied, botDied := rat.name+" has died.", fighter+" has DIED!"
 	deadline := time.Now().Add(fightStepTimeout)
 	for {
 		left := time.Until(deadline)
 		if left <= 0 {
-			s.err = &stepError{step, "the rat did not die in " + fightStepTimeout.String(), s.c.screen()}
-			return
+			s.err = &stepError{step, "the fight did not end in " + fightStepTimeout.String(), s.c.screen()}
+			return ""
 		}
-		s.c.send("attack rat")
-		retry := false
+		s.c.send("attack " + rat.word)
+		retry, ending := false, ""
 		s.err = s.c.until(s.ctx, left, step, func(got string, _ bool) (bool, string) {
-			if strings.Contains(got, "rat has died.") {
-				// Any rat dying ends the step; the XP line follows in the same round.
+			if strings.Contains(got, botDied) {
+				ending = botDied
+				return true, ""
+			}
+			if strings.Contains(got, ratDied) {
+				// The XP line follows the death line in the same round.
 				if strings.Contains(got, "You gained") && strings.Contains(got, "experience points") && strings.Contains(got, "(combat)") {
+					ending = ratDied
 					return true, ""
 				}
-				return false, `no "You gained N experience points ... (combat)" line after "rat has died."`
+				return false, fmt.Sprintf(`no "You gained N experience points ... (combat)" line after %q`, ratDied)
 			}
 			if strings.Contains(got, "You attack the darkness!") || strings.Contains(got, "Your target can't be found.") {
 				retry = true
 				return true, ""
 			}
-			return false, `no "rat has died."`
+			return false, fmt.Sprintf("no %q or %q", ratDied, botDied)
 		})
-		if s.err != nil || !retry {
-			if s.err == nil {
-				fc.ok = true
+		if s.err != nil {
+			return ""
+		}
+		if !retry {
+			if ending == botDied {
+				s.do(step+": in the recovery room", "look", recoveryRoomTitle)
+				s.do(step+": walk back", "portal", startRoomTitle)
+				s.do(step+": take the item from the corpse", "get "+smokeItem+" "+fighter,
+					"You take the "+smokeItem+" from the "+fighter+" corpse")
 			}
-			return
+			return ending
 		}
 		select {
 		case <-time.After(fightRetryGap):
 		case <-s.ctx.Done():
 			s.err = &stepError{step, "interrupted", s.c.screen()}
-			return
+			return ""
 		}
 	}
 }
@@ -119,17 +165,10 @@ var ratWord = regexp.MustCompile(`\brat\b`)
 // promptPrefix matches the status prompt, e.g. "[☀️ 4:01AM HP:6/6 MP:5/5]:".
 var promptPrefix = regexp.MustCompile(`^\[[^\]]*\]:`)
 
-// stripCombatMarks removes the leading marks combat puts on a line (from
-// internal/rules/dikubasic/combat.go, ansi stripped): "*[BACKSTAB]* " on a backstab
-// and "*** " on a crit, in that order when both apply.
+// stripCombatMarks removes the leading mark combat puts on a crit line (from
+// internal/rules/dikubasic/combat.go, ansi stripped): "*** ".
 func stripCombatMarks(line string) string {
-	for {
-		trimmed := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(line, "*[BACKSTAB]*"), "***"))
-		if trimmed == line {
-			return line
-		}
-		line = trimmed
-	}
+	return strings.TrimSpace(strings.TrimPrefix(line, "***"))
 }
 
 // checkObserverText checks what a bystander read during bot fighter's fight:
@@ -157,6 +196,21 @@ func checkObserverText(got, fighter string) error {
 	return nil
 }
 
+// sawEndings reports whether got holds every fight's ending, each line as
+// many times as fights ended with it, and if not, which line is short.
+func sawEndings(got string, endings []string) (bool, string) {
+	want := map[string]int{}
+	for _, e := range endings {
+		want[e]++
+	}
+	for _, e := range endings {
+		if n := strings.Count(got, e); n < want[e] {
+			return false, fmt.Sprintf("%q read %d of %d times", e, n, want[e])
+		}
+	}
+	return true, ""
+}
+
 // observe is bot 1's step: confirm it stands in Town Square, tell bot 0 it can
 // attack, wait for the fight to end and check the text it read meanwhile. The
 // look sets the text mark, so the screen holds everything since it.
@@ -179,7 +233,12 @@ func (s *script) observe(fc *fightCheck) {
 	if !fc.ok {
 		return // bot 0 failed or was cut short: its error is the one that counts
 	}
-	s.wait("fight observer: sees the rat die", "rat has died.")
+	// Each fight's ending, whichever it was: the rat's death line or bot 0's.
+	// Each ending must be read once per fight it ended, so bot 0 dying in
+	// both fights needs its death line twice.
+	s.err = s.c.until(s.ctx, s.c.timeout, "fight observer: sees each fight end", func(got string, _ bool) (bool, string) {
+		return sawEndings(got, fc.endings)
+	})
 	if s.err != nil {
 		return
 	}

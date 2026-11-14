@@ -82,17 +82,30 @@ func (Ruleset) Consider(attacker, defender *actors.Actor) float64 {
 	return CombatOdds(*attacker.Character, *defender.Character)
 }
 
-// CanAttack allows any NPC target. An account target needs PvP allowed in
-// the attacker's room and, when it differs, the defender's room (spec
-// ruling 1: no shooting out of or into a safe room).
+// CanAttack refuses any attacker standing in the recovery room. Any target
+// in the recovery room (or a private copy of it), NPC or player, is safe from
+// every attacker. It allows any other NPC target. The PvP rules apply
+// only when both sides are accounts (Phase 5 slice 4.1: an NPC fighting a
+// player is not PvP): PvP allowed in the attacker's room and, when it
+// differs, the defender's room (spec ruling 1: no shooting out of or into a
+// safe room).
 func (Ruleset) CanAttack(attacker, defender *actors.Actor) error {
+	// The recovery room (or a private copy of it) is safe in both
+	// directions: nobody fights out of it either (plan review round 4).
+	if rooms.IsDeathRecoveryRoom(attacker.Character.RoomId) {
+		return errors.New(`Fighting is not allowed here.`)
+	}
+	// CanPvp checks only the attacker's room against the recovery room; a
+	// safe room protects whoever stands in it, its private copies included,
+	// an NPC as much as a player (spec ruling 10).
+	if rooms.IsDeathRecoveryRoom(defender.Character.RoomId) {
+		return errors.New(`Fighting is not allowed here.`)
+	}
 	if accountOf(defender) == nil {
 		return nil
 	}
-	// CanPvp checks only the attacker's room against the recovery room; a
-	// safe room protects whoever stands in it, its private copies included.
-	if rooms.IsDeathRecoveryRoom(defender.Character.RoomId) {
-		return errors.New(`Fighting is not allowed here.`)
+	if accountOf(attacker) == nil {
+		return nil
 	}
 	r := rooms.LoadRoom(attacker.Character.RoomId)
 	if r == nil {
@@ -123,15 +136,14 @@ func (Ruleset) Condition(a *actors.Actor) rules.Condition {
 }
 
 // Regen in the death recovery room (or a private copy of it) is fast:
-// recoveryRegen. Elsewhere it is GoMud's AutoHeal, moved behind the seam
-// unchanged: an account, every 3rd round, out of a fight and not downed,
-// regains HealthPerRound and ManaPerRound. NPCs do not regenerate there
-// (slice 4 gives every actor the one rule).
+// recoveryRegen. Elsewhere every actor, player or NPC, regenerates by one
+// rule (Phase 5 slice 4.1): every 3rd round, out of a fight and above 0
+// health, it regains HealthPerRound and ManaPerRound.
 func (Ruleset) Regen(a *actors.Actor, round uint64) rules.RegenResult {
 	if rooms.IsDeathRecoveryRoom(a.Character.RoomId) {
 		return recoveryRegen(a)
 	}
-	if accountOf(a) == nil || round%3 != 0 || a.Character.Aggro != nil {
+	if round%3 != 0 || a.Character.Aggro != nil {
 		return rules.RegenResult{}
 	}
 	if a.Character.Health <= 0 {

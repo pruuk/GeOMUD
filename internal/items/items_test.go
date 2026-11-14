@@ -1,8 +1,11 @@
 package items
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/GoMudEngine/GoMud/internal/fileloader"
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -280,4 +283,23 @@ func TestItem_TempData(t *testing.T) {
 	assert.Equal(t, "value", itm.GetTempData("key"))
 	itm.SetTempData("key", nil)
 	assert.Nil(t, itm.GetTempData("key"))
+}
+
+// An item file from before Phase 5 slice 4.1 may still have a breakchance
+// key: the game's item loader (LoadAllFlatFiles, as LoadDataFiles calls it)
+// loads it, and the keys after it too.
+func TestOldItemFileWithBreakKeyLoads(t *testing.T) {
+	dir := t.TempDir()
+	spec := ItemSpec{ItemId: 1, Name: "old shield"}
+	path := filepath.Join(dir, filepath.FromSlash(spec.Filepath()))
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	text := "itemid: 1\nname: old shield\ntype: offhand\nbreakchance: 50\ndamagereduction: 10\n"
+	require.NoError(t, os.WriteFile(path, []byte(text), 0o644))
+
+	loaded, err := fileloader.LoadAllFlatFiles[int, *ItemSpec](dir)
+	require.NoError(t, err)
+	require.Contains(t, loaded, 1)
+	assert.Equal(t, "old shield", loaded[1].Name)
+	assert.Equal(t, Offhand, loaded[1].Type)
+	assert.Equal(t, 10, loaded[1].DamageReduction)
 }

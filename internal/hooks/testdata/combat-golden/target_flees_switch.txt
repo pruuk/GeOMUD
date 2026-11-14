@@ -1,0 +1,45 @@
+seed 1103
+== start
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93001 hp=30/30 aggro=[(none) Flee wait=0] playerdamage={}
+  cat: room=93001 hp=30/30 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 1
+-- Alice reads
+  Your <ansi fg="item">fists</ansi> hits <ansi fg="mobname">rat</ansi> hard for <ansi fg="damage">6 damage</ansi>!
+  <ansi fg="mobname">rat</ansi> flees to the <ansi fg="exit">north</ansi> exit!
+  You are hit hard by <ansi fg="mobname">cat</ansi>, taking <ansi fg="damage">2 damage</ansi>!
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged rat room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged cat room=93001
+-- state
+  Alice: room=93001 hp=58/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93002 hp=24/30 aggro=[none] playerdamage={Alice:6}
+  cat: room=93001 hp=30/30 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+== round 2
+-- Alice reads
+  You turn to fight <ansi fg="mobname">cat</ansi>!
+  You miss with your <ansi fg="item">fists</ansi>.
+  <ansi fg="mobname">cat</ansi> missed you with their <ansi fg="item">teeth and nails</ansi>.
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged Alice room=93001
+  AggroChanged cat room=93001
+-- state
+  Alice: room=93001 hp=58/60 aggro=[cat DefaultAttack wait=0] playerdamage={}
+  rat: room=93002 hp=24/30 aggro=[none] playerdamage={Alice:6}
+  cat: room=93001 hp=30/30 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:0}
+== round 3
+-- Alice reads
+  Your attack fails to hit <ansi fg="mobname">cat</ansi>.
+  <ansi fg="yellow-bold">***</ansi> You are <ansi fg="cyan-bold">CRITICALLY HIT</ansi> by <ansi fg="mobname">cat</ansi>, taking <ansi fg="damage">3 damage</ansi>! <ansi fg="yellow-bold">***</ansi>
+-- events
+  AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged cat room=93001
+-- state
+  Alice: room=93001 hp=55/60 aggro=[cat DefaultAttack wait=0] playerdamage={}
+  rat: room=93002 hp=24/30 aggro=[none] playerdamage={Alice:6}
+  cat: room=93001 hp=30/30 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:0}

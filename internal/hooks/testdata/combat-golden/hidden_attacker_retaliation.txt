@@ -1,0 +1,29 @@
+seed 1106
+== start
+-- state
+  Alice: room=93001 hp=60/60 aggro=[Bob DefaultAttack wait=0] playerdamage={}
+  Bob: room=93001 hp=60/60 aggro=[none] playerdamage={}
+== round 1
+-- Alice reads
+  Your attack strikes <ansi fg="username">Bob</ansi>, causing <ansi fg="damage">1 damage</ansi>.
+-- Bob reads
+  You are hit by someone's attack for <ansi fg="damage">1 damage</ansi>.
+  You can't seem to find your target.
+-- events
+  CharacterVitalsChanged Bob
+  AggroChanged Bob room=93001
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=60/60 aggro=[Bob DefaultAttack wait=0] playerdamage={}
+  Bob: room=93001 hp=59/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:1}
+== round 2
+-- Alice reads
+  <ansi fg="cyan"><ansi fg="username">Bob</ansi> dodges your attack!</ansi>
+-- Bob reads
+  <ansi fg="cyan">You dodge the attack!</ansi>
+  You can't seem to find your target.
+-- events
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=60/60 aggro=[Bob DefaultAttack wait=0] playerdamage={}
+  Bob: room=93001 hp=59/60 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:1}

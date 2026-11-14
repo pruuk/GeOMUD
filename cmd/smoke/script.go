@@ -192,7 +192,7 @@ func play(ctx context.Context, addr string, b bot, timeout, hold time.Duration, 
 	s.do("walk: north", "north", "End of the Line")
 	s.do("walk: south", "south", startRoomTitle)
 	s.do("say", "say hello from "+b.char, `You say, "hello from `+b.char+`"`)
-	// The smoke fight: bot 0 attacks the rat in Town Square, bot 1 watches.
+	// The smoke fight: bot 0 fights the two rats in Town Square (ruling 11), bot 1 watches.
 	// Other bots do nothing here.
 	switch b.idx {
 	case 0:

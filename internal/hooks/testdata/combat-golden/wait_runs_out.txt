@@ -1,0 +1,64 @@
+seed 1108
+== start
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  rat: room=93001 hp=30/30 aggro=[(none) Flee wait=0] playerdamage={}
+== round 1
+-- Alice reads
+  You swing your <ansi fg="item">fists</ansi>, but miss completely!
+  <ansi fg="mobname">rat</ansi> flees to the <ansi fg="exit">north</ansi> exit!
+-- Carol reads
+  <ansi fg="username">Alice</ansi> swings at <ansi fg="mobname">rat</ansi>, but misses.
+  <ansi fg="mobname">rat</ansi> flees to the <ansi fg="exit">north</ansi> exit!
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged rat room=93001
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  rat: room=93002 hp=30/30 aggro=[none] playerdamage={Alice:0}
+== round 2
+-- Alice reads
+  Your target is out of reach.
+-- Carol reads
+-- events
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  rat: room=93002 hp=30/30 aggro=[none] playerdamage={Alice:0}
+== round 3
+-- Alice reads
+-- Carol reads
+-- events
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  rat: room=93002 hp=30/30 aggro=[none] playerdamage={Alice:0}
+== round 4
+-- Alice reads
+-- Carol reads
+-- events
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  rat: room=93002 hp=30/30 aggro=[none] playerdamage={Alice:0}
+== round 5
+-- Alice reads
+-- Carol reads
+-- events
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  rat: room=93002 hp=30/30 aggro=[none] playerdamage={Alice:0}
+== round 6
+-- Alice reads
+  You lose track of <ansi fg="mobname">rat</ansi>.
+-- Carol reads
+  <ansi fg="username">Alice</ansi> mumbles about losing their quarry.
+-- events
+  AggroChanged Alice room=93001
+-- state
+  Alice: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  Carol: room=93001 hp=60/60 aggro=[none] playerdamage={}
+  rat: room=93002 hp=30/30 aggro=[none] playerdamage={Alice:0}
