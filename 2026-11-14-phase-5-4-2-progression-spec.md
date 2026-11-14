@@ -4,7 +4,7 @@ Date: 2026-11-14. Written at `strip/phase-5-4-2-progression` `59cfa1f8` (branche
 `703f4c30`, slice 4.1 merged as #37). Builds on `gomud_strip_plan.md` decisions 6, 12 and 13-15,
 the phase design `2026-11-06-phase-5-rules-seam-design.md` (slice 4 row, "Notes for later slices")
 and slice 4.1's spec (`2026-11-12-phase-5-4-1-leftovers-spec.md`).
-**Not yet reviewed by Calabe.**
+**Approved by Calabe 2026-11-14.**
 
 **Goal.** A small cleanup slice. The reference ruleset keeps levels, XP and stats (decision 13), so
 4.2 deletes only alignment, the training points nobody can spend, and dead progression code; makes
