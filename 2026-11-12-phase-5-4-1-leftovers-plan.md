@@ -64,7 +64,7 @@ was run again there.
 | Smoke crit handling | the only leading mark left is `*** ` (`combat.go:267-273`); `fight_test.go:43` "crit line" already covers it at line start; with the strip reduced to one `TrimPrefix`, both crit rows pass and a no-op strip fails both (run) | read, scratch run |
 | Stale comments the deletions leave | `combat_golden_test.go:82` ("the broken-item spec"), `:603-604` ("the defender's shield can break"), `character.go:702-709` (`ForgetKillerIfUp`: "once its health is 1 or more"), `ruleset.go:125-129` (`Regen`), `registry_test.go:112` ("no BodyReplaced call") | grep |
 | Combat golden helpers | `heal` (`combat_golden_test.go:537-551`), fixtures end at `:823`; last test `TestKilledByOutlivesTheKiller` ends at `:859` (end of file) | read |
-| Golden line endings | goldens are `i/lf w/crlf` with `core.autocrlf=true`; `-update` writes LF and `git status` stays clean | `git ls-files --eol` |
+| Golden line endings | goldens are `i/lf w/crlf` with `core.autocrlf=true` (system config); `-update` writes every golden its `-run` pattern reaches, in LF. A file whose content changed is staged as usual (`git add` stores LF). One whose content did not change shows ` M` in `git status` (its working copy went from CRLF to LF) with nothing in `git diff --stat`; `git add` on it stages nothing and clears the ` M`. Only Task 6a Step 9's broad pattern reaches unchanged files (the seven reads goldens other than `E-move-look`); every other `-update` names one fixture whose content changes | `git ls-files --eol`; a scratch clone of `252d02fe` with `core.autocrlf=true`: `A-admin-room.txt` rewritten in LF showed ` M`, an empty `git diff --stat`, and a clean status after `git add` (2026-11-14) |
 | Package count | the scratch run after Task 6: 41 packages ok plus the 3 known Windows failures (unchanged; `geomud-verifying` needs no edit) | scratch run |
 | `combatTurn` at `1c8e607f` (re-verified, plan review round 2) | `:102` the function; `:104-106` no aggro, no turn; `:124` combat commands for a `DefaultAttack` NPC; `:130` flee; `:143` the target lookup; `:156-160` not found ("Your target can't be found.", aggro ends); `:170-174` not up ("Your rage subsides."); `:184-194` weapon wait rounds; `:197-200` not perceived ("You can't seem to find your target."); `:202` `attack`; `:254` the NPC "stays put / heads that way" block; `:269-275` the end of the swing | read |
 | Task 6a, ruling 12: NPC give-up today | `behaviour.loseLostQuarry` (`behaviour/tick.go:71-84`), called from `Tick`'s aggro branch (`:53-58`): a player target offline or in another room ends the NPC's aggro with `emote mumbles about losing their quarry.`; an NPC target never (`mobs.GetInstance(t) != nil` returns early). No test names it (grep `quarry`: `tick.go` only) | read, grep |
@@ -1683,8 +1683,9 @@ every `internal/hooks/testdata/combat-golden/*.txt` and
 `internal/mutators/testhelpers.go`,
 `cmd/smoke/fightrats_test.go` and eight golden files (by `-update`).
 
-- [ ] **Step 1: `Since` and `OutOfReach` on the aggro.** `internal/characters/aggro.go`, after the
-  `FleeFrom` field (`:20-22`), inside the struct:
+- [ ] **Step 1: `Since` and `OutOfReach` on the aggro.** Do Step 2's tests and Step 1's `shoot_test`
+  assertions first and see them fail to build (Step 2 ends with the run); then the code below.
+  `internal/characters/aggro.go`, after the `FleeFrom` field (`:20-22`), inside the struct:
 
 ```go
 	// Since is the round this aggro began on its target: set when the target
@@ -1845,9 +1846,10 @@ func TestSavedAggroKeepsSince(t *testing.T) {
   (Plan review round 4: an earlier half of this test stripped `since:` and checked 0 was loaded; no
   code change could make it fail, so it is gone, and the plan no longer claims a test for it.)
 
-  Order: write these two tests before Step 1's code, run
+  Order (Step 1 says so too): these two tests and Step 1's `shoot_test` assertions are written
+  first, before any of Step 1's code; run
   `go test ./internal/characters/ ./internal/mobs/ -run 'TestSetAggroSince|TestSavedAggroKeepsSince' -count=1`
-  (build failure: `unknown field Since`), then Step 1, then `ok`.
+  (build failure: `unknown field Since`); then Step 1's code; then the same run prints `ok`.
 
 - [ ] **Step 3: The switch rule** (Q14). Create `internal/death/switch.go`
   (`hooks` imports `death`, so the rule lives where both the round and `Die` reach it):
@@ -3726,7 +3728,123 @@ func TestUnseenTargetGivesWayToASeenAttacker(t *testing.T) {
 		assert.Equal(t, 1, b.Character.Aggro.OutOfReach, "the unseen turn counts")
 	})
 }
+
+// Phase 5 slice 4.1 (spec "Death"; blind review round 7): a death releases
+// every body targeting the victim, a body waiting on it from another room
+// too, so a dead player respawned in the recovery room is never waited on.
+func TestDeathReleasesAnAttackerInAnotherRoom(t *testing.T) {
+	w := newCombatWorld(t, 1)
+	w.recoveryRoom()
+	deathConfig(t)
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 60)
+	bob := w.addPlayer(9302, "Bob", goldenRoomB, 1, 1, 1, 1)
+	carol := w.addPlayer(9303, "Carol", goldenRoomB, 30, 30, 20, 60)
+	carol.Character.Equipment.Weapon = weapon(93101, "testsword", items.Slashing, 4, 6, 0)
+	alice.Character.SetAggro(bob.Character.Id, characters.DefaultAttack) // she waits on Bob from room A
+	carol.Character.SetAggro(bob.Character.Id, characters.DefaultAttack)
+	dead := func() bool { return rooms.IsEphemeralRoomId(bob.Character.RoomId) }
+	for round := 1; round <= 4 && !dead(); round++ {
+		require.NotNil(t, alice.Character.Aggro, "round %d: she still waits on him", round)
+		DoCombat(events.NewRound{})
+		events.ProcessEvents()
+	}
+	require.True(t, dead(), "the fixture must reach Bob's death within her wait limit")
+	assert.Nil(t, alice.Character.Aggro, "his death ends her wait, though she is in another room")
+}
+
+// Phase 5 slice 4.1 (ruling 12; blind review round 7): the wait limit is
+// GamePlay.OutOfReachRounds, not a fixed 5.
+func TestWaitLimitComesFromTheConfig(t *testing.T) {
+	w := newCombatWorld(t, 1)
+	setConfig(t,
+		map[string]any{"GamePlay.OutOfReachRounds": 2},
+		map[string]any{"GamePlay.OutOfReachRounds": int(configs.GetGamePlayConfig().OutOfReachRounds)})
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 30)
+	rat := w.addNPC(93201, "rat", 10, goldenRoomB, 5, 5, 5, 30)
+	a, room := actors.Get(alice.Character.Id), rooms.LoadRoom(goldenRoomA)
+	a.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+	assert.Nil(t, settleTarget(a, room))
+	require.NotNil(t, a.Character.Aggro, "1 turn of 2")
+	assert.Nil(t, settleTarget(a, room))
+	assert.Nil(t, a.Character.Aggro, "a limit of 2 ends the wait on its 2nd turn")
+}
+
+// Phase 5 slice 4.1 (plan review round 5; blind review round 7): with two
+// exits to the target's room, a shot goes through the aggro's own exit when
+// it still leads there, otherwise through the first by name.
+func TestShootingExitPrefersItsOwnExitThenTheFirstByName(t *testing.T) {
+	w := newCombatWorld(t, 1)
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 30)
+	rat := w.addNPC(93201, "rat", 10, goldenRoomB, 5, 5, 5, 30)
+	a, room := actors.Get(alice.Character.Id), rooms.LoadRoom(goldenRoomA)
+	a.Character.Equipment.Weapon = weapon(93103, "testbow", items.Shooting, 1, 6, 0)
+	for _, name := range []string{"east", "up", "west", "down", "out", "gate"} {
+		room.Exits[name] = exit.RoomExit{RoomId: goldenRoomB} // north leads there too
+	}
+	for i := 0; i < 20; i++ { // map order differs between calls
+		a.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+		a.Character.Aggro.Shot = characters.TypedShot
+		require.NotNil(t, settleTarget(a, room))
+		require.Equal(t, "down", a.Character.Aggro.ExitName, "no exit of its own: the first by name")
+	}
+	typeShoot(a.Character, "north", rat.Character.Id)
+	require.NotNil(t, settleTarget(a, room))
+	assert.Equal(t, "north", a.Character.Aggro.ExitName, "its own exit still leads there: kept")
+}
+
+// Phase 5 slice 4.1 (ruling 12; blind review round 7): a body nobody in its
+// room perceives loses track unseen: they read no mumble line.
+func TestLoseTrackIsNotSeenByThoseWhoCannotPerceiveTheBody(t *testing.T) {
+	w := newCombatWorld(t, 1)
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 10, 10, 10, 30)
+	w.addPlayer(9303, "Carol", goldenRoomA, 10, 10, 10, 30)
+	rat := w.addNPC(93201, "rat", 10, goldenRoomB, 5, 5, 5, 30)
+	w.hide(alice.Character)
+	a, room := actors.Get(alice.Character.Id), rooms.LoadRoom(goldenRoomA)
+	a.Character.SetAggro(rat.Character.Id, characters.DefaultAttack)
+	w.told(9301)
+	for turn := 1; turn <= 5; turn++ {
+		assert.Nil(t, settleTarget(a, room))
+	}
+	require.Nil(t, a.Character.Aggro, "she lost track at the limit")
+	events.ProcessEvents()
+	reads := map[int][]string{}
+	for _, e := range w.rec.take() {
+		reads[e.userId] = append(reads[e.userId], strings.TrimSuffix(e.text, "\n"))
+	}
+	assert.Contains(t, reads[9301], `You lose track of <ansi fg="mobname">rat</ansi>.`)
+	assert.Empty(t, reads[9303], "Carol cannot perceive hidden Alice: no mumble line")
+}
+
+// Phase 5 slice 4.1 (spec "What stays as today": a body with no-combat takes
+// no turn; blind review round 7): no-combat still stops a flee, now that the
+// lookup runs before it.
+func TestNoCombatStillStopsAFlee(t *testing.T) {
+	w := newCombatWorld(t, 1)
+	t.Cleanup(buffs.SetTestSpec(&buffs.BuffSpec{
+		BuffId: noCombatBuff, Name: "test calm", TriggerRate: "1 round", TriggerCount: 1000,
+		Flags: []string{"no-combat"},
+	}))
+	alice := w.addPlayer(9301, "Alice", goldenRoomA, 100, 10, 10, 30)
+	require.NoError(t, alice.Character.AddBuff(noCombatBuff, true))
+	fleeAggro(alice.Character)
+	a := actors.Get(alice.Character.Id)
+
+	combatTurn(a)
+	assert.Equal(t, goldenRoomA, alice.Character.RoomId, "no-combat: no flee")
+	require.NotNil(t, alice.Character.Aggro)
+	assert.Equal(t, characters.Flee, alice.Character.Aggro.Type, "the flee stays pending")
+
+	alice.Character.RemoveBuff(noCombatBuff)
+	combatTurn(a)
+	assert.Equal(t, goldenRoomB, alice.Character.RoomId, "control: without it she flees")
+}
 ```
+
+  (The last five tests came from blind review round 7, which found these mutations surviving. The
+  `no-combat` flee rule is today's (spec "What stays as today"); Step 5 moves the lookup above it, so
+  the test guards the reorder. `TestShootingExitPrefers...` gives room A six more exits to room B
+  and repeats the no-own-exit case 20 times, so an unsorted map order cannot pass by chance.)
 
   `TestShootingExitUsesEveryExitTheRoomHas` needs a test-only way to register a mutator spec without
   writing a file (`mutators.SaveMutatorSpec` in `admin.go` writes one). Create
@@ -3794,14 +3912,29 @@ func SetTestSpec(spec *MutatorSpec) (remove func()) {
 | `retaliate` (ruling 13): `typedShot &&` dropped from the shooting branch | `TestRetaliate` | "a shot back earns nothing" (expected 0, actual 2) |
 | `retaliate` (ruling 13): `d.Character.Aggro.Shot = characters.EarnedShot` dropped | `TestRetaliate`, `TestTypedShotEarnsOneShotBack`, `shot_from_another_room` | "one shot back"; "a typed shot earns one back"; `... at line 11` |
 | `aggro.go`: `Shot ShotMark` to ``Shot ShotMark `yaml:"-"` `` | `TestSavedAggroKeepsSince` | `"mob:..." does not contain "shot: 2"` |
+| `releaseAttackers` (review round 7): the loop over `actors.All()` ranges `[]*actors.Actor{}` (only the victim's room is released) | `TestDeathReleasesAnAttackerInAnotherRoom` | "his death ends her wait, though she is in another room" (`Expected nil, but got: &characters.Aggro{... OutOfReach:1, OutOfReachTold:true ...}`) |
+| `outOfReachRounds` (review round 7): returns `5` instead of the config value | `TestWaitLimitComesFromTheConfig` | "a limit of 2 ends the wait on its 2nd turn" (`... OutOfReach:2 ...`) |
+| `shootingExit` (review round 7): the aggro's own exit not put first (`if false && a.Character.Aggro != nil ...`) | `TestShootingExitPrefersItsOwnExitThenTheFirstByName` | "its own exit still leads there: kept" (expected `"north"`, actual `"down"`) |
+| `shootingExit` (review round 7): `sort.Strings(all)` replaced by `_ = sort.Strings` | same | "no exit of its own: the first by name" (expected `"down"`, actual `"north"`) |
+| `loseTrack` (review round 7): the observer line's `Exclude: rooms.NotPerceiving(a.Character)` dropped | `TestLoseTrackIsNotSeenByThoseWhoCannotPerceiveTheBody` | "Carol cannot perceive hidden Alice: no mumble line" (`[Someone mumbles about losing their quarry.]`) |
+| `combatTurn` (review round 7): the flee branch's `if noCombat {` to `if false && noCombat {` | `TestNoCombatStillStopsAFlee` | "no-combat: no flee" (expected 93001, actual 93002) |
+
+  A known equivalent mutation (blind review round 7, not a gap): swapping `retaliate`'s
+  `rules.Get().CanAttack(d, a)` to `CanAttack(a, d)` kills nothing. Retaliation runs right after `a`
+  attacked `d`, which `settleTarget` allowed by `CanAttack(a, d)`, so the swapped check passes
+  wherever the real one does except where `dikubasic`'s checks are one-sided: the recovery room
+  refuses an attacker standing in it but protects only an account target, so an NPC standing in the
+  recovery room, shot from outside, would retaliate under the swap. No fixture puts an NPC there;
+  accepted as equivalent in practice, not tested. The refusal itself is covered by `TestRetaliate`
+  ("the ruleset's CanAttack refuses").
 | `shootingExit`: the lock read from `aRoom.Exits[exitName]` instead of `GetExitInfo` | `TestShootingExitUsesEveryExitTheRoomHas` | "the locked exit stops the shot: waits" |
 | `shootingExit`: `FindExitByName(name)` replaced by `name, aRoom.Exits[name].RoomId` | same | "shoots through the portal" |
 | `shootingExit`: the `ExitsTemp` loop ranges an empty map | same | "shoots through the portal" |
 | `shootingExit`: the mutator loop ranges `(&rooms.Room{}).ActiveMutators` (none) | same | "shoots through the trapdoor" |
 | step 4 for an unseen target here: `!rooms.Perceives(...) && death.Switch(a)` to `false && death.Switch(a)` | `TestUnseenTargetGivesWayToASeenAttacker` | "the turn swings at the rat" |
 | the same, with the `!rooms.Perceives(...)` test dropped (a seen target given up for another attacker) | same | "no switch from a target in reach" |
-| step 5: `if !a.Character.Aggro.OutOfReachTold {` (the one "out of reach" line) to `if true {` | same | "told once" |
-| step 5: the mark `a.Character.Aggro.OutOfReachTold = true` not set | same, and `TestOutOfReachLineOncePerWait` | "told once" |
+| step 5: `if !a.Character.Aggro.OutOfReachTold {` (the one "out of reach" line) to `if true {` | `TestSettleTargetSteps` (step 5) and `TestWaitRunsOutAtTheLimit` | "told once" |
+| step 5: the mark `a.Character.Aggro.OutOfReachTold = true` not set | `TestSettleTargetSteps` (step 5), `TestWaitRunsOutAtTheLimit` and `TestOutOfReachLineOncePerWait` | "told once" |
 | step 5: the line keyed on the count again (`if a.Character.Aggro.OutOfReach == 1 {`) | `TestBeingAttackedByItsTargetResetsTheWait` | "one out-of-reach line for the whole wait, though each shot resets the count" |
 | `inReach`: `a.Character.Aggro.OutOfReachTold = false` dropped | `TestOutOfReachLineOncePerWait` | "a new wait: told again" |
 | step 5: `OutOfReach >= outOfReachRounds()` to `>` | `TestWaitRunsOutAtTheLimit` | "the 5th turn out of reach ends the wait" |
@@ -3852,7 +3985,15 @@ func SetTestSpec(spec *MutatorSpec) (remove func()) {
 | `npc_regen` | the rat swings in rounds 1-2; the numbers shift; heals raise the rat | the rat ends the fight at 32/40 and heals to 36; Alice takes no damage |
 | reads `E-move-look` | the rat's lines appear where Ann attacks it | two lines added after line 130: Bob reads `rat's teeth and nails connects with Ann.`, Ann reads `rat strikes you with their teeth and nails, causing 1 damage.` |
 
-  Every other reads golden byte-identical. Then rerun without `-update` three times
+  Every other reads golden byte-identical. The `-update` rewrote those seven (`A-admin-room`,
+  `B-admin-item-mob`, `C-admin-other`, `D-items`, `F-comms-party`, `G-character-info`,
+  `H-outside`) in LF, so `git status` lists them ` M` though their content did not change (facts
+  row "Golden line endings"). Confirm that `git diff --stat -- internal/hooks/testdata/reads-golden/`
+  lists `E-move-look.txt` alone, then restore the seven:
+  `git checkout -- internal/hooks/testdata/reads-golden/A-admin-room.txt internal/hooks/testdata/reads-golden/B-admin-item-mob.txt internal/hooks/testdata/reads-golden/C-admin-other.txt internal/hooks/testdata/reads-golden/D-items.txt internal/hooks/testdata/reads-golden/F-comms-party.txt internal/hooks/testdata/reads-golden/G-character-info.txt internal/hooks/testdata/reads-golden/H-outside.txt`.
+  That is safe here: with no ref, `git checkout -- <path>` copies the index version back to the
+  working copy and stages nothing, and the diff just showed there is no content to lose. `git status`
+  then lists only this task's files, as the per-task check expects. Then rerun without `-update` three times
   (`go test ./internal/hooks/ -count=1`): `ok` each time (with Step 4; without it, four goldens
   differ run to run).
 
@@ -4153,7 +4294,9 @@ func TestCombatGoldenWaitRunsOut(t *testing.T) {
   the same (scratch, after the answers to Q7-Q15: `-count=2` fails only `FleeSuccess`, once;
   `-shuffle=1` to `6` fail only `FleeSuccess`; the full suite shows only the 3 known Windows failures;
   three plain reruns of `internal/hooks` print `ok`; again with ruling 13, 2026-11-14: `-count=2`
-  fails only `FleeSuccess`, seeds 1-4 and 6 fail only it and seed 5 fails nothing). Run both and
+  fails only `FleeSuccess`, seeds 1-4 and 6 fail only it and seed 5 fails nothing; with review
+  round 7's five tests added, `-count=2` fails only `FleeSuccess`, seeds 1-5 fail only it and seed
+  6 fails nothing: which seeds hit it moves with the test count). Run both and
   report the failing names; any new name is a regression.
 
 - [ ] **Step 12: Smoke fights a real rat and checks both endings (ruling 11).** With ruling 10 the
