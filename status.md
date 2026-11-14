@@ -1,8 +1,8 @@
 # Status (updated 2026-11-14)
 
 ## Now
-- Phase 5 slice 4.1 (round and death leftovers) is executed on `strip/phase-5-4-1-leftovers`; PR to
-  open (#TBD)
+- Phase 5 slice 4.1 (round and death leftovers) is executed on `strip/phase-5-4-1-leftovers`; PR #37,
+  waiting on CI
 
 ## Next
 1. Phase 5 slice 4.2 (progression: levels, XP, alignment, training and stat points, the PvP minimum
