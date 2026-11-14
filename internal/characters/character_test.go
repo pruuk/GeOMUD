@@ -10,6 +10,7 @@ import (
 	"maps"
 
 	"github.com/GoMudEngine/GoMud/internal/ids"
+	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/skills"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,6 +54,7 @@ func TestRecoveringHealthClearsTheKiller(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	mudlog.SetupLogger(nil, "", "", false) // ApplyHealthChange below 0 asks buffs, which log
 	// Seed the skills cache so skill-gated helpers (GetSkillLevel)
 	// behave deterministically without loading datafiles from disk.
 	seedSkills := []*skills.Skill{}
@@ -1325,4 +1327,27 @@ func TestUnsetIsUpFailsLoudly(t *testing.T) {
 	t.Cleanup(func() { IsUp = saved })
 	IsUp = nil
 	assert.PanicsWithValue(t, "characters: IsUp is not set; rules.Set wires it at boot", func() { isUp(New()) })
+}
+
+// Phase 5 slice 4.1: the engine applies damage as given. No floor below 0;
+// the cap at the maximum stays.
+func TestApplyHealthChangeHasNoFloor(t *testing.T) {
+	c := New()
+	c.HealthMax.Value, c.Health = 10, 10
+	assert.Equal(t, -30, c.ApplyHealthChange(-30))
+	assert.Equal(t, -20, c.Health, "a 30 hit on 10 health")
+	assert.Equal(t, -10, c.ApplyHealthChange(-10))
+	assert.Equal(t, -30, c.Health, "a hit on a body already below 0")
+
+	c.Health = 8
+	assert.Equal(t, 2, c.ApplyHealthChange(50))
+	assert.Equal(t, 10, c.Health, "a heal above the maximum stops there")
+}
+
+// Phase 5 slice 4.1: a saved body's health below 0 loads as saved.
+func TestValidateKeepsHealthBelowZero(t *testing.T) {
+	c := New()
+	c.Health = -50
+	require.NoError(t, c.Validate())
+	assert.Equal(t, -50, c.Health)
 }

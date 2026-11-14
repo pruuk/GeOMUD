@@ -9,16 +9,18 @@ import (
 	"testing"
 )
 
-// deathScanned is the engine's round and command code, where the slice 3
-// death guards apply. characters, rooms and the rulesets are outside it
-// (slice 4 moves the characters checks; the import cycle keeps them there
-// for now).
-var deathScanned = []string{"internal/hooks/", "internal/usercommands/", "internal/death/"}
+// deathScanned is the engine code where the death guards apply: the round
+// and command code (slice 3), and the bodies and rooms (slice 4.1, where
+// characters asks the ruleset through characters.IsUp). The rulesets are
+// outside it: comparing health is their job.
+var deathScanned = []string{"internal/hooks/", "internal/usercommands/", "internal/death/", "internal/characters/", "internal/rooms/"}
 
 // itemIsDisabled lists the scanned files that call items.Item.IsDisabled
-// (a disabled equipment slot, not a body's condition), with why. A file on
-// it may still not call .Character.IsDisabled().
+// (a disabled equipment slot, not a body's condition), with why. A body has
+// no IsDisabled since slice 4.1; any other IsDisabled call in a scanned file
+// must be listed here.
 var itemIsDisabled = map[string]string{
+	"internal/characters/character.go":          "Validate, BestUpgrades and Wear handle a slot the race cannot use",
 	"internal/usercommands/look.panels.go":      "the equipment and corpse panels skip a disabled slot",
 	"internal/usercommands/inventory.panels.go": "the inventory panel skips a disabled slot",
 }
@@ -32,7 +34,7 @@ func f(a, c, m, u, itm any) bool {
 	u.CommandFlagged(` + "`suicide`" + `, 0)
 	events.AddToQueue(events.Input{ActorId: a, InputText: "suicide"})
 	_ = itm.IsDisabled()
-	return a.Character.IsDisabled() || c.Health <= -10 || 1 > c.Health || c.Health == (0) || c.Health > c.HealthMax
+	return c.Health <= -10 || 1 > c.Health || c.Health == (0) || c.Health > c.HealthMax
 }
 `
 
@@ -71,16 +73,16 @@ func TestEngineAsksTheRulesetWhoIsDead(t *testing.T) {
 		files++
 		literal, compares := healthLiteralCompares(f)
 		healthCompares += compares
-		for range literal {
-			t.Errorf("%s: compares .Health with a number; ask rules.Get().Condition (slice 3)", path)
+		ask := "rules.Get().Condition"
+		if p == "internal/characters/" {
+			ask = "characters.IsUp (characters cannot import rules)"
 		}
-		for _, onCharacter := range isDisabledCalls(f) {
-			if onCharacter {
-				t.Errorf("%s: calls .Character.IsDisabled(); ask rules.Get().Condition (slice 3)", path)
-				continue
-			}
+		for range literal {
+			t.Errorf("%s: compares .Health with a number; ask %s", path, ask)
+		}
+		if isDisabledCalls(f) > 0 {
 			if _, ok := itemIsDisabled[path]; !ok {
-				t.Errorf("%s: calls .IsDisabled(); a body's: ask rules.Get().Condition (slice 3); an item's: add the file to itemIsDisabled with why", path)
+				t.Errorf("%s: calls .IsDisabled(); an item's: add the file to itemIsDisabled with why (a body has none: ask rules.Get().Condition)", path)
 				continue
 			}
 			itemCalls[path] = true
@@ -108,21 +110,13 @@ func TestEngineAsksTheRulesetWhoIsDead(t *testing.T) {
 	}
 	// ... and the matchers find exactly what is planted: three literal
 	// compares (signed, reversed, in brackets) and not the compare with a
-	// variable; one body IsDisabled call and one other.
+	// variable; one IsDisabled call.
 	planted := parsePlanted(t)
 	if literal, compares := healthLiteralCompares(planted); len(literal) != 3 || compares != 4 {
 		t.Errorf("control: found %d literal health compares of 3 and %d health compares of 4 in the planted source; the literal check is broken", len(literal), compares)
 	}
-	onCharacter, other := 0, 0
-	for _, c := range isDisabledCalls(planted) {
-		if c {
-			onCharacter++
-		} else {
-			other++
-		}
-	}
-	if onCharacter != 1 || other != 1 {
-		t.Errorf("control: found %d .Character.IsDisabled calls of 1 and %d other IsDisabled calls of 1 in the planted source", onCharacter, other)
+	if n := isDisabledCalls(planted); n != 1 {
+		t.Errorf("control: found %d IsDisabled calls of 1 in the planted source; the IsDisabled check is broken", n)
 	}
 }
 
@@ -174,27 +168,24 @@ func healthLiteralCompares(f *ast.File) (literal []token.Pos, compares int) {
 	return literal, compares
 }
 
-// isDisabledCalls returns one entry per X.IsDisabled() call in f: true when
-// X is a .Character selector (a body's IsDisabled, characters.Character).
-// The guard sees syntax, not types: a body reached through another name
-// (char := a.Character; char.IsDisabled()) reads as "other", which is
-// allowed only in the itemIsDisabled files.
-func isDisabledCalls(f *ast.File) []bool {
-	out := []bool{}
-	ast.Inspect(f, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
+// isDisabledCalls counts the X.IsDisabled() calls in f. The guard sees
+// syntax, not types, so every one counts; only the itemIsDisabled files may
+// have any. It no longer tells a body's call from an item's, which is sound
+// while Character.IsDisabled does not exist (deleted in slice 4.1); a body
+// method of that name would need the distinction back.
+func isDisabledCalls(f *ast.File) int {
+	n := 0
+	ast.Inspect(f, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
 		if !ok {
 			return true
 		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != "IsDisabled" {
-			return true
+		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "IsDisabled" {
+			n++
 		}
-		recv, isSel := sel.X.(*ast.SelectorExpr)
-		out = append(out, isSel && recv.Sel.Name == "Character")
 		return true
 	})
-	return out
+	return n
 }
 
 // suicideQueues returns where f queues the suicide command, and how many

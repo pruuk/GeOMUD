@@ -34,5 +34,5 @@ seed 404
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
   dog: room=93001 hp=10/10 aggro=[none] playerdamage={}
-  rat: room=93001 hp=-5/12 aggro=[none] playerdamage={}
+  rat: room=93001 hp=-9/12 aggro=[none] playerdamage={}
   room 93001 floor gold: 25

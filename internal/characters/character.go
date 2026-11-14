@@ -894,14 +894,6 @@ func (c *Character) ApplyHealthChange(healthChange int) int {
 	newHealth := c.Health + healthChange
 	if newHealth < 0 {
 		c.CancelBuffsWithFlag("cancel-on-combat")
-
-		// If they haven't dropped yet, require a drop before going straight to death.
-		// Don't allow players to drop under -5 in a single hit.
-		if newHealth < -5 && oldHealth > 0 {
-			newHealth = -5
-		} else if newHealth <= -10 {
-			newHealth = -10
-		}
 	} else if newHealth > c.HealthMax.Value {
 		newHealth = c.HealthMax.Value
 	}
@@ -1196,10 +1188,6 @@ func (c *Character) Validate(recalcPermaBuffs ...bool) error {
 	}
 	if c.Health > c.HealthMax.Value {
 		c.Health = c.HealthMax.Value
-	}
-
-	if c.Health < -10 {
-		c.Health = -10
 	}
 
 	if c.Mana < 0 {
