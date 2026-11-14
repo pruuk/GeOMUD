@@ -38,6 +38,6 @@
   of 4 on both. Cause not found
 - Copyover runs only on Linux: the smoke copyover step (player and NPC IDs survive) is CI-only
 - Moving a player to the recovery room panics when `DeathRecoveryRoom` is 0 (`ephemeral.go:188`;
-  package tests load no config; shipped room is 75). Help pages in markdown (`get.md`) join their
-  usage lines in a Windows (CRLF) checkout; git stores LF, so servers render them correctly
+  package tests load no config; shipped room is 75). Help pages in markdown join their usage lines
+  in a Windows (CRLF) checkout; git stores LF, so servers render them correctly
 - Known engine and world issues, most from upstream: `docs/known-issues.md`
