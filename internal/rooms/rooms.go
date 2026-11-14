@@ -52,7 +52,6 @@ const (
 	FindFightingMob    FindFlag = 0b00000001000 // aggro vs. a mob
 	FindHostile        FindFlag = 0b00000010000 // will auto-attack players
 	FindMerchant       FindFlag = 0b00000100000 // is a merchant
-	FindDowned         FindFlag = 0b00001000000 // hp < 1
 	FindBuffed         FindFlag = 0b00010000000 // has a buff
 	FindHasLight       FindFlag = 0b00100000000 // has a light source
 	FindNative         FindFlag = 0b10000000000 // spawns in this room
@@ -1141,11 +1140,6 @@ func (r *Room) GetMobs(findTypes ...FindFlag) []ids.ID {
 			continue
 		}
 
-		if typeFlag&FindDowned == FindDowned && mob.Character.Health < 1 {
-			mobMatches = append(mobMatches, mobId)
-			continue
-		}
-
 		if typeFlag&FindBuffed == FindBuffed && len(mob.Character.Buffs.List) > 0 {
 			mobMatches = append(mobMatches, mobId)
 			continue
@@ -1212,11 +1206,6 @@ func (r *Room) GetPlayers(findTypes ...FindFlag) []int {
 		}
 
 		if typeFlag&FindMerchant == FindMerchant && user.HasShop() {
-			playerMatches = append(playerMatches, userId)
-			continue
-		}
-
-		if typeFlag&FindDowned == FindDowned && user.Character.Health < 1 {
 			playerMatches = append(playerMatches, userId)
 			continue
 		}

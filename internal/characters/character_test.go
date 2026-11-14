@@ -66,6 +66,10 @@ func TestMain(m *testing.M) {
 	}
 	skills.SetTestData(seedSkills)
 
+	// The reference rules' Condition (rules.Set wires IsUp in the game;
+	// this package cannot import rules): up above 0 health.
+	IsUp = func(c *Character) bool { return c.Health > 0 }
+
 	os.Exit(m.Run())
 }
 
@@ -1192,48 +1196,6 @@ func TestCharacter_GetSetting(t *testing.T) {
 		})
 	}
 }
-func TestCharacter_IsDisabled(t *testing.T) {
-	tests := []struct {
-		name   string
-		health int
-		want   bool
-	}{
-		{
-			name:   "Health is positive",
-			health: 10,
-			want:   false,
-		},
-		{
-			name:   "Health is zero",
-			health: 0,
-			want:   true,
-		},
-		{
-			name:   "Health is negative",
-			health: -1,
-			want:   true,
-		},
-		{
-			name:   "Health is large positive",
-			health: 100,
-			want:   false,
-		},
-		{
-			name:   "Health is large negative",
-			health: -100,
-			want:   true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := New()
-			c.Health = tt.health
-			got := c.IsDisabled()
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
 func TestCharacter_EndAggro(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -1355,4 +1317,12 @@ func TestHealRestoresManaByTheManaAmount(t *testing.T) {
 	assert.Equal(t, 15, c.Mana)
 	assert.Equal(t, 1, dh)
 	assert.Equal(t, 5, dm)
+}
+
+// An unset IsUp fails loudly (Phase 5 slice 4.1), as rules.Get does.
+func TestUnsetIsUpFailsLoudly(t *testing.T) {
+	saved := IsUp
+	t.Cleanup(func() { IsUp = saved })
+	IsUp = nil
+	assert.PanicsWithValue(t, "characters: IsUp is not set; rules.Set wires it at boot", func() { isUp(New()) })
 }

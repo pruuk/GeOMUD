@@ -13,6 +13,8 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
+	"github.com/GoMudEngine/GoMud/internal/rules"
+	"github.com/GoMudEngine/GoMud/internal/rules/dikubasic"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,6 +22,7 @@ import (
 func TestMain(m *testing.M) {
 	mudlog.SetupLogger(nil, "", "", false)
 	actors.Init()
+	rules.Set(dikubasic.New()) // the room panel's names ask characters.IsUp
 	os.Exit(m.Run())
 }
 

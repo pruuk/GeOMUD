@@ -109,7 +109,7 @@ func TestLoginWithANewBodyIdRekeysTheActor(t *testing.T) {
 	u.Character.Id = ids.New(ids.NoCell)
 	accounts.OnActivate.Fire(u)
 	old := u.Character.Id
-	u.Character.Id = ids.New(ids.NoCell) // no BodyReplaced call
+	u.Character.Id = ids.New(ids.NoCell) // a new body ID, seen at the next login
 	accounts.OnActivate.Fire(u)
 	assert.Nil(t, Get(old))
 	require.NotNil(t, Get(u.Character.Id))
@@ -180,19 +180,6 @@ func TestPlayerKeepsItsActorIdAcrossLogins(t *testing.T) {
 	again.Character.Id = body
 	accounts.OnActivate.Fire(again)
 	assert.Equal(t, body, ByUserId(91).Id)
-}
-
-func TestBodyReplacedRekeysThePlayer(t *testing.T) {
-	Reset()
-	u := &accounts.Account{UserId: 92, Character: characters.New()}
-	u.Character.Id = ids.New(ids.NoCell)
-	accounts.OnActivate.Fire(u)
-	old := u.Character.Id
-	u.Character.Id = ids.New(ids.NoCell)
-	BodyReplaced(u, old)
-	assert.Nil(t, Get(old))
-	assert.Same(t, u, Get(u.Character.Id).Controller().Account())
-	assert.Len(t, All(), 1)
 }
 
 func TestEachVisitsEveryActorOnce(t *testing.T) {

@@ -177,21 +177,6 @@ func bindLocked(u *accounts.Account) (a *Actor, spawned, rebound bool) {
 	return a, a != nil, false
 }
 
-// BodyReplaced re-keys a player whose body was replaced (a permadeath reroll):
-// under one lock it removes the actor with ID old if u drives it, then binds
-// u's new body.
-func BodyReplaced(u *accounts.Account, old ActorId) {
-	mu.Lock()
-	defer mu.Unlock()
-	if a, ok := byId[old]; ok && a.controller.Account() == u {
-		unindex(a)
-		delete(byId, old)
-	}
-	if a, _, _ := bindLocked(u); a != nil {
-		mudlog.Debug("actor", "event", "replaced", "kind", "player", "actorId", a.Id, "oldActorId", old, "userId", u.UserId)
-	}
-}
-
 // unbindAccount removes the actor u drives, but only while u is still the
 // record driving it: a late logout of an older record leaves a newer login's
 // actor alone. It returns the removed actor, or nil.
