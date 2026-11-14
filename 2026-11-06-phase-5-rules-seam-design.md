@@ -226,7 +226,7 @@ Each slice plan reads these first; a note leaves once a slice settles it.
     "What this locks in").
   - Slice 4.2 (progression: levels, XP, alignment, training and stat points, the PvP minimum level and
     their displays). Kill stats: since slice 4.1 a player's retaliation that misses still credits a 0
-    in the attacker's `PlayerDamage` (`attack` tracks every swing, `NewRound_DoCombat.go:80-83`), so
+    in the attacker's `PlayerDamage` (`attack` tracks every swing, `NewRound_DoCombat.go:81-84`), so
     when that attacker later dies to an NPC, `recordPlayerDeath` books it as a PvP death because its
     `PlayerDamage` is not empty (`death/death.go:136-137`; plan review round 2). Slice 4.1 keeps this
     on purpose (spec, Decisions row "Retaliation records the retaliator's damage like any attack");

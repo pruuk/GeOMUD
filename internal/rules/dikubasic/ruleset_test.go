@@ -667,3 +667,22 @@ func TestCanAttackRefusesAnAttackerInTheRecoveryRoom(t *testing.T) {
 	p.Character.RoomId = here
 	assert.NoError(t, New().CanAttack(p, n), "control: out of it, the NPC may be attacked")
 }
+
+// Phase 5.4.1 final review (spec ruling 10: the recovery room is safe from
+// everyone): an NPC standing in the recovery room, or in a private copy of
+// it, cannot be attacked by a player outside it.
+func TestCanAttackRefusesAnNPCTargetInTheRecoveryRoom(t *testing.T) {
+	const here, recovery = 94015, 94016
+	testRoom(t, here, "rulesetzone")
+	testRoom(t, recovery, "rulesetzone")
+	copyId := recoveryCopy(t, recovery, "rulesetzone")
+	p := player(t, 9634)
+	p.Character.RoomId = here
+	n := npc(t, 0, 0)
+	for _, roomId := range []int{recovery, copyId} {
+		n.Character.RoomId = roomId
+		assert.EqualError(t, New().CanAttack(p, n), "Fighting is not allowed here.", "room %d", roomId)
+	}
+	n.Character.RoomId = here
+	assert.NoError(t, New().CanAttack(p, n), "control: out of it, the NPC may be attacked")
+}

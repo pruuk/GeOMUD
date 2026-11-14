@@ -204,7 +204,8 @@ func combatTurn(a *actors.Actor) (affected []ids.ID) {
 
 	// Combat took a player out of Up: remember who did it (plan Decision 7),
 	// for the death that follows. The defender was up before this attack:
-	// the rage check above returns for one who is not.
+	// settleTarget, which runs before the attack, returns (or switches) for
+	// a target that is not up.
 	if defAcct != nil && rules.Get().Condition(d) != rules.Up {
 		d.Character.KilledBy = a.Id
 		d.Character.KillerMobIsElite = false
