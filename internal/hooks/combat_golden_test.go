@@ -860,7 +860,7 @@ func TestKilledByOutlivesTheKiller(t *testing.T) {
 
 // A player wounds an NPC, then the fight ends (both aggros are cleared, as
 // a "break" would leave them) and the regen pass runs four times (Phase 5
-// slice 4.1, recorded on today's code first: an NPC does not regenerate).
+// slice 4.1: recorded before NPC regen; since then the rat heals each pass).
 // The rat has no groups, so the fixture leaves no hatred behind.
 func TestCombatGoldenNPCRegen(t *testing.T) {
 	w := newCombatWorld(t, 1010)

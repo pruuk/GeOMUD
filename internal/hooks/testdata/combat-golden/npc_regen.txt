@@ -24,22 +24,22 @@ seed 1010
 -- events
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
-  rat: room=93001 hp=30/40 aggro=[none] playerdamage={Alice:10}
+  rat: room=93001 hp=31/40 aggro=[none] playerdamage={Alice:10}
 == heal 2
 -- Alice reads
 -- events
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
-  rat: room=93001 hp=30/40 aggro=[none] playerdamage={Alice:10}
+  rat: room=93001 hp=32/40 aggro=[none] playerdamage={Alice:10}
 == heal 3
 -- Alice reads
 -- events
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
-  rat: room=93001 hp=30/40 aggro=[none] playerdamage={Alice:10}
+  rat: room=93001 hp=33/40 aggro=[none] playerdamage={Alice:10}
 == heal 4
 -- Alice reads
 -- events
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
-  rat: room=93001 hp=30/40 aggro=[none] playerdamage={Alice:10}
+  rat: room=93001 hp=34/40 aggro=[none] playerdamage={Alice:10}

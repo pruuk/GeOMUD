@@ -123,15 +123,14 @@ func (Ruleset) Condition(a *actors.Actor) rules.Condition {
 }
 
 // Regen in the death recovery room (or a private copy of it) is fast:
-// recoveryRegen. Elsewhere it is GoMud's AutoHeal, moved behind the seam
-// unchanged: an account, every 3rd round, out of a fight and not downed,
-// regains HealthPerRound and ManaPerRound. NPCs do not regenerate there
-// (slice 4 gives every actor the one rule).
+// recoveryRegen. Elsewhere every actor, player or NPC, regenerates by one
+// rule (Phase 5 slice 4.1): every 3rd round, out of a fight and above 0
+// health, it regains HealthPerRound and ManaPerRound.
 func (Ruleset) Regen(a *actors.Actor, round uint64) rules.RegenResult {
 	if rooms.IsDeathRecoveryRoom(a.Character.RoomId) {
 		return recoveryRegen(a)
 	}
-	if accountOf(a) == nil || round%3 != 0 || a.Character.Aggro != nil {
+	if round%3 != 0 || a.Character.Aggro != nil {
 		return rules.RegenResult{}
 	}
 	if a.Character.Health <= 0 {

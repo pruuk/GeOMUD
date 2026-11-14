@@ -237,33 +237,32 @@ func TestConditionIsDeadAtZeroOrBelow(t *testing.T) {
 	}
 }
 
-// Parity with the old AutoHeal (NewRound_AutoHeal.go before slice 3).
-func TestRegenOutsideTheRecoveryRoomIsTheOldAutoHeal(t *testing.T) {
+// Outside the recovery room every actor regenerates by one rule (Phase 5
+// slice 4.1): every 3rd round, out of a fight and above 0 health, it regains
+// HealthPerRound and ManaPerRound, an NPC as a player does.
+func TestRegenOutsideTheRecoveryRoomIsOneRuleForEveryActor(t *testing.T) {
 	const here, recovery = 94005, 94006
 	setConfig(t,
 		map[string]any{"SpecialRooms.DeathRecoveryRoom": recovery},
 		map[string]any{"SpecialRooms.DeathRecoveryRoom": int(configs.GetSpecialRoomsConfig().DeathRecoveryRoom)})
 	none := rules.RegenResult{}
 
-	a := player(t, 9621)
-	a.Character.RoomId, a.Character.Health = here, 5
-	full := rules.RegenResult{Health: a.Character.HealthPerRound(), Mana: a.Character.ManaPerRound()}
-	require.NotZero(t, full.Health)
-	assert.Equal(t, full, New().Regen(a, 3), "every 3rd round")
-	assert.Equal(t, full, New().Regen(a, 6))
-	assert.Equal(t, none, New().Regen(a, 4), "only every 3rd round")
-	assert.Equal(t, none, New().Regen(a, 5))
+	for name, a := range map[string]*actors.Actor{"player": player(t, 9621), "npc": npc(t, 0, 0)} {
+		a.Character.RoomId, a.Character.Health = here, 5
+		full := rules.RegenResult{Health: a.Character.HealthPerRound(), Mana: a.Character.ManaPerRound()}
+		require.NotZero(t, full.Health, name)
+		assert.Equal(t, full, New().Regen(a, 3), "%s: every 3rd round", name)
+		assert.Equal(t, full, New().Regen(a, 6), name)
+		assert.Equal(t, none, New().Regen(a, 4), "%s: only every 3rd round", name)
+		assert.Equal(t, none, New().Regen(a, 5), name)
 
-	a.Character.Aggro = &characters.Aggro{Type: characters.DefaultAttack}
-	assert.Equal(t, none, New().Regen(a, 3), "never in a fight")
-	a.Character.Aggro = nil
+		a.Character.Aggro = &characters.Aggro{Type: characters.DefaultAttack}
+		assert.Equal(t, none, New().Regen(a, 3), "%s: never in a fight", name)
+		a.Character.Aggro = nil
 
-	a.Character.Health = 0
-	assert.Equal(t, none, New().Regen(a, 3), "never while down")
-
-	n := npc(t, 0, 0)
-	n.Character.RoomId, n.Character.Health = here, 5
-	assert.Equal(t, none, New().Regen(n, 3), "accounts only")
+		a.Character.Health = 0
+		assert.Equal(t, none, New().Regen(a, 3), "%s: never at 0 health", name)
+	}
 }
 
 // reseed puts the shared random source back on a clock seed after a test.
