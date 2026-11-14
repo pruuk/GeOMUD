@@ -615,3 +615,55 @@ func TestOnDeathReviveOnDeathRevivesAnyActorAtFullHealth(t *testing.T) {
 		assert.Zero(t, out.DropGold, name)
 	}
 }
+
+// Phase 5 slice 4.1 (plan Q7): an NPC attacking a player is not PvP. Under
+// the shipped settings (limited, minimum level 15), in a room that is not a
+// PvP room, an NPC may attack a level 1 player; a player may not; and the
+// recovery room, and a private copy of it, is safe from both.
+func TestCanAttackAppliesPvPOnlyBetweenPlayers(t *testing.T) {
+	const here, recovery = 94011, 94012
+	testRoom(t, here, "rulesetzone")
+	testRoom(t, recovery, "rulesetzone")
+	copyId := recoveryCopy(t, recovery, "rulesetzone")
+	setConfig(t,
+		map[string]any{"GamePlay.PVP.Enabled": "limited", "GamePlay.PVP.MinimumLevel": 15},
+		map[string]any{
+			"GamePlay.PVP.Enabled":      string(configs.GetPVPConfig().Enabled),
+			"GamePlay.PVP.MinimumLevel": int(configs.GetPVPConfig().MinimumLevel),
+		})
+	target := player(t, 9631)
+	target.Character.RoomId = here
+	require.Equal(t, 1, target.Character.Level)
+
+	n := npc(t, 0, 0)
+	n.Character.RoomId = here
+	assert.NoError(t, New().CanAttack(n, target), "an NPC may attack a level 1 player outside a PvP room")
+
+	p := player(t, 9632)
+	p.Character.RoomId = here
+	assert.EqualError(t, New().CanAttack(p, target), "Players must be at least level 15 to PVP.", "player against player: the PvP rules, unchanged")
+
+	for _, roomId := range []int{recovery, copyId} {
+		target.Character.RoomId = roomId // the NPC stays outside, in room here
+		assert.EqualError(t, New().CanAttack(n, target), "Fighting is not allowed here.", "room %d: safe from an NPC too", roomId)
+	}
+}
+
+// Phase 5 slice 4.1 (plan review round 4): the recovery room is safe in
+// both directions; a body standing in it, or in a private copy of it,
+// attacks nobody (for example an NPC through the room's portal).
+func TestCanAttackRefusesAnAttackerInTheRecoveryRoom(t *testing.T) {
+	const here, recovery = 94013, 94014
+	testRoom(t, here, "rulesetzone")
+	testRoom(t, recovery, "rulesetzone")
+	copyId := recoveryCopy(t, recovery, "rulesetzone")
+	n := npc(t, 0, 0)
+	n.Character.RoomId = here
+	p := player(t, 9633)
+	for _, roomId := range []int{recovery, copyId} {
+		p.Character.RoomId = roomId
+		assert.EqualError(t, New().CanAttack(p, n), "Fighting is not allowed here.", "room %d", roomId)
+	}
+	p.Character.RoomId = here
+	assert.NoError(t, New().CanAttack(p, n), "control: out of it, the NPC may be attacked")
+}

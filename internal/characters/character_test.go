@@ -12,6 +12,7 @@ import (
 	"github.com/GoMudEngine/GoMud/internal/ids"
 	"github.com/GoMudEngine/GoMud/internal/mudlog"
 	"github.com/GoMudEngine/GoMud/internal/skills"
+	"github.com/GoMudEngine/GoMud/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1350,4 +1351,24 @@ func TestValidateKeepsHealthBelowZero(t *testing.T) {
 	c.Health = -50
 	require.NoError(t, c.Validate())
 	assert.Equal(t, -50, c.Health)
+}
+
+// Phase 5 slice 4.1, ruling 7: an aggro records the round it began on its
+// target; re-arming the same target keeps it, a new target sets it.
+func TestSetAggroSinceIsSetOnChangeAndKeptOnReArm(t *testing.T) {
+	prev := util.GetRoundCount()
+	t.Cleanup(func() { util.SetRoundCount(prev) })
+	c := New()
+	first, second := ids.New(ids.NoCell), ids.New(ids.NoCell)
+
+	util.SetRoundCount(500)
+	c.SetAggro(first, DefaultAttack)
+	assert.Equal(t, uint64(500), c.Aggro.Since)
+
+	util.SetRoundCount(510)
+	c.SetAggro(first, DefaultAttack)
+	assert.Equal(t, uint64(500), c.Aggro.Since, "the same target, re-armed")
+
+	c.SetAggro(second, DefaultAttack)
+	assert.Equal(t, uint64(510), c.Aggro.Since, "a new target")
 }

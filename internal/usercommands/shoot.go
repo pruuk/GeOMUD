@@ -102,6 +102,7 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 			}
 
 			actor.Character.SetAggroRemote(exitName, attackMobId, characters.Shooting)
+			actor.Character.Aggro.Shot = characters.TypedShot // one shot (Phase 5 slice 4.1, ruling 13)
 			events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 
 			Tell(actor,
@@ -134,6 +135,7 @@ func Shoot(rest string, actor *actors.Actor, room *rooms.Room, flags events.Even
 			}
 
 			actor.Character.SetAggroRemote(exitName, p.Character.Id, characters.Shooting)
+			actor.Character.Aggro.Shot = characters.TypedShot // one shot (Phase 5 slice 4.1, ruling 13)
 			events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 
 			Tell(actor,

@@ -1,0 +1,42 @@
+seed 1104
+== start
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93001 hp=30/30 aggro=[(none) Flee wait=0] playerdamage={}
+== round 1
+-- Alice reads
+  Your <ansi fg="item">fists</ansi> hits <ansi fg="mobname">rat</ansi> hard for <ansi fg="damage">6 damage</ansi>!
+  <ansi fg="mobname">rat</ansi> flees to the <ansi fg="exit">north</ansi> exit!
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged rat room=93001
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93002 hp=24/30 aggro=[none] playerdamage={Alice:6}
+== round 2
+-- Alice reads
+  Your target is out of reach.
+-- events
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93002 hp=24/30 aggro=[none] playerdamage={Alice:6}
+== round 3
+-- Alice reads
+-- events
+-- state
+  Alice: room=93001 hp=60/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93002 hp=24/30 aggro=[none] playerdamage={Alice:6}
+== round 1
+-- Alice reads
+  You miss with your <ansi fg="item">fists</ansi>.
+  <ansi fg="mobname">rat</ansi> strikes you with their <ansi fg="item">teeth and nails</ansi>, causing <ansi fg="damage">4 damage</ansi>.
+  <ansi fg="yellow-bold">***</ansi> <ansi fg="mobname">rat</ansi> <ansi fg="cyan-bold">CRITICALLY HITS</ansi> you with their <ansi fg="item">teeth and nails</ansi> for <ansi fg="damage">9 damage</ansi>! <ansi fg="yellow-bold">***</ansi>
+  <ansi fg="yellow-bold">***</ansi> You are <ansi fg="cyan-bold">CRITICALLY HIT</ansi> by <ansi fg="mobname">rat</ansi>, taking <ansi fg="damage">7 damage</ansi>! <ansi fg="yellow-bold">***</ansi>
+-- events
+  AggroChanged rat room=93001
+  AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged rat room=93001
+-- state
+  Alice: room=93001 hp=40/60 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93001 hp=24/30 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:6}

@@ -7,56 +7,67 @@ seed 303
 -- Alice reads
   <ansi fg="mobname">guard</ansi>'s attack goes wide.
 -- events
+  AggroChanged Alice room=93001
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=12/12 aggro=[none] playerdamage={}
+  Alice: room=93001 hp=12/12 aggro=[guard DefaultAttack wait=0] playerdamage={}
   guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
 == round 2
 -- Alice reads
-  You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">4 damage</ansi>.
+  You miss with your <ansi fg="item">fists</ansi>.
+  You are hit hard by <ansi fg="mobname">guard</ansi>, taking <ansi fg="damage">6 damage</ansi>!
 -- events
+  AggroChanged Alice room=93001
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=8/12 aggro=[none] playerdamage={}
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+  Alice: room=93001 hp=6/12 aggro=[guard DefaultAttack wait=0] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:0}
 == round 3
 -- Alice reads
-  <ansi fg="mobname">guard</ansi> strikes you with their <ansi fg="item">fists</ansi>, causing <ansi fg="damage">5 damage</ansi>.
+  Your <ansi fg="item">fists</ansi> hits <ansi fg="mobname">guard</ansi> hard for <ansi fg="damage">3 damage</ansi>!
+  <ansi fg="mobname">guard</ansi> swings at you but misses!
 -- events
+  AggroChanged Alice room=93001
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=6/12 aggro=[guard DefaultAttack wait=0] playerdamage={}
+  guard: room=93001 hp=7/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:3}
+== round 4
+-- Alice reads
+  Your attack fails to hit <ansi fg="mobname">guard</ansi>.
+  <ansi fg="mobname">guard</ansi>'s <ansi fg="item">fists</ansi> connects with you for <ansi fg="damage">3 damage</ansi>.
+-- events
+  AggroChanged Alice room=93001
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=3/12 aggro=[none] playerdamage={}
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
-== round 4
--- Alice reads
-  <ansi fg="mobname">guard</ansi> missed you with their <ansi fg="item">fists</ansi>.
--- events
-  AggroChanged guard room=93001
--- state
-  Alice: room=93001 hp=3/12 aggro=[none] playerdamage={}
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+  Alice: room=93001 hp=3/12 aggro=[guard DefaultAttack wait=0] playerdamage={}
+  guard: room=93001 hp=7/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:3}
 == round 5
 -- Alice reads
+  You hit <ansi fg="mobname">guard</ansi> with your <ansi fg="item">fists</ansi>, dealing <ansi fg="damage">2 damage</ansi>.
   <ansi fg="mobname">guard</ansi> swings at you but misses!
 -- events
+  AggroChanged Alice room=93001
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=3/12 aggro=[none] playerdamage={}
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+  Alice: room=93001 hp=3/12 aggro=[guard DefaultAttack wait=0] playerdamage={}
+  guard: room=93001 hp=5/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:5}
 == round 6
 -- Alice reads
-  You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">5 damage</ansi>.
+  You miss with your <ansi fg="item">fists</ansi>.
+  <ansi fg="mobname">guard</ansi> strikes you with their <ansi fg="item">fists</ansi>, causing <ansi fg="damage">5 damage</ansi>.
   <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Alice</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
   <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- events
+  AggroChanged Alice room=93001
   CharacterVitalsChanged Alice
-  AggroChanged guard room=93001
   AggroChanged Alice room=93001
   PlayerDeath Alice
+  AggroChanged guard room=93001
   CharacterVitalsChanged Alice
 -- state
   Alice: room=copy-of-93003 hp=1/12 aggro=[none] playerdamage={}
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  guard: room=93001 hp=5/10 aggro=[none] playerdamage={Alice:5}
   room 93001 floor gold: 25

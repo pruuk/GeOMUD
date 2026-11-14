@@ -69,7 +69,7 @@ func Die(victim *actors.Actor) {
 		award(aw, mob)
 	}
 
-	clearKillersAggro(victim)
+	releaseAttackers(victim)
 
 	// The drops leave the body. With no room to put them in, they stay on it.
 	var drops []items.Item
@@ -258,19 +258,6 @@ func award(aw rules.Award, mob *mobs.Mob) {
 	user.GrantXP(aw.XP, `combat`)
 	for _, m := range aw.Messages {
 		messaging.Send(m)
-	}
-}
-
-// clearKillersAggro ends the fight of every account credited with damage to
-// the victim whose body still targets it.
-func clearKillersAggro(victim *actors.Actor) {
-	for uId := range victim.Character.PlayerDamage {
-		u := accounts.GetByUserId(uId)
-		if u == nil || u.Character.Aggro == nil || u.Character.Aggro.Target != victim.Id {
-			continue
-		}
-		u.Character.Aggro = nil
-		events.AddToQueue(events.AggroChanged{ActorId: u.Character.Id, RoomId: u.Character.RoomId})
 	}
 }
 

@@ -6,42 +6,74 @@ seed 111
 == round 1
 -- Alice reads
   You slash at <ansi fg="mobname">rat</ansi> but fail to connect!
+  <ansi fg="mobname">rat</ansi> swings at you but misses!
 -- events
+  AggroChanged rat room=93001
   AggroChanged Alice room=93001
+  AggroChanged rat room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
-  rat: room=93001 hp=12/12 aggro=[none] playerdamage={Alice:0}
+  rat: room=93001 hp=12/12 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:0}
   group golden-rats-pvm hates Alice
 == round 2
 -- Alice reads
-  You wave your <ansi fg="item">testsword</ansi> at <ansi fg="mobname">rat</ansi>, to no avail!
+  In a sweeping motion, you slash <ansi fg="mobname">rat</ansi> with your <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">7 damage</ansi>!
+  <ansi fg="mobname">rat</ansi>'s <ansi fg="item">teeth and nails</ansi> connects with you for <ansi fg="damage">1 damage</ansi>.
 -- events
   AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged rat room=93001
 -- state
-  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
-  rat: room=93001 hp=12/12 aggro=[none] playerdamage={Alice:0}
+  Alice: room=93001 hp=9/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=5/12 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:7}
   group golden-rats-pvm hates Alice
 == round 3
 -- Alice reads
-  In a sweeping motion, you slash <ansi fg="mobname">rat</ansi> with your <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">7 damage</ansi>!
+  You slash at <ansi fg="mobname">rat</ansi> but fail to connect!
+  <ansi fg="mobname">rat</ansi> missed you with their <ansi fg="item">teeth and nails</ansi>.
 -- events
   AggroChanged Alice room=93001
+  AggroChanged rat room=93001
 -- state
-  Alice: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
-  rat: room=93001 hp=5/12 aggro=[none] playerdamage={Alice:7}
+  Alice: room=93001 hp=9/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=5/12 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:7}
   group golden-rats-pvm hates Alice
 == round 4
 -- Alice reads
-  You slash <ansi fg="mobname">rat</ansi> with your <ansi fg="item">testsword</ansi>, causing <ansi fg="damage">5 damage</ansi>!
+  You connect with your <ansi fg="item">testsword</ansi>, wounding <ansi fg="mobname">rat</ansi> for <ansi fg="damage">4 damage</ansi>!
+  <ansi fg="yellow-bold">***</ansi> You are <ansi fg="cyan-bold">CRITICALLY HIT</ansi> by <ansi fg="mobname">rat</ansi>, taking <ansi fg="damage">3 damage</ansi>! <ansi fg="yellow-bold">***</ansi>
+-- events
+  AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged rat room=93001
+-- state
+  Alice: room=93001 hp=6/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=1/12 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:11}
+  group golden-rats-pvm hates Alice
+== round 5
+-- Alice reads
+  Your swing at <ansi fg="mobname">rat</ansi> misses completely!
+  You are hit by <ansi fg="mobname">rat</ansi>'s attack for <ansi fg="damage">1 damage</ansi>.
+-- events
+  AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged rat room=93001
+-- state
+  Alice: room=93001 hp=5/10 aggro=[rat DefaultAttack wait=0] playerdamage={} weapon=93101
+  rat: room=93001 hp=1/12 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:11}
+  group golden-rats-pvm hates Alice
+== round 6
+-- Alice reads
+  You slash <ansi fg="mobname">rat</ansi> with your <ansi fg="item">testsword</ansi>, causing <ansi fg="damage">4 damage</ansi>!
   <ansi fg="mobname">rat</ansi> has died.
   You gained <ansi fg="yellow-bold">19 experience points</ansi>! <ansi fg="7">(combat)</ansi>
   <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- events
-  AggroChanged Alice room=93001
   AggroChanged rat room=93001
   MobDeath rat
+  AggroChanged Alice room=93001
 -- state
-  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101
-  rat: room=93001 hp=0/12 aggro=[none] playerdamage={Alice:12}
+  Alice: room=93001 hp=5/10 aggro=[none] playerdamage={} weapon=93101
+  rat: room=93001 hp=-3/12 aggro=[none] playerdamage={Alice:15}
   group golden-rats-pvm hates Alice
   room 93001 floor gold: 25

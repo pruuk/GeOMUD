@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v2"
 )
 
 // server is a GeOMUD server this program built and started. It runs from
@@ -43,6 +45,101 @@ Network.HttpsPort: 0
 Network.SSHPort: 0
 Network.AI.Port: 0
 `, strconv.Quote(filepath.ToSlash(world)), localPort)
+}
+
+// fightRats sets up launch mode's world copy for the smoke fight (Phase 5
+// slice 4.1, ruling 11). Town Square (startland room 1) gets exactly two
+// rats: a "small rat" pinned at level 1 and a "large rat" pinned at level 5
+// (launchRats), neither wandering (an idle list of one empty command) and
+// neither respawning within a run. End of the Line (room 2), where the
+// shipped world's three rats live and from where they wander, gets none.
+// The admin step still spawns one plain "rat" in Town Square (npcSpeaks),
+// which may wander; bot 0 attacks "small" and "large", which never match
+// it, and the fight checks wait for "small rat has died." and "large rat
+// has died.". The rodent race's damage is unchanged:
+// either rat fights back, and the fight step checks whichever ending comes.
+// Only the temporary copy changes.
+func fightRats(world string) error {
+	dir := filepath.Join(world, "rooms", "startland")
+	if err := editSpawns(filepath.Join(dir, "2.yaml"), func(spawns []any) ([]any, error) {
+		for _, sp := range spawns {
+			if mobIdOf(sp) != ratMobId {
+				return nil, fmt.Errorf("room 2 spawns more than rats: update fightRats")
+			}
+		}
+		return nil, nil
+	}); err != nil {
+		return err
+	}
+	return editSpawns(filepath.Join(dir, "1.yaml"), func(spawns []any) ([]any, error) {
+		for _, sp := range spawns {
+			if mobIdOf(sp) == ratMobId {
+				return nil, fmt.Errorf("room 1 already spawns a rat: update fightRats")
+			}
+		}
+		for i, level := range []int{1, 5} {
+			spawns = append(spawns, yaml.MapSlice{
+				{Key: "mobid", Value: ratMobId},
+				{Key: "name", Value: launchRats[i].name},
+				{Key: "level", Value: level},
+				{Key: "idlecommands", Value: []string{""}},
+				{Key: "respawnrate", Value: "24 real hours"},
+			})
+		}
+		return spawns, nil
+	})
+}
+
+// ratMobId is the rat's mob template (world/empty/mobs/startland/1-rat.yaml).
+const ratMobId = 1
+
+// editSpawns rewrites a room file's spawninfo list through edit; an empty
+// result removes the key.
+func editSpawns(path string, edit func([]any) ([]any, error)) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("fight rats: %w", err)
+	}
+	var room yaml.MapSlice
+	if err := yaml.Unmarshal(b, &room); err != nil {
+		return fmt.Errorf("fight rats: %s: %w", path, err)
+	}
+	out := yaml.MapSlice{}
+	var spawns []any
+	for _, item := range room {
+		if item.Key == "spawninfo" {
+			list, _ := item.Value.([]any)
+			spawns = list
+			continue
+		}
+		out = append(out, item)
+	}
+	spawns, err = edit(spawns)
+	if err != nil {
+		return fmt.Errorf("fight rats: %s: %w", path, err)
+	}
+	if len(spawns) > 0 {
+		out = append(out, yaml.MapItem{Key: "spawninfo", Value: spawns})
+	}
+	b, err = yaml.Marshal(out)
+	if err != nil {
+		return fmt.Errorf("fight rats: %s: %w", path, err)
+	}
+	return os.WriteFile(path, b, 0o644)
+}
+
+// mobIdOf is a spawn entry's mobid, or 0.
+func mobIdOf(spawn any) int {
+	if m, ok := spawn.(yaml.MapSlice); ok {
+		for _, item := range m {
+			if item.Key == "mobid" {
+				if n, ok := item.Value.(int); ok {
+					return n
+				}
+			}
+		}
+	}
+	return 0
 }
 
 // serverBinary is where launch mode builds the server. The path is fixed so
@@ -77,6 +174,9 @@ func launch(ctx context.Context) (_ *server, err error) {
 	world := filepath.Join(dir, "world")
 	if err := os.CopyFS(world, os.DirFS(filepath.Join("_datafiles", "world", "empty"))); err != nil {
 		return s, fmt.Errorf("copy world: %w", err)
+	}
+	if err := fightRats(world); err != nil {
+		return s, err
 	}
 
 	// Build and run the binary directly, so the PID we hold is the server

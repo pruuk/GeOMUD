@@ -7,56 +7,67 @@ seed 303
 -- Alice reads
   <ansi fg="mobname">guard</ansi>'s attack goes wide.
 -- events
+  AggroChanged Alice room=93001
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=12/12 aggro=[none] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Alice: room=93001 hp=12/12 aggro=[guard DefaultAttack wait=0] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
   guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
 == round 2
 -- Alice reads
-  You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">4 damage</ansi>.
+  You wave your <ansi fg="item">testsword</ansi> at <ansi fg="mobname">guard</ansi>, to no avail!
+  You are hit hard by <ansi fg="mobname">guard</ansi>, taking <ansi fg="damage">6 damage</ansi>!
 -- events
+  AggroChanged Alice room=93001
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=8/12 aggro=[none] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Alice: room=93001 hp=6/12 aggro=[guard DefaultAttack wait=0] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:0} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
 == round 3
 -- Alice reads
-  <ansi fg="mobname">guard</ansi> strikes you with their <ansi fg="item">fists</ansi>, causing <ansi fg="damage">5 damage</ansi>.
--- events
-  CharacterVitalsChanged Alice
-  AggroChanged guard room=93001
--- state
-  Alice: room=93001 hp=3/12 aggro=[none] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== round 4
--- Alice reads
-  <ansi fg="mobname">guard</ansi> missed you with their <ansi fg="item">fists</ansi>.
--- events
-  AggroChanged guard room=93001
--- state
-  Alice: room=93001 hp=3/12 aggro=[none] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== round 5
--- Alice reads
+  Your <ansi fg="item">testsword</ansi> cuts into <ansi fg="mobname">guard</ansi>, dealing <ansi fg="damage">3 damage</ansi>!
   <ansi fg="mobname">guard</ansi> swings at you but misses!
 -- events
+  AggroChanged Alice room=93001
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=3/12 aggro=[none] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
-== round 6
+  Alice: room=93001 hp=6/12 aggro=[guard DefaultAttack wait=0] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
+  guard: room=93001 hp=7/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:3} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 4
 -- Alice reads
-  You are hit by <ansi fg="mobname">guard</ansi>'s attack for <ansi fg="damage">5 damage</ansi>.
-  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Alice</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
+  Your swing at <ansi fg="mobname">guard</ansi> misses completely!
+  <ansi fg="mobname">guard</ansi>'s <ansi fg="item">fists</ansi> connects with you for <ansi fg="damage">3 damage</ansi>.
 -- events
+  AggroChanged Alice room=93001
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=3/12 aggro=[guard DefaultAttack wait=0] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
+  guard: room=93001 hp=7/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:3} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 5
+-- Alice reads
+  You deliver a powerful blow to <ansi fg="mobname">guard</ansi>, causing an impressive <ansi fg="damage">5 damage</ansi>!
+  <ansi fg="mobname">guard</ansi> swings at you but misses!
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged guard room=93001
+-- state
+  Alice: room=93001 hp=3/12 aggro=[guard DefaultAttack wait=0] playerdamage={} weapon=93101 items=93108 gold=25 xp=1000 worn=[93101,93107] kd=0/0/0/0/0/0 pk=[] pd=[]
+  guard: room=93001 hp=2/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:8} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 6
+-- Alice reads
+  You wave your <ansi fg="item">testsword</ansi> at <ansi fg="mobname">guard</ansi>, to no avail!
+  <ansi fg="mobname">guard</ansi> strikes you with their <ansi fg="item">fists</ansi>, causing <ansi fg="damage">5 damage</ansi>.
+  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Alice</ansi> has <ansi fg="red-bold">DIED!</ansi> <ansi fg="magenta-bold">***</ansi>
+-- events
+  AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
   AggroChanged Alice room=93001
   PlayerDeath Alice
+  AggroChanged guard room=93001
   ItemOwnership Alice item=93108 gained=false
   CharacterVitalsChanged Alice
 -- state
   Alice: room=copy-of-93003 hp=1/12 aggro=[none] playerdamage={} weapon=93101 gold=0 xp=1000 worn=[93101,93107] kd=0/1/0/0/0/1 pk=[] pd=[]
-  guard: room=93001 hp=10/10 aggro=[none] playerdamage={} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
+  guard: room=93001 hp=2/10 aggro=[none] playerdamage={Alice:8} gold=25 xp=1 worn=[] kd=0/0/0/0/0/0 pk=[] pd=[]
   room 93001 corpse Alice: items=[93108] gold=25 worn=[]

@@ -24,6 +24,9 @@ type GamePlay struct {
 	// Elite mob settings
 	EliteLevelBonus ConfigInt `yaml:"EliteLevelBonus"` // Percent level increase for elite mob spawns (e.g. 20 = 20% higher level)
 	EliteXPBonus    ConfigInt `yaml:"EliteXPBonus"`    // Percent XP bonus for killing an elite mob (e.g. 10 = 10% more XP)
+	// OutOfReachRounds is how many rounds in a row a fight waits on a target
+	// out of reach before the body loses track of it (0 or less = 5).
+	OutOfReachRounds ConfigInt `yaml:"OutOfReachRounds"`
 }
 
 // CombatConfig holds configurable min/max bounds for every combat calculation.
@@ -125,6 +128,10 @@ func (g *GamePlay) Validate() {
 
 	if g.EliteXPBonus < 0 {
 		g.EliteXPBonus = 10
+	}
+
+	if g.OutOfReachRounds <= 0 {
+		g.OutOfReachRounds = 5
 	}
 
 	g.Combat.validate()

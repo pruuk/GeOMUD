@@ -284,6 +284,11 @@ GamePlay:
   #   Percent XP bonus awarded to players when killing an elite mob.
   #   Example: 10 = 10% more XP than normal.
   EliteXPBonus: 10
+  # - OutOfReachRounds -
+  #   How many rounds in a row a fight waits on a target out of reach (in
+  #   another room, with no shot to fire) before the fighter loses track of it.
+  #   0 or less means 5.
+  OutOfReachRounds: 5
   # Party settings
   Party:
     # - MaxPlayerCount -

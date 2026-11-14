@@ -6,41 +6,62 @@ seed 202
 == round 1
 -- Alice reads
   You slash <ansi fg="username">Bob</ansi> with your <ansi fg="item">testsword</ansi>, causing <ansi fg="damage">5 damage</ansi>!
+  You are hit hard by <ansi fg="username">Bob</ansi>, taking <ansi fg="damage">3 damage</ansi>!
 -- Bob reads
   You feel a sharp pain as <ansi fg="username">Alice</ansi> cuts you for <ansi fg="damage">5 damage</ansi>!
+  You wallop <ansi fg="username">Alice</ansi> with your <ansi fg="item">fists</ansi> for <ansi fg="damage">3 damage</ansi>!
 -- events
   CharacterVitalsChanged Bob
+  AggroChanged Bob room=93001
   AggroChanged Alice room=93001
+  CharacterVitalsChanged Alice
+  AggroChanged Bob room=93001
 -- state
-  Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101 gold=25 xp=1 worn=[93101] kd=0/0/0/0/0/0 pk=[] pd=[]
-  Bob: room=93001 hp=10/15 aggro=[none] playerdamage={Alice:5} items=93108 gold=25 xp=1000 worn=[93107] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Alice: room=93001 hp=7/10 aggro=[Bob DefaultAttack wait=0] playerdamage={Bob:3} weapon=93101 gold=25 xp=1 worn=[93101] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93001 hp=10/15 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:5} items=93108 gold=25 xp=1000 worn=[93107] kd=0/0/0/0/0/0 pk=[] pd=[]
 == round 2
 -- Alice reads
-  You connect with your <ansi fg="item">testsword</ansi>, wounding <ansi fg="username">Bob</ansi> for <ansi fg="damage">5 damage</ansi>!
--- Bob reads
-  You feel a sharp pain as <ansi fg="username">Alice</ansi> cuts you for <ansi fg="damage">5 damage</ansi>!
--- events
-  CharacterVitalsChanged Bob
-  AggroChanged Alice room=93001
--- state
-  Alice: room=93001 hp=10/10 aggro=[Bob DefaultAttack wait=0] playerdamage={} weapon=93101 gold=25 xp=1 worn=[93101] kd=0/0/0/0/0/0 pk=[] pd=[]
-  Bob: room=93001 hp=5/15 aggro=[none] playerdamage={Alice:10} items=93108 gold=25 xp=1000 worn=[93107] kd=0/0/0/0/0/0 pk=[] pd=[]
-== round 3
--- Alice reads
   You deliver a powerful blow to <ansi fg="username">Bob</ansi>, causing an impressive <ansi fg="damage">6 damage</ansi>!
-  <ansi fg="username">Bob</ansi> has died.
-  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by <ansi fg="username">Alice</ansi>) <ansi fg="magenta-bold">***</ansi>
+  <ansi fg="username">Bob</ansi> swings at you but misses!
 -- Bob reads
   <ansi fg="username">Alice</ansi> delivers a powerful blow, causing you <ansi fg="damage">6 damage</ansi>!
-  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by <ansi fg="username">Alice</ansi>) <ansi fg="magenta-bold">***</ansi>
+  Your attack fails to hit <ansi fg="username">Alice</ansi>.
 -- events
   CharacterVitalsChanged Bob
   AggroChanged Alice room=93001
   AggroChanged Bob room=93001
+-- state
+  Alice: room=93001 hp=7/10 aggro=[Bob DefaultAttack wait=0] playerdamage={Bob:3} weapon=93101 gold=25 xp=1 worn=[93101] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93001 hp=4/15 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:11} items=93108 gold=25 xp=1000 worn=[93107] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 3
+-- Alice reads
+  You wave your <ansi fg="item">testsword</ansi> at <ansi fg="username">Bob</ansi>, to no avail!
+  <ansi fg="username">Bob</ansi>'s attack goes wide.
+-- Bob reads
+  <ansi fg="username">Alice</ansi> attempts to slash you but misses!
+  You swing your <ansi fg="item">fists</ansi>, but miss completely!
+-- events
+  AggroChanged Alice room=93001
+  AggroChanged Bob room=93001
+-- state
+  Alice: room=93001 hp=7/10 aggro=[Bob DefaultAttack wait=0] playerdamage={Bob:3} weapon=93101 gold=25 xp=1 worn=[93101] kd=0/0/0/0/0/0 pk=[] pd=[]
+  Bob: room=93001 hp=4/15 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:11} items=93108 gold=25 xp=1000 worn=[93107] kd=0/0/0/0/0/0 pk=[] pd=[]
+== round 4
+-- Alice reads
+  You deliver a powerful blow to <ansi fg="username">Bob</ansi>, causing an impressive <ansi fg="damage">7 damage</ansi>!
+  <ansi fg="username">Bob</ansi> has died.
+  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by <ansi fg="username">Alice</ansi>) <ansi fg="magenta-bold">***</ansi>
+-- Bob reads
+  In a sweeping motion, <ansi fg="username">Alice</ansi> slashes you with their <ansi fg="item">testsword</ansi>, doing an impressive <ansi fg="damage">7 damage</ansi>!
+  <ansi fg="magenta-bold">***</ansi> <ansi fg="username">Bob</ansi> has <ansi fg="red-bold">DIED!</ansi> (killed by <ansi fg="username">Alice</ansi>) <ansi fg="magenta-bold">***</ansi>
+-- events
+  CharacterVitalsChanged Bob
+  AggroChanged Bob room=93001
   PlayerDeath Bob
+  AggroChanged Alice room=93001
   ItemOwnership Bob item=93108 gained=false
   CharacterVitalsChanged Bob
 -- state
-  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={} weapon=93101 gold=25 xp=1 worn=[93101] kd=0/0/1/0/0/0 pk=[9302:Bob=1] pd=[]
+  Alice: room=93001 hp=7/10 aggro=[none] playerdamage={Bob:3} weapon=93101 gold=25 xp=1 worn=[93101] kd=0/0/1/0/0/0 pk=[9302:Bob=1] pd=[]
   Bob: room=copy-of-93003 hp=1/15 aggro=[none] playerdamage={} gold=0 xp=1000 worn=[93107] kd=0/0/0/1/0/0 pk=[] pd=[9301:Alice=1]
   room 93001 corpse Bob: items=[93108] gold=25 worn=[]

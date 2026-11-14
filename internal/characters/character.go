@@ -804,10 +804,16 @@ func (c *Character) SetAggro(target ids.ID, aggroType AggroType, roundsWaitTime 
 		}
 	}
 
+	since := util.GetRoundCount()
+	if c.Aggro != nil && c.Aggro.Target == target {
+		since = c.Aggro.Since // the same fight, re-armed
+	}
+
 	c.Aggro = &Aggro{
 		Target:        target,
 		Type:          aggroType,
 		RoundsWaiting: combatAddlWaitRounds,
+		Since:         since,
 	}
 
 }

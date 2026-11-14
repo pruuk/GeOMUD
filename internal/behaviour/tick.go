@@ -5,9 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GoMudEngine/GoMud/internal/accounts"
 	"github.com/GoMudEngine/GoMud/internal/actors"
-	"github.com/GoMudEngine/GoMud/internal/events"
 	"github.com/GoMudEngine/GoMud/internal/mobs"
 	"github.com/GoMudEngine/GoMud/internal/rooms"
 	"github.com/GoMudEngine/GoMud/internal/util"
@@ -51,9 +49,9 @@ func Tick(mob *mobs.Mob) {
 	}
 
 	// If they are doing some sort of combat thing,
-	// Don't do idle actions
+	// Don't do idle actions. A fight whose target is out of reach ends in the
+	// combat round (ruling 12), for every body.
 	if mob.Character.Aggro != nil {
-		loseLostQuarry(mob)
 		return
 	}
 
@@ -66,21 +64,6 @@ func Tick(mob *mobs.Mob) {
 	}
 
 	idle(mob)
-}
-
-// loseLostQuarry ends the fight of an NPC whose target is gone: a player
-// target who is offline or in another room is lost. A vanished NPC target is
-// treated the same (accepted trade-off).
-func loseLostQuarry(mob *mobs.Mob) {
-	t := mob.Character.Aggro.Target
-	if t.IsZero() || mobs.GetInstance(t) != nil {
-		return
-	}
-	if user := accounts.GetByBodyId(t); user == nil || user.Character.RoomId != mob.Character.RoomId {
-		mob.Command(`emote mumbles about losing their quarry.`)
-		mob.Character.Aggro = nil
-		events.AddToQueue(events.AggroChanged{ActorId: mob.Character.Id, RoomId: mob.Character.RoomId})
-	}
 }
 
 // walkPath takes the NPC's next step on its path, and reports whether the

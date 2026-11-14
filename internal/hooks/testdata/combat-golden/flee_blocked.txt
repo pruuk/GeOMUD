@@ -10,25 +10,29 @@ seed 505
 -- events
   AggroChanged Alice room=93001
   CharacterVitalsChanged Alice
+  AggroChanged Alice room=93001
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=28/30 aggro=[none] playerdamage={}
+  Alice: room=93001 hp=28/30 aggro=[guard DefaultAttack wait=0] playerdamage={}
   guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
 == round 2
 -- Alice reads
-  <ansi fg="mobname">guard</ansi>'s <ansi fg="item">fists</ansi> connects with you for <ansi fg="damage">2 damage</ansi>.
+  Your attack fails to hit <ansi fg="mobname">guard</ansi>.
+  <ansi fg="mobname">guard</ansi> strikes you with their <ansi fg="item">fists</ansi>, causing <ansi fg="damage">2 damage</ansi>.
 -- events
+  AggroChanged Alice room=93001
   CharacterVitalsChanged Alice
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=26/30 aggro=[none] playerdamage={}
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+  Alice: room=93001 hp=26/30 aggro=[guard DefaultAttack wait=0] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:0}
 == round 3
 -- Alice reads
-  <ansi fg="mobname">guard</ansi> smashes you with their <ansi fg="item">fists</ansi>, dealing <ansi fg="damage">3 damage</ansi>!
+  Your attack fails to hit <ansi fg="mobname">guard</ansi>.
+  <ansi fg="cyan">You dodge the attack!</ansi>
 -- events
-  CharacterVitalsChanged Alice
+  AggroChanged Alice room=93001
   AggroChanged guard room=93001
 -- state
-  Alice: room=93001 hp=23/30 aggro=[none] playerdamage={}
-  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={}
+  Alice: room=93001 hp=26/30 aggro=[guard DefaultAttack wait=0] playerdamage={}
+  guard: room=93001 hp=10/10 aggro=[Alice DefaultAttack wait=0] playerdamage={Alice:0}

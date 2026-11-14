@@ -8,31 +8,47 @@ seed 404
 -- Alice reads
   <ansi fg="mobname">dog</ansi> attacks <ansi fg="mobname">rat</ansi> but fails to connect.
 -- events
+  AggroChanged rat room=93001
   AggroChanged dog room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
   dog: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={}
-  rat: room=93001 hp=12/12 aggro=[none] playerdamage={}
+  rat: room=93001 hp=12/12 aggro=[dog DefaultAttack wait=0] playerdamage={}
 == round 2
 -- Alice reads
-  <ansi fg="mobname">dog</ansi> delivers a heavy hit to <ansi fg="mobname">rat</ansi>!
+  <ansi fg="mobname">rat</ansi> attacks <ansi fg="mobname">dog</ansi> but fails to connect.
+  <ansi fg="mobname">dog</ansi> smashes <ansi fg="mobname">rat</ansi> with a powerful blow!
 -- events
+  AggroChanged rat room=93001
   AggroChanged dog room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
   dog: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={}
-  rat: room=93001 hp=5/12 aggro=[none] playerdamage={}
+  rat: room=93001 hp=5/12 aggro=[dog DefaultAttack wait=0] playerdamage={}
 == round 3
 -- Alice reads
-  <ansi fg="yellow-bold">***</ansi> <ansi fg="mobname">dog</ansi> <ansi fg="cyan-bold">CRITICALLY HITS</ansi> <ansi fg="mobname">rat</ansi> with their <ansi fg="item">fists</ansi>! <ansi fg="yellow-bold">***</ansi>
+  <ansi fg="mobname">rat</ansi> attacks <ansi fg="mobname">dog</ansi> but fails to connect.
+  <ansi fg="mobname">dog</ansi> strikes <ansi fg="mobname">rat</ansi>, dealing damage.
+-- events
+  AggroChanged rat room=93001
+  AggroChanged dog room=93001
+-- state
+  Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
+  dog: room=93001 hp=10/10 aggro=[rat DefaultAttack wait=0] playerdamage={}
+  rat: room=93001 hp=1/12 aggro=[dog DefaultAttack wait=0] playerdamage={}
+== round 4
+-- Alice reads
+  <ansi fg="mobname">rat</ansi> swings at <ansi fg="mobname">dog</ansi>, but misses.
+  <ansi fg="yellow-bold">***</ansi> <ansi fg="mobname">dog</ansi> <ansi fg="cyan-bold">DEVASTATES</ansi> <ansi fg="mobname">rat</ansi> with their attack! <ansi fg="yellow-bold">***</ansi>
   <ansi fg="mobname">rat</ansi> has died.
   <ansi fg="yellow-bold">25 gold</ansi> drops to the ground.
 -- events
-  AggroChanged dog room=93001
+  AggroChanged rat room=93001
   AggroChanged rat room=93001
   MobDeath rat
+  AggroChanged dog room=93001
 -- state
   Alice: room=93001 hp=10/10 aggro=[none] playerdamage={}
   dog: room=93001 hp=10/10 aggro=[none] playerdamage={}
-  rat: room=93001 hp=-9/12 aggro=[none] playerdamage={}
+  rat: room=93001 hp=-12/12 aggro=[none] playerdamage={}
   room 93001 floor gold: 25

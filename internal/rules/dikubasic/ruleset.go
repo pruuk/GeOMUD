@@ -82,10 +82,19 @@ func (Ruleset) Consider(attacker, defender *actors.Actor) float64 {
 	return CombatOdds(*attacker.Character, *defender.Character)
 }
 
-// CanAttack allows any NPC target. An account target needs PvP allowed in
-// the attacker's room and, when it differs, the defender's room (spec
-// ruling 1: no shooting out of or into a safe room).
+// CanAttack refuses any attacker standing in the recovery room. It allows
+// any other NPC target. An account target in the recovery room
+// (or a private copy of it) is safe from every attacker. The PvP rules apply
+// only when both sides are accounts (Phase 5 slice 4.1: an NPC fighting a
+// player is not PvP): PvP allowed in the attacker's room and, when it
+// differs, the defender's room (spec ruling 1: no shooting out of or into a
+// safe room).
 func (Ruleset) CanAttack(attacker, defender *actors.Actor) error {
+	// The recovery room (or a private copy of it) is safe in both
+	// directions: nobody fights out of it either (plan review round 4).
+	if rooms.IsDeathRecoveryRoom(attacker.Character.RoomId) {
+		return errors.New(`Fighting is not allowed here.`)
+	}
 	if accountOf(defender) == nil {
 		return nil
 	}
@@ -93,6 +102,9 @@ func (Ruleset) CanAttack(attacker, defender *actors.Actor) error {
 	// safe room protects whoever stands in it, its private copies included.
 	if rooms.IsDeathRecoveryRoom(defender.Character.RoomId) {
 		return errors.New(`Fighting is not allowed here.`)
+	}
+	if accountOf(attacker) == nil {
+		return nil
 	}
 	r := rooms.LoadRoom(attacker.Character.RoomId)
 	if r == nil {

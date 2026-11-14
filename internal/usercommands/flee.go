@@ -13,13 +13,16 @@ func Flee(rest string, actor *actors.Actor, room *rooms.Room, flags events.Event
 	if actor.Character.Aggro == nil || actor.Character.Aggro.Type != characters.Flee {
 		Tell(actor, `You attempt to flee...`)
 
-		// Keep the target fled from: a blocked or exitless flee resumes it.
+		// Keep the target fled from, and when that fight began: a blocked or
+		// exitless flee resumes it in its place (Phase 5 slice 4.1).
 		fleeFrom := ids.ID{}
+		var since uint64
 		if actor.Character.Aggro != nil {
 			fleeFrom = actor.Character.Aggro.Target
+			since = actor.Character.Aggro.Since
 		}
 
-		actor.Character.Aggro = &characters.Aggro{Type: characters.Flee, FleeFrom: fleeFrom}
+		actor.Character.Aggro = &characters.Aggro{Type: characters.Flee, FleeFrom: fleeFrom, Since: since}
 		events.AddToQueue(events.AggroChanged{ActorId: actor.Character.Id, RoomId: actor.Character.RoomId})
 	}
 

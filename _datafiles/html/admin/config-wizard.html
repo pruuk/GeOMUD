@@ -1107,6 +1107,13 @@ var FIELD_META = {
         inputType: 'slider',
         min: 0, max: 500, step: 5,
     },
+    'GamePlay.OutOfReachRounds': {
+        label: 'Out-of-Reach Rounds',
+        description: 'How many rounds in a row a fight waits on a target that is out of reach (in another room, with no shot to fire) before the fighter loses track of it.',
+        implications: 'Higher values keep fighters waiting longer for a fleeing target to come back; lower values end such fights sooner. 0 or less means 5.',
+        inputType: 'number',
+        min: 0, max: 100, step: 1,
+    },
     'GamePlay.ShopRestockRate': {
         label: 'Shop Restock Rate',
         description: 'Default time interval for shops to restock one unit of each item. Uses period format (e.g., "6 hours", "30 minutes").',
@@ -1471,7 +1478,7 @@ var SECTIONS = [
         color: '#c0392b',
         iconBg: '#fdecea',
         icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 9H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5S16.33 9 15.5 9z"/><path d="M10 9.5c0 .83-.67 1.5-1.5 1.5h-5C2.67 11 2 10.33 2 9.5S2.67 8 3.5 8h5c.83 0 1.5.67 1.5 1.5z"/><path d="M8.5 15H10v-1.5c0-.83-.67-1.5-1.5-1.5S7 12.67 7 13.5s.67 1.5 1.5 1.5z"/></svg>',
-        fields: ['GamePlay.AllowItemBuffRemoval','GamePlay.XPScale','GamePlay.AlignmentDecayRounds','GamePlay.EliteLevelBonus','GamePlay.EliteXPBonus','GamePlay.ShopRestockRate','GamePlay.MercHirePricePerLevel','GamePlay.ContainerSizeMax','GamePlay.FloorItemCountMax'],
+        fields: ['GamePlay.AllowItemBuffRemoval','GamePlay.XPScale','GamePlay.AlignmentDecayRounds','GamePlay.EliteLevelBonus','GamePlay.EliteXPBonus','GamePlay.OutOfReachRounds','GamePlay.ShopRestockRate','GamePlay.MercHirePricePerLevel','GamePlay.ContainerSizeMax','GamePlay.FloorItemCountMax'],
     },
     {
         key: 'GamePlay.Death',
