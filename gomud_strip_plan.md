@@ -168,6 +168,7 @@ Detail and options: `2026-11-06-phase-5-rulings.md`.
    a hit roll with weapon damage, health regen, death at 0 with a respawn, and races as names only.
    Levels, XP, the stat block and racial stat differences go in the shrink (Earthdawn brings its
    own). The guard test forbids the core from naming any ruleset value, not a fixed list of stats.
+   (Revised 2026-11-14 by decision 13: levels, XP and stats stay in the reference ruleset.)
 10. **The bare reference ruleset has no movement cost and no carry limit.** Action points are a
     ruleset value; the reference ruleset drops them, and encumbrance with them.
 11. **A death in the bare reference ruleset drops carried items and gold into a corpse; worn gear
@@ -176,3 +177,22 @@ Detail and options: `2026-11-06-phase-5-rulings.md`.
     (decision 1) covers code that survives the shrink. Code the shrink deletes skips the parity move
     and goes to its bare form, with a golden recorded first so the change is visible (Calabe,
     2026-11-10, slice 3).
+
+## Decisions (Calabe, 2026-11-14, Phase 5 slice 4.2 brainstorm)
+
+13. **The reference ruleset keeps progression and stats; this revises decision 9.** The base is a
+    bare-bones MUD that others build on, not a stripped one: `dikubasic` keeps levels, XP and kill
+    XP, the stat block and level-scaled creatures. What still holds from decisions 5, 6 and 9: the
+    rules live behind the ruleset seam and the engine names none of them (decision 6), so a ruleset
+    with no levels or stats (Earthdawn) needs no core edit. Slices 4.2 and 4.3 move these systems
+    behind the seam and delete only what is dead (code with no caller, config with no reader, help
+    for commands that do not exist). Decision 9 as written on 2026-11-06 is superseded for levels,
+    XP and stats; gold, races and the floor are unchanged.
+14. **Alignment is deleted** (2026-11-14). Kill shifts, decay, the displays (prompt, `online`,
+    GMCP), race default alignment, the alignment help and the follow module's hate check go. A
+    ruleset that wants alignment brings its own.
+15. **Players spend stat points the way NPCs do, and training points are deleted** (2026-11-14).
+    No command spends either today. On a level-up a player's stat points go round-robin into the six
+    stats, as `AutoTrain` does for NPCs at spawn (one actor ruling). Training points, which nothing
+    spends, go with the `{tp}`/`{sp}` prompt tokens and their GMCP fields. A player choosing where
+    points go (a `train` command) is a ruleset feature for later.
