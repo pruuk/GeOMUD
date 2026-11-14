@@ -6,7 +6,8 @@ Date: 2026-11-12. Written at `master` `12e4848a` (slice 3 merged as #34). Branch
 (`docs/completed/2026-11-10-phase-5-3-round-death-spec.md`).
 **Approved by Calabe 2026-11-12; amended the same day with rulings 6-9 (retaliation and target
 switching), which came out of plan review round 1. Amendment approved by Calabe 2026-11-12.
-Rulings 10-12 added the same day from Calabe's answers during plan review.**
+Rulings 10-12 added the same day from Calabe's answers during plan review; ruling 13 the same day,
+its detail settled by Calabe 2026-11-14.**
 
 **Goal.** Clear what slices 2 and 3 left in the engine for slice 4: the health floors, the health
 checks in `characters` and `rooms`, NPCs that never regenerate, offhand breakage, `BackStab` and
@@ -66,10 +67,10 @@ Calabe:
     `behaviour.loseLostQuarry`.
 13. **Shooting is one shot per action** (2026-11-12, after plan review round 6 found the plan made
     `shoot` keep firing every round). `shoot` fires once, as today, and shooting back under ruling 9
-    is one shot too; neither repeats each round. NOT YET APPLIED to the design text below or the
-    plan: lookup step 3 and the shooter re-arm still describe continued fire. Open detail to settle
-    when applying it: whether each shot received earns one shot back, and what the aggro does after
-    the shot (wait under step 5, or end as `shoot` does today).
+    is one shot too; neither repeats each round. Its detail (2026-11-14, Calabe): after the shot the
+    aggro **waits** (lookup step 5: it swings if the target comes into its room, and loses track
+    after the wait limit), and **each typed `shoot` earns one shot back**, while a shot back earns
+    nothing, so two shooters cannot trade shots forever without anyone typing.
 
 ## Facts verified against source (2026-11-12, `12e4848a`)
 
@@ -119,6 +120,7 @@ Facts for rulings 6-9, read by the controller 2026-11-12 at `1c8e607f`:
 | Turn order | `dikubasic.TurnOrder`: accounts first, then NPCs, each in the order given (`ruleset.go:26-41`); the round takes the order once, before any turn (`NewRound_DoCombat.go:34-36`) | read |
 | Shooting | needs a wielded weapon of subtype `Shooting` (`shoot.go:40`) and the target in the room an unlocked exit leads to (`:59-81`); `SetAggroRemote` sets the aggro and its `ExitName` (`character.go:784-787`); `SetAggro` turns a `DefaultAttack` into `Shooting` when the weapon shoots (`:801-803`) | read |
 | Aggro record | `Aggro{Type, Target, ExitName, RoundsWaiting, FleeFrom}` (`aggro.go:15-23`); no record of when it began. Players do not save it (`character.go:73`, `yaml:"-"`); NPC sidecars do (`mobs/saved.go:20`) | read |
+| A shot today | `shoot` sets a shooting aggro with its exit (`SetAggroRemote`); after the swing the round re-arms through `SetAggro` (`NewRound_DoCombat.go:273`), which builds a new `Aggro` without `ExitName` (`character.go:807-811`), so the next turn finds the target in another room with no exit, reads "Your target can't be found." and ends the aggro (`:146-160`). One shot per `shoot` (read 2026-11-14 at `f8e96841`) | read |
 | Aggro on death | `death.clearKillersAggro` ends the aggro of each account credited with damage that still targets the victim (`death.go:264-275`); NPCs targeting the victim are not cleared there | read |
 
 ## Design
@@ -193,9 +195,9 @@ save it with the rest of the aggro; an old sidecar loads with 0, which reads as 
 aggro that is up, and that the ruleset lets attack back (`CanAttack(defender, attacker)`), takes an
 aggro on its attacker:
 - the attacker in the defender's room: a plain attack;
-- the attacker in another room (it shot through an exit): a shooting aggro through the defender's
-  exit to that room when the defender wields a shooting weapon and an unlocked exit leads there;
-  otherwise an aggro that waits (below);
+- the attacker in another room (it shot through an exit): an aggro on it. When the shot came from
+  a typed `shoot`, the defender wields a shooting weapon and an unlocked exit leads there, the
+  aggro holds one shot back (ruling 13); otherwise it waits (below);
 - an attacker the defender cannot perceive: the aggro is taken all the same; the turn's existing
   "You can't seem to find your target." applies until it can.
 
@@ -208,18 +210,25 @@ it settles the target instead, in this order:
 1. The target no longer exists (dead NPC, a player who left the game): switch (below).
 2. The target is not up: switch (below). Today's "Your rage subsides." stays for when there is
    nobody to switch to.
-3. The target is in another room, the body wields a shooting weapon, and an unlocked exit leads to
-   the target's room: the aggro becomes a shooting aggro through that exit and the turn shoots. A
-   target the body can shoot is reachable, so it is kept even when someone in the body's room
-   attacks it (ruling 7).
+3. The target is in another room, the aggro holds a shot, the body wields a shooting weapon, and
+   an unlocked exit leads to the target's room: the turn shoots through that exit, once, and the
+   shot is spent (ruling 13). A target the body is about to shoot is reachable, so it is kept even
+   when someone in the body's room attacks it (ruling 7). A shot that cannot be fired (no shooting
+   weapon, no unlocked exit) is dropped, and the turn goes on to step 4.
+
+   **Shots.** An aggro holds a shot in two cases only: `shoot` arms one, and a body shot by a typed
+   `shoot` (hit or miss, as for retaliation) earns one back on its aggro on that shooter, whether
+   the shot gave it a new aggro (retaliation) or it was already fighting that shooter. A shot back
+   earns nothing, and neither does a shot from anyone the body is not fighting. A body never holds more than one shot. After its
+   shot an aggro waits on its target like any other (step 5).
 4. The target is in another room, or in this room but not perceived by the body, and someone in
    this room whom the body perceives is attacking it: switch.
 5. Otherwise the aggro waits: no swing, and one line the first time the turn finds the target out
-   of reach: "Your target is out of reach." When the target and the body share a room again, the
+   of reach: "Your target is out of reach." (not after a shot: the body just shot it there) When the target and the body share a room again, the
    next turn swings. A wait lasts at most the configured number of rounds (ruling 12, default 5),
    counted in consecutive turns that end here; any turn that finds the target reachable resets the
-   count, and so does being attacked by the target (a shooter in the next room that keeps firing
-   is still in the fight). When the count runs out the aggro ends, the body is told "You lose track of <name>." and
+   count, and so does being attacked by the target (a shooter in the next room that keeps typing
+   `shoot` is still in the fight). The turn that fires a shot counts as reachable. When the count runs out the aggro ends, the body is told "You lose track of <name>." and
    observers who perceive it see "<name> mumbles about losing their quarry." (the line
    `loseLostQuarry` used for NPCs). `behaviour.loseLostQuarry` (`behaviour/tick.go:71-84`) and its
    call in `Tick` are deleted: step 1 covers its offline-player case, and this limit covers its
@@ -263,7 +272,8 @@ death that follows switches it, so a killer with other opponents turns to the ne
 
 **What stays as today:** `attack` and `shoot` themselves; party members joining an `attack`; flee
 and wimpy; a body with `no-combat` takes no turn (it still gets the aggro); the attacker's own
-re-arm after a swing.
+re-arm after a swing. A shooter's re-arm keeps the exit it shot through, with its shot spent, so the
+aggro waits on the target rather than ending with "Your target can't be found." as today.
 
 **Every body with an aggro settles its target every round,** before anything can take its turn
 (`no-combat`, an NPC's combat command): the lookup runs, a switch or a lost track happens, the wait
@@ -328,8 +338,9 @@ times. On today's code the NPC's health stays put.
 - a player chooses a third target with `attack`; its attackers' deaths do not move it;
 - a target flees: with another attacker in the room the body switches; alone, its aggro waits
   ("Your target is out of reach." once), and it swings when the target returns;
-- shot from another room: with a shooting weapon the body shoots back through the exit; without,
-  it waits; an NPC walks over and swings;
+- shot from another room: with a shooting weapon the body shoots back through the exit once and
+  then waits; a second typed `shoot` earns a second shot back; neither side fires in the rounds
+  between; without a shooting weapon it waits; an NPC walks over and swings;
 - a hidden attacker: the defender takes an aggro and reads "You can't seem to find your target.";
 - a death with three bodies targeting the victim: each switches or ends.
 
@@ -361,7 +372,9 @@ holds. The fighter must be able to choose the level 1 rat over the level 5 one d
 6. `BackStab` gone. Goldens unchanged.
 6a. Retaliation and target switching (rulings 6-9), with the new fixtures and unit tests (the
     switch's choice by `Since` and turn order; the lookup's five steps; `Since` kept on a re-arm,
-    set on a change, saved in a sidecar). Combat goldens change; each diff summarised.
+    set on a change, saved in a sidecar; ruling 13's shot: armed by `shoot` and by a typed shot,
+    not by a shot back, spent by firing, dropped when it cannot fire, saved in a sidecar).
+    Combat goldens change; each diff summarised.
 7. Docs: patch notes, status, the phase design's slice 4 row (cut into 4.1-4.3) and its "Notes for
    later slices" (this slice's items leave; 4.2's and 4.3's lists are written there),
    `docs/known-issues.md` if it names any of these.
@@ -378,6 +391,8 @@ holds. The fighter must be able to choose the level 1 rat over the level 5 one d
   never start a fight, for now: NPC aggression is out of scope (phase design) and comes with a
   ruleset or a later phase.
 - **An aggro remembers when it began,** and the next opponent is the longest attacker.
+- **Shooting is one shot per action** (ruling 13): no body fires twice without a typed `shoot`
+  behind each shot, its own or its target's.
 
 ## Out of scope
 
@@ -432,7 +447,12 @@ holds. The fighter must be able to choose the level 1 rat over the level 5 one d
 | When shooting back, the exit is the aggro's own exit if it still leads to the target, otherwise the first exit by name that does | Deterministic; most rooms have one exit to a given room | Another order |
 | Retaliation records the retaliator's damage like any attack, so a player who fought back against a player has that player in `PlayerDamage`, and a later death can be booked as PvP (`death.go:136-137`) | Every swing earns credit (same as a miss counting as an attack); the kill-credit rules are 4.2's (progression), noted there | Exclude retaliation from `PlayerDamage` here |
 | Every body with an aggro settles its target each round even when its turn is taken (`no-combat`, an NPC combat command) (plan review round 3) | Ruling 12's limit is for every body; otherwise those bodies wait forever | Count only turns that could swing |
-| A target the body can shoot counts as reachable and is kept (lookup step 3 before step 4; plan Q12) | Ruling 7: a chosen target is never replaced while reachable | Switch to an attacker in the room first |
+| A target the body is about to shoot (its aggro holds a shot) counts as reachable and is kept (lookup step 3 before step 4; plan Q12; narrowed by ruling 13, 2026-11-14). Once the shot is spent, a perceived attacker in the body's room takes over under step 4 | Ruling 7: a chosen target is never replaced while reachable. A target the body will not fire at again is out of reach, and waiting on it while someone hits you in your room is the thing ruling 7 forbids | Keep the remote target until the wait limit runs out, while the attacker in the room hits for free |
+| How a shot is held: one mark on the aggro, set by `shoot` and by being shot by a typed `shoot` from the body's own target or (retaliation) from a new one; spent by firing, dropped when it cannot be fired; never more than one. The mark says which it is (typed or earned), and only a fired typed shot earns a shot back. An NPC running `shoot` as a combat command types it like a player (ruling 13) | "Each typed `shoot` earns one shot back"; a mark on the shot (typed or not) stops two shooters answering each other every round, which is continued fire again. One shot at most: five unanswered typed shots in one round still earn one, since the body fires once per turn | A count of owed shots |
+| The shot mark is saved in NPC sidecars; old sidecars load with none | Sidecars save the rest of the aggro; an NPC restored with a shot owed fires it | Do not save it |
+| A hit from a typed `shoot` by someone the body is not fighting earns no shot (ruling 6: a body already fighting keeps its target) | One target at a time; switching to every new shooter is what ruling 7 rules out | Earn a shot at the new shooter and switch |
+| "Your target is out of reach." is not told on the turns after a shot (the shot sets the told mark) | The body just shot the target where it stands; telling it the target is out of reach reads wrong | Tell it as for any wait |
+| A body attacked from another room by a typed shot, with no shooting weapon, waits (ruling 9); an NPC also takes today's walk | Unchanged by ruling 13 | none |
 | "In a fight" (`inFight`, which gates `go`, `quit` and `suicide`) means someone in the body's room fights it, or it fights someone in its room (plan Q17) | One meaning for all three commands; a body shot from the next room could already quit today; flee stays the only way out of a fight in the room. A pending flee with nobody attacking is no longer a fight | Narrow the change to `go` only |
 | A failed flee keeps the `Since` the fleer's aggro had (plan Q15) | The fight resumes with the same opponent; it should not lose its place | Reset it |
 | The switch rule lives in `internal/death` (plan Q14) | The round imports `death`, not the reverse; death needs the rule | A new package both import |
